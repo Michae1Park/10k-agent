@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Downloaded filings and derived data (reproducible via `tenk fetch`)
+/data/
