@@ -91,6 +91,17 @@ Metadata filters on `search_filings` are what make comparative questions tractab
 
 A deterministic post-pass: for each numeric claim, confirm the value (with unit normalization) appears in its cited chunk; for each calculated claim, re-run the calculation. Failures are downgraded to *unverified* and shown, not hidden.
 
+### Model layer
+
+The agent loop, Ask pipeline and eval harness never call a provider SDK directly. They go through one small interface: `complete(messages, tools) → response` (text, tool calls, token counts). There are two implementations:
+
+- **Anthropic:** Claude, the baseline.
+- **OpenAI-compatible:** open-source models served by vLLM (or Ollama for local development). Both expose the same chat + tool-calling API.
+
+Tool schemas are defined once and translated per provider. Model choice is a config value, so any eval run can target any model.
+
+**The LLM judge is fixed.** It stays the same Claude model no matter which model is under test, so changing the agent's model never changes how answers are scored.
+
 ### Tracing
 
 Every request is traced (tool calls, inputs/outputs, tokens, latency). The same traces feed the UI's trace view and the eval harness's agent and cost metrics.
@@ -101,23 +112,7 @@ Every request is traced (tool calls, inputs/outputs, tokens, latency). The same 
 
 ### Gold dataset
 
-```json
-{
-  "id": "aapl-rd-fy2024",
-  "category": "retrieval",
-  "question": "What was Apple's R&D expense in fiscal 2024?",
-  "expected_answer": {"value": 31370, "unit": "USD millions"},
-  "answer_type": "number",
-  "tolerance": 0.005,
-  "sources": [{"company": "AAPL", "fiscal_year": 2024, "item": "8", "section": "Consolidated Statements of Operations"}],
-  "gold_chunk_ids": ["..."],
-  "expected_tools": ["search_filings"],
-  "failure_mode": null,
-  "should_abstain": false
-}
-```
-
-The value above is from memory and must be checked against the filing like every other gold answer.
+Stored as `eval/gold/questions.jsonl`. The record format, source and unit rules, verification procedure and dev/test split are defined in the [gold-set authoring guide](eval/gold-set-guide.md). Each record carries a verbatim `evidence` quote per source; after ingestion a script matches those quotes to chunks and fills in `gold_chunk_ids` for the retrieval metrics.
 
 **Target mix (~100):** 30 retrieval · 15 grounding (narrative) · 15 multi-document · 15 tool use · 10 agent workflow · 15 failure cases. Each failure case in PRD §6.6 gets at least two questions, tagged by `failure_mode`. Numeric answers are cross-checked against EDGAR's structured XBRL data to catch transcription errors in the gold set.
 
@@ -162,7 +157,7 @@ This trajectory is the reference for the "unnecessary calls" metric.
 
 ## Roadmap
 
-**Six milestones plus an optional V5 experiment, each ending with a full eval run so every architectural addition has to earn its place in the results table.** V1–V4 match the PRD §9 releases. Durations assume part-time work and are rough.
+**Six milestones plus optional experiments, each ending with a full eval run so every architectural addition has to earn its place in the results table.** V1–V4 match the PRD §9 releases. Durations assume part-time work and are rough.
 
 | Milestone | Builds | Exit criteria | Est. |
 | --- | --- | --- | --- |
@@ -172,13 +167,15 @@ This trajectory is the reference for the "unnecessary calls" metric.
 | V3 — Agent | Research mode, 4 tools, streaming step list; gold set to ~100 | Tasks 3–5 complete end to end; agent metrics reported | 2 wks |
 | V4 — Reliable agent | Verification pass, structured claims, failure-case fixes, LLM-judge calibration | Failure suite passes; unsupported-answer rate measured and reduced vs. V2 | 1–2 wks |
 | V5 — Structured-data experiment (optional) | `get_financial_facts` tool over XBRL company facts, with a per-company tag mapping | Same gold set run document-only vs. document + structured data; difference reported by question category | 1 wk |
+| V6 — Open-source models | Serve 2–3 open tool-calling models with vLLM; run the gold set through the same agent | Accuracy, tool-call correctness, latency and cost per question reported vs. the Claude baseline | 1–2 wks |
+| V7 — Fine-tuning (only if V6 shows a gap) | LoRA fine-tune of the best open model on agent trajectories (training data below) | Gap to baseline reduced on `test`; cost per question still below baseline | 2 wks |
 | Ship | README for both hiring managers and engineers: results table and demo video up front, then architecture and design decisions; public deployment TBD | Someone can run the eval with one command | 1 wk |
 
 Rule for the whole roadmap: when a metric doesn't move, write that down too. An honest "hybrid search didn't help on this corpus" is portfolio material.
 
 ## Tech stack
 
-**Recommended: Python + FastAPI, SQLite with sqlite-vec and FTS5, Claude via the Anthropic SDK with native tool use, a hosted reranker, Langfuse for traces, Next.js for the UI.** Every choice is swappable; none should become the project.
+**Recommended: Python + FastAPI, SQLite with sqlite-vec and FTS5, Claude as the baseline model with open-source models as the cost-efficient target, a hosted reranker, Langfuse for traces, Next.js for the UI.** Every choice is swappable; none should become the project.
 
 | Layer | Recommendation | Why | Alternative |
 | --- | --- | --- | --- |
@@ -187,8 +184,12 @@ Rule for the whole roadmap: when a metric doesn't move, write that down too. An 
 | Store | SQLite + sqlite-vec + FTS5 | One file, no server: metadata, vectors and keyword search with SQL filters on company/year; ample at this corpus size | Postgres + pgvector (if deployed publicly), LanceDB |
 | Embeddings | A hosted embedding model (e.g. Voyage, OpenAI) | No infra; swap and re-run eval to compare | `bge` / `e5` locally |
 | Reranker | Cohere Rerank or Voyage rerank | Largest cheap retrieval win | `bge-reranker` locally |
-| LLM | Claude Sonnet 5 for agent + answers; Haiku 4.5 for judge/cheap steps | Strong tool use; cost control on eval runs | Any tool-calling model |
-| Agent framework | Hand-written loop on the SDK's tool-use API (~200 lines) | Shows you understand the loop; easier to trace and test | LangGraph, Claude Agent SDK |
+| LLM (baseline) | Claude Sonnet 5 for agent + answers through V4 | Strong multi-step tool use; sets the accuracy bar | — |
+| LLM (target) | Open-source tool-calling models (e.g. Qwen, Llama, Mistral families; pick current ones at V6) | Compute and cost; can be fine-tuned | — |
+| LLM judge | Claude Haiku 4.5, fixed across all runs | Cheap; consistent scoring across models | — |
+| Serving | vLLM (OpenAI-compatible, tool calling); Ollama for local dev | Standard, fast, one API for all open models | TGI, llama.cpp |
+| Fine-tuning | LoRA / QLoRA with Hugging Face TRL (or Unsloth) | Fits on a single GPU | Full fine-tune |
+| Agent framework | Hand-written loop over the model layer (~200 lines) | Shows you understand the loop; easier to trace, test and swap models | LangGraph, Claude Agent SDK |
 | Tracing | Langfuse Cloud (self-hosting needs its own Postgres) | Traces + datasets + scores in one place | Phoenix, OpenTelemetry |
 | Frontend | Next.js + streaming (SSE) | Step-by-step Research view | Streamlit for V1–V2 |
 | Deploy | Local: one process + one SQLite file. Public: TBD (would move storage to managed Postgres) | Nothing to operate until deployment is decided | — |
@@ -206,6 +207,32 @@ Keep the eval harness framework-free (pytest-style runner + JSONL results), so t
 | LLM-judge scores are noisy | Metrics not credible | Deterministic scoring for numbers; calibrate judge on 30 hand grades |
 | Eval runs get expensive | Fewer iterations | Cache retrieval; Haiku for judging; run a 30-question smoke set per change |
 | Scope creep (10-Q, web search, charts) | MVP never ships | Hold the PRD §10 "Later" column until V4 ships |
+
+### Hardware (V6–V7)
+
+One NVIDIA L40S: 48 GB card, ~44 GB usable, Ada architecture with native FP8. Everything in V6–V7 must fit on this single card:
+
+| Task | Comfortable | Possible, tight | Not practical |
+| --- | --- | --- | --- |
+| Serving (vLLM) | ≤ 14B in BF16 | ~32B in FP8 or 4-bit (AWQ/GPTQ) | 70B+ |
+| LoRA fine-tuning | ≤ 8B in BF16 | — | — |
+| QLoRA fine-tuning | ≤ 14B | ~32B with gradient checkpointing and short sequences | 70B |
+
+Agent trajectories are long: retrieved chunks and tool results can reach 20–40k tokens. The KV cache (serving) and activations (training) grow with context length, so budget memory for the longest real trajectory, not the model weights alone. Measure it in V3 traces.
+
+Starting point for V6: one ~7–8B, one ~14B and one ~30B-class open model, so the results show how accuracy scales with size against cost.
+
+### Fine-tuning data (V7)
+
+**Training data comes from 10-Ks outside the eval corpus:** other companies, and other years of the 8 corpus companies. The same pipeline (ingestion, tools, agent) runs over this separate training corpus, so the model learns the task without seeing any eval filing.
+
+- **Other companies:** any 10-K filer. Prefer a mix of fiscal calendars and industries, so the fiscal-year and unit-handling skills generalize.
+- **Other years of the corpus companies:** only filings for **FY2022 and earlier**. A 10-K repeats the prior two years' figures, so FY2026+ filings contain FY2024–FY2025 values, which are eval answers. They're excluded.
+- **Narrative text repeats across years.** Risk factors change little from one year to the next, so narrative training questions should come mostly from other companies.
+- **Numeric labels come cheaply from XBRL.** For training questions (not gold questions), the SEC's company facts data supplies verified answers for standard line items automatically, so thousands of numeric questions can be generated without hand labeling.
+- **Trajectories come from open models, not Claude.** Anthropic's Usage Policy (effective 2025-09-15) prohibits "utilization of inputs and outputs to train an AI model (e.g., 'model scraping' or 'model distillation') without prior authorization from Anthropic." That covers Claude-written training questions too. Generate trajectories by running the open model itself and keeping verified successes (rejection sampling), optionally bootstrapped by a larger open teacher model whose license permits it. Claude remains the baseline and the eval judge, neither of which involves training on its outputs.
+- **Keep only correct trajectories.** A run becomes training data only if its final answer passes the same deterministic checks as the eval (numbers, citations, abstention).
+- **Never train on gold questions or eval filings,** and deduplicate training questions against `dev` and `test`.
 
 ### Open questions
 
