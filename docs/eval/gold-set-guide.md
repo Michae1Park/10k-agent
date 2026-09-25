@@ -42,7 +42,7 @@
 }
 ```
 
-`gold_chunk_ids` is not written by hand. After ingestion, a script finds the chunks whose text contains each `evidence` string and fills them in. That's why evidence must be copied verbatim.
+Chunk IDs are never written by hand or stored here. At evaluation time the chunks whose text contains each `evidence` string are looked up (ignoring case, whitespace, `$` and `|`), so re-chunking never invalidates a question. That's why evidence must be copied verbatim. Run `tenk gold` to see, per question, whether every quote resolves and whether numeric answers match an XBRL fact.
 
 ## Field rules
 
@@ -84,7 +84,7 @@ Each failure mode needs at least two questions.
 ## Numbers and units
 
 - **Record the value exactly as the filing's table reports it,** in the table's own unit. If the table says "(in millions)" and shows 31,370, record `31370` with `"unit": "USD millions"`. Don't convert to billions.
-- **Units vocabulary:** `USD millions`, `USD thousands`, `USD`, `percent`, `shares millions`, `count`. Add a new unit only if none fits, and list it here.
+- **Units vocabulary:** `USD millions`, `USD thousands`, `USD`, `percent`, `shares millions`, `count`, `count thousands`. Add a new unit only if none fits, and list it here.
 - **Percentages** are stored as percent numbers: 12.5% becomes `12.5` with `"unit": "percent"`.
 - **Calculated answers** (growth rates, shares of a total): compute from the verified inputs with a script or spreadsheet, never by hand. Record the inputs in `notes`.
 - **Negative values:** store them as negative numbers, even if the filing shows parentheses.
@@ -123,8 +123,8 @@ Do this for every question before it's committed:
 1. Open the filing on EDGAR (not a secondary site) and find the answer.
 2. Copy the `evidence` text verbatim: the exact sentence(s), or for a table row, the row label and its cells in order, separated by ` | ` (e.g. `Total net sales | 391,035 | 383,285 | 394,328`). Record the column years and unit in `section` or `notes` if they aren't obvious.
 3. Record `accession_no`, `item` and `section`.
-4. For numeric answers on standard line items, cross-check against the SEC's XBRL company facts data. If they disagree, the filing text wins; note the discrepancy.
-5. Set `verified_by` and `verified_on`.
+4. For numeric answers on standard line items, cross-check against the SEC's XBRL company facts data (`tenk gold` does this automatically). If they disagree, the filing text wins; note the discrepancy. Segment figures (e.g. AWS) aren't in company facts, so no match is expected for them.
+5. Sign off with `tenk gold verify <id> --by <initials>`, which sets `verified_by` and `verified_on`. `tenk gold show <id>` prints the question, expected answer, each evidence quote with its EDGAR link and matched chunk, and the XBRL cross-check, to review against.
 6. A second pass is optional but recommended: re-verify a random ~20% of questions a few days later.
 
 ## Writing good questions

@@ -6,21 +6,29 @@
 - How (architecture, tools, roadmap): [docs/project-plan.md](docs/project-plan.md)
 - Gold dataset rules: [docs/eval/gold-set-guide.md](docs/eval/gold-set-guide.md)
 
-**Status:** V0 in progress: corpus fetching done; ingestion and gold set next.
+**Status:** V0 built (fetch, ingestion, 30 draft gold questions); V0 completes when the gold questions are verified.
 
 ## Development
 
 ```bash
-uv sync                                   # install (or: python -m venv .venv && .venv/bin/pip install -e . pytest)
+uv sync                                   # install (or: python -m venv .venv && .venv/bin/pip install -e . pytest ruff)
 uv run pytest                             # tests
 
 # Download the 24 corpus 10-Ks into data/ (git-ignored). SEC requires a contact in the User-Agent.
 export SEC_USER_AGENT="10k you@example.com"
 uv run tenk fetch                         # all companies; cached, safe to re-run
 uv run tenk fetch --tickers AAPL --refresh
+
+uv run tenk ingest                        # parse + chunk into data/tenk.db (~30 s)
+uv run tenk gold                          # per question: verified?, evidence found, XBRL match
+uv run tenk gold show <id>                # a question with its evidence, EDGAR link and XBRL check
+uv run tenk gold verify <id>... --by XX   # record your sign-off after checking the filing
+uv run tenk check                         # V0 exit criteria
+
+uv run ruff format && uv run ruff check   # formatting and lint (100-character lines)
 ```
 
-Output: `data/raw/filings/<TICKER>/FY<year>/` (primary HTML document + `metadata.json`) and `data/raw/manifest.json`.
+Downloads go to `data/raw/filings/<TICKER>/FY<year>/` (primary HTML + `metadata.json`) with `data/raw/manifest.json`; the database is `data/tenk.db`.
 
 ## Product rules
 
@@ -36,7 +44,7 @@ These are invariants. Changes that break them are bugs.
 ## Engineering decisions
 
 - Python 3.12 with uv; FastAPI; Next.js frontend.
-- Storage: one SQLite file (sqlite-vec + FTS5). All access goes through the storage interface; nothing else touches the database directly.
+- Storage: one SQLite file (FTS5 now, sqlite-vec from V1). All access goes through `Store`; nothing else touches the database directly.
 - The agent is a hand-written tool-use loop. Don't add agent frameworks.
 - All model calls go through the model layer (`complete(messages, tools)`), never a provider SDK directly. Claude is the baseline; open-source models served with vLLM are the target.
 - The LLM judge stays the same fixed model across all runs, whatever model is under test.

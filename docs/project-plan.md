@@ -43,25 +43,28 @@ flowchart TD
 ### Ingestion
 
 1. **Fetch** 10-K primary documents (HTML) from EDGAR's free APIs, with a declared User-Agent and ≤ 10 requests/s. Store raw HTML for reproducibility.
-2. **Section-split** by 10-K Item (1 Business, 1A Risk Factors, 7 MD&A, 8 Financial Statements, …). Section is the unit of citation.
-3. **Tables are first-class.** Convert each financial table to Markdown and keep it as one chunk with its caption, column headers (years) and unit line ("in millions"). Splitting tables mid-row is the #1 cause of wrong-number answers.
-4. **Chunk prose** at ~500–800 tokens with overlap, never across section boundaries.
-5. **Attach metadata** to every chunk (below) and embed.
+2. **Section-split** by 10-K Item (1 Business, 1A Risk Factors, 7 MD&A, 8 Financial Statements, …). Section is the unit of citation. A heading is an "Item N. Title" line outside multi-row tables, which excludes tables of contents, cross-references ("Item 5.02") and running page headers.
+3. **Financial statements always live in Item 8.** Some filers keep Item 8 as a pointer and place the statements elsewhere (NVIDIA under Item 15, Netflix after the signatures). When Item 8 has no tables, the statements, from the index or the auditor's report on them, are moved into Item 8.
+4. **Tables are first-class.** Each financial table becomes one chunk of `| cell | cell |` rows with its caption and unit line ("in millions"). Split cells are merged (`$` + `1,234`, `(3` + `)%`). Tables over ~1,800 tokens are split into row groups that repeat the header rows, never mid-row. Splitting tables mid-row is the #1 cause of wrong-number answers.
+5. **Chunk prose** into ~600-token chunks (4 characters per token), never across section boundaries; a chunk starts with the previous chunk's last paragraph when that paragraph is short.
+6. **Attach metadata** to every chunk (below). Embeddings are added in V1.
+
+`tenk ingest` runs steps 2–6 over the downloaded filings (about 30 s, ~6,300 chunks); `tenk check` verifies the V0 exit criteria.
 
 ### Data model
 
 | Table | Key fields |
 | --- | --- |
-| `companies` | cik, ticker, name, fiscal_year_end_month, aliases (e.g. "Google") |
-| `filings` | accession_no, cik, form, fiscal_year, period_end_date, filed_date, source_url |
-| `sections` | filing_id, item (e.g. "7"), title, char range |
-| `chunks` | section_id, text, kind (prose / table), units, years_covered, embedding, FTS5 index |
+| `companies` | ticker, cik, name; aliases (e.g. "Google", added in V3) |
+| `filings` | accession_no, ticker, fiscal_year, period_end_date, filing_date, source_url |
+| `sections` | id (e.g. `AAPL-FY2025-7`), accession_no, item, title |
+| `chunks` | id (e.g. `AAPL-FY2025-7-012`), section_id, ticker, fiscal_year, item, seq, kind (prose / table), text, units, years_covered; FTS5 index; embedding (V1) |
 
-`fiscal_year` and `period_end_date` are stored explicitly so the system never infers fiscal years from text. `aliases` handles entity naming (PRD §6.6).
+`fiscal_year` and `period_end_date` are stored explicitly so the system never infers fiscal years from text; each filing's fiscal year comes from its XBRL cover-page data. `aliases` handles entity naming (PRD §6.6).
 
 ### Storage
 
-One SQLite file holds everything: relational tables above, vectors via the sqlite-vec extension, and keyword search via the built-in FTS5. A single query can combine vector similarity, keyword match and metadata filters (company, fiscal year, item). This is what comparative questions need.
+One SQLite file (`data/tenk.db`) holds everything: relational tables above, keyword search via the built-in FTS5 (V0), and vectors via the sqlite-vec extension (V1). A single query can combine vector similarity, keyword match and metadata filters (company, fiscal year, item). This is what comparative questions need.
 
 At ~24 filings (a few thousand chunks), brute-force vector search takes milliseconds, so a database server adds nothing. All retrieval code goes through a small storage interface (`search`, `get_section`, `get_chunk`), so moving to Postgres + pgvector later changes one module. That move happens only if the project is deployed publicly (see open questions).
 
@@ -112,7 +115,7 @@ Every request is traced (tool calls, inputs/outputs, tokens, latency). The same 
 
 ### Gold dataset
 
-Stored as `eval/gold/questions.jsonl`. The record format, source and unit rules, verification procedure and dev/test split are defined in the [gold-set authoring guide](eval/gold-set-guide.md). Each record carries a verbatim `evidence` quote per source; after ingestion a script matches those quotes to chunks and fills in `gold_chunk_ids` for the retrieval metrics.
+Stored as `eval/gold/questions.jsonl`. The record format, source and unit rules, verification procedure and dev/test split are defined in the [gold-set authoring guide](eval/gold-set-guide.md). Each record carries a verbatim `evidence` quote per source. Gold chunk IDs are resolved at evaluation time by matching those quotes against the current chunks, so re-chunking never invalidates the gold set. `tenk gold` reports, per question, whether every quote resolves and whether numeric answers match an XBRL fact.
 
 **Target mix (~100):** 30 retrieval · 15 grounding (narrative) · 15 multi-document · 15 tool use · 10 agent workflow · 15 failure cases. Each failure case in PRD §6.6 gets at least two questions, tagged by `failure_mode`. Numeric answers are cross-checked against EDGAR's structured XBRL data to catch transcription errors in the gold set.
 
@@ -161,7 +164,7 @@ This trajectory is the reference for the "unnecessary calls" metric.
 
 | Milestone | Builds | Exit criteria | Est. |
 | --- | --- | --- | --- |
-| V0 — Data + gold set | EDGAR fetch, section split, table extraction, DB schema; first 30 gold questions | 24 filings ingested; every Item 7 and Item 8 section present; 30 verified questions | 1–2 wks |
+| V0 — Data + gold set | EDGAR fetch, section split, table extraction, DB schema; first 30 gold questions | `tenk check` passes: 24 filings ingested; Items 1A, 7 and 8 present, with financial tables in Item 8; 30 verified questions whose evidence resolves to chunks | 1–2 wks |
 | V1 — Search | Embedding + reranking retriever; CLI; eval harness (retrieval metrics) | Recall@5 and MRR reported on the gold set | 1 wk |
 | V2 — RAG | Ask pipeline with cited answers; FastAPI; minimal UI; tracing | Tasks 1, 2 and 6 pass; answer + citation metrics reported | 1–2 wks |
 | V3 — Agent | Research mode, 4 tools, streaming step list; gold set to ~100 | Tasks 3–5 complete end to end; agent metrics reported | 2 wks |
