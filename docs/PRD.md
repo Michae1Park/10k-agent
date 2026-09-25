@@ -1,6 +1,6 @@
 # 10k-agent — Product Requirements
 
-2026-09-25 · Status: Draft · Implementation details: [project-plan.md](project-plan.md)
+2026-09-26 · Status: Draft · How it's built: [project-plan.md](project-plan.md)
 
 ## 1. Summary
 
@@ -16,7 +16,7 @@ The core question the product answers:
 
 A general-purpose LLM can often answer "What was Apple's R&D spending in 2024?" from memory. It can't reliably do this:
 
-> "Compare Apple's R&D spending with Microsoft's for 2022–2024, calculate year-over-year growth for each, verify every number against the original 10-K, and give me a cited table."
+> "Compare Apple's R&D spending with Microsoft's for 2023–2025, calculate year-over-year growth for each, verify every number against the original 10-K, and give me a cited table."
 
 That request needs the system to:
 
@@ -81,8 +81,8 @@ In Research mode the agent has three jobs:
 
 ### 6.1 Corpus
 
-- **R1.** Annual 10-K filings for 8 companies: Apple, Microsoft, Amazon, Alphabet (Google), Meta, NVIDIA, Tesla and Netflix.
-- **R2.** The 3 most recent fiscal years per company, 24 filings in total (~2,400–7,200 pages).
+- **R1.** Annual 10-K filings for 8 companies: Apple, Microsoft, Amazon, Alphabet (Google), Meta, NVIDIA, Tesla and Netflix. They are chosen partly because their fiscal years end in different months, which makes "what was X in 2024?" a real disambiguation problem.
+- **R2.** Fiscal years 2023, 2024 and 2025 for every company (one 10-K each), 24 filings in total (~2,400–7,200 pages). The range is fixed, so the corpus doesn't change when a company files a newer 10-K.
 - **R3.** Every filing is tagged with company, fiscal year, period end date and section, so answers can cite them precisely.
 
 ### 6.2 Modes
@@ -91,10 +91,12 @@ In Research mode the agent has three jobs:
 | --- | --- | --- |
 | For | Simple, factual questions | Comparisons, calculations, "why" questions |
 | Example | "What was Apple's total revenue in 2024?" | "Research Apple's iPhone revenue growth over the past three years and explain the factors management identified." |
-| Behavior | Retrieve → rerank → answer with citations | Multi-step plan: find filings, locate data, calculate, search management discussion, cross-check, report |
-| User sees | Answer + cited passages | Live progress of each step, then a structured report with citations |
+| Behavior | Find passages → answer with citations | Multi-step plan: find filings, locate data, calculate, search management discussion, cross-check, report |
+| Output | 1–3 sentence answer + citations | Structured report: summary, table, findings, citations, unverified claims |
+| User sees while waiting | — | Live list of each step ("Searching Apple FY2024 10-K…", "Calculating YoY change…") |
+| Target response time | < 5 s | < 60 s, streamed |
 
-- **R4.** The user can choose between Ask and Research.
+- **R4.** The user chooses between Ask and Research with a toggle.
 - **R5.** Research mode shows its steps as it works, so the difference between RAG and agent behavior is visible.
 
 ### 6.3 Question classes
@@ -107,22 +109,30 @@ The product must handle three classes of question:
 | **Comparative** | "How did Apple's R&D spending change between 2023 and 2025?" · "Compare Microsoft's and Google's revenue growth over the last three reported fiscal years." | Retrieve across several filings and keep company, fiscal year, metric, units and reporting period straight |
 | **Agentic** | "Compare Apple's and Microsoft's R&D spending over the last three years and calculate the percentage change." | Plan multiple steps, use tools, extract data, calculate, then answer with citations |
 
-### 6.4 Tools
+### 6.4 Agent capabilities
 
 The agent's toolset is deliberately small. The interesting problem is whether the agent can decide when and how to use each tool.
 
-| Tool | Purpose | Release |
-| --- | --- | --- |
-| `search_filings` | Find relevant passages across the corpus | MVP |
-| `get_filing` | Read a specific filing or section in full | MVP |
-| `calculator` | Do all arithmetic; the LLM never calculates in its head | MVP |
-| `search_web` | Look outside the filings, clearly labeled as a non-filing source | Later |
-| `generate_chart` | Visualize extracted figures | Later |
+| Capability | Release |
+| --- | --- |
+| Search passages across the filings | MVP |
+| Read a specific filing section in full | MVP |
+| Calculate (all arithmetic; the LLM never calculates in its head) | MVP |
+| Verify that a cited passage contains a claimed value | MVP |
+| Search the web, clearly labeled as a non-filing source | Later |
+| Generate a chart of extracted figures | Later |
 
 ### 6.5 Answers
 
+Every answer, in either mode, has the same parts:
+
+1. **Answer:** the claims, with inline citation markers such as `[1]`.
+2. **Citations:** each marker opens the source passage, showing company, fiscal year, 10-K section and a link to the filing on EDGAR.
+3. **Evidence status:** every number is marked *verified* (found in the cited passage), *calculated* (inputs shown) or *unverified*.
+4. **Scope notice**, when relevant: for example, "Filings in this corpus cover FY2023–FY2025; no 2027 figure exists."
+
 - **R6.** Every factual claim has a citation to the company, fiscal year and filing section.
-- **R7.** Every number is either taken from a cited source or calculated by the calculator tool from cited inputs.
+- **R7.** Every number is either taken from a cited source or calculated by the calculator from cited inputs.
 - **R8.** Claims that can't be verified are labeled as unverified, not presented as fact.
 - **R9.** Questions the filings can't answer get an explicit statement of what the corpus does and doesn't cover.
 
@@ -131,28 +141,35 @@ The agent's toolset is deliberately small. The interesting problem is whether th
 | Failure case | Example | Required behavior |
 | --- | --- | --- |
 | Ambiguous fiscal year | "What was Apple's revenue in 2024?" | Resolve it to the fiscal year that ended September 2024, and say so |
+| Shifted fiscal year | "What was NVIDIA's revenue in 2024?" | Explain that NVIDIA's fiscal 2025 ended January 2025, and state which year it reports |
 | Similar numbers | A table lists three years of the same metric side by side | Take the value for the requested year and section, not a neighboring one |
 | Cross-company units | "Compare Apple's and Microsoft's R&D spending." | Normalize units and periods before comparing |
-| Unsupported question | "What will Apple's revenue be in 2027?" | Decline to predict: "The filings in this corpus don't provide a verified 2027 revenue figure. I found historical revenue through [year]…" |
+| Entity naming | "What was Google's capex?" | Resolve Google to Alphabet |
+| Unsupported question | "What will Apple's revenue be in 2027?" · "What was Oracle's revenue?" | Decline: "The filings in this corpus don't provide a verified 2027 revenue figure. I found historical revenue through FY2025…" |
+| False premise | "Why did Netflix stop reporting subscribers in 2019?" | Correct the premise using the filings |
+
+### 6.7 Transparency
+
+- **R10.** A trace view, one click away from any answer, shows each tool call with its inputs, outputs, token use and latency.
 
 ## 7. Demo tasks
 
-These six tasks are representative workflows that prove the system works. They don't limit what it can answer. Each one maps to an evaluation category.
+These six tasks are representative workflows that prove the system works. They don't limit what it can answer. Each one maps to an evaluation category. The tasks drive the architecture, data model, tools and evaluation dataset, rather than infrastructure being built first.
 
-| # | Task | Demonstrates | Evaluated by |
-| --- | --- | --- | --- |
-| 1 | "What were Apple's total revenues in fiscal years 2022, 2023 and 2024?" | Ingestion, chunking, retrieval, reranking, cited answer (the RAG baseline) | Retrieval: recall / relevance |
-| 2 | "What risks does Microsoft identify regarding its dependence on cloud infrastructure and data centers?" | Semantic retrieval across several sections, synthesis | Grounding: faithfulness |
-| 3 | "Compare Apple's and Microsoft's R&D spending from 2022–2024." | Cross-document retrieval, fiscal-year alignment | Multi-document: completeness |
-| 4 | "Calculate the year-over-year percentage change in Apple's R&D spending from 2022 to 2024." | Extraction, then calculator tool | Tool use: tool correctness |
-| 5 | "Investigate how Apple's revenue mix changed over the last three years. Identify the major changes and summarize the factors management cited." | Full research workflow: find filings, extract tables, calculate, read MD&A, cross-check, report with citations | Agent workflow: task success |
-| 6 | "What will Apple's revenue be in 2027?" | Grounding and uncertainty handling | Abstention: unsupported-claim rate |
+| # | Task | Mode | Demonstrates | Evaluated by |
+| --- | --- | --- | --- | --- |
+| 1 | "What were Apple's total revenues in fiscal years 2023, 2024 and 2025?" | Ask | Grounded retrieval with citations (the RAG baseline) | Retrieval: recall / relevance |
+| 2 | "What risks does Microsoft identify regarding its dependence on cloud infrastructure and data centers?" | Ask | Finding and combining information from several sections | Grounding: faithfulness |
+| 3 | "Compare Apple's and Microsoft's R&D spending from 2023–2025." | Research | Cross-document comparison, fiscal-year alignment, unit normalization | Multi-document: completeness |
+| 4 | "Calculate the year-over-year percentage change in Apple's R&D spending from 2023 to 2025." | Research | Extracting figures, then calculating with a tool | Tool use: tool correctness |
+| 5 | "Investigate how Apple's revenue mix changed over the last three years. Identify the major changes and summarize the factors management cited." | Research | Full research workflow: figures, calculations and management's explanations in one cited report | Agent workflow: task success |
+| 6 | "What will Apple's revenue be in 2027?" | Either | Grounding and uncertainty handling | Abstention: unsupported-claim rate |
 
 Task 5 is the flagship demo.
 
 ## 8. Success metrics
 
-Success means being able to say: **"Evaluated on 100 manually verified questions across 8 companies and 3 fiscal years."** Most of the metrics below are scored against that gold set.
+Success means being able to say: **"Evaluated on 100 manually verified questions across 8 companies and 3 fiscal years."**
 
 **Gold dataset:** 50–100 questions, each with a verified expected answer, source filing and source section.
 
@@ -162,12 +179,13 @@ Success means being able to say: **"Evaluated on 100 manually verified questions
 | Answer | Correctness, faithfulness, citation accuracy |
 | Agent | Task completion, tool selection, tool-call correctness, number of unnecessary calls |
 | Guardrails | Unsupported-answer rate on questions the corpus can't answer |
+| Cost | Latency, tokens and cost per question |
 
-The same evaluation suite runs after every release, so each architectural addition has to show a measured improvement. Results are reported as measured, never estimated.
+The same evaluation suite runs after every release, so each addition has to show a measured improvement. Results are reported as measured, never estimated.
 
 ## 9. Releases
 
-Each version adds one capability and is evaluated against the previous one.
+The agent is not built first. Each version adds one capability and is evaluated against the previous one.
 
 | Version | Capability | Flow |
 | --- | --- | --- |
@@ -176,28 +194,37 @@ Each version adds one capability and is evaluated against the previous one.
 | **V3 — Agent** | Multi-step tool use | Question → agent (search, retrieve, calculator) → answer |
 | **V4 — Reliable agent** | Verified, observable answers | Question → agent → tools → verification → citations → evaluation / tracing |
 
-The deliverable is a results table with one column per version (V1–V4). It shows why each layer exists.
+The deliverable is a results table with one column per version. It shows why each layer exists. Cells are filled only with measured results:
+
+| Metric | V1 | V2 | V3 | V4 |
+| --- | --- | --- | --- | --- |
+| Retrieval (Recall@5) | | | | |
+| Answer faithfulness | — | | | |
+| Citation accuracy | — | | | |
+| Tool-call correctness | — | — | | |
+| Task completion | — | — | | |
+| Unsupported-answer rate | — | | | |
+
+A dash means the metric doesn't apply to that version.
 
 ## 10. Scope
 
 | Component | MVP | Later | Out of scope |
 | --- | --- | --- | --- |
-| Companies | 8 | More | |
-| Filing type | 10-K | 10-Q | |
+| Companies | 8 | More, once evaluation is stable | |
+| Filing type | 10-K | 10-Q, 8-K | |
 | Years | 3 | | |
 | RAG + reranking | Yes | | |
-| Hybrid search | Optional | | |
+| Hybrid search | Optional, only if evaluation shows it helps | | |
 | Agent | Yes | | |
-| Tools | 3–4 | Web search, charts | |
+| Tools | 4 | Web search, charts | |
+| Structured financial data (XBRL) tool | | Optional experiment after V4 | |
+| Mode selection | Manual toggle | Automatic Ask/Research routing | |
 | Calculations | Yes | | |
-| Citations | Yes | | |
-| Evaluation dataset | 50–100 questions | | |
+| Citations + verification | Yes | | |
+| Evaluation dataset | 50–100 questions | 150+ | |
 | Observability | Yes | | |
 | Stock prices | | | Excluded |
 | Investment recommendations | | | Excluded |
 
 Stock prices and investment advice stay out of scope permanently. They don't help show the core technical problem, and they would pull the project into a much larger financial-domain problem.
-
-## 11. Architecture (reference only)
-
-The architecture stays simple. It is a Next.js frontend, a FastAPI backend, the agent with a RAG tool, a filing tool and a calculator, and a vector database over the filings. An evaluation system writes traces and metrics. The infrastructure is not the project; the system's behavior is. See [project-plan.md](project-plan.md) for the technical design.
