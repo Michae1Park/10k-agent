@@ -181,6 +181,8 @@ Success means being able to say: **"Evaluated on 100 manually verified questions
 | Guardrails | Unsupported-answer rate on questions the corpus can't answer |
 | Cost | Latency, tokens and cost per question |
 
+Beyond accuracy, a goal is running the agent on open-source models at a fraction of the baseline's cost, with the accuracy gap measured and reported.
+
 The same evaluation suite runs after every release, so each addition has to show a measured improvement. Results are reported as measured, never estimated.
 
 ## 9. Releases
@@ -219,6 +221,7 @@ A dash means the metric doesn't apply to that version.
 | Agent | Yes | | |
 | Tools | 4 | Web search, charts | |
 | Structured financial data (XBRL) tool | | Optional experiment after V4 | |
+| Open-source models (+ fine-tuning if needed) | Claude as baseline | Open models compared against the baseline after V4 | |
 | Mode selection | Manual toggle | Automatic Ask/Research routing | |
 | Calculations | Yes | | |
 | Citations + verification | Yes | | |
