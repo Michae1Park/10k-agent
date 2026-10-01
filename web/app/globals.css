@@ -1,0 +1,411 @@
+:root {
+  --bg: #fbfbfa;
+  --panel: #ffffff;
+  --text: #1c1c1a;
+  --muted: #6b6b66;
+  --border: #e4e3de;
+  --accent: #2f5bd3;
+  --accent-soft: #e8eefc;
+  --ok: #1d7a46;
+  --ok-soft: #e3f3e9;
+  --calc: #6a47c2;
+  --calc-soft: #efe9fb;
+  --warn: #a8540b;
+  --warn-soft: #fcefdf;
+  --code: #f4f3ef;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161615;
+    --panel: #1e1e1c;
+    --text: #ecebe6;
+    --muted: #9c9b94;
+    --border: #33322f;
+    --accent: #8aa8ff;
+    --accent-soft: #232c45;
+    --ok: #6fd39a;
+    --ok-soft: #1c3326;
+    --calc: #b9a2f2;
+    --calc-soft: #2b2440;
+    --warn: #f0a55c;
+    --warn-soft: #3a2a19;
+    --code: #242422;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+main {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px 16px 80px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 14px;
+}
+
+button[type="submit"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.ask-form {
+  margin: 24px 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.ask-form textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: vertical;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  padding: 8px 4px;
+}
+
+.form-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.toggle button {
+  border: none;
+  border-radius: 0;
+}
+
+.toggle button.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.examples {
+  display: grid;
+  gap: 8px;
+}
+
+.example {
+  text-align: left;
+  padding: 10px 14px;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 99px;
+  background: var(--code);
+  margin-right: 6px;
+}
+
+.steps ol {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  border-left: 2px solid var(--border);
+}
+
+.steps li {
+  padding: 6px 0 6px 16px;
+  position: relative;
+}
+
+.steps li::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 14px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+.steps li.step-error::before {
+  background: var(--warn);
+}
+
+.steps li.step-running::before {
+  background: var(--accent);
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  to {
+    opacity: 0.3;
+  }
+}
+
+.answer {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.answer-text p {
+  margin: 0 0 12px;
+}
+
+.marker {
+  font-size: 0.7rem;
+  padding: 0 5px;
+  margin: 0 1px;
+  vertical-align: super;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: none;
+}
+
+.notice {
+  background: var(--accent-soft);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 8px 0 12px;
+  font-size: 0.92rem;
+}
+
+.notice.warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+td p {
+  margin: 0;
+}
+
+.citation-panel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin: 12px 0;
+  background: var(--bg);
+}
+
+.citation-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.citation {
+  margin-top: 10px;
+}
+
+.citation-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.9rem;
+}
+
+.chunk-text {
+  white-space: pre-wrap;
+  background: var(--code);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.8rem;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.status {
+  font-size: 0.85rem;
+  margin: 6px 0;
+}
+
+.status-verified {
+  color: var(--ok);
+}
+
+.status-calculated {
+  color: var(--calc);
+}
+
+.status-unverified {
+  color: var(--warn);
+}
+
+.badge.status-verified {
+  background: var(--ok-soft);
+}
+
+.badge.status-calculated {
+  background: var(--calc-soft);
+}
+
+.badge.status-unverified {
+  background: var(--warn-soft);
+}
+
+.claims ul {
+  list-style: none;
+  padding: 0;
+}
+
+.claims li {
+  padding: 4px 0;
+  font-size: 0.92rem;
+}
+
+.answer-foot {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 8px;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawer {
+  width: min(760px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  background: var(--panel);
+  padding: 16px 20px;
+}
+
+.drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.span {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 6px 0;
+  padding: 6px 10px;
+}
+
+.span summary {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+
+.span-index {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.span-type {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.span-llm {
+  border-left: 3px solid var(--accent);
+}
+
+.span-tool {
+  border-left: 3px solid var(--ok);
+}
+
+.span-retrieval {
+  border-left: 3px solid var(--calc);
+}
+
+.span-error {
+  border-left-color: var(--warn);
+}
+
+.span-body pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--code);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 0.75rem;
+  max-height: 360px;
+  overflow: auto;
+}
