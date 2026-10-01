@@ -1,0 +1,39 @@
+# Every tunable parameter, per stage. Guides: docs/STAGE*.md (Knobs).
+# Environment variables override the ones marked "env" (e.g. TENK_MODEL=openai:Qwen/Qwen3.5-9B).
+
+data_dir: data                                  # env TENK_DATA_DIR
+
+ingest:                                         # stage 1 · docs/STAGE1_INGEST.md
+  chunk_chars: 2400                             # prose chunk size (~600 tokens at 4 chars/token)
+  table_chars: 7200                             # longer tables split into row groups (header rows repeated)
+  overlap_chars: 600                            # start a chunk with the previous paragraph if it is this short
+
+retrieve:                                       # stage 2 · docs/STAGE2_RETRIEVE.md
+  embedder: local:Qwen/Qwen3-Embedding-0.6B     # env TENK_EMBEDDER · or voyage:voyage-3.5
+  reranker: local:BAAI/bge-reranker-v2-m3       # env TENK_RERANKER · or cohere:rerank-v3.5, voyage:rerank-2.5, none
+  mode: dense                                   # env TENK_RETRIEVAL · keyword | dense | hybrid
+  candidates: 40                                # chunks per search before reranking
+  slot_search: true                             # one search per (company, filing) named in the question
+  device: null                                  # env TENK_LOCAL_DEVICE · where local models run: null = GPU if any, cpu
+
+model:                                          # stages 3-4
+  name: anthropic:claude-sonnet-5               # env TENK_MODEL · or openai:<model> on an OpenAI-compatible server
+  base_url: http://localhost:8001/v1            # env OPENAI_BASE_URL · vLLM / Ollama, for openai:* models
+  thinking: null                                # env TENK_OPENAI_THINKING · open hybrid-reasoning models: false = off
+  gpu_hourly_usd: 0.86                          # env TENK_GPU_HOURLY_USD · cost of self-hosted models = latency x rate
+
+answer:                                         # stage 3 · docs/STAGE3_ANSWER.md
+  k: 8                                          # chunks given to the model
+
+agent:                                          # stage 4 · docs/STAGE4_AGENT.md
+  max_tool_calls: 15                            # env TENK_MAX_TOOL_CALLS
+  section_chars: 24000                          # one page of get_filing_section
+  structured_data: false                        # env TENK_STRUCTURED_DATA · V5: add the XBRL tool
+
+verify:                                         # stage 5 · docs/STAGE5_VERIFY.md
+  enabled: true                                 # label every claim verified / calculated / cited / unverified
+  repair: true                                  # research mode: send failed claims back to the agent once
+  repair_calls: 4                               # extra tool calls in the repair round
+
+eval:                                           # docs/EVAL.md
+  judge_model: anthropic:claude-haiku-4-5       # env TENK_JUDGE_MODEL · fixed, whatever model is under test

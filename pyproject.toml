@@ -5,13 +5,25 @@ description = "Agentic research assistant for grounded, cited answers over SEC 1
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "anthropic>=1.9.0",
     "beautifulsoup4>=4.12",
+    "fastapi>=0.142.2",
     "httpx>=0.27",
     "lxml>=5.0",
+    "numpy>=2.5.3",
+    "openai>=3.22.1",
+    "pyyaml>=6.0.3",
+    "sqlite-vec>=0.1.9",
+    "uvicorn[standard]>=0.54.0",
 ]
 
 [project.scripts]
 tenk = "tenk_agent.cli:main"
+
+[project.optional-dependencies]
+local = [
+    "sentence-transformers>=6.1.0",
+]
 
 [dependency-groups]
 dev = [
@@ -35,3 +47,10 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# Prompt text reads better unwrapped.
+"src/tenk_agent/{agent,answers,ask}.py" = ["E501"]
+"src/tenk_agent/evaluation/judge.py" = ["E501"]
+# Playgrounds: usage examples and report lines read better unwrapped.
+"playground/*.py" = ["E501"]
