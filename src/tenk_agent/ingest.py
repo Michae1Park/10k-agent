@@ -4,7 +4,7 @@ import json
 import logging
 from pathlib import Path
 
-from tenk_agent.chunking import chunk_sections
+from tenk_agent.chunking import DEFAULT_SIZES, ChunkSizes, chunk_sections
 from tenk_agent.corpus import company_by_ticker
 from tenk_agent.edgar import Filing
 from tenk_agent.parse import parse_filing
@@ -20,30 +20,37 @@ def db_path(data_dir: Path) -> Path:
     return data_dir / "tenk.db"
 
 
-def ingest(data_dir: Path, tickers: list[str] | None = None) -> Store:
+def downloaded_filings(data_dir: Path) -> list[Filing]:
+    """Every filing in data/raw/manifest.json (written by `tenk fetch`)."""
     manifest = json.loads((data_dir / "raw" / "manifest.json").read_text())
+    return [Filing(**record) for records in manifest.values() for record in records]
+
+
+def ingest(
+    data_dir: Path, tickers: list[str] | None = None, sizes: ChunkSizes = DEFAULT_SIZES
+) -> Store:
     store = Store(db_path(data_dir))
-    for ticker, filings in manifest.items():
+    for filing in downloaded_filings(data_dir):
+        ticker = filing.ticker
         if tickers and ticker not in tickers:
             continue
-        for record in filings:
-            filing = Filing(**record)
-            html = _document_path(data_dir, filing).read_text(encoding="utf-8", errors="ignore")
-            sections = parse_filing(html)
-            chunks = chunk_sections(f"{ticker}-FY{filing.fiscal_year}", sections)
-            store.add_filing(filing, company_by_ticker(ticker).name, sections, chunks)
-            log.info(
-                "Ingested %s FY%s: %d sections, %d chunks",
-                ticker,
-                filing.fiscal_year,
-                len(sections),
-                len(chunks),
-            )
+        html = document_path(data_dir, filing).read_text(encoding="utf-8", errors="ignore")
+        sections = parse_filing(html)
+        chunks = chunk_sections(f"{ticker}-FY{filing.fiscal_year}", sections, sizes)
+        company = company_by_ticker(ticker)
+        store.add_filing(filing, company.name, sections, chunks, company.aliases)
+        log.info(
+            "Ingested %s FY%s: %d sections, %d chunks",
+            ticker,
+            filing.fiscal_year,
+            len(sections),
+            len(chunks),
+        )
     store.rebuild_search_index()
     return store
 
 
-def _document_path(data_dir: Path, filing: Filing) -> Path:
+def document_path(data_dir: Path, filing: Filing) -> Path:
     filing_dir = data_dir / "raw" / "filings" / filing.ticker / f"FY{filing.fiscal_year}"
     return filing_dir / filing.primary_document
 

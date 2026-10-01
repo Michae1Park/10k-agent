@@ -13,11 +13,21 @@ from dataclasses import dataclass, field
 from tenk_agent.parse import Block, Section
 
 MAX_CHARS = 2400  # ~600 tokens
-MAX_TABLE_CHARS = 3 * MAX_CHARS
-MAX_OVERLAP_CHARS = MAX_CHARS // 4
 HEADER_ROWS = 2
 UNITS = re.compile(r"in (millions|thousands|billions)", re.IGNORECASE)
 YEAR = re.compile(r"\b(20[0-3]\d)\b")
+
+
+@dataclass(frozen=True)
+class ChunkSizes:
+    """config.yaml `ingest:`."""
+
+    chunk_chars: int = MAX_CHARS
+    table_chars: int = 3 * MAX_CHARS
+    overlap_chars: int = MAX_CHARS // 4
+
+
+DEFAULT_SIZES = ChunkSizes()
 
 
 @dataclass
@@ -31,11 +41,13 @@ class Chunk:
     years_covered: list[int] = field(default_factory=list)
 
 
-def chunk_sections(prefix: str, sections: list[Section]) -> list[Chunk]:
+def chunk_sections(
+    prefix: str, sections: list[Section], sizes: ChunkSizes = DEFAULT_SIZES
+) -> list[Chunk]:
     """Chunk every section. IDs look like '<prefix>-<item>-<seq>', e.g. 'AAPL-FY2025-7-012'."""
     chunks = []
     for section in sections:
-        for seq, (kind, text) in enumerate(_section_chunks(section)):
+        for seq, (kind, text) in enumerate(_section_chunks(section, sizes)):
             chunk = Chunk(f"{prefix}-{section.item}-{seq:03d}", section.item, seq, kind, text)
             if kind == "table":
                 # Units and years live in the caption and header rows at the top.
@@ -46,43 +58,43 @@ def chunk_sections(prefix: str, sections: list[Section]) -> list[Chunk]:
     return chunks
 
 
-def _section_chunks(section: Section):
+def _section_chunks(section: Section, sizes: ChunkSizes):
     """Yield (kind, text) in reading order."""
     prose: list[str] = []
     for i, block in enumerate(section.blocks):
         if block.kind == "paragraph":
-            prose.extend(_split_long(block.text))
+            prose.extend(_split_long(block.text, sizes.chunk_chars))
             continue
-        yield from _flush(prose)
+        yield from _flush(prose, sizes)
         prose = []
         caption = _caption(section.blocks[:i])
-        for text in _table_texts(block, caption):
+        for text in _table_texts(block, caption, sizes.table_chars):
             yield "table", text
-    yield from _flush(prose)
+    yield from _flush(prose, sizes)
 
 
-def _flush(paragraphs: list[str]):
-    """Pack paragraphs into prose chunks of at most MAX_CHARS, with a one-paragraph overlap."""
+def _flush(paragraphs: list[str], sizes: ChunkSizes):
+    """Pack paragraphs into prose chunks of at most chunk_chars, with a one-paragraph overlap."""
     current: list[str] = []
     for paragraph in paragraphs:
-        if current and len("\n".join(current + [paragraph])) > MAX_CHARS:
+        if current and len("\n".join(current + [paragraph])) > sizes.chunk_chars:
             yield "prose", "\n".join(current)
             last = current[-1]
-            current = [last] if len(last) <= MAX_OVERLAP_CHARS else []
+            current = [last] if len(last) <= sizes.overlap_chars else []
         current.append(paragraph)
     if current:
         yield "prose", "\n".join(current)
 
 
-def _table_texts(table: Block, caption: str) -> list[str]:
+def _table_texts(table: Block, caption: str, max_chars: int) -> list[str]:
     rows = ["| " + " | ".join(row) + " |" for row in table.rows]
     head = ([caption] if caption else []) + rows[:HEADER_ROWS]
     body = rows[HEADER_ROWS:]
-    if len("\n".join(head + body)) <= MAX_TABLE_CHARS:
+    if len("\n".join(head + body)) <= max_chars:
         return ["\n".join(head + body)]
     texts, group = [], []
     for row in body:
-        if group and len("\n".join(head + group + [row])) > MAX_TABLE_CHARS:
+        if group and len("\n".join(head + group + [row])) > max_chars:
             texts.append("\n".join(head + group))
             group = []
         group.append(row)
@@ -99,13 +111,13 @@ def _caption(preceding: list[Block]) -> str:
     return "\n".join(lines)
 
 
-def _split_long(text: str) -> list[str]:
-    """Split a paragraph longer than MAX_CHARS at sentence boundaries."""
-    if len(text) <= MAX_CHARS:
+def _split_long(text: str, max_chars: int) -> list[str]:
+    """Split a paragraph longer than max_chars at sentence boundaries."""
+    if len(text) <= max_chars:
         return [text]
     parts, current = [], ""
     for sentence in re.split(r"(?<=[.;])\s+", text):
-        if current and len(current) + len(sentence) + 1 > MAX_CHARS:
+        if current and len(current) + len(sentence) + 1 > max_chars:
             parts.append(current)
             current = ""
         current = f"{current} {sentence}".strip()
