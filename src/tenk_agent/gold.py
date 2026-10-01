@@ -1,6 +1,6 @@
 """Gold dataset tooling: validation, evidence-to-chunk resolution and XBRL cross-checks.
 
-Rules for the dataset itself are in docs/eval/gold-set-guide.md.
+Rules for the dataset itself are in docs/EVAL.md.
 """
 
 import json
