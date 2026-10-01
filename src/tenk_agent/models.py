@@ -176,6 +176,7 @@ class OpenAICompatibleModel:
     gpu_hourly_usd: float = 0.0
     base_url: str = "http://localhost:8001/v1"
     thinking: bool | None = None  # Qwen-style hybrid reasoning: False turns thinking off
+    temperature: float = 0.0  # V7 rollouts sample several attempts per question
     name: str = field(init=False)
 
     def __post_init__(self):
@@ -216,7 +217,7 @@ class OpenAICompatibleModel:
             model=self.model,
             messages=chat,
             max_tokens=max_tokens,
-            temperature=0,
+            temperature=self.temperature,
             extra_body=self._extra or None,
             **kwargs,
         )
@@ -281,12 +282,13 @@ def get_model(
     gpu_hourly_usd: float = 0.0,
     base_url: str = "http://localhost:8001/v1",
     thinking: bool | None = None,
+    temperature: float = 0.0,
 ) -> Model:
     provider, _, model = spec.partition(":")
     if provider == "anthropic":
         return AnthropicModel(model)
     if provider == "openai":
-        return OpenAICompatibleModel(model, gpu_hourly_usd, base_url, thinking)
+        return OpenAICompatibleModel(model, gpu_hourly_usd, base_url, thinking, temperature)
     raise ValueError(f"Unknown model spec {spec!r} (use anthropic:<id> or openai:<model>)")
 
 

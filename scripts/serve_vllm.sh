@@ -3,6 +3,7 @@
 #
 #   scripts/serve_vllm.sh qwen3.5-9b            # then: TENK_MODEL=openai:Qwen/Qwen3.5-9B
 #   scripts/serve_vllm.sh qwen3.6-27b-fp8
+#   scripts/serve_vllm.sh qwen3.5-9b-v7      # V7: then TENK_MODEL=openai:tenk/qwen3.5-9b-v7
 #
 # Everything must fit on one L40S (48 GB). The tenk process also keeps the embedder and
 # reranker on the GPU (3–6 GB per process), so vLLM gets 72% of memory by default.
@@ -23,6 +24,12 @@ case "$preset" in
     model=Qwen/Qwen3.5-9B
     args=(--dtype bfloat16 --tool-call-parser qwen3_coder --reasoning-parser qwen3)
     ;;
+  qwen3.5-9b-v7)
+    # The merged V7 fine-tune (scripts/finetune.sh merge); same settings as its base.
+    model=${V7_MODEL:-data/finetune/v7/merged}
+    name=tenk/qwen3.5-9b-v7
+    args=(--dtype bfloat16 --tool-call-parser qwen3_coder --reasoning-parser qwen3)
+    ;;
   qwen3.6-27b-fp8)
     model=Qwen/Qwen3.6-27B-FP8
     # 28.5 GB of weights: skip CUDA graphs and the unused vision encoder, or the KV cache
@@ -37,13 +44,13 @@ case "$preset" in
     args=(--dtype bfloat16 --tool-call-parser hermes --reasoning-parser qwen3)
     ;;
   *)
-    echo "unknown preset $preset (qwen3.5-9b, qwen3.6-27b-fp8, qwen3-1.7b)" >&2
+    echo "unknown preset $preset (qwen3.5-9b, qwen3.5-9b-v7, qwen3.6-27b-fp8, qwen3-1.7b)" >&2
     exit 2
     ;;
 esac
 
 exec taskset -c "$CPUS" "$VLLM_BIN" serve "$model" \
-  --served-model-name "$model" \
+  --served-model-name "${name:-$model}" \
   --port "$PORT" \
   --gpu-memory-utilization "$GPU_UTIL" \
   --max-model-len "$MAX_LEN" \

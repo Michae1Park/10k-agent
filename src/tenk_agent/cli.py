@@ -110,6 +110,26 @@ def main(argv: list[str] | None = None) -> int:
     calibrate.add_argument("label", help="run label")
     calibrate.add_argument("--answers", type=int, default=30)
 
+    finetune = commands.add_parser("finetune", help="V7 fine-tuning data (docs/FINETUNE.md)")
+    ft_actions = finetune.add_subparsers(dest="ft_action", required=True)
+    questions = ft_actions.add_parser("questions", help="generate questions with XBRL answers")
+    questions.add_argument("--out", type=Path, help="default: <data_dir>/questions.jsonl")
+    questions.add_argument("--heldout", type=float, default=0.2, help="share of companies held out")
+    rollouts = ft_actions.add_parser("rollouts", help="the agent answers them; attempts are scored")
+    rollouts.add_argument("--questions", type=Path, help="default: <data_dir>/questions.jsonl")
+    rollouts.add_argument("--out", type=Path, help="default: <data_dir>/rollouts.jsonl")
+    rollouts.add_argument("--split", default="train")
+    rollouts.add_argument("--samples", type=int, default=2, help="attempts per question")
+    rollouts.add_argument("--temperature", type=float, default=0.7)
+    rollouts.add_argument("--workers", type=int, default=4)
+    rollouts.add_argument("--limit", type=int)
+    dataset = ft_actions.add_parser("dataset", help="passing attempts -> SFT records")
+    dataset.add_argument("--rollouts", type=Path, help="default: <data_dir>/rollouts.jsonl")
+    dataset.add_argument("--out", type=Path, help="default: <data_dir>/sft.jsonl")
+    dataset.add_argument("--split", default="train")
+    dataset.add_argument("--max-per-question", type=int, default=2)
+    dataset.add_argument("--max-tool-errors", type=int, default=0)
+
     args = parser.parse_args(argv)
     args.data_dir = args.data_dir or Settings.load().data_dir
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -127,6 +147,7 @@ def main(argv: list[str] | None = None) -> int:
         "research": _answer,
         "serve": _serve,
         "eval": _eval,
+        "finetune": _finetune,
     }
     return handlers[args.command](args)
 
@@ -423,6 +444,44 @@ def _eval(args: argparse.Namespace) -> int:
     summary = runner.run(options, settings)
     print(json.dumps({k: v for k, v in summary.items() if k != "config"}, indent=2))
     print(f"Results: {runner.RUNS_DIR / label}")
+    return 0
+
+
+def _finetune(args: argparse.Namespace) -> int:
+    from tenk_agent.finetune import dataset, questions, rollouts
+
+    data_dir = args.data_dir
+    if args.ft_action == "questions":
+        store = Store(db_path(data_dir))
+        generated = questions.generate(store, data_dir, heldout_fraction=args.heldout)
+        out = args.out or data_dir / "questions.jsonl"
+        questions.write(generated, out)
+        kinds = Counter((q["split"], q["kind"]) for q in generated)
+        print(json.dumps({f"{s}/{k}": n for (s, k), n in sorted(kinds.items())}, indent=2))
+        print(f"Wrote {len(generated)} questions to {out}")
+        return 0
+    if args.ft_action == "rollouts":
+        options = rollouts.RolloutOptions(
+            questions=args.questions or data_dir / "questions.jsonl",
+            out=args.out or data_dir / "rollouts.jsonl",
+            split=args.split,
+            samples=args.samples,
+            temperature=args.temperature,
+            workers=args.workers,
+            limit=args.limit,
+        )
+        print(json.dumps(rollouts.run(options, _settings(args)), indent=2))
+        return 0
+    options = dataset.DatasetOptions(
+        rollouts=args.rollouts or data_dir / "rollouts.jsonl",
+        out=args.out or data_dir / "sft.jsonl",
+        split=args.split,
+        max_per_question=args.max_per_question,
+        max_tool_errors=args.max_tool_errors,
+    )
+    report = dataset.build(options)
+    print(json.dumps(report.to_dict(), indent=2))
+    print(f"Wrote {report.kept} records to {options.out}")
     return 0
 
 

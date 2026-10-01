@@ -45,14 +45,20 @@ def research(
     verify: bool = True,
     repair: bool = True,
     repair_calls: int = 4,
+    transcript: dict | None = None,
 ) -> Iterator[dict]:
     """Yield events: {"type": "step", ...} per tool call, then {"type": "answer", ...}.
 
     With `verify`, claims go through the deterministic verification pass; with `repair`
     too, claims that fail it are sent back to the agent once to correct (V4). Claims still
     failing afterwards stay in the answer, labeled unverified.
+
+    A `transcript` dict is filled with the system prompt, tool specs and every message, as
+    the model saw them (V7 training data; traces keep only summaries).
     """
     run = _Run(question, store, toolbox, model, max_tool_calls)
+    if transcript is not None:
+        transcript |= {"system": run.system, "tools": toolbox.specs, "messages": run.messages}
     try:
         yield from run.turns(max_tool_calls)
         raw = run.final_json()
