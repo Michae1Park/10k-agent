@@ -1,0 +1,13 @@
+{
+  "label": "abl-qwen-dense-rerank-m3",
+  "system": "retrieval",
+  "started_at": "2026-09-30T14:06:26.516482+00:00",
+  "model": null,
+  "judge_model": null,
+  "retriever": "dense local:Qwen/Qwen3-Embedding-0.6B rerank=local:BAAI/bge-reranker-v2-m3",
+  "verify": true,
+  "structured_data": false,
+  "split": "dev",
+  "questions": 23,
+  "includes_unverified": true
+}

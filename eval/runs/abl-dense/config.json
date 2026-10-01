@@ -1,0 +1,13 @@
+{
+  "label": "abl-dense",
+  "system": "retrieval",
+  "started_at": "2026-09-30T13:57:20.404017+00:00",
+  "model": null,
+  "judge_model": null,
+  "retriever": "dense local:BAAI/bge-base-en-v1.5",
+  "verify": true,
+  "structured_data": false,
+  "split": "dev",
+  "questions": 23,
+  "includes_unverified": true
+}

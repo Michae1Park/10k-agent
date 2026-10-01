@@ -1,0 +1,24 @@
+{
+  "questions": 23,
+  "errors": 0,
+  "verified_questions": 0,
+  "retrieval": {
+    "recall@5": 0.3157,
+    "recall@10": 0.5571,
+    "mrr": 0.2473,
+    "scored": 22
+  },
+  "config": {
+    "label": "abl-dense-rerank",
+    "system": "retrieval",
+    "started_at": "2026-09-30T13:58:34.989273+00:00",
+    "model": null,
+    "judge_model": null,
+    "retriever": "dense local:BAAI/bge-base-en-v1.5 rerank=local:BAAI/bge-reranker-base",
+    "verify": true,
+    "structured_data": false,
+    "split": "dev",
+    "questions": 23,
+    "includes_unverified": true
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "label": "v4-research-qwen3.5-9b",
+  "system": "research",
+  "started_at": "2026-09-30T14:41:35.597624+00:00",
+  "model": "openai:Qwen/Qwen3.5-9B",
+  "judge_model": null,
+  "retriever": "dense local:Qwen/Qwen3-Embedding-0.6B rerank=local:BAAI/bge-reranker-v2-m3",
+  "verify": true,
+  "repair": true,
+  "structured_data": false,
+  "split": "test",
+  "questions": 31,
+  "includes_unverified": true
+}
