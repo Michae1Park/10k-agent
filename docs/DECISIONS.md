@@ -31,9 +31,12 @@ Why the project looks the way it does: decisions, and the issues found along the
 | [D-019](#d-019) | 2026-10-01 | `config.yaml` holds every knob; `TENK_*` variables override the model choices | Accepted |
 | [D-020](#d-020) | 2026-10-01 | Self-hosted cost = latency × GPU hourly rate ($0.86/h, L40S) | Accepted |
 | [D-021](#d-021) | 2026-10-01 | V5: structured XBRL data stays out of the product | Accepted |
-| [D-022](#d-022) | 2026-09-26 | V7 fine-tuning: data from open models only, outside the eval corpus | Proposed |
+| [D-022](#d-022) | 2026-09-26 | V7 fine-tuning: data from open models only, outside the eval corpus | Superseded by D-025 |
 | [D-023](#d-023) | 2026-09-26 | Public deployment: deferred; would move SQLite → Postgres + pgvector | Proposed |
 | [D-024](#d-024) | 2026-10-01 | Docs: README + one guide per stage + this log (PRD and plan folded in) | Accepted |
+| [D-025](#d-025) | 2026-10-01 | V7 always runs; tuned vs the same model un-tuned; D-022's data rules kept and enforced in code | Accepted |
+| [D-026](#d-026) | 2026-10-01 | V7 training: HF Trainer + PEFT LoRA in the project env, assistant-only loss, merged for vLLM | Accepted |
+| [D-027](#d-027) | 2026-10-01 | Comparisons report bootstrap intervals and paired tests; "better/worse" needs p < 0.05 | Accepted |
 
 ### D-001
 **8 companies × FY2023–2025, 24 10-Ks.** Fiscal years end in different months, so "revenue in 2024" is a real disambiguation problem. The range is fixed so the corpus doesn't change when a company files a newer 10-K.
@@ -128,6 +131,15 @@ A public demo needs rate limiting, an API budget and Postgres + pgvector. Decide
 
 ### D-024
 Documentation follows the shape of [prompt-pick-place](https://github.com/Michae1Park/prompt-pick-place): a README with the pipeline table, one guide per stage (Commands · Data · Knobs · Outputs · How it works · Things to try · Gotchas), one playground per stage, and this log. The PRD and project plan were folded in: requirements and roadmap into the README, rationale here, the how into the stage guides.
+
+### D-025
+Supersedes D-022's condition: V7 no longer waits for a Claude-baseline gap. The question is what fine-tuning does to the same model, so V7 is compared to Qwen3.5-9B un-tuned, with identical settings (thinking off, same prompt, tools, budget and verification), on the eval `test` split and on held-out training companies. D-022's data rules stand and are now code (`finetune/dataset.py`, tested): no Claude outputs, no gold questions, no eval-corpus filings (eval companies' FY2022 and earlier allowed), only attempts that pass the deterministic checks. Questions are generated from XBRL facts, so no model writes them. [FINETUNE.md](FINETUNE.md).
+
+### D-026
+Considered: hosted no-code tuning (no Qwen3.5 support, data leaves the machine), LLaMA-Factory (not wanted), TRL `SFTTrainer` and a raw PyTorch loop. Chosen: Hugging Face `Trainer` + PEFT LoRA, ~150 lines, because the two hard parts aren't covered by stock tools. (1) Masking: the Qwen3.5 template has no assistant-mask markers, so TRL's `assistant_only_loss` can't work; records are rendered with the model's template exactly as vLLM renders them, cut at user turns, and labeled by character span. (2) Memory: full logits for a 40k-token trajectory are ~40 GB; the loss requests logits only at assistant positions. The adapter is merged into full weights so vLLM serves V7 like the base model. Training deps are the optional `finetune` extra of the project env.
+
+### D-027
+With 31 test questions, a single percentage hides a ±10-point interval, and V-to-V differences of one or two questions are noise. `tenk eval compare` therefore reports every metric with a 95% bootstrap interval over questions, and each candidate's difference from the baseline on the same questions with a bootstrap interval and a sign-flip permutation p-value, plus exact McNemar counts (fixed vs regressed) for task completion. A difference reads as better or worse only at p < 0.05: the percentile bootstrap is over-confident when few questions change (4 changes all one way give p = 0.125, yet the interval excludes zero). Failures get one cause each, the first pipeline stage that broke. [EVAL.md](EVAL.md#comparing-runs).
 
 ## Issues
 

@@ -39,6 +39,7 @@ Every model call goes through `Model.complete(messages, tools)` (`src/tenk_agent
 | Preset | Model | Weights | Context | KV cache | Notes |
 |---|---|---|---|---|---|
 | `qwen3.5-9b` | Qwen/Qwen3.5-9B | 18 GB BF16 | 64k | 124k tokens at `GPU_UTIL=0.80` | V2–V5 runs |
+| `qwen3.5-9b-v7` | `data/finetune/v7/merged` (`V7_MODEL`), served as `tenk/qwen3.5-9b-v7` | 18 GB BF16 | 64k | | V7 ([FINETUNE.md](FINETUNE.md)); no MTP head, so no speculative decoding |
 | `qwen3.6-27b-fp8` | Qwen/Qwen3.6-27B-FP8 | 28.5 GB FP8 | 32k | 27k tokens at `GPU_UTIL=0.80` | eager mode, no vision, bf16 KV ([I-003](DECISIONS.md#i-003)); use `--workers 2` |
 | `qwen3-1.7b` | Qwen/Qwen3-1.7B | 3.4 GB | 64k | | smoke tests |
 
@@ -48,7 +49,7 @@ Every model call goes through `Model.complete(messages, tools)` (`src/tenk_agent
 | `MAX_LEN` / `MAX_LEN_27B` | 65536 / 32768 | Context length; trajectories reach 20–40k tokens per request |
 | `PORT`, `CPUS`, `VLLM_BIN` | 8001, 16-31, `vllm` | |
 
-**What fits on one L40S (48 GB, ~44 usable):** serving ≤ 14B in BF16 comfortably, ~30B in FP8 / 4-bit tightly, 70B not at all. LoRA fine-tuning ≤ 8B; QLoRA ≤ 14B ([D-022](DECISIONS.md#d-022)).
+**What fits on one L40S (48 GB, ~44 usable):** serving ≤ 14B in BF16 comfortably, ~30B in FP8 / 4-bit tightly, 70B not at all. LoRA fine-tuning of the 9B in BF16 up to 38k-token samples (tested, 41.3 GiB); QLoRA ≤ 14B ([D-026](DECISIONS.md#d-026)).
 
 ## API
 

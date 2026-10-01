@@ -24,6 +24,11 @@ tenk = "tenk_agent.cli:main"
 local = [
     "sentence-transformers>=6.1.0",
 ]
+finetune = [
+    "accelerate>=1.11",
+    "flash-linear-attention>=0.5.2",
+    "peft>=0.18",
+]
 
 [dependency-groups]
 dev = [

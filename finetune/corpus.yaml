@@ -1,0 +1,30 @@
+# V7 training corpus (D-022): companies outside the eval corpus, same fiscal years.
+# Used with TENK_CORPUS=finetune/corpus.yaml TENK_DATA_DIR=data/train (docs/FINETUNE.md).
+# Fiscal year ends vary on purpose: the agent has to learn the same calendar-vs-fiscal
+# year handling the eval tests. CIKs are checked by `tenk fetch` (it prints each filer).
+
+fiscal_years: [2023, 2024, 2025]
+
+companies:
+  # December year ends
+  - {ticker: INTC, cik: 50863, name: "Intel Corporation", aliases: [Intel]}
+  - {ticker: AMD, cik: 2488, name: "Advanced Micro Devices, Inc.", aliases: [AMD]}
+  - {ticker: UBER, cik: 1543151, name: "Uber Technologies, Inc.", aliases: [Uber]}
+  - {ticker: PEP, cik: 77476, name: "PepsiCo, Inc.", aliases: [PepsiCo, Pepsi]}
+  - {ticker: JNJ, cik: 200406, name: "Johnson & Johnson", aliases: [J&J]}
+  # Fiscal years ending in January (like NVIDIA): the FY label runs ahead of the calendar
+  - {ticker: CRM, cik: 1108524, name: "Salesforce, Inc.", aliases: [Salesforce]}
+  - {ticker: WMT, cik: 104169, name: "Walmart Inc.", aliases: [Walmart]}
+  - {ticker: HD, cik: 354950, name: "The Home Depot, Inc.", aliases: [Home Depot]}
+  # Fiscal years ending May to November (like Apple and Microsoft)
+  - {ticker: NKE, cik: 320187, name: "NIKE, Inc.", aliases: [Nike]}
+  - {ticker: FDX, cik: 1048911, name: "FedEx Corporation", aliases: [FedEx]}
+  - {ticker: PG, cik: 80424, name: "The Procter & Gamble Company", aliases: [Procter & Gamble, P&G]}
+  - {ticker: CSCO, cik: 858877, name: "Cisco Systems, Inc.", aliases: [Cisco]}
+  - {ticker: COST, cik: 909832, name: "Costco Wholesale Corporation", aliases: [Costco]}
+  - {ticker: MU, cik: 723125, name: "Micron Technology, Inc.", aliases: [Micron]}
+  - {ticker: QCOM, cik: 804328, name: "QUALCOMM Incorporated", aliases: [Qualcomm]}
+  - {ticker: V, cik: 1403161, name: "Visa Inc.", aliases: [Visa]}
+  - {ticker: SBUX, cik: 829224, name: "Starbucks Corporation", aliases: [Starbucks]}
+  - {ticker: AVGO, cik: 1730168, name: "Broadcom Inc.", aliases: [Broadcom]}
+  - {ticker: ADBE, cik: 796343, name: "Adobe Inc.", aliases: [Adobe]}

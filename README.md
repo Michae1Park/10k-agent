@@ -64,6 +64,7 @@ flowchart LR
 ```bash
 git clone <this repo> && cd 10k-agent
 uv sync --extra local                          # Python deps + local embedding / reranker models
+                                               # (+ --extra finetune for V7 training)
 export SEC_USER_AGENT="Your Name you@example.com"
 uv run tenk fetch                              # 24 10-Ks from EDGAR (cached)
 uv run tenk ingest                             # parse + chunk → data/tenk.db (~30 s)
@@ -108,7 +109,8 @@ The UI has an Ask / Research toggle, a live step list, clickable citations with 
 | [Stage 3 — Answer](docs/STAGE3_ANSWER.md) | Prompt, rules for failure cases, answer format |
 | [Stage 4 — Agent](docs/STAGE4_AGENT.md) | The four tools, the loop, budgets, reference trajectory |
 | [Stage 5 — Verify](docs/STAGE5_VERIFY.md) | Number parsing, unit normalization, precision matching, repair |
-| [Evaluation](docs/EVAL.md) | Gold set format and rules, metrics, running and reporting evals |
+| [Evaluation](docs/EVAL.md) | Gold set format and rules, metrics, running evals, comparing runs (intervals, paired tests, error analysis, charts) |
+| [V7 — Fine-tuning](docs/FINETUNE.md) | Training corpus, generated questions, rollouts, D-022 guards, LoRA training, merge, base-vs-tuned eval |
 | [Serving](docs/SERVING.md) | Model layer, vLLM presets, API, UI, traces |
 | [Decisions & issues](docs/DECISIONS.md) | Why things are the way they are, known issues |
 
@@ -117,11 +119,12 @@ The UI has an Ask / Research toggle, a live step list, clickable citations with 
 | Path | Contents |
 |---|---|
 | `src/tenk_agent/` | The pipeline: `edgar`, `parse`, `chunking`, `ingest` · `store`, `embeddings`, `retrieval` · `ask`, `answers`, `agent`, `tools`, `calculator` · `verify` · `models`, `tracing`, `api`, `cli` · `xbrl` (V5) |
-| `src/tenk_agent/evaluation/` | Eval runner, scoring, LLM judge, report, judge calibration |
+| `src/tenk_agent/evaluation/` | Eval runner, scoring, LLM judge, report, judge calibration · `stats`, `analysis`, `compare` (run comparisons) |
+| `src/tenk_agent/finetune/` · `finetune/` | V7 data: questions, rollouts, SFT dataset · training corpus, config, `train.py`, `merge.py` |
 | `playground/` | One script per stage, for trying and debugging it alone |
 | `web/` | Next.js UI |
-| `eval/` | Gold set, reference trajectories, every run (`runs/`), `results.md` |
-| `scripts/` | `serve_vllm.sh` (open models), `eval_all.sh` (one-command eval) |
+| `eval/` | Gold set, reference trajectories, every run (`runs/`), `results.md`, comparison reports (`reports/`) |
+| `scripts/` | `serve_vllm.sh` (open models), `eval_all.sh` (one-command eval), `finetune.sh` (V7, step by step) |
 | `config.yaml` | Every tunable parameter, per stage |
 | `data/` | Filings, XBRL facts, `tenk.db` (generated, git-ignored) |
 | `tests/` | Unit tests, no GPU or model (`env -u PYTHONPATH uv run pytest` on this machine, [I-010](docs/DECISIONS.md#i-010)) |
@@ -137,7 +140,7 @@ The UI has an Ask / Research toggle, a live step list, clickable citations with 
 | V4 · Reliable agent | Verification + repair, failure-case rules, judge calibration tool | ✅ calibration not yet run (needs the judge) |
 | V5 · Structured data (experiment) | XBRL tool; documents-only vs with XBRL | ✅ measured; kept out ([D-021](docs/DECISIONS.md#d-021)) |
 | V6 · Open models | 9B and 27B on vLLM vs the Claude baseline | 🟡 open models measured; baseline needs a key |
-| V7 · Fine-tuning | Only if V6 shows a gap ([D-022](docs/DECISIONS.md#d-022)) | ⏸ waiting on V6 baseline |
+| V7 · Fine-tuning | LoRA on the 9B's own passing trajectories vs the same model un-tuned ([D-025](docs/DECISIONS.md#d-025)) | 🟡 rig built and smoke-tested; training data not generated yet |
 | Ship | Verified gold set, Claude baseline column, demo | 🗺️ next |
 
 ## Results
