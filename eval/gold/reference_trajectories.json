@@ -1,0 +1,17 @@
+{
+  "aapl-revenue-mix-fy2023-2025": {
+    "notes": "Project plan, flagship demo (task 5). The FY2025 10-K's net-sales-by-category table covers FY2023–FY2025, so one read gets all figures; one calculator call can compute several shares via separate expressions, but a call per figure is allowed for here.",
+    "steps": [
+      {"tool": "search_filings", "purpose": "Find the net sales by category table (Item 7) in the FY2025 10-K"},
+      {"tool": "search_filings", "purpose": "Find MD&A explanations of category changes in the FY2025 10-K"},
+      {"tool": "search_filings", "purpose": "Find MD&A explanations of category changes in the FY2024 10-K"},
+      {"tool": "calculator", "purpose": "Services share of net sales, FY2023"},
+      {"tool": "calculator", "purpose": "Services share of net sales, FY2025"},
+      {"tool": "calculator", "purpose": "iPhone change FY2024 to FY2025"},
+      {"tool": "calculator", "purpose": "Wearables change FY2023 to FY2025"},
+      {"tool": "calculator", "purpose": "Mac change FY2023 to FY2025"},
+      {"tool": "verify_citation", "purpose": "Cross-check category figures against the cited table"},
+      {"tool": "verify_citation", "purpose": "Cross-check a second cited figure"}
+    ]
+  }
+}
