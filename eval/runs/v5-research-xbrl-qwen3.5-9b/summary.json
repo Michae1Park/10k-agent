@@ -1,0 +1,80 @@
+{
+  "questions": 31,
+  "errors": 0,
+  "verified_questions": 0,
+  "retrieval": {
+    "evidence_recall": 0.523,
+    "scored": 29
+  },
+  "answers": {
+    "correctness": 1.0,
+    "task_completion": 1.0,
+    "faithfulness": null,
+    "citation_accuracy": 0.8936,
+    "unsupported_answer_rate": 0.0,
+    "false_abstention_rate": 0.0,
+    "format_error_rate": 0.0,
+    "correctness_scored": 21
+  },
+  "agent": {
+    "tool_selection": 0.7742,
+    "tool_call_correctness": 0.934,
+    "mean_tool_calls": 9.7742,
+    "unnecessary_calls": 5,
+    "over_budget_rate": 0.3548
+  },
+  "cost": {
+    "mean_latency_s": 98.6327,
+    "p95_latency_s": 215.759,
+    "mean_input_tokens": 112587.8065,
+    "mean_output_tokens": 2370.7742,
+    "mean_cost_usd": 0.0232,
+    "total_cost_usd": 0.7191
+  },
+  "by_category": {
+    "agent_workflow": {
+      "questions": 3,
+      "correctness": null,
+      "task_completion": null
+    },
+    "failure_case": {
+      "questions": 5,
+      "correctness": 1.0,
+      "task_completion": 1.0
+    },
+    "grounding": {
+      "questions": 6,
+      "correctness": null,
+      "task_completion": null
+    },
+    "multi_document": {
+      "questions": 4,
+      "correctness": 1.0,
+      "task_completion": 1.0
+    },
+    "retrieval": {
+      "questions": 9,
+      "correctness": 1.0,
+      "task_completion": 1.0
+    },
+    "tool_use": {
+      "questions": 4,
+      "correctness": 1.0,
+      "task_completion": 1.0
+    }
+  },
+  "config": {
+    "label": "v5-research-xbrl-qwen3.5-9b",
+    "system": "research",
+    "started_at": "2026-09-30T15:03:04.964653+00:00",
+    "model": "openai:Qwen/Qwen3.5-9B",
+    "judge_model": null,
+    "retriever": "dense local:Qwen/Qwen3-Embedding-0.6B rerank=local:BAAI/bge-reranker-v2-m3",
+    "verify": true,
+    "repair": true,
+    "structured_data": true,
+    "split": "test",
+    "questions": 31,
+    "includes_unverified": true
+  }
+}

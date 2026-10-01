@@ -1,0 +1,14 @@
+{
+  "label": "v6-research-qwen3.6-27b-fp8",
+  "system": "research",
+  "started_at": "2026-09-30T15:43:50.969853+00:00",
+  "model": "openai:Qwen/Qwen3.6-27B-FP8",
+  "judge_model": null,
+  "retriever": "dense local:Qwen/Qwen3-Embedding-0.6B rerank=local:BAAI/bge-reranker-v2-m3",
+  "verify": true,
+  "repair": true,
+  "structured_data": false,
+  "split": "test",
+  "questions": 31,
+  "includes_unverified": true
+}

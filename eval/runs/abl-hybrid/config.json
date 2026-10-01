@@ -1,0 +1,13 @@
+{
+  "label": "abl-hybrid",
+  "system": "retrieval",
+  "started_at": "2026-09-30T13:57:31.509490+00:00",
+  "model": null,
+  "judge_model": null,
+  "retriever": "hybrid local:BAAI/bge-base-en-v1.5",
+  "verify": true,
+  "structured_data": false,
+  "split": "dev",
+  "questions": 23,
+  "includes_unverified": true
+}

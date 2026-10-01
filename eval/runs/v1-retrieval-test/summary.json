@@ -1,0 +1,25 @@
+{
+  "questions": 31,
+  "errors": 0,
+  "verified_questions": 0,
+  "retrieval": {
+    "recall@5": 0.7124,
+    "recall@10": 0.8805,
+    "mrr": 0.5259,
+    "scored": 29
+  },
+  "config": {
+    "label": "v1-retrieval-test",
+    "system": "retrieval",
+    "started_at": "2026-09-30T14:23:28.083215+00:00",
+    "model": null,
+    "judge_model": null,
+    "retriever": "dense local:Qwen/Qwen3-Embedding-0.6B rerank=local:BAAI/bge-reranker-v2-m3",
+    "verify": true,
+    "repair": true,
+    "structured_data": false,
+    "split": "test",
+    "questions": 31,
+    "includes_unverified": true
+  }
+}

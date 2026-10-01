@@ -1,0 +1,24 @@
+{
+  "questions": 23,
+  "errors": 0,
+  "verified_questions": 0,
+  "retrieval": {
+    "recall@5": 0.4662,
+    "recall@10": 0.653,
+    "mrr": 0.3672,
+    "scored": 22
+  },
+  "config": {
+    "label": "abl-qwen-hybrid-rerank-m3",
+    "system": "retrieval",
+    "started_at": "2026-09-30T14:07:06.615350+00:00",
+    "model": null,
+    "judge_model": null,
+    "retriever": "hybrid local:Qwen/Qwen3-Embedding-0.6B rerank=local:BAAI/bge-reranker-v2-m3",
+    "verify": true,
+    "structured_data": false,
+    "split": "dev",
+    "questions": 23,
+    "includes_unverified": true
+  }
+}

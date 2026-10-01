@@ -1,0 +1,24 @@
+{
+  "questions": 23,
+  "errors": 0,
+  "verified_questions": 0,
+  "retrieval": {
+    "recall@5": 0.2742,
+    "recall@10": 0.4712,
+    "mrr": 0.3018,
+    "scored": 22
+  },
+  "config": {
+    "label": "abl-dense-nofilter",
+    "system": "retrieval",
+    "started_at": "2026-09-30T13:59:21.126952+00:00",
+    "model": null,
+    "judge_model": null,
+    "retriever": "dense local:BAAI/bge-base-en-v1.5 no-inferred-filters",
+    "verify": true,
+    "structured_data": false,
+    "split": "dev",
+    "questions": 23,
+    "includes_unverified": true
+  }
+}

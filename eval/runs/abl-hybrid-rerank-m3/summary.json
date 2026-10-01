@@ -1,0 +1,24 @@
+{
+  "questions": 23,
+  "errors": 0,
+  "verified_questions": 0,
+  "retrieval": {
+    "recall@5": 0.398,
+    "recall@10": 0.5394,
+    "mrr": 0.3636,
+    "scored": 22
+  },
+  "config": {
+    "label": "abl-hybrid-rerank-m3",
+    "system": "retrieval",
+    "started_at": "2026-09-30T14:02:37.420486+00:00",
+    "model": null,
+    "judge_model": null,
+    "retriever": "hybrid local:BAAI/bge-base-en-v1.5 rerank=local:BAAI/bge-reranker-v2-m3",
+    "verify": true,
+    "structured_data": false,
+    "split": "dev",
+    "questions": 23,
+    "includes_unverified": true
+  }
+}
