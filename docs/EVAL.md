@@ -16,6 +16,7 @@ tenk eval run research --split test                # V4
 tenk eval run research --split test --structured-data --label v5-xbrl    # V5 experiment
 tenk eval rescore <label>                          # recompute deterministic metrics, no model calls
 tenk eval report V1=<label> V2=<label> V3=<label> V4=<label> --out eval/results.md
+tenk eval compare V4=<label> V7=<label> [V6=<label>]     # baseline first: intervals, paired tests, failure causes, charts
 tenk eval calibrate export <label>                 # judge calibration: fill in "human", then
 tenk eval calibrate score <label>
 scripts/eval_all.sh                                # V1–V4 + report in one command
@@ -24,6 +25,7 @@ scripts/eval_all.sh                                # V1–V4 + report in one com
 | Flag | Effect |
 |---|---|
 | `--split dev \| test \| all` | Tune on `dev` only; report `test` |
+| `--gold <file>` | Another question file, e.g. V7's held-out training companies ([FINETUNE.md](FINETUNE.md)) |
 | `--include-unverified` | Also run draft questions; results say so |
 | `--no-judge` | Skip LLM-judge metrics (shown as n/m) |
 | `--workers N` | Questions in parallel (vLLM batches them) |
@@ -38,6 +40,7 @@ scripts/eval_all.sh                                # V1–V4 + report in one com
 | Reference trajectories (unnecessary-calls metric) | `eval/gold/reference_trajectories.json` |
 | **Runs** | `eval/runs/<label>/`: `config.json`, `results.jsonl` (one scored row per question), `summary.json` |
 | Results table | `eval/results.md` |
+| Comparison reports | `eval/reports/<name>.{md,html,json}` |
 | Judge calibration | `eval/calibration/<label>.jsonl` |
 
 **Gold set now:** 100 questions, all `drafted`, none verified ([I-011](DECISIONS.md#i-011)).
@@ -69,6 +72,30 @@ scripts/eval_all.sh                                # V1–V4 + report in one com
 | Latency, tokens, cost | From traces; self-hosted cost = latency × GPU rate ([D-020](DECISIONS.md#d-020)) | no |
 
 The judge is fixed (`eval.judge_model`, Claude Haiku 4.5) whatever model is under test ([D-014](DECISIONS.md#d-014)). Calibrate it once: hand-grade ~30 answers, report agreement and Cohen's kappa.
+
+## Comparing runs
+
+`tenk eval compare BASE=<label> NAME=<label> ...` answers "is the new version better, and where?". The first run is the baseline; paired statistics use the questions both runs answered. It writes Markdown (for the repo), a self-contained HTML page with charts, and the numbers as JSON.
+
+| Section | What it shows | Why |
+|---|---|---|
+| Metrics | Every metric with a **95% bootstrap interval** over questions | 31 questions → about ±10 points; a single percentage hides that |
+| Differences | Candidate − baseline per metric: bootstrap interval + **paired sign-flip permutation p** | Paired: same questions, so question difficulty cancels out. "Better/worse" only at p < 0.05 ([D-027](DECISIONS.md#d-027)) |
+| Question-level changes | Fixed / regressed / both pass / both fail, **exact McNemar p** | Only questions that changed carry information; regressions are listed by ID to read first |
+| Failure causes | Each failure's first broken stage: error · format · false abstention · unsupported · retrieval miss · over budget · wrong value · citation | Error analysis: tells you which stage to improve next |
+| By category | Task completion per gold category, with intervals | Where a version helps or hurts |
+| Quality vs latency | Task completion against seconds per question | Cost of a gain |
+| Sample size | Questions needed for a ±5-point interval | Whether the gold set can detect the change you care about |
+
+**Charts** (HTML report): differences as a dot-and-interval (forest) plot, quality vs latency as a scatter, failure causes and categories as grouped bars; hover for exact values. Every chart has a table with the same numbers.
+
+**Reading it.**
+- "No clear difference" means the test set can't tell, not that the versions are equal. With ≤ 5 changed questions no result can reach p < 0.05.
+- Decide on one primary metric before looking (task completion). The rest are diagnostics; with ~10 metrics, one "significant" by chance is expected.
+- Read the regressed questions' traces before trusting an aggregate gain.
+- Temperature 0 still varies slightly run to run on vLLM; for a close call, repeat both runs and compare again.
+
+**Common tools elsewhere**, for reference: [Inspect](https://inspect.aisi.org.uk/) and [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) (eval harnesses), [RAGAS](https://docs.ragas.io/) and [DeepEval](https://deepeval.com/) (RAG and LLM-judge metrics), [promptfoo](https://www.promptfoo.dev/) (prompt regression tests), [Langfuse](https://langfuse.com/) and [Phoenix](https://phoenix.arize.com/) (traces; Langfuse export is built in). This harness stays custom because its checks are domain-specific (fiscal years, unit normalization, chunk citations) and deterministic.
 
 ## Gold question format
 
