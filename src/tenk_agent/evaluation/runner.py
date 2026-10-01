@@ -52,10 +52,11 @@ class RunOptions:
     repair: bool = True  # V4: send failed claims back to the agent once
     repair_calls: int = 4
     resume: bool = False  # keep finished rows in results.jsonl, run only the rest
+    gold_path: Path = gold.GOLD_PATH  # V7: generated questions over the training corpus
 
 
 def select_questions(options: RunOptions) -> list[dict]:
-    questions = [q for q in gold.load() if not q.get("retired")]
+    questions = [q for q in gold.load(options.gold_path) if not q.get("retired")]
     if options.ids:
         questions = [q for q in questions if q["id"] in options.ids]
     elif options.split:
@@ -83,12 +84,14 @@ def run(options: RunOptions, settings: Settings) -> dict:
         "system": options.system,
         "started_at": datetime.now(UTC).isoformat(),
         "model": model.name if model else None,
+        "thinking": settings.thinking if model else None,
         "judge_model": settings.judge_model if judge else None,
         "retriever": retriever.name,
         "verify": options.verify,
         "repair": options.repair and options.verify,
         "structured_data": settings.structured_data,
         "split": options.split,
+        "gold": str(options.gold_path),
         "questions": len(questions),
         "includes_unverified": any(not gold.is_verified(q) for q in questions),
     }
@@ -133,7 +136,7 @@ def rescore(label: str, settings: Settings) -> dict:
     store = Store(settings.db_path)
     out_dir = RUNS_DIR / label
     config = json.loads((out_dir / "config.json").read_text())
-    questions = {q["id"]: q for q in gold.load()}
+    questions = {q["id"]: q for q in gold.load(Path(config.get("gold", gold.GOLD_PATH)))}
     references = json.loads(REFERENCE_PATH.read_text()) if REFERENCE_PATH.exists() else {}
     rows = [json.loads(line) for line in (out_dir / "results.jsonl").read_text().splitlines()]
     for row in rows:

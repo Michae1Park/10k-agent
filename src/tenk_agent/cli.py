@@ -70,7 +70,8 @@ def main(argv: list[str] | None = None) -> int:
     run = eval_actions.add_parser("run", help="run a system over the gold set")
     run.add_argument("system", choices=("retrieval", "ask", "research"))
     run.add_argument("--label", help="run name (default: <system>-<timestamp>)")
-    run.add_argument("--split", default="dev", choices=("dev", "test", "all"))
+    run.add_argument("--split", default="dev", help="dev, test or all (V7 questions: heldout)")
+    run.add_argument("--gold", type=Path, help="question file (default: the gold set)")
     run.add_argument("--ids", nargs="*", help="only these question IDs")
     run.add_argument("--limit", type=int)
     run.add_argument(
@@ -99,6 +100,11 @@ def main(argv: list[str] | None = None) -> int:
     report = eval_actions.add_parser("report", help="results table from runs")
     report.add_argument("columns", nargs="+", help="NAME=run-label, e.g. V1=v1-retrieval")
     report.add_argument("--out", type=Path, help="also write the table to this file")
+    compare = eval_actions.add_parser(
+        "compare", help="baseline vs other runs: intervals, paired tests, error analysis, charts"
+    )
+    compare.add_argument("columns", nargs="+", help="NAME=run-label; the first is the baseline")
+    compare.add_argument("--out", type=Path, help="report path without extension")
     calibrate = eval_actions.add_parser("calibrate", help="LLM-judge calibration")
     calibrate.add_argument("action", choices=("export", "score"))
     calibrate.add_argument("label", help="run label")
@@ -370,6 +376,16 @@ def _eval(args: argparse.Namespace) -> int:
         summary = runner.rescore(args.label, _settings(args))
         print(json.dumps({k: v for k, v in summary.items() if k != "config"}, indent=2))
         return 0
+    if args.eval_action == "compare":
+        from tenk_agent.evaluation import compare
+
+        columns = [tuple(c.split("=", 1)) if "=" in c else (c, c) for c in args.columns]
+        if len(columns) < 2:
+            raise SystemExit("compare needs a baseline and at least one other run")
+        md, page = compare.write(columns, args.out)
+        print(md.read_text())
+        print(f"Report: {md} · {page}")
+        return 0
     if args.eval_action == "calibrate":
         if args.action == "export":
             print(f"Wrote {calibrate.export(args.label, args.answers)}; fill in 'human'.")
@@ -402,6 +418,7 @@ def _eval(args: argparse.Namespace) -> int:
         repair=settings.repair and not args.no_repair,
         repair_calls=settings.repair_calls,
         ask_k=settings.ask_k,
+        gold_path=args.gold or gold.GOLD_PATH,
     )
     summary = runner.run(options, settings)
     print(json.dumps({k: v for k, v in summary.items() if k != "config"}, indent=2))

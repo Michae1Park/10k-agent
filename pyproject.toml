@@ -52,5 +52,7 @@ select = ["E", "F", "I", "B", "UP"]
 # Prompt text reads better unwrapped.
 "src/tenk_agent/{agent,answers,ask}.py" = ["E501"]
 "src/tenk_agent/evaluation/judge.py" = ["E501"]
+# SVG and HTML markup reads better unwrapped.
+"src/tenk_agent/evaluation/compare.py" = ["E501"]
 # Playgrounds: usage examples and report lines read better unwrapped.
 "playground/*.py" = ["E501"]
