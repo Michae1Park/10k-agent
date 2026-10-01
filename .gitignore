@@ -219,3 +219,6 @@ __marimo__/
 
 # Downloaded filings and derived data (reproducible via `tenk fetch`)
 /data/
+
+# Playground reports
+output/
