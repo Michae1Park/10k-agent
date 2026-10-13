@@ -68,11 +68,13 @@ case "$preset" in
     ;;
 esac
 
+# Tool calling only for presets with a parser: vLLM refuses auto tool choice without one (the judge).
+[[ " ${args[*]} " == *" --tool-call-parser "* ]] && args+=(--enable-auto-tool-choice)
+
 exec taskset -c "$CPUS" "$VLLM_BIN" serve "$model" \
   --served-model-name "${name:-$model}" \
   --port "$PORT" \
   --gpu-memory-utilization "$GPU_UTIL" \
   --max-model-len "$MAX_LEN" \
   --enable-prefix-caching \
-  --enable-auto-tool-choice \
   "${args[@]}" "$@"
