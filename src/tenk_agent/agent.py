@@ -155,8 +155,10 @@ class _Run:
             self.messages.append(
                 {"role": "user", "content": "Reply with only the final JSON object now."}
             )
+            # Tools stay defined (Anthropic requires them once tool calls are in the history)
+            # but can't be called: offered tools, a model may answer with a call, not the JSON.
             self.response = self.model.complete(
-                self.messages, tools=self.toolbox.specs, system=self.system
+                self.messages, tools=self.toolbox.specs, system=self.system, tool_choice="none"
             )
             self.trace.llm("format repair", self.response, len(self.messages))
             text = self.response.text

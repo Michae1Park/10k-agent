@@ -77,6 +77,7 @@ class Model(Protocol):
         tools: list[ToolSpec] | None = None,
         system: str | None = None,
         max_tokens: int = 8000,
+        tool_choice: str | None = None,  # "none": no tool calls this turn
     ) -> Response: ...
 
 
@@ -91,13 +92,17 @@ class AnthropicModel:
         self.name = f"anthropic:{self.model}"
         self._client = anthropic.Anthropic(max_retries=4)
 
-    def complete(self, messages, tools=None, system=None, max_tokens=8000) -> Response:
+    def complete(
+        self, messages, tools=None, system=None, max_tokens=8000, tool_choice=None
+    ) -> Response:
         kwargs = {}
         if tools:
             kwargs["tools"] = [
                 {"name": t.name, "description": t.description, "input_schema": t.parameters}
                 for t in tools
             ]
+            if tool_choice:
+                kwargs["tool_choice"] = {"type": tool_choice}
         if system:
             kwargs["system"] = system
         start = time.monotonic()
@@ -195,9 +200,13 @@ class OpenAICompatibleModel:
             else {}
         )
 
-    def complete(self, messages, tools=None, system=None, max_tokens=8000) -> Response:
+    def complete(
+        self, messages, tools=None, system=None, max_tokens=8000, tool_choice=None
+    ) -> Response:
         kwargs = {}
-        if tools:
+        # vLLM keeps tools in the prompt under tool_choice "none", and the model then writes
+        # tool-call markup as text. Earlier tool calls render fine without definitions.
+        if tools and tool_choice != "none":
             kwargs["tools"] = [
                 {
                     "type": "function",
@@ -209,6 +218,8 @@ class OpenAICompatibleModel:
                 }
                 for t in tools
             ]
+            if tool_choice:
+                kwargs["tool_choice"] = tool_choice
         chat = ([{"role": "system", "content": system}] if system else []) + _openai_messages(
             messages
         )

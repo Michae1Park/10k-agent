@@ -1,11 +1,19 @@
 import json
+from types import SimpleNamespace
 
 from tenk_agent.agent import research, run_research
 from tenk_agent.answers import finalize
 from tenk_agent.ask import ask
 from tenk_agent.evaluation.runner import summarize
 from tenk_agent.evaluation.scoring import agent_metrics, citation_accuracy, score_numbers
-from tenk_agent.models import Response, ToolCall, _anthropic_messages, parse_json
+from tenk_agent.models import (
+    OpenAICompatibleModel,
+    Response,
+    ToolCall,
+    ToolSpec,
+    _anthropic_messages,
+    parse_json,
+)
 from tenk_agent.retrieval import Retriever
 from tenk_agent.tools import Toolbox
 from test_store_and_gold import make_store
@@ -22,8 +30,10 @@ class ScriptedModel:
         self.responses = list(responses)
         self.requests = []
 
-    def complete(self, messages, tools=None, system=None, max_tokens=8000):
-        self.requests.append({"messages": list(messages), "tools": tools, "system": system})
+    def complete(self, messages, tools=None, system=None, max_tokens=8000, tool_choice=None):
+        self.requests.append(
+            {"messages": list(messages), "tools": tools, "system": system, "choice": tool_choice}
+        )
         text, calls = self.responses.pop(0)
         return Response(text, calls, 100, 20, 0.01, self.name, "end_turn")
 
@@ -162,6 +172,36 @@ def test_format_repair_then_fallback(tmp_path):
     model = ScriptedModel([("not json", []), ("still not json", [])])
     answer = run_research("q", store, tools, model)
     assert answer["format_error"] and answer["claims"] == []
+
+
+def test_format_repair_forbids_tool_calls(tmp_path):
+    # Offered tools, the 27B answered the "only JSON" request with a calculator call.
+    store, tools = toolbox(tmp_path)
+    model = ScriptedModel([("**Risks** prose, not JSON", []), (final([RD_CLAIM]), [])])
+    answer = run_research("q", store, tools, model)
+    assert not answer["format_error"] and answer["claims"][0]["status"] == "verified"
+    assert model.requests[-1]["tools"] and model.requests[-1]["choice"] == "none"
+    assert model.requests[0]["choice"] is None
+
+
+def test_openai_model_drops_tools_when_none_may_be_called():
+    # vLLM keeps tools in the prompt under tool_choice "none"; the 27B then wrote <tool_call> text.
+    sent = []
+    message = SimpleNamespace(content='{"answer": ""}', tool_calls=None)
+    reply = SimpleNamespace(
+        choices=[SimpleNamespace(message=message, finish_reason="stop")], usage=None
+    )
+    model = OpenAICompatibleModel("m")
+    model._client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(create=lambda **kw: sent.append(kw) or reply)
+        )
+    )
+    tools = [ToolSpec("calculator", "math", {"type": "object"})]
+    model.complete([{"role": "user", "content": "q"}], tools=tools)
+    model.complete([{"role": "user", "content": "q"}], tools=tools, tool_choice="none")
+    assert sent[0]["tools"] and "tool_choice" not in sent[0]
+    assert "tools" not in sent[1] and "tool_choice" not in sent[1]
 
 
 def test_ask_pipeline_single_call_with_retrieved_chunks(tmp_path):
