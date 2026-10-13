@@ -1,4 +1,6 @@
-# Stage 3 — Answer (Ask mode): chunks → one model call → cited claims
+# V2 · RAG (Ask mode): chunks → one model call → cited claims
+
+**Builds on** V1: its top chunks go to one model call. **Run and score it:** `versions/v2_rag/run.sh`, with the model served (`scripts/serve_vllm.sh qwen3.6-27b-fp8`). The commands below explore it by hand.
 
 ## Commands
 
@@ -6,15 +8,15 @@ Workstation terminal, repo root. Needs a model: Claude (`ANTHROPIC_API_KEY`) or 
 
 ```bash
 source .venv/bin/activate
-python playground/answer.py "What was Apple's revenue in 2024?"
-python playground/answer.py --gold nvda-revenue-2024-shifted                    # gold question, scored
-python playground/answer.py "What will Apple's revenue be in 2027?"             # should decline
-python playground/answer.py "What was Apple's revenue in 2024?" --dry-run       # the exact prompt, no model call
-python playground/answer.py "..." --model openai:Qwen/Qwen3.5-9B                # open model on vLLM :8001
-python playground/answer.py --help
+python versions/v2_rag/answer.py "What was Apple's revenue in 2024?"
+python versions/v2_rag/answer.py --gold nvda-revenue-2024-shifted                    # gold question, scored
+python versions/v2_rag/answer.py "What will Apple's revenue be in 2027?"             # should decline
+python versions/v2_rag/answer.py "What was Apple's revenue in 2024?" --dry-run       # the exact prompt, no model call
+python versions/v2_rag/answer.py "..." --model openai:Qwen/Qwen3.5-9B                # open model on vLLM :8001
+python versions/v2_rag/answer.py --help
 
 tenk ask "What was Netflix's revenue in 2024?"                                  # the product command
-tenk eval run ask --split dev --include-unverified --no-judge                   # V2 over the gold set
+tenk eval run ask --split dev --include-unverified                   # V2 over the gold set
 ```
 The playground prints the retrieved chunks, the answer and a claims table, and saves `output/answer/<tag>.md` with the system prompt, the user message, the raw reply and the verified claims.
 
@@ -22,7 +24,7 @@ The playground prints the retrieved chunks, the answer and a claims table, and s
 
 | Data | Where |
 |---|---|
-| Retrieved chunks | stage 2 (`answer.k` of them) |
+| Retrieved chunks | V1 (`answer.k` of them) |
 | Corpus table (company, fiscal year, period end) | `filings` table, written into the system prompt |
 | Rules + answer format | `src/tenk_agent/answers.py` (`RULES`, `ANSWER_FORMAT`) |
 | **Answer** | returned; trace in `traces` (see it in the UI, or `tenk serve` → `/api/traces/<id>`) |
@@ -36,7 +38,7 @@ Defaults: `config.yaml` → `answer:`, `model:`. Flags override per run.
 | `answer.k` | `--k` | Chunks in the prompt | 4: cheaper, misses multi-year questions |
 | `model.name` | `--model` | `anthropic:<id>` or `openai:<model>` | `openai:Qwen/Qwen3.5-9B` |
 | `model.thinking` | `TENK_OPENAI_THINKING` | Qwen's reasoning mode; `false` = off | on: 286 s and 7.9k output tokens for one answer; off: 7 s |
-| `verify.enabled` | `--no-verify` | Label claims (stage 5) | off: every claim "unchecked" |
+| `verify.enabled` | `--no-verify` | Label claims (V4) | off: every claim "unchecked" |
 
 ## Outputs
 
@@ -54,7 +56,7 @@ Defaults: `config.yaml` → `answer:`, `model:`. Flags override per run.
 `tenk_agent.ask.ask()`:
 
 ```
-question ─► retrieve (stage 2) ─► prompt ─► one model call ─► parse JSON ─► verify (stage 5) ─► answer + trace
+question ─► retrieve (V1) ─► prompt ─► one model call ─► parse JSON ─► verify (V4) ─► answer + trace
 ```
 
 | Step | What happens |
@@ -62,7 +64,7 @@ question ─► retrieve (stage 2) ─► prompt ─► one model call ─► pa
 | 1. Retrieve | `answer.k` chunks, slot search + rerank |
 | 2. Prompt | System: rules, the corpus table, the answer format. User: each chunk as `<chunk id="AAPL-FY2024-8-002">` with company, fiscal year, period end, Item, kind, units; then the question |
 | 3. Call | One `complete()`; if the reply isn't JSON, one "reply with only the JSON" retry |
-| 4. Finalize | Claims normalized, verified (stage 5), citations get company, fiscal year, section title and EDGAR link |
+| 4. Finalize | Claims normalized, verified (V4), citations get company, fiscal year, section title and EDGAR link |
 
 **The rules the model gets** (`answers.RULES`):
 
@@ -101,6 +103,6 @@ question ─► retrieve (stage 2) ─► prompt ─► one model call ─► pa
 
 ## Gotchas
 
-- **Ask mode has no calculator.** Percentages and growth rates belong in Research mode (stage 4); Ask mode's mental arithmetic breaks the "all arithmetic via the calculator" rule.
+- **Ask mode has no calculator.** Percentages and growth rates belong in Research mode (V3); Ask mode's mental arithmetic breaks the "all arithmetic via the calculator" rule.
 - **Open hybrid-reasoning models are slow with thinking on.** Set `TENK_OPENAI_THINKING=0` for Ask mode's < 5 s target.
 - Claims the model forgets to list aren't verified: a number only in the answer text has no status.

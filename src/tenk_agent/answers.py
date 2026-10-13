@@ -1,4 +1,4 @@
-"""The answer format shared by Ask and Research modes (docs/STAGE3_ANSWER.md).
+"""The answer format shared by Ask and Research modes (docs/V2_RAG.md).
 
 The model returns JSON: an answer with [n] markers and a list of claims, each with its
 value, unit and chunk-ID citations. `finalize` then runs the deterministic verification

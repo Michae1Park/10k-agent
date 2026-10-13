@@ -1,17 +1,18 @@
-"""Shared helpers for the stage playgrounds: settings, report file, opening it in Cursor."""
+"""Shared helpers for the version playgrounds (versions/v*/): settings, report file, Cursor tab.
+
+Importing it sets the quiet-logging variables and moves to the repo root, where config.yaml,
+data/ and eval/ live. Models load lazily, so import order among tenk_agent modules is free.
+"""
 
 import os
 import subprocess
-import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parents[2]  # src/tenk_agent/playground.py
 os.chdir(REPO)  # config.yaml, data/ and eval/ are relative to the repo root
 os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")  # no model-loading progress bars
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
-sys.path.insert(0, str(REPO / "src"))
-
 from tenk_agent.config import Settings  # noqa: E402
 
 

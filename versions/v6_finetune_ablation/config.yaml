@@ -1,9 +1,9 @@
-# V7 LoRA fine-tune of the 9B agent model (docs/FINETUNE.md). One L40S (46 GB).
-# Run: scripts/finetune.sh train   (or: uv run --extra finetune python finetune/train.py)
+# V6 LoRA fine-tune of the 9B agent model (docs/V6_FINETUNE_ABLATION.md). One L40S (46 GB).
+# Run: scripts/finetune.sh train   (or: uv run --extra finetune python versions/v6_finetune_ablation/train.py)
 
 base_model: Qwen/Qwen3.5-9B
 data: data/train/sft.jsonl              # from `tenk finetune dataset`
-output_dir: data/finetune/v7            # adapter in <output_dir>/adapter, merged model in /merged
+output_dir: data/finetune/v6            # adapter in <output_dir>/adapter, merged model in /merged
 enable_thinking: false                  # must match how the model is served and evaluated
 max_length: 38400                       # longer samples are dropped, never truncated; 38.3k
                                         # tokens peaked at 41.3 GiB of 44.4 (tested)

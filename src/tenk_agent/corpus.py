@@ -1,6 +1,6 @@
 """The fixed corpus (docs/DECISIONS.md D-001): 8 companies × fiscal years 2023–2025.
 
-TENK_CORPUS=<file.yaml> swaps in another corpus for the whole process: V7 builds its
+TENK_CORPUS=<file.yaml> swaps in another corpus for the whole process: V6 builds its
 fine-tuning data from filings outside the eval corpus (D-022). EVAL_COMPANIES and
 EVAL_FISCAL_YEARS always name the eval corpus, whatever is active.
 """

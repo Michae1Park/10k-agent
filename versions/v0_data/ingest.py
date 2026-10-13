@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Stage 1 playground: one 10-K's HTML -> sections by Item -> chunks. Nothing is written to the database.
-Guide: docs/STAGE1_INGEST.md. No GPU, no model.
+"""V0 playground: one 10-K's HTML -> sections by Item -> chunks. Nothing is written to the database.
+Guide: docs/V0_DATA.md. No GPU, no model.
 
-  python playground/ingest.py                                   # AAPL FY2025, config.yaml `ingest:` sizes
-  python playground/ingest.py --ticker NVDA --year 2025 --item 8 --tag nvda8
-  python playground/ingest.py --chunk-chars 1200 --tag small    # smaller prose chunks
-  python playground/ingest.py --find "Total net sales"          # which chunks contain this text
+  python versions/v0_data/ingest.py                                   # AAPL FY2025, config.yaml `ingest:` sizes
+  python versions/v0_data/ingest.py --ticker NVDA --year 2025 --item 8 --tag nvda8
+  python versions/v0_data/ingest.py --chunk-chars 1200 --tag small    # smaller prose chunks
+  python versions/v0_data/ingest.py --find "Total net sales"          # which chunks contain this text
 
 Writes output/ingest/<tag>.md: the sections table and every chunk of --item.
 """
@@ -14,12 +14,11 @@ import argparse
 import time
 from collections import Counter
 
-from _common import preview, settings, table, write_report
-
 from tenk_agent.chunking import ChunkSizes, chunk_sections
 from tenk_agent.gold import normalize
 from tenk_agent.ingest import document_path, downloaded_filings
 from tenk_agent.parse import parse_filing
+from tenk_agent.playground import preview, settings, table, write_report
 
 
 def main():

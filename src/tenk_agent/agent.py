@@ -54,7 +54,7 @@ def research(
     failing afterwards stay in the answer, labeled unverified.
 
     A `transcript` dict is filled with the system prompt, tool specs and every message, as
-    the model saw them (V7 training data; traces keep only summaries).
+    the model saw them (V6 training data; traces keep only summaries).
     """
     run = _Run(question, store, toolbox, model, max_tool_calls)
     if transcript is not None:

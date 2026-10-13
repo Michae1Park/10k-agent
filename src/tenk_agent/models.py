@@ -176,7 +176,7 @@ class OpenAICompatibleModel:
     gpu_hourly_usd: float = 0.0
     base_url: str = "http://localhost:8001/v1"
     thinking: bool | None = None  # Qwen-style hybrid reasoning: False turns thinking off
-    temperature: float = 0.0  # V7 rollouts sample several attempts per question
+    temperature: float = 0.0  # V6 rollouts sample several attempts per question
     name: str = field(init=False)
 
     def __post_init__(self):

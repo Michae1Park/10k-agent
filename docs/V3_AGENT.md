@@ -1,4 +1,6 @@
-# Stage 4 — Agent (Research mode): plan, call tools, calculate, report
+# V3 · Agent (Research mode): plan, call tools, calculate, report
+
+**Builds on** V2: the model now drives the search with tools. **Run and score it:** `versions/v3_agent/run.sh` (V2 and V3 on the same questions, compared). The commands below explore it by hand.
 
 ## Commands
 
@@ -8,21 +10,21 @@ Workstation terminal, repo root. The tools need no model; the agent needs Claude
 source .venv/bin/activate
 
 # Part 1: the tools by hand, exactly what the agent sees
-python playground/tools.py --list                                                  # the schemas the model gets
-python playground/tools.py search_filings query="R&D expense" companies=Apple fiscal_years=2024
-python playground/tools.py get_filing_section company=Google fiscal_year=2025 item=7
-python playground/tools.py calculator op=pct_change old=29915 new=31370
-python playground/tools.py verify_citation chunk_id=AAPL-FY2024-8-002 value=31.37 unit="USD billions"
-python playground/tools.py search_filings query=revenue companies=Oracle            # the error the agent gets
+python versions/v3_agent/tools.py --list                                                  # the schemas the model gets
+python versions/v3_agent/tools.py search_filings query="R&D expense" companies=Apple fiscal_years=2024
+python versions/v3_agent/tools.py get_filing_section company=Google fiscal_year=2025 item=7
+python versions/v3_agent/tools.py calculator op=pct_change old=29915 new=31370
+python versions/v3_agent/tools.py verify_citation chunk_id=AAPL-FY2024-8-002 value=31.37 unit="USD billions"
+python versions/v3_agent/tools.py search_filings query=revenue companies=Oracle            # the error the agent gets
 
 # Part 2: the agent
-python playground/agent.py "Compare Apple's and Microsoft's R&D spending from 2023-2025."
-python playground/agent.py --gold aapl-rd-yoy-fy2023-2025                          # gold question, scored
-python playground/agent.py "..." --max-calls 5 --tag tight                         # small budget
-python playground/agent.py "..." --no-repair                                       # V3 (no repair round)
+python versions/v3_agent/agent.py "Compare Apple's and Microsoft's R&D spending from 2023-2025."
+python versions/v3_agent/agent.py --gold aapl-rd-yoy-fy2023-2025                          # gold question, scored
+python versions/v3_agent/agent.py "..." --max-calls 5 --tag tight                         # small budget
+python versions/v3_agent/agent.py "..." --no-repair                                       # V3 (no repair round)
 
 tenk research "Investigate how Apple's revenue mix changed over the last three years."
-tenk eval run research --split dev --include-unverified --no-judge                 # V4 over the gold set
+tenk eval run research --split dev --include-unverified --no-verify                 # V3 over the gold set (no verification)
 ```
 `tools.py` prints the call, the step label, the summary and the JSON result (`output/tools/<tag>.md`). `agent.py` streams each step, then prints the answer, its claims and every model turn and tool call with tokens and latency (`output/agent/<tag>.md`).
 
@@ -43,8 +45,8 @@ Defaults: `config.yaml` → `agent:`, `verify:`, `model:`. Flags override per ru
 |---|---|---|---|
 | `agent.max_tool_calls` | `--max-calls` | Budget; calls beyond it get an error telling the model to answer | 5 vs 15 vs 30 |
 | `agent.section_chars` | (config) | One page of `get_filing_section` | 12000: more paging |
-| `agent.structured_data` | `--structured-data` | Adds the V5 XBRL tool ([D-021](DECISIONS.md#d-021)) | compare citations |
-| `verify.repair` | `--no-repair` | Send failed claims back once (stage 5) | V3 vs V4 |
+| `agent.structured_data` | `--structured-data` | Adds the XBRL tool (ablation) ([D-021](DECISIONS.md#d-021)) | compare citations |
+| `verify.repair` | `--no-repair` | Send failed claims back once (V4) | V3 vs V4 |
 | `verify.repair_calls` | (config) | Extra tool calls in the repair round | 0 |
 | `model.name` | `--model` | Which model runs the loop | 9B vs 27B |
 
@@ -66,7 +68,7 @@ Defaults: `config.yaml` → `agent:`, `verify:`, `model:`. Flags override per ru
 | `search_filings` | query; companies, fiscal_years, items, k | Ranked chunks with IDs, company, fiscal year, period end, Item, units, text. Explicit filters = one search (no slots) |
 | `get_filing_section` | company, fiscal_year, item; start | The section in order, 24k chars per page, `next_start` to continue |
 | `calculator` | op (`pct_change`, `cagr`, `ratio`, `percent_of`, `difference`, `sum`) or expression; named inputs | Result + formula. Safe AST evaluation, no `eval` |
-| `verify_citation` | chunk_id; value + unit, or quote | Found / not found + matched span (stage 5's check) |
+| `verify_citation` | chunk_id; value + unit, or quote | Found / not found + matched span (V4's check) |
 
 **The loop** (`tenk_agent.agent.research()`, about 80 lines in `_Run`):
 
@@ -79,8 +81,8 @@ question ─► model ─► tool calls? ─yes─► run tools ─► results b
 |---|---|
 | 1. Turn | `complete(messages, tools)`. Text before tool calls streams as a "thought" |
 | 2. Tools | Each call runs; errors (unknown company, FY2022, bad arguments) return as results the model can fix. Calls past the budget get "budget exhausted, answer now" |
-| 3. Stop | A turn without tool calls is the final answer (JSON, same format as stage 3) |
-| 4. Verify + repair | Stage 5; then usage and the trace are saved |
+| 3. Stop | A turn without tool calls is the final answer (JSON, same format as V2) |
+| 4. Verify + repair | V4; then usage and the trace are saved |
 
 **The flagship task** ("how Apple's revenue mix changed over the last three years") has a 10-step reference trajectory: find the net-sales-by-category table, find MD&A explanations, compute shares and changes, verify two figures (`eval/gold/reference_trajectories.json`). Calls beyond it count as unnecessary.
 

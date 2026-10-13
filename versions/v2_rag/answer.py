@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Stage 3 playground (Ask mode): retrieve -> one model call -> JSON claims -> verification.
-Guide: docs/STAGE3_ANSWER.md. Needs a model: Claude (ANTHROPIC_API_KEY) or an open model on vLLM.
+"""V2 playground (Ask mode): retrieve -> one model call -> JSON claims -> verification.
+Guide: docs/V2_RAG.md. Needs a model: Claude (ANTHROPIC_API_KEY) or an open model on vLLM.
 
-  python playground/answer.py "What was Apple's revenue in 2024?"
-  python playground/answer.py --gold nvda-revenue-2024-shifted               # a gold question, scored
-  python playground/answer.py "What will Apple's revenue be in 2027?" --k 4
-  python playground/answer.py "..." --model openai:Qwen/Qwen3.5-9B           # vLLM on :8001 (scripts/serve_vllm.sh)
-  python playground/answer.py "..." --dry-run                                # prompt only, no model call
+  python versions/v2_rag/answer.py "What was Apple's revenue in 2024?"
+  python versions/v2_rag/answer.py --gold nvda-revenue-2024-shifted               # a gold question, scored
+  python versions/v2_rag/answer.py "What will Apple's revenue be in 2027?" --k 4
+  python versions/v2_rag/answer.py "..." --model openai:Qwen/Qwen3.5-9B           # vLLM on :8001 (scripts/serve_vllm.sh)
+  python versions/v2_rag/answer.py "..." --dry-run                                # prompt only, no model call
 
 Writes output/answer/<tag>.md: the prompt, the raw reply and the verified claims.
 """
@@ -14,13 +14,12 @@ Writes output/answer/<tag>.md: the prompt, the raw reply and the verified claims
 import argparse
 import json
 
-from _common import settings, table, write_report
-
 from tenk_agent import gold
 from tenk_agent.answers import finalize
 from tenk_agent.ask import build_prompt
 from tenk_agent.evaluation.scoring import score_numbers
 from tenk_agent.models import load_model, parse_json
+from tenk_agent.playground import settings, table, write_report
 from tenk_agent.retrieval import Retriever
 from tenk_agent.store import Store
 
@@ -47,7 +46,7 @@ def main():
     s.device = a.device
     store = Store(s.db_path)
 
-    # 1. retrieve (stage 2)
+    # 1. retrieve (V1)
     chunks = Retriever.from_settings(store, s).search(question, k=a.k)
     print(f"Q: {question}\nretrieved: {', '.join(c.id for c in chunks)}")
 
@@ -69,7 +68,7 @@ def main():
     )
     report += f"## Raw reply ({model.name})\n\n```\n{response.text}\n```\n\n"
 
-    # 4. parse + verify (stage 5)
+    # 4. parse + verify (V4)
     try:
         raw = parse_json(response.text)
     except ValueError as e:

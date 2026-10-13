@@ -1,7 +1,7 @@
-"""V5 experiment: a get_financial_facts tool over the SEC's XBRL company facts.
+"""XBRL ablation: a get_financial_facts tool over the SEC's XBRL company facts.
 
 Off by default (TENK_STRUCTURED_DATA=1 enables it). Through V4, XBRL data only verifies gold
-answers behind the scenes; the agent never sees it. V5 measures what changes when it does.
+answers behind the scenes; the agent never sees it. The ablation measures what changes when it does.
 
 Tag names differ between companies, so each standard metric maps to candidate us-gaap
 concepts, first match wins, with per-company overrides. Company facts omits dimensional

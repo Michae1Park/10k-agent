@@ -1,5 +1,5 @@
-# V7 training corpus (D-022): companies outside the eval corpus, same fiscal years.
-# Used with TENK_CORPUS=finetune/corpus.yaml TENK_DATA_DIR=data/train (docs/FINETUNE.md).
+# V6 training corpus (D-022): companies outside the eval corpus, same fiscal years.
+# Used with TENK_CORPUS=versions/v6_finetune_ablation/corpus.yaml TENK_DATA_DIR=data/train (docs/V6_FINETUNE_ABLATION.md).
 # Fiscal year ends vary on purpose: the agent has to learn the same calendar-vs-fiscal
 # year handling the eval tests. CIKs are checked by `tenk fetch` (it prints each filer).
 

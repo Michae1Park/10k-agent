@@ -1,4 +1,6 @@
-# Stage 1 — Ingest: 10-K HTML → sections → chunks
+# V0 · Data: 10-K HTML → sections → chunks
+
+**Builds on** nothing: start here. **Run it:** `versions/v0_data/run.sh` (fetch + ingest + check), then `versions/v0_data/run.sh explore`. The commands below do the same by hand.
 
 ## Commands
 
@@ -11,11 +13,11 @@ tenk fetch                                                         # download th
 tenk ingest                                                        # parse + chunk all of them into data/tenk.db (~30 s)
 tenk check                                                         # every filing has Items 1A, 7, 8 and tables in 8
 
-python playground/ingest.py                                        # one filing, nothing written: AAPL FY2025
-python playground/ingest.py --ticker NVDA --year 2025 --tag nvda    # NVIDIA: statements moved from Item 15
-python playground/ingest.py --chunk-chars 1200 --tag small         # smaller prose chunks
-python playground/ingest.py --find "Total net sales"               # which chunks contain this text
-python playground/ingest.py --help
+python versions/v0_data/ingest.py                                        # one filing, nothing written: AAPL FY2025
+python versions/v0_data/ingest.py --ticker NVDA --year 2025 --tag nvda    # NVIDIA: statements moved from Item 15
+python versions/v0_data/ingest.py --chunk-chars 1200 --tag small         # smaller prose chunks
+python versions/v0_data/ingest.py --find "Total net sales"               # which chunks contain this text
+python versions/v0_data/ingest.py --help
 ```
 The playground prints a report and saves `output/ingest/<tag>.md` (sections table + every chunk of `--item`, default 8).
 
@@ -33,7 +35,7 @@ The playground prints a report and saves `output/ingest/<tag>.md` (sections tabl
 | `companies` | ticker, cik, name, aliases ("Google", "Facebook") |
 | `filings` | accession_no, ticker, fiscal_year, period_end_date, filing_date, source_url |
 | `sections` | id (`AAPL-FY2025-7`), item, title |
-| `chunks` | id (`AAPL-FY2025-7-012`), ticker, fiscal_year, item, seq, kind (prose / table), text, units, years_covered; FTS5 index; vectors in `chunks_vec` (stage 2) |
+| `chunks` | id (`AAPL-FY2025-7-012`), ticker, fiscal_year, item, seq, kind (prose / table), text, units, years_covered; FTS5 index; vectors in `chunks_vec` (V1) |
 | `traces` | every Ask / Research request (stages 3–4) |
 
 ## Knobs

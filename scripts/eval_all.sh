@@ -1,37 +1,38 @@
 #!/usr/bin/env bash
-# Run the full eval (V1–V4) on one split and write the results table.
+# Run the full eval ladder (V1–V4) on one split and write the results table.
 #
-#   scripts/eval_all.sh                  # test split, TENK_MODEL (Claude baseline by default)
+#   scripts/eval_all.sh                  # test split, TENK_MODEL (Qwen3.6-27B-FP8 on vLLM by default)
 #   SPLIT=dev scripts/eval_all.sh
-#   TENK_MODEL=openai:Qwen/Qwen3.5-9B TENK_OPENAI_THINKING=0 EXTRA="--no-judge" scripts/eval_all.sh
+#   TENK_MODEL=openai:Qwen/Qwen3.5-9B scripts/eval_all.sh
+#   JUDGE=1 scripts/eval_all.sh          # then the judge pass: stop the model, serve gpt-oss-20b first
 #
-# Draft (unverified) gold questions are excluded unless EXTRA includes --include-unverified.
-# Runs resume after an interruption: re-run the script with the same TAG.
+# The model must already be served (scripts/serve_vllm.sh). The LLM judge runs as a second
+# pass because one GPU can't hold both models: run once without JUDGE, swap servers, run
+# again with JUDGE=1 and the same TAG (finished runs resume, so only the judge pass runs).
+# SPLIT, TAG, WORKERS, EXTRA, CPUS: versions/common.sh. Each version also runs alone: versions/vN_*/run.sh.
 set -euo pipefail
 
-SPLIT=${SPLIT:-test}
-TAG=${TAG:-$(date +%Y%m%d)}
-WORKERS=${WORKERS:-4}
-EXTRA=${EXTRA:-}
-model=$(uv run python -c "from tenk_agent.config import Settings, load_dotenv; load_dotenv(); print(Settings().model.split(':', 1)[1].split('/')[-1])")
+cd "$(dirname "$0")/.."
+source versions/common.sh
+JUDGE=${JUDGE:-0}
+model=$(model_slug)
 
-run() {
-  local label=$1
-  shift
-  local resume=()
-  [ -f "eval/runs/$label/results.jsonl" ] && resume=(--resume)
-  # shellcheck disable=SC2086
-  uv run tenk eval run "$@" --split "$SPLIT" --workers "$WORKERS" --label "$label" "${resume[@]}" $EXTRA
-}
+labels=(
+  "v1-retrieval-$SPLIT-$TAG"
+  "v2-ask-$model-$SPLIT-$TAG"
+  "v3-research-$model-$SPLIT-$TAG"
+  "v4-research-$model-$SPLIT-$TAG"
+)
 
-run "v1-retrieval-$SPLIT-$TAG" retrieval
-run "v2-ask-$model-$SPLIT-$TAG" ask
-run "v3-research-$model-$SPLIT-$TAG" research --no-repair
-run "v4-research-$model-$SPLIT-$TAG" research
+if [ "$JUDGE" != 1 ]; then
+  eval_run "${labels[0]}" retrieval
+  eval_run "${labels[1]}" ask
+  eval_run "${labels[2]}" research --no-verify
+  eval_run "${labels[3]}" research
+else
+  tenk eval judge "${labels[@]}"
+fi
 
-uv run tenk eval report \
-  "V1=v1-retrieval-$SPLIT-$TAG" \
-  "V2=v2-ask-$model-$SPLIT-$TAG" \
-  "V3=v3-research-$model-$SPLIT-$TAG" \
-  "V4=v4-research-$model-$SPLIT-$TAG" \
+tenk eval report \
+  "V1=${labels[0]}" "V2=${labels[1]}" "V3=${labels[2]}" "V4=${labels[3]}" \
   --out "eval/results-$SPLIT-$TAG.md"

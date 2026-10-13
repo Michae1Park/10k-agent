@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Stage 2 playground: question -> slots -> candidates (dense / keyword) -> rerank -> top k.
-Guide: docs/STAGE2_RETRIEVE.md. Needs `tenk embed` once; local models run on the GPU (or --device cpu).
+"""V1 playground: question -> slots -> candidates (dense / keyword) -> rerank -> top k.
+Guide: docs/V1_SEARCH.md. Needs `tenk embed` once; local models run on the GPU (or --device cpu).
 
-  python playground/retrieve.py "How much did Apple spend on R&D in fiscal 2024?"
-  python playground/retrieve.py --gold aapl-msft-rd-fy2023-2025          # a gold question; gold chunks marked
-  python playground/retrieve.py --gold aapl-msft-rd-fy2023-2025 --no-slot-search --tag noslots
-  python playground/retrieve.py "Tesla competition" --mode hybrid --reranker none --k 5
-  python playground/retrieve.py "net sales by category" --tickers AAPL --years 2025 --items 7
+  python versions/v1_search/retrieve.py "How much did Apple spend on R&D in fiscal 2024?"
+  python versions/v1_search/retrieve.py --gold aapl-msft-rd-fy2023-2025          # a gold question; gold chunks marked
+  python versions/v1_search/retrieve.py --gold aapl-msft-rd-fy2023-2025 --no-slot-search --tag noslots
+  python versions/v1_search/retrieve.py "Tesla competition" --mode hybrid --reranker none --k 5
+  python versions/v1_search/retrieve.py "net sales by category" --tickers AAPL --years 2025 --items 7
 
 Writes output/retrieve/<tag>.md: every search with its candidates and scores, and the final top k.
 """
@@ -14,10 +14,9 @@ Writes output/retrieve/<tag>.md: every search with its candidates and scores, an
 import argparse
 import time
 
-from _common import preview, settings, table, write_report
-
 from tenk_agent import gold
 from tenk_agent.evaluation.retrieval import gold_chunks, recall_at_k, reciprocal_rank
+from tenk_agent.playground import preview, settings, table, write_report
 from tenk_agent.retrieval import Retriever, companies_in, years_in
 from tenk_agent.store import Store
 

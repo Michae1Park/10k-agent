@@ -1,4 +1,6 @@
-# Stage 5 — Verify: is every number really in what it cites?
+# V4 · Verified agent: is every number really in what it cites?
+
+**Builds on** V3: every number is checked against its cited chunk, failed claims get one repair round, and an LLM judge scores what code can't. **Run and score it:** `versions/v4_verified_agent/run.sh`, then `versions/v4_verified_agent/run.sh judge` with the judge served ([EVAL.md](EVAL.md#metrics)). The commands below explore verification by hand.
 
 ## Commands
 
@@ -6,12 +8,12 @@ Workstation terminal, repo root. No GPU, no model.
 
 ```bash
 source .venv/bin/activate
-python playground/verify.py --chunk AAPL-FY2024-8-002 --value 31370 --unit "USD millions"
-python playground/verify.py --chunk AAPL-FY2024-8-002 --value 31.37 --unit "USD billions"     # unit normalization
-python playground/verify.py --chunk AAPL-FY2024-8-002 --value 31500 --unit "USD millions"     # close, but wrong
-python playground/verify.py --chunk AAPL-FY2025-8-002 --calc pct_change old=31370 new=34550 --value 10.1
-python playground/verify.py --trace <trace id>                                               # re-check a stored answer
-python playground/verify.py --help
+python versions/v4_verified_agent/verify.py --chunk AAPL-FY2024-8-002 --value 31370 --unit "USD millions"
+python versions/v4_verified_agent/verify.py --chunk AAPL-FY2024-8-002 --value 31.37 --unit "USD billions"     # unit normalization
+python versions/v4_verified_agent/verify.py --chunk AAPL-FY2024-8-002 --value 31500 --unit "USD millions"     # close, but wrong
+python versions/v4_verified_agent/verify.py --chunk AAPL-FY2025-8-002 --calc pct_change old=31370 new=34550 --value 10.1
+python versions/v4_verified_agent/verify.py --trace <trace id>                                               # re-check a stored answer
+python versions/v4_verified_agent/verify.py --help
 ```
 Prints each claim's status and why, plus the numbers found in each cited chunk; saves `output/verify/<tag>.md` with every number the parser read from the chunk.
 

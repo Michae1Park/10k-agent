@@ -17,13 +17,13 @@ Why the project looks the way it does: decisions, and the issues found along the
 | [D-005](#d-005) | 2026-09-26 | One SQLite file: tables, FTS5, sqlite-vec, traces | Accepted |
 | [D-006](#d-006) | 2026-09-26 | Gold set before retriever; evidence stored as verbatim quotes | Accepted |
 | [D-007](#d-007) | 2026-09-26 | XBRL data only checks gold answers; the agent never sees it (through V4) | Accepted |
-| [D-008](#d-008) | 2026-09-26 | Releases V1 search → V2 RAG → V3 agent → V4 reliable agent, each measured | Accepted |
+| [D-008](#d-008) | 2026-09-26 | Releases V1 search → V2 RAG → V3 agent → V4 reliable agent, each measured | Superseded by D-028 |
 | [D-009](#d-009) | 2026-09-26 | Out of scope: stock prices, forecasts, investment advice. Later: 10-Q, web search, charts | Accepted |
 | [D-010](#d-010) | 2026-09-30 | Retrieval: local Qwen3-Embedding-0.6B + bge-reranker-v2-m3, dense (hybrid off) | Accepted |
 | [D-011](#d-011) | 2026-09-30 | Slot search: one search per company and filing named in the question | Accepted |
 | [D-012](#d-012) | 2026-09-30 | Hand-written agent loop, four tools, 15 tool calls max | Accepted |
 | [D-013](#d-013) | 2026-09-30 | One model interface; Claude is the baseline, open models via vLLM; answer is JSON as text | Accepted |
-| [D-014](#d-014) | 2026-09-30 | The LLM judge is fixed (Claude Haiku 4.5); numbers are scored without it | Accepted |
+| [D-014](#d-014) | 2026-09-30 | The LLM judge is fixed (Claude Haiku 4.5); numbers are scored without it | Superseded by D-029 (the model) |
 | [D-015](#d-015) | 2026-09-30 | Verification labels every claim; Research mode gets one repair round | Accepted |
 | [D-016](#d-016) | 2026-09-30 | Over-budget tool calls count as unnecessary, not incorrect | Accepted |
 | [D-017](#d-017) | 2026-10-01 | Rates are over completed questions; errors are reported separately | Accepted |
@@ -37,6 +37,8 @@ Why the project looks the way it does: decisions, and the issues found along the
 | [D-025](#d-025) | 2026-10-01 | V7 always runs; tuned vs the same model un-tuned; D-022's data rules kept and enforced in code | Accepted |
 | [D-026](#d-026) | 2026-10-01 | V7 training: HF Trainer + PEFT LoRA in the project env, assistant-only loss, merged for vLLM | Accepted |
 | [D-027](#d-027) | 2026-10-01 | Comparisons report bootstrap intervals and paired tests; "better/worse" needs p < 0.05 | Accepted |
+| [D-028](#d-028) | 2026-10-13 | Versions V0–V6, one folder each under `versions/`; XBRL and closed-book become ablation rows | Accepted |
+| [D-029](#d-029) | 2026-10-13 | Open models by default: Qwen3.6-27B-FP8 under test, gpt-oss-20b as the fixed judge (second pass) | Accepted |
 
 ### D-001
 **8 companies × FY2023–2025, 24 10-Ks.** Fiscal years end in different months, so "revenue in 2024" is a real disambiguation problem. The range is fixed so the corpus doesn't change when a company files a newer 10-K.
@@ -53,7 +55,7 @@ Why the project looks the way it does: decisions, and the issues found along the
 10-K HTML keeps table structure; PDFs lose it. A section is an "Item N. Title" line outside tables (skips tables of contents, cross-references, page headers). Item 8 always holds the financial statements: filers that keep Item 8 as a pointer (NVIDIA under Item 15, Netflix after the signatures) have them moved into Item 8.
 
 ### D-003
-Splitting tables mid-row was the expected #1 cause of wrong numbers. Each table is one chunk with its caption and unit line; tables over `table_chars` split into row groups that repeat the header rows. [STAGE1_INGEST.md](STAGE1_INGEST.md).
+Splitting tables mid-row was the expected #1 cause of wrong numbers. Each table is one chunk with its caption and unit line; tables over `table_chars` split into row groups that repeat the header rows. [the V0 guide](V0_DATA.md).
 
 ### D-004
 `filings.fiscal_year` comes from each filing's XBRL `EntityPublicFloat` fact (`fy`). The agent maps calendar years through `period_end_date`; it never guesses from text.
@@ -103,7 +105,7 @@ Everything calls `Model.complete(messages, tools)`; providers translate one neut
 Changing the model under test must never change the scoring. Numbers, citations, abstention and tool use are scored deterministically; the judge only scores narrative points, faithfulness and context relevance.
 
 ### D-015
-**Every claim is labeled** verified / calculated / cited / unverified, and unverified claims are shown, not dropped. Labels alone change no metric, so Research mode also sends failed claims back to the agent **once**, with `repair_calls` extra tool calls (`--no-repair` = V3). Unbounded repair loops were rejected for cost and latency. [STAGE5_VERIFY.md](STAGE5_VERIFY.md).
+**Every claim is labeled** verified / calculated / cited / unverified, and unverified claims are shown, not dropped. Labels alone change no metric, so Research mode also sends failed claims back to the agent **once**, with `repair_calls` extra tool calls (`--no-repair` = V3). Unbounded repair loops were rejected for cost and latency. [the V4 guide](V4_VERIFIED_AGENT.md).
 
 ### D-016
 A call refused for exceeding the budget had valid arguments. Counting it as incorrect made tool-call correctness 79.6% instead of 97.7% (V3); it now counts toward unnecessary calls and `over_budget_rate`.
@@ -133,13 +135,31 @@ A public demo needs rate limiting, an API budget and Postgres + pgvector. Decide
 Documentation follows the shape of [prompt-pick-place](https://github.com/Michae1Park/prompt-pick-place): a README with the pipeline table, one guide per stage (Commands · Data · Knobs · Outputs · How it works · Things to try · Gotchas), one playground per stage, and this log. The PRD and project plan were folded in: requirements and roadmap into the README, rationale here, the how into the stage guides.
 
 ### D-025
-Supersedes D-022's condition: V7 no longer waits for a Claude-baseline gap. The question is what fine-tuning does to the same model, so V7 is compared to Qwen3.5-9B un-tuned, with identical settings (thinking off, same prompt, tools, budget and verification), on the eval `test` split and on held-out training companies. D-022's data rules stand and are now code (`finetune/dataset.py`, tested): no Claude outputs, no gold questions, no eval-corpus filings (eval companies' FY2022 and earlier allowed), only attempts that pass the deterministic checks. Questions are generated from XBRL facts, so no model writes them. [FINETUNE.md](FINETUNE.md).
+Supersedes D-022's condition: V7 no longer waits for a Claude-baseline gap. The question is what fine-tuning does to the same model, so V7 is compared to Qwen3.5-9B un-tuned, with identical settings (thinking off, same prompt, tools, budget and verification), on the eval `test` split and on held-out training companies. D-022's data rules stand and are now code (`finetune/dataset.py`, tested): no Claude outputs, no gold questions, no eval-corpus filings (eval companies' FY2022 and earlier allowed), only attempts that pass the deterministic checks. Questions are generated from XBRL facts, so no model writes them. [V6 guide](V6_FINETUNE_ABLATION.md).
 
 ### D-026
 Considered: hosted no-code tuning (no Qwen3.5 support, data leaves the machine), LLaMA-Factory (not wanted), TRL `SFTTrainer` and a raw PyTorch loop. Chosen: Hugging Face `Trainer` + PEFT LoRA, ~150 lines, because the two hard parts aren't covered by stock tools. (1) Masking: the Qwen3.5 template has no assistant-mask markers, so TRL's `assistant_only_loss` can't work; records are rendered with the model's template exactly as vLLM renders them, cut at user turns, and labeled by character span. (2) Memory: full logits for a 40k-token trajectory are ~40 GB; the loss requests logits only at assistant positions. The adapter is merged into full weights so vLLM serves V7 like the base model. Training deps are the optional `finetune` extra of the project env.
 
 ### D-027
 With 31 test questions, a single percentage hides a ±10-point interval, and V-to-V differences of one or two questions are noise. `tenk eval compare` therefore reports every metric with a 95% bootstrap interval over questions, and each candidate's difference from the baseline on the same questions with a bootstrap interval and a sign-flip permutation p-value, plus exact McNemar counts (fixed vs regressed) for task completion. A difference reads as better or worse only at p < 0.05: the percentile bootstrap is over-confident when few questions change (4 changes all one way give p = 0.125, yet the interval excludes zero). Failures get one cause each, the first pipeline stage that broke. [EVAL.md](EVAL.md#comparing-runs).
+
+### D-028
+**Versions you can run one at a time.** Each version has a guide in `docs/` (`V0_DATA.md` … `V6_FINETUNE_ABLATION.md`, next to EVAL, SERVING and this log) and a folder `versions/vN_*/` with a `run.sh` that runs and scores that version only and its playground script; shared code stays in `src/`. Each builds on the one before, except V5 and V6, which both start from V4.
+
+| Now | Was | Contents |
+|---|---|---|
+| V0 · Data | Stage 1 / V0 | Fetch, ingest, explore filings and chunks |
+| V1 · Search | Stage 2 / V1 | Retrieval only, no LLM |
+| V2 · RAG | Stage 3 / V2 | Retrieval + one model call (Ask mode) |
+| V3 · Agent | Stage 4 / V3 | Tool loop, no verification |
+| V4 · Verified agent | Stage 5 / V4 | Verification + repair; the LLM judge |
+| V5 · Model comparison | V6 | Open models vs each other (+ Claude with a key) |
+| V6 · Fine-tune + ablation | V7 + V5 | LoRA variants vs the base; one-change-at-a-time rows: closed-book, no rerank, no verify, budget, + XBRL |
+
+Closed-book (the model with no documents) and XBRL are not steps the others build on, so they are ablation rows, not versions. Runs made before the change keep their labels (`v5-research-xbrl-*` is a V6 ablation row, `v6-research-qwen3.6-27b-fp8` a V5 column); new runs and fine-tuned models use the new numbers. Supersedes D-008's numbering; D-024's guide format stands.
+
+### D-029
+**Open models by default.** Everything runs on one 46 GB L40S with no API key. Under test: Qwen3.6-27B-FP8 (the best open model that fits, with I-003's workaround; ahead of the 9B on every answer metric so far, 100% vs 95.2% correctness, though no difference is significant on 31 questions: `eval/reports/v4-v5-v6.md`); compared against Gemma 4 31B FP8 (another family, same size and precision), plus Claude when a key is set. The fine-tune base stays Qwen3.5-9B: the 27B's bf16 weights alone (~54 GB) don't fit for training, so V6 asks whether a tuned 9B closes the gap to the untuned 27B. **Judge:** gpt-oss-20b, fixed whatever is under test (D-014's rule) and from another family than every model compared, so no model grades itself. It can't share the GPU with the 27B/31B, so judging is a second pass (`tenk eval judge`) after the answers.
 
 ## Issues
 
@@ -167,7 +187,7 @@ vLLM (35 GB) + an eval's embedder and reranker (6 GB) + the API (3 GB) exceed 44
 28.5 GB of weights left too little for the KV cache with CUDA graphs and the vision encoder profiled; an fp8 KV cache made FlashInfer JIT-compile kernels without a CUDA toolkit. **Workaround:** `--enforce-eager`, images/video off, bf16 KV cache, 32k context (preset `qwen3.6-27b-fp8`).
 
 ### I-004
-The Microsoft R&D gold sources are Item 8 income statements; the MD&A R&D table states the same figures and is what retrieval finds, so Recall@5 scores 0 on a correct retrieval (`playground/retrieve.py --gold aapl-msft-rd-fy2023-2025`). **Next:** the reviewer adds those as `acceptable_sources` while verifying.
+The Microsoft R&D gold sources are Item 8 income statements; the MD&A R&D table states the same figures and is what retrieval finds, so Recall@5 scores 0 on a correct retrieval (`versions/v1_search/retrieve.py --gold aapl-msft-rd-fy2023-2025`). **Next:** the reviewer adds those as `acceptable_sources` while verifying.
 
 ### I-005
 The question is an `unsupported` near miss by the gold rules (FY2021 is outside the corpus), but the FY2023 10-K shows 2021 as a comparative column and the model cites it. Decide while verifying: keep the rule, or reword the question.

@@ -60,4 +60,4 @@ select = ["E", "F", "I", "B", "UP"]
 # SVG and HTML markup reads better unwrapped.
 "src/tenk_agent/evaluation/compare.py" = ["E501"]
 # Playgrounds: usage examples and report lines read better unwrapped.
-"playground/*.py" = ["E501"]
+"versions/**/*.py" = ["E501"]

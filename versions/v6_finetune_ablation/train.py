@@ -1,6 +1,6 @@
-"""V7: LoRA fine-tune of the agent model on passing trajectories (docs/FINETUNE.md).
+"""V6: LoRA fine-tune of the agent model on passing trajectories (docs/V6_FINETUNE_ABLATION.md).
 
-    uv run --extra finetune python finetune/train.py [finetune/config.yaml] [--max-steps N]
+    uv run --extra finetune python versions/v6_finetune_ablation/train.py [versions/v6_finetune_ablation/config.yaml] [--max-steps N]
 
 Hugging Face Trainer + PEFT; the only custom parts are the two things the stock tools
 can't do for this model and data:
@@ -32,7 +32,9 @@ from transformers import (
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("config", nargs="?", default="finetune/config.yaml", type=Path)
+    parser.add_argument(
+        "config", nargs="?", default="versions/v6_finetune_ablation/config.yaml", type=Path
+    )
     parser.add_argument("--max-steps", type=int, default=-1, help="smoke test: stop early")
     parser.add_argument("--data", type=Path, help="override the config's data file")
     args = parser.parse_args()

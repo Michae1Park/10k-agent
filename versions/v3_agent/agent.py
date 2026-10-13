@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Stage 4 playground, part 2: the Research agent, step by step, then its whole conversation.
-Guide: docs/STAGE4_AGENT.md. Needs a model: Claude (ANTHROPIC_API_KEY) or an open model on vLLM.
+"""V3 playground, part 2: the Research agent, step by step, then its whole conversation.
+Guide: docs/V3_AGENT.md. Needs a model: Claude (ANTHROPIC_API_KEY) or an open model on vLLM.
 
-  python playground/agent.py "Compare Apple's and Microsoft's R&D spending from 2023-2025."
-  python playground/agent.py --gold aapl-rd-yoy-fy2023-2025                  # a gold question, scored
-  python playground/agent.py "..." --max-calls 5 --tag tight                 # small tool budget
-  python playground/agent.py "..." --no-repair                               # V3: no repair round
-  python playground/agent.py "..." --model openai:Qwen/Qwen3.5-9B            # vLLM on :8001
+  python versions/v3_agent/agent.py "Compare Apple's and Microsoft's R&D spending from 2023-2025."
+  python versions/v3_agent/agent.py --gold aapl-rd-yoy-fy2023-2025                  # a gold question, scored
+  python versions/v3_agent/agent.py "..." --max-calls 5 --tag tight                 # small tool budget
+  python versions/v3_agent/agent.py "..." --no-repair                               # V3: no repair round
+  python versions/v3_agent/agent.py "..." --model openai:Qwen/Qwen3.5-9B            # vLLM on :8001
 
 Writes output/agent/<tag>.md: every model turn and tool call with tokens and latency, and the answer.
 """
@@ -14,12 +14,11 @@ Writes output/agent/<tag>.md: every model turn and tool call with tokens and lat
 import argparse
 import json
 
-from _common import preview, settings, table, write_report
-
 from tenk_agent import gold
 from tenk_agent.agent import research
 from tenk_agent.evaluation.scoring import agent_metrics, score_numbers
 from tenk_agent.models import load_model
+from tenk_agent.playground import preview, settings, table, write_report
 from tenk_agent.retrieval import Retriever
 from tenk_agent.store import Store
 from tenk_agent.tools import Toolbox
@@ -36,7 +35,7 @@ def main():
     p.add_argument("--max-calls", type=int, default=s.max_tool_calls)
     p.add_argument("--no-repair", action="store_true")
     p.add_argument("--no-verify", action="store_true")
-    p.add_argument("--structured-data", action="store_true", help="V5: add the XBRL tool")
+    p.add_argument("--structured-data", action="store_true", help="ablation: add the XBRL tool")
     p.add_argument("--device", default=s.device)
     p.add_argument("--tag", default="play")
     a = p.parse_args()

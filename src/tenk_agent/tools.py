@@ -1,4 +1,4 @@
-"""The agent's four tools (plus the optional V5 structured-data tool).
+"""The agent's four tools (plus the optional XBRL tool, an ablation).
 
 Schemas are defined once here as ToolSpecs; the model layer translates them per provider.
 Every tool returns JSON text. Errors come back as tool results the model can correct,
@@ -135,7 +135,7 @@ class ToolError(ValueError):
 class Toolbox:
     store: Store
     retriever: Retriever
-    structured_data: bool = False  # V5 experiment only
+    structured_data: bool = False  # XBRL ablation only
     data_dir: Path = field(default_factory=lambda: Path("data"))
     section_chars: int = 24_000  # one page of get_filing_section output
 

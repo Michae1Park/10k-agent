@@ -37,7 +37,7 @@ class RolloutOptions:
 
 def run(options: RolloutOptions, settings: Settings) -> dict:
     if settings.model.startswith("anthropic:"):
-        raise SystemExit("V7 trains on open-model outputs only, never Claude's (D-022).")
+        raise SystemExit("V6 trains on open-model outputs only, never Claude's (D-022).")
     model = get_model(
         settings.model,
         settings.gpu_hourly_usd,

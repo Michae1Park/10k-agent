@@ -158,7 +158,7 @@ def resolve_evidence(store: Store, q: dict) -> list[list[str]]:
     resolved = []
     for source in q.get("sources", []) + q.get("acceptable_sources", []):
         evidence = normalize(source.get("evidence") or "")
-        if not evidence:  # generated V7 questions: answer from XBRL, no evidence quote
+        if not evidence:  # generated V6 questions: answer from XBRL, no evidence quote
             resolved.append([])
             continue
         chunks = store.chunks(source["company"], source["fiscal_year"])

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Stage 4 playground, part 1: call the agent's tools by hand, no model. See exactly what the agent sees.
-Guide: docs/STAGE4_AGENT.md.
+"""V3 playground, part 1: call the agent's tools by hand, no model. See exactly what the agent sees.
+Guide: docs/V3_AGENT.md.
 
-  python playground/tools.py --list                                                   # schemas the model gets
-  python playground/tools.py search_filings query="R&D expense" companies=Apple fiscal_years=2024
-  python playground/tools.py get_filing_section company=Google fiscal_year=2025 item=7
-  python playground/tools.py get_filing_section company=AAPL fiscal_year=2025 item=8 start=10
-  python playground/tools.py calculator op=pct_change old=29915 new=31370
-  python playground/tools.py calculator expression="a / b * 100" a=109158 b=416161
-  python playground/tools.py verify_citation chunk_id=AAPL-FY2024-8-002 value=31.37 unit="USD billions"
-  python playground/tools.py search_filings query=revenue companies=Oracle            # an error the agent sees
+  python versions/v3_agent/tools.py --list                                                   # schemas the model gets
+  python versions/v3_agent/tools.py search_filings query="R&D expense" companies=Apple fiscal_years=2024
+  python versions/v3_agent/tools.py get_filing_section company=Google fiscal_year=2025 item=7
+  python versions/v3_agent/tools.py get_filing_section company=AAPL fiscal_year=2025 item=8 start=10
+  python versions/v3_agent/tools.py calculator op=pct_change old=29915 new=31370
+  python versions/v3_agent/tools.py calculator expression="a / b * 100" a=109158 b=416161
+  python versions/v3_agent/tools.py verify_citation chunk_id=AAPL-FY2024-8-002 value=31.37 unit="USD billions"
+  python versions/v3_agent/tools.py search_filings query=revenue companies=Oracle            # an error the agent sees
 
 Arguments are name=value; lists take commas (companies=Apple,MSFT). Writes output/tools/<tag>.md.
 """
@@ -17,9 +17,8 @@ Arguments are name=value; lists take commas (companies=Apple,MSFT). Writes outpu
 import argparse
 import json
 
-from _common import settings, write_report
-
 from tenk_agent.agent import result_summary, step_label
+from tenk_agent.playground import settings, write_report
 from tenk_agent.retrieval import Retriever
 from tenk_agent.store import Store
 from tenk_agent.tools import CALCULATOR, Toolbox
@@ -56,7 +55,9 @@ def main():
     p.add_argument("tool", nargs="?")
     p.add_argument("args", nargs="*", help="name=value")
     p.add_argument("--list", action="store_true", help="print the tool schemas")
-    p.add_argument("--structured-data", action="store_true", help="include the V5 XBRL tool")
+    p.add_argument(
+        "--structured-data", action="store_true", help="include the XBRL tool (ablation)"
+    )
     p.add_argument("--device", default=s.device)
     p.add_argument("--tag", default="play")
     a = p.parse_args()

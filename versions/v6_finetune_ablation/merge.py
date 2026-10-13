@@ -1,6 +1,6 @@
-"""Merge the V7 LoRA adapter into the base model, for vLLM (docs/FINETUNE.md).
+"""Merge the V6 LoRA adapter into the base model, for vLLM (docs/V6_FINETUNE_ABLATION.md).
 
-    uv run --extra finetune python finetune/merge.py [finetune/config.yaml]
+    uv run --extra finetune python versions/v6_finetune_ablation/merge.py [versions/v6_finetune_ablation/config.yaml]
 
 Writes <output_dir>/merged: full BF16 weights (vision tower included, so vLLM loads the
 same architecture as the base) plus the base model's tokenizer, chat template and processor
@@ -24,7 +24,9 @@ OWN_FILES = {"config.json", "generation_config.json", "model.safetensors.index.j
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("config", nargs="?", default="finetune/config.yaml", type=Path)
+    parser.add_argument(
+        "config", nargs="?", default="versions/v6_finetune_ablation/config.yaml", type=Path
+    )
     args = parser.parse_args()
     cfg = yaml.safe_load(args.config.read_text())
     out = Path(cfg["output_dir"])

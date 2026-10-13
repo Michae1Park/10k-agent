@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# V7 fine-tuning, end to end (docs/FINETUNE.md). Each step resumes or overwrites safely.
+# V6 fine-tuning, end to end (docs/V6_FINETUNE_ABLATION.md). Each step resumes or overwrites safely.
 #
 #   scripts/finetune.sh data        # fetch, ingest, embed the training corpus; generate questions
 #   scripts/finetune.sh rollouts    # the agent answers them (needs the base model on vLLM)
 #   scripts/finetune.sh dataset     # passing attempts -> data/train/sft.jsonl
 #   scripts/finetune.sh train       # LoRA (stop vLLM first: training needs the whole GPU)
-#   scripts/finetune.sh merge       # adapter -> data/finetune/v7/merged, for vLLM
+#   scripts/finetune.sh merge       # adapter -> data/finetune/v6/merged, for vLLM
 #
 # Training-corpus steps run with TENK_CORPUS and TENK_DATA_DIR set, so they never touch the
 # eval corpus. Pinned to the E-cores (I-001).
@@ -17,9 +17,9 @@ CPUS=${CPUS:-16-31}
 SAMPLES=${SAMPLES:-2}
 TEMPERATURE=${TEMPERATURE:-0.7}
 WORKERS=${WORKERS:-4}
-CONFIG=${CONFIG:-finetune/config.yaml}
+CONFIG=${CONFIG:-versions/v6_finetune_ablation/config.yaml}
 
-export TENK_CORPUS=finetune/corpus.yaml
+export TENK_CORPUS=versions/v6_finetune_ablation/corpus.yaml
 export TENK_DATA_DIR=data/train
 tenk() { taskset -c "$CPUS" env -u PYTHONPATH uv run tenk "$@"; }
 # Long trajectories leave the allocator fragmented; expandable segments avoid false OOMs.
@@ -45,10 +45,10 @@ case "$step" in
     tenk finetune dataset "$@"
     ;;
   train)
-    ft finetune/train.py "$CONFIG" "$@"
+    ft versions/v6_finetune_ablation/train.py "$CONFIG" "$@"
     ;;
   merge)
-    ft finetune/merge.py "$CONFIG" "$@"
+    ft versions/v6_finetune_ablation/merge.py "$CONFIG" "$@"
     ;;
   *)
     echo "unknown step $step" >&2

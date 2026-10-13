@@ -1,6 +1,6 @@
 """Compare runs against a baseline: intervals, paired tests, error analysis, charts.
 
-    tenk eval compare BASE=v4-research-qwen3.5-9b V7=v7-research-qwen3.5-9b [NAME=label ...]
+    tenk eval compare BASE=v4-research-qwen3.5-9b V6=v6-research-qwen3.5-9b-v6 [NAME=label ...]
 
 The first run is the baseline. Writes eval/reports/<name>.md (tables, for the repo) and
 <name>.html (self-contained, charts + the same tables). Only questions present in both

@@ -1,6 +1,6 @@
 """Generated questions with known answers, over the active (training) corpus.
 
-Answers come from each filing's XBRL facts (the same lookup as the V5 tool), so no model
+Answers come from each filing's XBRL facts (the same lookup as the XBRL ablation tool), so no model
 writes a question or an answer. Question kinds mirror the eval categories the agent is
 scored on: single values, several years, a calculated change, two companies, and two kinds
 of abstention. Whole companies are held out (`split: heldout`) for an in-distribution test.

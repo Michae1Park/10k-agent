@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""Stage 5 playground: is this number really in that chunk? Same check as the verification pass.
-Guide: docs/STAGE5_VERIFY.md. No GPU, no model.
+"""V4 playground: is this number really in that chunk? Same check as the verification pass.
+Guide: docs/V4_VERIFIED_AGENT.md. No GPU, no model.
 
-  python playground/verify.py --chunk AAPL-FY2024-8-002 --value 31370 --unit "USD millions"
-  python playground/verify.py --chunk AAPL-FY2024-8-002 --value 31.37 --unit "USD billions"   # unit normalization
-  python playground/verify.py --chunk AAPL-FY2024-8-002 --value 31500 --unit "USD millions"   # not there
-  python playground/verify.py --chunk AAPL-FY2025-8-002 --calc pct_change old=31370 new=34550 --value 10.1
-  python playground/verify.py --trace <trace id>                                             # re-check a stored answer
+  python versions/v4_verified_agent/verify.py --chunk AAPL-FY2024-8-002 --value 31370 --unit "USD millions"
+  python versions/v4_verified_agent/verify.py --chunk AAPL-FY2024-8-002 --value 31.37 --unit "USD billions"   # unit normalization
+  python versions/v4_verified_agent/verify.py --chunk AAPL-FY2024-8-002 --value 31500 --unit "USD millions"   # not there
+  python versions/v4_verified_agent/verify.py --chunk AAPL-FY2025-8-002 --calc pct_change old=31370 new=34550 --value 10.1
+  python versions/v4_verified_agent/verify.py --trace <trace id>                                             # re-check a stored answer
 
 Writes output/verify/<tag>.md.
 """
 
 import argparse
 
-from _common import preview, settings, table, write_report
-
+from tenk_agent.playground import preview, settings, table, write_report
 from tenk_agent.store import Store
 from tenk_agent.verify import chunk_scales, find_value, numbers_in, verify_claim
 

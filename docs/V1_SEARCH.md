@@ -1,4 +1,6 @@
-# Stage 2 — Retrieve: question → the chunks that answer it
+# V1 · Search: question → the chunks that answer it
+
+**Builds on** V0. No LLM: retrieval only. **Run and score it:** `versions/v1_search/run.sh` (embed, then Recall@5 and MRR on the gold set). The commands below explore it by hand.
 
 ## Commands
 
@@ -9,14 +11,14 @@ source .venv/bin/activate
 tenk embed                                                              # once after ingest: vectors for every chunk (~2 min)
 tenk search "Apple R&D expense fiscal 2024"                             # quick look, config.yaml defaults
 
-python playground/retrieve.py "How much did Apple spend on R&D in fiscal 2024?"
-python playground/retrieve.py --gold aapl-msft-rd-fy2023-2025           # gold question: gold chunks marked ★, recall printed
-python playground/retrieve.py --gold aapl-msft-rd-fy2023-2025 --no-slot-search --tag noslots
-python playground/retrieve.py "Tesla competition" --mode hybrid --reranker none --k 5
-python playground/retrieve.py "net sales by category" --tickers AAPL --years 2025 --items 7
-python playground/retrieve.py --help
+python versions/v1_search/retrieve.py "How much did Apple spend on R&D in fiscal 2024?"
+python versions/v1_search/retrieve.py --gold aapl-msft-rd-fy2023-2025           # gold question: gold chunks marked ★, recall printed
+python versions/v1_search/retrieve.py --gold aapl-msft-rd-fy2023-2025 --no-slot-search --tag noslots
+python versions/v1_search/retrieve.py "Tesla competition" --mode hybrid --reranker none --k 5
+python versions/v1_search/retrieve.py "net sales by category" --tickers AAPL --years 2025 --items 7
+python versions/v1_search/retrieve.py --help
 
-tenk eval run retrieval --split dev --include-unverified --no-judge     # Recall@5 / MRR over the gold set
+tenk eval run retrieval --split dev --include-unverified                # Recall@5 / MRR over the gold set
 ```
 The playground prints the slots and the final top k, and saves `output/retrieve/<tag>.md` with every search's candidates, their dense / keyword ranks and rerank scores.
 
@@ -24,7 +26,7 @@ The playground prints the slots and the final top k, and saves `output/retrieve/
 
 | Data | Where |
 |---|---|
-| Chunks + FTS5 index | `data/tenk.db` (stage 1) |
+| Chunks + FTS5 index | `data/tenk.db` (V0) |
 | Vectors (1,024-d, cosine) | `chunks_vec` in `data/tenk.db`, written by `tenk embed` |
 | Embedding model, reranker | Hugging Face cache, downloaded on first use |
 | Gold questions (for `--gold`) | `eval/gold/questions.jsonl` |
@@ -94,4 +96,4 @@ question ─► slots ─► per slot: dense (+ keyword) candidates ─► reran
 
 - **Embedder and database must match.** `Retriever` refuses to run if the stored vectors came from another model; `tenk embed` re-embeds when the model changes.
 - **Explicit filters skip slot search.** `--tickers` / `--years` run one filtered search (this is what the agent's `search_filings` does).
-- Companies outside the corpus (Oracle) give no slot; the search runs unfiltered and returns the closest corpus chunks. Declining is stage 3's job.
+- Companies outside the corpus (Oracle) give no slot; the search runs unfiltered and returns the closest corpus chunks. Declining is V2's job.
