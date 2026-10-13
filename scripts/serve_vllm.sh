@@ -44,8 +44,11 @@ case "$preset" in
   gemma-4-31b-fp8)
     # Gemma 4 31B in bf16 is 62 GB; this FP8 build is ~32 GB, the same precision as the
     # Qwen 27B. Same memory limits as qwen3.6-27b-fp8 (I-003): eager mode, no vision, 32k.
+    # Its 30.4 GiB of weights leave 0.4 GiB of KV cache at 72%; 86% gives 6.6 GiB (1.4
+    # requests at 32k) and leaves ~6 GB for the eval's embedder and reranker.
     model=RedHatAI/gemma-4-31B-it-FP8-block
     MAX_LEN=${MAX_LEN_31B:-32768}
+    GPU_UTIL=${GPU_UTIL_31B:-0.86}
     args=(--tool-call-parser gemma4 --reasoning-parser gemma4
       --enforce-eager --limit-mm-per-prompt '{"image":0,"video":0}')
     ;;

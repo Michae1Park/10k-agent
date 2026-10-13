@@ -41,7 +41,7 @@ Every model call goes through `Model.complete(messages, tools)` (`src/tenk_agent
 | `qwen3.5-9b` | Qwen/Qwen3.5-9B | 18 GB BF16 | 64k | 124k tokens at `GPU_UTIL=0.80` | V2–V4 runs, V6 fine-tune base |
 | `qwen3.5-9b-v6` | `data/finetune/v6/merged` (`TUNED_MODEL`), served as `tenk/qwen3.5-9b-v6` | 18 GB BF16 | 64k | | V6 ([V6 guide](V6_FINETUNE_ABLATION.md)); no MTP head, so no speculative decoding |
 | `qwen3.6-27b-fp8` | Qwen/Qwen3.6-27B-FP8 | 28.5 GB FP8 | 32k | 27k tokens at `GPU_UTIL=0.80` | eager mode, no vision, bf16 KV ([I-003](DECISIONS.md#i-003)); use `--workers 2` |
-| `gemma-4-31b-fp8` | RedHatAI/gemma-4-31B-it-FP8-block | ~32 GB FP8 | 32k | not measured yet | V5 comparison. bf16 (62 GB) doesn't fit; same limits as the 27B; `gemma4` tool and reasoning parsers |
+| `gemma-4-31b-fp8` | RedHatAI/gemma-4-31B-it-FP8-block | 30.4 GiB FP8 | 32k | 6.6 GiB at `GPU_UTIL=0.86` (its default; 0.72 leaves 0.4 GiB and vLLM refuses to start) | V5 comparison. bf16 (62 GB) doesn't fit; same limits as the 27B; `gemma4` tool and reasoning parsers |
 | `gpt-oss-20b` | openai/gpt-oss-20b | ~13 GB MXFP4 | 32k | | **The LLM judge** ([D-029](DECISIONS.md#d-029)), port 8002, `GPU_UTIL=0.45`. Fits beside the 9B, not beside the 27B/31B: judge those runs afterwards with `tenk eval judge` |
 | `qwen3-1.7b` | Qwen/Qwen3-1.7B | 3.4 GB | 64k | | smoke tests |
 
