@@ -85,10 +85,13 @@ def write(columns: list[tuple[str, str]], out: Path | None = None) -> tuple[Path
     data = build(columns)
     out = out or REPORTS_DIR / ("compare-" + "-vs-".join(n.lower() for n, _ in columns))
     out.parent.mkdir(parents=True, exist_ok=True)
-    md, page = out.with_suffix(".md"), out.with_suffix(".html")
+    # Append, don't use with_suffix: labels like qwen3.6-27b would lose everything after the dot.
+    if out.suffix in (".md", ".html", ".json"):
+        out = out.with_suffix("")
+    md, page = (out.with_name(out.name + ext) for ext in (".md", ".html"))
     md.write_text(markdown(data))
     page.write_text(render_html(data))
-    out.with_suffix(".json").write_text(json.dumps(data, indent=2) + "\n")
+    out.with_name(out.name + ".json").write_text(json.dumps(data, indent=2) + "\n")
     return md, page
 
 

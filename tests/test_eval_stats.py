@@ -1,4 +1,4 @@
-from tenk_agent.evaluation import analysis, stats
+from tenk_agent.evaluation import analysis, compare, stats
 
 
 def row(qid: str, complete: bool, **extra) -> dict:
@@ -81,3 +81,15 @@ def test_transitions_list_regressions_first():
     cand = [row("a", False), row("b", True), row("c", True)]
     changes = [(t["id"], t["change"]) for t in analysis.transitions(base, cand)]
     assert changes == [("a", "regressed"), ("b", "fixed"), ("c", "both pass")]
+
+
+def test_compare_report_keeps_dotted_labels(tmp_path, monkeypatch):
+    monkeypatch.setattr(compare, "build", lambda columns: {})
+    monkeypatch.setattr(compare, "markdown", lambda data: "md")
+    monkeypatch.setattr(compare, "render_html", lambda data: "html")
+    md, page = compare.write([("V4", "run")], tmp_path / "v4-qwen3.6-27b-fp8-test")
+    assert md.name == "v4-qwen3.6-27b-fp8-test.md"
+    assert page.name == "v4-qwen3.6-27b-fp8-test.html"
+    assert (tmp_path / "v4-qwen3.6-27b-fp8-test.json").exists()
+    md, _ = compare.write([("V4", "run")], tmp_path / "plain.md")  # an extension is optional
+    assert md.name == "plain.md"
