@@ -42,6 +42,18 @@ Serving details, memory limits and every preset: [SERVING.md](SERVING.md).
 | One run per model | `eval/runs/v5-<model>-<split>-<tag>/` (`results.jsonl`, `summary.json`, `config.json`) |
 | Comparison | `eval/reports/v5-models-<split>-<tag>.{md,html,json}`: metrics with intervals, differences vs the default, fixed vs regressed questions, the first failing stage per failure |
 
+First comparison (`TAG=20261013`, `test` split, 31 questions incl. unverified gold, judge not run): `eval/reports/v5-models-test-20261013.md`.
+
+| Metric | Qwen3.6-27B-FP8 | Gemma 4 31B FP8 | Reading (p < 0.05) |
+|---|---|---|---|
+| Answer correctness (21 scored) | 100% | 90.5% | no clear difference (2 regressions: a wrong net margin, an answered `unsupported` question) |
+| Citation accuracy | 95.1% | 100% | no clear difference |
+| Tool-call correctness | 96.6% | 86.5% | **worse** |
+| Unnecessary calls / question | 1.23 | 0.00 | **better** |
+| Over-budget rate | 12.9% | 0% | no clear difference |
+
+Latency isn't comparable in this run: the 27B ran with 4 workers and Gemma with 2, and both servers fit only ~1.4 full-length requests at once, so queueing dominates.
+
 Earlier runs, before the renumbering ([D-028](DECISIONS.md#d-028)): `v4-research-qwen3.5-9b` (9B) and `v6-research-qwen3.6-27b-fp8` (27B), compared in `eval/reports/v4-v5-v6.md`.
 
 | Metric (test, 31 questions) | Qwen3.5-9B | Qwen3.6-27B-FP8 |

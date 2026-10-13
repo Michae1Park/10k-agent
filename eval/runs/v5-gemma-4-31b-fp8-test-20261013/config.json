@@ -1,0 +1,16 @@
+{
+  "label": "v5-gemma-4-31b-fp8-test-20261013",
+  "system": "research",
+  "started_at": "2026-10-13T08:00:10.428428+00:00",
+  "model": "openai:RedHatAI/gemma-4-31B-it-FP8-block",
+  "thinking": false,
+  "judge_model": null,
+  "retriever": "dense local:Qwen/Qwen3-Embedding-0.6B rerank=local:BAAI/bge-reranker-v2-m3",
+  "verify": true,
+  "repair": true,
+  "structured_data": false,
+  "split": "test",
+  "gold": "eval/gold/questions.jsonl",
+  "questions": 31,
+  "includes_unverified": true
+}

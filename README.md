@@ -156,7 +156,7 @@ The UI has an Ask / Research toggle, a live step list, clickable citations with 
 | V2 · RAG | Ask mode, API, UI, tracing | ✅ |
 | V3 · Agent | Research mode, four tools, streaming steps | ✅ |
 | V4 · Verified agent | Verification + repair, failure-case rules, open-source judge (second pass) | ✅ judge not yet run or calibrated |
-| V5 · Model comparison | Qwen3.6-27B (default) vs Gemma 4 31B vs Qwen3.5-9B (+ Claude with a key) | 🟡 9B and 27B measured; Gemma, judge metrics next |
+| V5 · Model comparison | Qwen3.6-27B (default) vs Gemma 4 31B vs Qwen3.5-9B (+ Claude with a key) | 🟡 27B vs Gemma measured ([V5 guide](docs/V5_MODELS.md)); judge metrics next |
 | V6 · Fine-tune + ablation | Tuned 9B vs untuned 9B and 27B ([D-025](docs/DECISIONS.md#d-025)); ablation rows | 🟡 rig built and smoke-tested, no training data yet · XBRL row measured ([D-021](docs/DECISIONS.md#d-021)), other rows next |
 | Ship | Verified gold set, demo | 🗺️ next |
 

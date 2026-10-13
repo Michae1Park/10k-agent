@@ -1,0 +1,674 @@
+{
+  "runs": [
+    {
+      "name": "qwen3.6-27b-fp8",
+      "label": "v5-qwen3.6-27b-fp8-test-20261013",
+      "model": "openai:Qwen/Qwen3.6-27B-FP8",
+      "questions": 31
+    },
+    {
+      "name": "gemma-4-31b-fp8",
+      "label": "v5-gemma-4-31b-fp8-test-20261013",
+      "model": "openai:RedHatAI/gemma-4-31B-it-FP8-block",
+      "questions": 31
+    }
+  ],
+  "metrics": [
+    {
+      "key": "task_completion",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Task completion",
+      "runs": {
+        "qwen3.6-27b-fp8": {
+          "value": 1.0,
+          "low": 1.0,
+          "high": 1.0,
+          "n": 31
+        },
+        "gemma-4-31b-fp8": {
+          "value": 0.9048,
+          "low": 0.7647,
+          "high": 1.0,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Answer correctness",
+      "runs": {
+        "qwen3.6-27b-fp8": {
+          "value": 1.0,
+          "low": 1.0,
+          "high": 1.0,
+          "n": 31
+        },
+        "gemma-4-31b-fp8": {
+          "value": 0.9048,
+          "low": 0.7647,
+          "high": 1.0,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "citation_accuracy",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Citation accuracy",
+      "runs": {
+        "qwen3.6-27b-fp8": {
+          "value": 0.9506,
+          "low": 0.8919,
+          "high": 1.0,
+          "n": 31
+        },
+        "gemma-4-31b-fp8": {
+          "value": 1.0,
+          "low": 1.0,
+          "high": 1.0,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "evidence_recall",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Evidence recall",
+      "runs": {
+        "qwen3.6-27b-fp8": {
+          "value": 0.75,
+          "low": 0.5893,
+          "high": 0.8917,
+          "n": 31
+        },
+        "gemma-4-31b-fp8": {
+          "value": 0.7685,
+          "low": 0.6221,
+          "high": 0.8995,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "tool_selection",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Tool selection",
+      "runs": {
+        "qwen3.6-27b-fp8": {
+          "value": 0.9355,
+          "low": 0.8387,
+          "high": 1.0,
+          "n": 31
+        },
+        "gemma-4-31b-fp8": {
+          "value": 0.9355,
+          "low": 0.8387,
+          "high": 1.0,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "tool_call_correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Tool-call correctness",
+      "runs": {
+        "qwen3.6-27b-fp8": {
+          "value": 0.9657,
+          "low": 0.9307,
+          "high": 0.991,
+          "n": 31
+        },
+        "gemma-4-31b-fp8": {
+          "value": 0.8652,
+          "low": 0.7706,
+          "high": 0.9726,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "over_budget_rate",
+      "fmt": "pct",
+      "higher_is_better": false,
+      "label": "Over-budget rate",
+      "runs": {
+        "qwen3.6-27b-fp8": {
+          "value": 0.129,
+          "low": 0.0323,
+          "high": 0.2581,
+          "n": 31
+        },
+        "gemma-4-31b-fp8": {
+          "value": 0.0,
+          "low": 0.0,
+          "high": 0.0,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "unnecessary_calls",
+      "fmt": "num",
+      "higher_is_better": false,
+      "label": "Unnecessary calls / q",
+      "runs": {
+        "qwen3.6-27b-fp8": {
+          "value": 1.2258,
+          "low": 0.3548,
+          "high": 2.4194,
+          "n": 31
+        },
+        "gemma-4-31b-fp8": {
+          "value": 0,
+          "low": 0,
+          "high": 0,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "mean_latency_s",
+      "fmt": "num",
+      "higher_is_better": false,
+      "label": "Mean latency (s)",
+      "runs": {
+        "qwen3.6-27b-fp8": {
+          "value": 243.4972,
+          "low": 166.7705,
+          "high": 328.3646,
+          "n": 31
+        },
+        "gemma-4-31b-fp8": {
+          "value": 119.1067,
+          "low": 86.8621,
+          "high": 154.5915,
+          "n": 31
+        }
+      }
+    }
+  ],
+  "paired": [
+    {
+      "key": "task_completion",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Task completion",
+      "candidate": "gemma-4-31b-fp8",
+      "base_value": 1.0,
+      "candidate_value": 0.9048,
+      "diff": -0.09519999999999995,
+      "low": -0.23529999999999995,
+      "high": 0.0,
+      "p": 0.5022488755622189,
+      "n": 31
+    },
+    {
+      "key": "correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Answer correctness",
+      "candidate": "gemma-4-31b-fp8",
+      "base_value": 1.0,
+      "candidate_value": 0.9048,
+      "diff": -0.09519999999999995,
+      "low": -0.23529999999999995,
+      "high": 0.0,
+      "p": 0.5022488755622189,
+      "n": 31
+    },
+    {
+      "key": "citation_accuracy",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Citation accuracy",
+      "candidate": "gemma-4-31b-fp8",
+      "base_value": 0.9506,
+      "candidate_value": 1.0,
+      "diff": 0.0494,
+      "low": 0.0,
+      "high": 0.10829999999999995,
+      "p": 0.4732633683158421,
+      "n": 31
+    },
+    {
+      "key": "evidence_recall",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Evidence recall",
+      "candidate": "gemma-4-31b-fp8",
+      "base_value": 0.75,
+      "candidate_value": 0.7685,
+      "diff": 0.01849999999999996,
+      "low": -0.15279999999999994,
+      "high": 0.1773,
+      "p": 0.8415792103948025,
+      "n": 31
+    },
+    {
+      "key": "tool_selection",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Tool selection",
+      "candidate": "gemma-4-31b-fp8",
+      "base_value": 0.9355,
+      "candidate_value": 0.9355,
+      "diff": 0.0,
+      "low": -0.09670000000000001,
+      "high": 0.09670000000000001,
+      "p": 1.0,
+      "n": 31
+    },
+    {
+      "key": "tool_call_correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Tool-call correctness",
+      "candidate": "gemma-4-31b-fp8",
+      "base_value": 0.9657,
+      "candidate_value": 0.8652,
+      "diff": -0.10050000000000003,
+      "low": -0.2046,
+      "high": 0.015100000000000002,
+      "p": 0.022988505747126436,
+      "n": 31
+    },
+    {
+      "key": "over_budget_rate",
+      "fmt": "pct",
+      "higher_is_better": false,
+      "metric": "Over-budget rate",
+      "candidate": "gemma-4-31b-fp8",
+      "base_value": 0.129,
+      "candidate_value": 0.0,
+      "diff": -0.129,
+      "low": -0.2581,
+      "high": -0.0323,
+      "p": 0.12043978010994502,
+      "n": 31
+    },
+    {
+      "key": "unnecessary_calls",
+      "fmt": "num",
+      "higher_is_better": false,
+      "metric": "Unnecessary calls / q",
+      "candidate": "gemma-4-31b-fp8",
+      "base_value": 1.2258,
+      "candidate_value": 0,
+      "diff": -1.2258,
+      "low": -2.3226,
+      "high": -0.3548,
+      "p": 0.009995002498750625,
+      "n": 31
+    },
+    {
+      "key": "mean_latency_s",
+      "fmt": "num",
+      "higher_is_better": false,
+      "metric": "Mean latency (s)",
+      "candidate": "gemma-4-31b-fp8",
+      "base_value": 243.4972,
+      "candidate_value": 119.1067,
+      "diff": -124.39049999999999,
+      "low": -194.0475,
+      "high": -63.751099999999994,
+      "p": 0.0004997501249375312,
+      "n": 31
+    }
+  ],
+  "mcnemar": {
+    "gemma-4-31b-fp8": {
+      "fixed": 0,
+      "regressed": 2,
+      "both_pass": 19,
+      "both_fail": 0,
+      "p": 0.5
+    }
+  },
+  "causes": {
+    "qwen3.6-27b-fp8": {},
+    "gemma-4-31b-fp8": {
+      "wrong value": 1,
+      "unsupported": 1
+    }
+  },
+  "categories": {
+    "qwen3.6-27b-fp8": {
+      "agent_workflow": {
+        "value": null,
+        "low": null,
+        "high": null,
+        "n": 3
+      },
+      "failure_case": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 5
+      },
+      "grounding": {
+        "value": null,
+        "low": null,
+        "high": null,
+        "n": 6
+      },
+      "multi_document": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 4
+      },
+      "retrieval": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 9
+      },
+      "tool_use": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 4
+      }
+    },
+    "gemma-4-31b-fp8": {
+      "agent_workflow": {
+        "value": null,
+        "low": null,
+        "high": null,
+        "n": 3
+      },
+      "failure_case": {
+        "value": 0.75,
+        "low": 0.25,
+        "high": 1.0,
+        "n": 5
+      },
+      "grounding": {
+        "value": null,
+        "low": null,
+        "high": null,
+        "n": 6
+      },
+      "multi_document": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 4
+      },
+      "retrieval": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 9
+      },
+      "tool_use": {
+        "value": 0.75,
+        "low": 0.25,
+        "high": 1.0,
+        "n": 4
+      }
+    }
+  },
+  "transitions": {
+    "gemma-4-31b-fp8": [
+      {
+        "id": "aapl-net-margin-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "regressed",
+        "base_cause": null,
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "amzn-net-sales-fy2021-unsupported",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "regressed",
+        "base_cause": null,
+        "candidate_cause": "unsupported"
+      },
+      {
+        "id": "amzn-aws-growth-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-cloud-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-ai-risks-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-competition-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-revenue-drivers-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-export-controls-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-competition-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-profitability-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-revenue-decline-2023-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-revenue-mix-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-msft-net-income-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-msft-operating-cash-flow-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-net-income-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-rd-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-services-share-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-aws-sales-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-net-sales-fy2023",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "facebook-revenue-fy2024-entity",
+        "category": "failure_case",
+        "failure_mode": "entity_naming",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-net-income-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-rd-cagr-fy2023-2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-operating-cash-flow-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-net-income-fy2023-2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-revenue-fy2024-similar",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-net-income-fy2023-2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-revenue-fy2023",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-revenue-growth-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "orcl-revenue-fy2025",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-automotive-revenue-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-rd-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      }
+    ]
+  },
+  "questions_for_5pt": 73,
+  "unverified": true
+}
