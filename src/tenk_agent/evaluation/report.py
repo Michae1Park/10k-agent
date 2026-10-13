@@ -11,24 +11,26 @@ from pathlib import Path
 
 from tenk_agent.evaluation.runner import RUNS_DIR
 
+ANSWER = {"ask", "research", "closed-book"}
+
 # (row label, section, key, systems it applies to, format)
 ROWS = [
     ("Retrieval (Recall@5)", "retrieval", "recall@5", {"retrieval", "ask"}, "pct"),
     ("Retrieval (MRR)", "retrieval", "mrr", {"retrieval", "ask"}, "num"),
     ("Evidence recall (agent saw gold chunk)", "retrieval", "evidence_recall", {"research"}, "pct"),
     ("Context relevance (judge)", "retrieval", "context_relevance", {"retrieval"}, "pct"),
-    ("Answer correctness", "answers", "correctness", {"ask", "research"}, "pct"),
-    ("Answer faithfulness (judge)", "answers", "faithfulness", {"ask", "research"}, "pct"),
-    ("Citation accuracy (numeric)", "answers", "citation_accuracy", {"ask", "research"}, "pct"),
+    ("Answer correctness", "answers", "correctness", ANSWER, "pct"),
+    ("Answer faithfulness (judge)", "answers", "faithfulness", ANSWER, "pct"),
+    ("Citation accuracy (numeric)", "answers", "citation_accuracy", ANSWER, "pct"),
     ("Tool-call correctness", "agent", "tool_call_correctness", {"research"}, "pct"),
     ("Tool selection", "agent", "tool_selection", {"research"}, "pct"),
     ("Unnecessary calls / question", "agent", "unnecessary_calls", {"research"}, "num"),
-    ("Task completion", "answers", "task_completion", {"ask", "research"}, "pct"),
-    ("Unsupported-answer rate", "answers", "unsupported_answer_rate", {"ask", "research"}, "pct"),
-    ("False-abstention rate", "answers", "false_abstention_rate", {"ask", "research"}, "pct"),
-    ("Mean latency (s)", "cost", "mean_latency_s", {"ask", "research"}, "num"),
-    ("Mean tokens in / out", "cost", None, {"ask", "research"}, "tokens"),
-    ("Mean cost / question (USD)", "cost", "mean_cost_usd", {"ask", "research"}, "usd"),
+    ("Task completion", "answers", "task_completion", ANSWER, "pct"),
+    ("Unsupported-answer rate", "answers", "unsupported_answer_rate", ANSWER, "pct"),
+    ("False-abstention rate", "answers", "false_abstention_rate", ANSWER, "pct"),
+    ("Mean latency (s)", "cost", "mean_latency_s", ANSWER, "num"),
+    ("Mean tokens in / out", "cost", None, ANSWER, "tokens"),
+    ("Mean cost / question (USD)", "cost", "mean_cost_usd", ANSWER, "usd"),
 ]
 
 

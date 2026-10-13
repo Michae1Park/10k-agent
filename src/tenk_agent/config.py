@@ -32,6 +32,7 @@ KEYS = {
     "verify.repair": ("repair", None),
     "verify.repair_calls": ("repair_calls", None),
     "eval.judge_model": ("judge_model", "TENK_JUDGE_MODEL"),
+    "eval.judge_base_url": ("judge_base_url", "TENK_JUDGE_BASE_URL"),
 }
 BOOLS = {"slot_search", "thinking", "structured_data", "verify", "repair"}
 
@@ -50,9 +51,9 @@ class Settings:
     candidates: int = 40
     slot_search: bool = True
     device: str | None = None
-    model: str = "anthropic:claude-sonnet-5"
+    model: str = "openai:Qwen/Qwen3.6-27B-FP8"
     base_url: str = "http://localhost:8001/v1"
-    thinking: bool | None = None
+    thinking: bool | None = False
     gpu_hourly_usd: float = 0.86
     ask_k: int = 8
     max_tool_calls: int = 15
@@ -61,7 +62,8 @@ class Settings:
     verify: bool = True
     repair: bool = True
     repair_calls: int = 4
-    judge_model: str = "anthropic:claude-haiku-4-5"
+    judge_model: str = "openai:openai/gpt-oss-20b"
+    judge_base_url: str = "http://localhost:8002/v1"
 
     @classmethod
     def load(cls, path: Path = CONFIG_PATH) -> "Settings":

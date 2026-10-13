@@ -1,4 +1,7 @@
-"""Ask mode (V2): retrieve top-k chunks, rerank, then one LLM call that answers only from them."""
+"""Ask mode (V2 RAG): retrieve top-k chunks, rerank, then one LLM call that answers only from them.
+
+`closed_book=True` is the ablation baseline: the same call with no excerpts at all.
+"""
 
 import time
 
@@ -19,6 +22,20 @@ Answer in 1–3 sentences, with citations.
 {{corpus}}
 
 {ANSWER_FORMAT}"""
+
+
+# Ablation baseline: the same question and answer format, but no excerpts. Numbers can only
+# come from the model's memory, so the eval shows what retrieval adds.
+CLOSED_BOOK_SYSTEM = f"""You answer questions about SEC 10-K filings from your own knowledge. You have no documents.
+Answer in 1–3 sentences.
+
+- If you don't know the answer, say so instead of guessing, and set "abstained": true.
+- No investment advice, stock prices or forecasts.
+
+{{corpus}}
+
+{ANSWER_FORMAT}
+- You have no chunks: leave "chunk_ids" empty."""
 
 
 def format_chunks(chunks, store: Store) -> str:
@@ -42,20 +59,31 @@ def build_prompt(question: str, chunks, store: Store) -> tuple[str, list[dict]]:
     return system, [{"role": "user", "content": content}]
 
 
+def build_closed_book_prompt(question: str, store: Store) -> tuple[str, list[dict]]:
+    """The closed-book prompt: the corpus table (fiscal calendars) but no excerpts."""
+    system = CLOSED_BOOK_SYSTEM.replace("{corpus}", corpus_table(store))
+    return system, [{"role": "user", "content": f"Question: {question}"}]
+
+
 def ask(
     question: str,
     store: Store,
-    retriever: Retriever,
+    retriever: Retriever | None,
     model: Model,
     verify: bool = True,
     k: int = ASK_K,
+    closed_book: bool = False,
 ) -> dict:
-    trace = Trace("ask", question, model.name)
-    start = time.monotonic()
-    chunks = retriever.search(question, k=k)
-    trace.retrieval(question, [c.id for c in chunks], time.monotonic() - start)
-
-    system, messages = build_prompt(question, chunks, store)
+    """Ask mode; `closed_book` skips retrieval (the ablation baseline, no retriever needed)."""
+    trace = Trace("closed-book" if closed_book else "ask", question, model.name)
+    if closed_book:
+        chunks = []
+        system, messages = build_closed_book_prompt(question, store)
+    else:
+        start = time.monotonic()
+        chunks = retriever.search(question, k=k)
+        trace.retrieval(question, [c.id for c in chunks], time.monotonic() - start)
+        system, messages = build_prompt(question, chunks, store)
     response = model.complete(messages, system=system, max_tokens=4000)
     trace.llm("answer", response, len(messages))
     try:
@@ -74,7 +102,7 @@ def ask(
             raw = unparsed(response.text)
 
     result = finalize(raw, store, verify) | {
-        "mode": "ask",
+        "mode": "closed-book" if closed_book else "ask",
         "question": question,
         "model": model.name,
         "retrieved": [c.id for c in chunks],

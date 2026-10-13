@@ -32,7 +32,7 @@ class Metric:
     higher_is_better: bool = True
 
 
-ANSWER = frozenset({"ask", "research"})
+ANSWER = frozenset({"ask", "research", "closed-book"})
 RESEARCH = frozenset({"research"})
 METRICS = (
     Metric("Task completion", "answers", "task_completion", ANSWER),

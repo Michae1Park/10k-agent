@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
-# Serve an open tool-calling model with vLLM's OpenAI-compatible API (V6).
+# Serve an open tool-calling model with vLLM's OpenAI-compatible API.
 #
-#   scripts/serve_vllm.sh qwen3.5-9b            # then: TENK_MODEL=openai:Qwen/Qwen3.5-9B
-#   scripts/serve_vllm.sh qwen3.6-27b-fp8
-#   scripts/serve_vllm.sh qwen3.5-9b-v7      # V7: then TENK_MODEL=openai:tenk/qwen3.5-9b-v7
+#   scripts/serve_vllm.sh qwen3.6-27b-fp8       # the default model (config.yaml model.name)
+#   scripts/serve_vllm.sh gemma-4-31b-fp8       # V5 comparison: TENK_MODEL=openai:RedHatAI/gemma-4-31B-it-FP8-block
+#   scripts/serve_vllm.sh qwen3.5-9b            # V6 fine-tune base: TENK_MODEL=openai:Qwen/Qwen3.5-9B
+#   scripts/serve_vllm.sh qwen3.5-9b-v6         # V6 fine-tuned: TENK_MODEL=openai:tenk/qwen3.5-9b-v6
+#   scripts/serve_vllm.sh gpt-oss-20b           # the LLM judge, on port 8002 (tenk eval judge)
 #
 # Everything must fit on one L40S (48 GB). The tenk process also keeps the embedder and
 # reranker on the GPU (3–6 GB per process), so vLLM gets 72% of memory by default.
-# VLLM_BIN points at the vLLM executable (default: `vllm` on PATH).
+# VLLM_BIN points at the vLLM executable (default: `vllm` on PATH, else the vllm_py311 conda env).
 # On this machine the i9-14900K's P-cores crash under load; CPUS pins the server to E-cores.
 set -euo pipefail
 
 preset=${1:?usage: serve_vllm.sh <preset> [extra vllm args]}
 shift
-VLLM_BIN=${VLLM_BIN:-vllm}
+VLLM_BIN=${VLLM_BIN:-$(command -v vllm || echo ~/miniconda3/envs/vllm_py311/bin/vllm)}
 PORT=${PORT:-8001}
 GPU_UTIL=${GPU_UTIL:-0.72}
 MAX_LEN=${MAX_LEN:-65536}  # agent trajectories reach 20–40k tokens
@@ -24,10 +26,10 @@ case "$preset" in
     model=Qwen/Qwen3.5-9B
     args=(--dtype bfloat16 --tool-call-parser qwen3_coder --reasoning-parser qwen3)
     ;;
-  qwen3.5-9b-v7)
-    # The merged V7 fine-tune (scripts/finetune.sh merge); same settings as its base.
-    model=${V7_MODEL:-data/finetune/v7/merged}
-    name=tenk/qwen3.5-9b-v7
+  qwen3.5-9b-v6)
+    # The merged V6 fine-tune (scripts/finetune.sh merge); same settings as its base.
+    model=${TUNED_MODEL:-data/finetune/v6/merged}
+    name=${TUNED_NAME:-tenk/qwen3.5-9b-v6}  # variants: TUNED_MODEL=data/finetune/v6-r64/merged TUNED_NAME=tenk/qwen3.5-9b-v6-r64
     args=(--dtype bfloat16 --tool-call-parser qwen3_coder --reasoning-parser qwen3)
     ;;
   qwen3.6-27b-fp8)
@@ -39,12 +41,29 @@ case "$preset" in
     args=(--tool-call-parser qwen3_coder --reasoning-parser qwen3
       --enforce-eager --limit-mm-per-prompt '{"image":0,"video":0}')
     ;;
+  gemma-4-31b-fp8)
+    # Gemma 4 31B in bf16 is 62 GB; this FP8 build is ~32 GB, the same precision as the
+    # Qwen 27B. Same memory limits as qwen3.6-27b-fp8 (I-003): eager mode, no vision, 32k.
+    model=RedHatAI/gemma-4-31B-it-FP8-block
+    MAX_LEN=${MAX_LEN_31B:-32768}
+    args=(--tool-call-parser gemma4 --reasoning-parser gemma4
+      --enforce-eager --limit-mm-per-prompt '{"image":0,"video":0}')
+    ;;
+  gpt-oss-20b)
+    # The fixed LLM judge (D-029): another family than every model under test, ~13 GB.
+    # Port 8002 so it can run beside a small model; stop a 27B/31B model first.
+    model=openai/gpt-oss-20b
+    PORT=${JUDGE_PORT:-8002}
+    GPU_UTIL=${JUDGE_GPU_UTIL:-0.45}
+    MAX_LEN=${MAX_LEN_JUDGE:-32768}
+    args=(--reasoning-parser openai_gptoss)
+    ;;
   qwen3-1.7b)
     model=Qwen/Qwen3-1.7B
     args=(--dtype bfloat16 --tool-call-parser hermes --reasoning-parser qwen3)
     ;;
   *)
-    echo "unknown preset $preset (qwen3.5-9b, qwen3.5-9b-v7, qwen3.6-27b-fp8, qwen3-1.7b)" >&2
+    echo "unknown preset $preset (qwen3.6-27b-fp8, gemma-4-31b-fp8, qwen3.5-9b, qwen3.5-9b-v6, gpt-oss-20b, qwen3-1.7b)" >&2
     exit 2
     ;;
 esac

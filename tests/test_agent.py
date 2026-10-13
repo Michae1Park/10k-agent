@@ -277,3 +277,15 @@ def test_malformed_claims_are_unverified_not_fatal(tmp_path):
     ]
     answer = finalize({"answer": "x", "claims": claims}, store)
     assert [c["status"] for c in answer["claims"]] == ["unverified", "unverified"]
+
+
+def test_closed_book_sends_no_excerpts_and_needs_no_retriever(tmp_path):
+    store = make_store(tmp_path)
+    claim = RD_CLAIM | {"chunk_ids": []}
+    model = ScriptedModel([(final([claim]), [])])
+    answer = ask("What was Apple's R&D in fiscal 2025?", store, None, model, closed_book=True)
+    request = model.requests[0]
+    assert "Excerpts" not in request["messages"][0]["content"]
+    assert "no documents" in request["system"]
+    assert answer["mode"] == "closed-book"
+    assert answer["claims"][0]["status"] == "unverified"  # nothing cited, nothing to check

@@ -7,8 +7,8 @@ tool schemas use one neutral format, translated here per provider:
     {"role": "assistant", "content": str, "tool_calls": [ToolCall], "provider_content": ...}
     {"role": "tool", "tool_call_id": str, "name": str, "content": str, "is_error": bool}
 
-Specs: "anthropic:<model id>" (Claude, the baseline) or "openai:<model>" (any
-OpenAI-compatible server, e.g. vLLM or Ollama, at OPENAI_BASE_URL).
+Specs: "openai:<model>" (the default: open models on vLLM, or any
+OpenAI-compatible server at OPENAI_BASE_URL) or "anthropic:<model id>" (Claude, optional).
 """
 
 import json

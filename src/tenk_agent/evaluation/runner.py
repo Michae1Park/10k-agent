@@ -1,10 +1,13 @@
 """Run a system over the gold set and write eval/runs/<label>/{config,results,summary}.
 
-    retrieval  the retriever alone (V1): Recall@5/10, MRR, context relevance
-    ask        the Ask pipeline (V2)
-    research   the agent (V3; V4 with verification on)
+    retrieval    the retriever alone (V1): Recall@5/10, MRR, context relevance
+    ask          the Ask pipeline (V2 RAG)
+    research     the agent (V3 with --no-verify; V4 with verification and repair)
+    closed-book  the model with no documents (ablation baseline)
 
 Results are JSONL, one scored row per question, so any metric can be recomputed later.
+The LLM judge runs inline (`judge=True`) or afterwards with `judge_run`, which lets the
+judge model take the GPU once the model under test is stopped.
 """
 
 import json
@@ -32,7 +35,7 @@ from tenk_agent.tools import Toolbox
 log = logging.getLogger(__name__)
 RUNS_DIR = Path("eval/runs")
 REFERENCE_PATH = Path("eval/gold/reference_trajectories.json")
-SYSTEMS = ("retrieval", "ask", "research")
+SYSTEMS = ("retrieval", "ask", "research", "closed-book")
 
 
 @dataclass
@@ -42,7 +45,7 @@ class RunOptions:
     split: str | None = "dev"
     ids: list[str] | None = None
     include_unverified: bool = False
-    judge: bool = True
+    judge: bool = False  # inline; or later with `tenk eval judge <label>`
     verify: bool = True
     workers: int = 4
     limit: int | None = None
@@ -52,7 +55,7 @@ class RunOptions:
     repair: bool = True  # V4: send failed claims back to the agent once
     repair_calls: int = 4
     resume: bool = False  # keep finished rows in results.jsonl, run only the rest
-    gold_path: Path = gold.GOLD_PATH  # V7: generated questions over the training corpus
+    gold_path: Path = gold.GOLD_PATH  # V6: generated questions over the training corpus
 
 
 def select_questions(options: RunOptions) -> list[dict]:
@@ -70,7 +73,7 @@ def run(options: RunOptions, settings: Settings) -> dict:
     store = Store(settings.db_path)
     retriever = Retriever.from_settings(store, settings, **(options.retrieval_overrides or {}))
     model = load_model(settings) if options.system != "retrieval" else None
-    judge = Judge(get_model(settings.judge_model)) if options.judge else None
+    judge = load_judge(settings) if options.judge else None
     toolbox = Toolbox.from_settings(store, retriever, settings)
     references = json.loads(REFERENCE_PATH.read_text()) if REFERENCE_PATH.exists() else {}
     questions = select_questions(options)
@@ -124,6 +127,59 @@ def run(options: RunOptions, settings: Settings) -> dict:
         rows = done + list(pool.map(evaluate, questions))
 
     summary = summarize(rows, options.system) | {"config": config}
+    (out_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+    return summary
+
+
+def load_judge(settings: Settings) -> Judge:
+    """The fixed judge model, on its own server (TENK_JUDGE_BASE_URL)."""
+    return Judge(get_model(settings.judge_model, base_url=settings.judge_base_url))
+
+
+def judge_run(label: str, settings: Settings, workers: int = 4) -> dict:
+    """Add LLM-judge metrics to a finished run, from its stored answers and chunks.
+
+    The model under test isn't called again, so it needn't be served: only the judge.
+    Rows that already have judge verdicts are skipped.
+    """
+    store = Store(settings.db_path)
+    judge = load_judge(settings)
+    out_dir = RUNS_DIR / label
+    config = json.loads((out_dir / "config.json").read_text())
+    questions = {q["id"]: q for q in gold.load(Path(config.get("gold", gold.GOLD_PATH)))}
+    rows = [json.loads(line) for line in (out_dir / "results.jsonl").read_text().splitlines()]
+
+    def judge_row(row: dict) -> dict:
+        if row.get("error") or row.get("judged"):
+            return row
+        q = questions[row["id"]]
+        try:
+            if config["system"] == "retrieval":
+                chunks = [c for c in map(store.get_chunk, row["retrieved"][:5]) if c]
+                if chunks:
+                    verdicts = judge.relevance(q["question"], [c.text for c in chunks])
+                    row["context_relevance"] = sum(verdicts) / len(verdicts)
+            else:
+                citations = {
+                    cid: {"text": chunk.text}
+                    for claim in row["answer"]["claims"]
+                    for cid in claim["chunk_ids"]
+                    if (chunk := store.get_chunk(cid))
+                }
+                _judge_answer(q, row, row["answer"] | {"citations": citations}, judge)
+                row["correctness"] = _correctness(q, row)
+                row["task_complete"] = _task_complete(q, row)
+            row["judged"] = True
+        except Exception as e:  # one bad verdict mustn't end the pass; rerun to retry
+            log.error("%s: judge failed: %s", row["id"], e)
+        return row
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        rows = list(pool.map(judge_row, rows))
+    (out_dir / "results.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    config["judge_model"] = settings.judge_model
+    (out_dir / "config.json").write_text(json.dumps(config, indent=2) + "\n")
+    summary = summarize(rows, config["system"]) | {"config": config}
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     return summary
 
@@ -186,11 +242,21 @@ def _evaluate(q, options, store, retriever, model, toolbox, judge, references) -
         if judge and chunks:
             verdicts = judge.relevance(q["question"], [c.text for c in chunks[:5]])
             row["context_relevance"] = sum(verdicts) / len(verdicts)
+            row["judged"] = True
         return row
 
-    if options.system == "ask":
-        answer = ask(q["question"], store, retriever, model, verify=options.verify, k=options.ask_k)
-        retrieved = answer["retrieved"]
+    if options.system in ("ask", "closed-book"):
+        closed = options.system == "closed-book"
+        answer = ask(
+            q["question"],
+            store,
+            retriever,
+            model,
+            verify=options.verify,
+            k=options.ask_k,
+            closed_book=closed,
+        )
+        retrieved = None if closed else answer["retrieved"]
     else:
         answer = run_research(
             q["question"],
@@ -207,7 +273,7 @@ def _evaluate(q, options, store, retriever, model, toolbox, judge, references) -
     row["answer"] = {k: v for k, v in answer.items() if k != "citations"}
     row["usage"] = answer["usage"]
 
-    if gold_set:
+    if gold_set and options.system != "closed-book":
         if retrieved is not None:
             row["recall@5"] = rmetrics.recall_at_k(retrieved, gold_set, 5)
             row["mrr"] = rmetrics.reciprocal_rank(retrieved, gold_set)
@@ -223,17 +289,8 @@ def _evaluate(q, options, store, retriever, model, toolbox, judge, references) -
     row["citations"] = citation_accuracy(answer, store)
 
     if judge:
-        if q.get("required_points"):
-            covered = judge.points_covered(q["question"], q["required_points"], answer["answer"])
-            row["points_covered"] = covered
-        claims = [c for c in answer["claims"] if c["chunk_ids"]]
-        if claims:
-            supported = judge.faithfulness(claims, answer["citations"])
-            row["faithfulness"] = {
-                "claims": len(claims),
-                "supported": sum(supported),
-                "verdicts": {str(c["id"]): v for c, v in zip(claims, supported, strict=True)},
-            }
+        _judge_answer(q, row, answer, judge)
+        row["judged"] = True
 
     if options.system == "research":
         row["agent"] = agent_metrics(q, trace, references.get(q["id"]))
@@ -241,6 +298,21 @@ def _evaluate(q, options, store, retriever, model, toolbox, judge, references) -
     row["correctness"] = _correctness(q, row)
     row["task_complete"] = _task_complete(q, row)
     return row
+
+
+def _judge_answer(q: dict, row: dict, answer: dict, judge: Judge) -> None:
+    """Judge metrics: required points covered, and claims supported by their cited chunks."""
+    if q.get("required_points"):
+        covered = judge.points_covered(q["question"], q["required_points"], answer["answer"])
+        row["points_covered"] = covered
+    claims = [c for c in answer["claims"] if c["chunk_ids"]]
+    if claims:
+        supported = judge.faithfulness(claims, answer["citations"])
+        row["faithfulness"] = {
+            "claims": len(claims),
+            "supported": sum(supported),
+            "verdicts": {str(c["id"]): v for c, v in zip(claims, supported, strict=True)},
+        }
 
 
 def _chunks_seen(trace: dict) -> set[str]:

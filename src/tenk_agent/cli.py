@@ -57,7 +57,7 @@ def main(argv: list[str] | None = None) -> int:
     ):
         mode = commands.add_parser(name, help=help_text)
         mode.add_argument("question")
-        mode.add_argument("--model", help="model spec, e.g. anthropic:claude-sonnet-5")
+        mode.add_argument("--model", help="model spec, e.g. openai:Qwen/Qwen3.6-27B-FP8")
         mode.add_argument("--json", action="store_true", help="print the full answer JSON")
         mode.add_argument("--no-verify", action="store_true", help="skip the verification pass")
 
@@ -68,9 +68,9 @@ def main(argv: list[str] | None = None) -> int:
     eval_cmd = commands.add_parser("eval", help="run and report evaluations")
     eval_actions = eval_cmd.add_subparsers(dest="eval_action", required=True)
     run = eval_actions.add_parser("run", help="run a system over the gold set")
-    run.add_argument("system", choices=("retrieval", "ask", "research"))
+    run.add_argument("system", choices=("retrieval", "ask", "research", "closed-book"))
     run.add_argument("--label", help="run name (default: <system>-<timestamp>)")
-    run.add_argument("--split", default="dev", help="dev, test or all (V7 questions: heldout)")
+    run.add_argument("--split", default="dev", help="dev, test or all (V6 questions: heldout)")
     run.add_argument("--gold", type=Path, help="question file (default: the gold set)")
     run.add_argument("--ids", nargs="*", help="only these question IDs")
     run.add_argument("--limit", type=int)
@@ -79,7 +79,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="also run draft (unverified) questions; results are marked as such",
     )
-    run.add_argument("--no-judge", action="store_true", help="skip LLM-judge metrics")
+    run.add_argument(
+        "--judge",
+        action="store_true",
+        help="LLM-judge metrics inline (the judge server must be up; or: tenk eval judge)",
+    )
     run.add_argument("--no-verify", action="store_true", help="skip the verification pass")
     run.add_argument(
         "--no-repair", action="store_true", help="don't let the agent fix failed claims"
@@ -94,7 +98,13 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="one search, not one per company and filing named in the question",
     )
-    run.add_argument("--structured-data", action="store_true", help="V5: add the XBRL tool")
+    run.add_argument("--structured-data", action="store_true", help="ablation: add the XBRL tool")
+    run.add_argument("--max-tool-calls", type=int, help="agent tool budget (default: config)")
+    judge_cmd = eval_actions.add_parser(
+        "judge", help="add LLM-judge metrics to finished runs (only the judge model is served)"
+    )
+    judge_cmd.add_argument("labels", nargs="+")
+    judge_cmd.add_argument("--workers", type=int, default=4)
     rescore = eval_actions.add_parser("rescore", help="recompute deterministic metrics of a run")
     rescore.add_argument("label")
     report = eval_actions.add_parser("report", help="results table from runs")
@@ -110,7 +120,9 @@ def main(argv: list[str] | None = None) -> int:
     calibrate.add_argument("label", help="run label")
     calibrate.add_argument("--answers", type=int, default=30)
 
-    finetune = commands.add_parser("finetune", help="V7 fine-tuning data (docs/FINETUNE.md)")
+    finetune = commands.add_parser(
+        "finetune", help="V6 fine-tuning data (docs/V6_FINETUNE_ABLATION.md)"
+    )
     ft_actions = finetune.add_subparsers(dest="ft_action", required=True)
     questions = ft_actions.add_parser("questions", help="generate questions with XBRL answers")
     questions.add_argument("--out", type=Path, help="default: <data_dir>/questions.jsonl")
@@ -393,6 +405,11 @@ def _eval(args: argparse.Namespace) -> int:
         text = report.write(columns, args.out) if args.out else report.table(columns)
         print(text)
         return 0
+    if args.eval_action == "judge":
+        for label in args.labels:
+            summary = runner.judge_run(label, _settings(args), args.workers)
+            print(label, json.dumps(summary.get("answers") or summary["retrieval"], indent=2))
+        return 0
     if args.eval_action == "rescore":
         summary = runner.rescore(args.label, _settings(args))
         print(json.dumps({k: v for k, v in summary.items() if k != "config"}, indent=2))
@@ -419,6 +436,8 @@ def _eval(args: argparse.Namespace) -> int:
         settings.model = args.model
     if args.structured_data:
         settings.structured_data = True
+    if args.max_tool_calls:
+        settings.max_tool_calls = args.max_tool_calls
     overrides = {k: v for k, v in (("mode", args.mode), ("reranker", args.reranker)) if v}
     if args.no_slot_search:
         overrides["slot_search"] = False
@@ -429,7 +448,7 @@ def _eval(args: argparse.Namespace) -> int:
         split=None if args.split == "all" else args.split,
         ids=args.ids,
         include_unverified=args.include_unverified,
-        judge=not args.no_judge,
+        judge=args.judge,
         verify=settings.verify and not args.no_verify,
         workers=args.workers,
         limit=args.limit,

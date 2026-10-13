@@ -11,23 +11,27 @@ tenk check                                         # V0 exit criteria (filings +
 
 tenk eval run retrieval --split test               # V1 · verified questions only, unless --include-unverified
 tenk eval run ask --split test                     # V2
-tenk eval run research --split test --no-repair    # V3
+tenk eval run research --split test --no-verify    # V3 (no verification, no repair)
 tenk eval run research --split test                # V4
-tenk eval run research --split test --structured-data --label v5-xbrl    # V5 experiment
+tenk eval judge <label> [<label> ...]              # V4 · add LLM-judge metrics (only the judge served)
+tenk eval run closed-book --split test             # ablation: the model with no documents
+tenk eval run research --split test --structured-data --label abl-xbrl   # ablation: XBRL tool
 tenk eval rescore <label>                          # recompute deterministic metrics, no model calls
 tenk eval report V1=<label> V2=<label> V3=<label> V4=<label> --out eval/results.md
-tenk eval compare V4=<label> V7=<label> [V6=<label>]     # baseline first: intervals, paired tests, failure causes, charts
+tenk eval compare V4=<label> V5=<label> [V6=<label>]     # baseline first: intervals, paired tests, failure causes, charts
 tenk eval calibrate export <label>                 # judge calibration: fill in "human", then
 tenk eval calibrate score <label>
-scripts/eval_all.sh                                # V1–V4 + report in one command
+scripts/eval_all.sh                                # V1–V4 (+ judge pass) + report in one command
+versions/v6_finetune_ablation/ablation.sh          # every ablation row + comparison report
 ```
 
 | Flag | Effect |
 |---|---|
 | `--split dev \| test \| all` | Tune on `dev` only; report `test` |
-| `--gold <file>` | Another question file, e.g. V7's held-out training companies ([FINETUNE.md](FINETUNE.md)) |
+| `--gold <file>` | Another question file, e.g. V6's held-out training companies ([V6 guide](V6_FINETUNE_ABLATION.md)) |
 | `--include-unverified` | Also run draft questions; results say so |
-| `--no-judge` | Skip LLM-judge metrics (shown as n/m) |
+| `--judge` | LLM-judge metrics inline; the judge server must be up at `eval.judge_base_url`. Without it they show as n/m until `tenk eval judge <label>` |
+| `--max-tool-calls N` | Agent tool budget for this run (ablation) |
 | `--workers N` | Questions in parallel (vLLM batches them) |
 | `--resume` | Continue an interrupted run ([I-001](DECISIONS.md#i-001)) |
 | `--model`, `--mode`, `--reranker`, `--no-slot-search` | Override `config.yaml` for this run |
@@ -61,7 +65,7 @@ scripts/eval_all.sh                                # V1–V4 + report in one com
 | Recall@5, MRR | Gold chunks vs retrieved chunks, per primary source | no |
 | Evidence recall (agent) | Gold chunks among everything the agent's tools returned | no |
 | Answer correctness | Numbers: a claim matches each expected value (unit-normalized, `tolerance`, right company and year). Text: share of `required_points` covered. Abstain: declined | text only |
-| Citation accuracy | Numeric claims verified or calculated (stage 5) | no |
+| Citation accuracy | Numeric claims verified or calculated (V4) | no |
 | Faithfulness | Every claim supported by its cited chunks | yes |
 | Context relevance | Retrieved chunks that help answer | yes |
 | Task completion | All expected values right / all points covered / declined when it should | text only |
@@ -71,7 +75,7 @@ scripts/eval_all.sh                                # V1–V4 + report in one com
 | Unsupported-answer rate | Answered although `should_abstain` (completed questions only, [D-017](DECISIONS.md#d-017)) | no |
 | Latency, tokens, cost | From traces; self-hosted cost = latency × GPU rate ([D-020](DECISIONS.md#d-020)) | no |
 
-The judge is fixed (`eval.judge_model`, Claude Haiku 4.5) whatever model is under test ([D-014](DECISIONS.md#d-014)). Calibrate it once: hand-grade ~30 answers, report agreement and Cohen's kappa.
+The judge is fixed (`eval.judge_model`: `openai/gpt-oss-20b` on port 8002, [D-029](DECISIONS.md#d-029)) whatever model is under test ([D-014](DECISIONS.md#d-014)). It is from another family than every model compared, so no model grades itself. One GPU can't hold it beside the 27B or 31B, so the usual order is: run the answers, stop that model, start the judge (`scripts/serve_vllm.sh gpt-oss-20b`), then `tenk eval judge <labels>`. Calibrate it once: hand-grade ~30 answers, report agreement and Cohen's kappa.
 
 ## Comparing runs
 
@@ -133,7 +137,7 @@ The judge is fixed (`eval.judge_model`, Claude Haiku 4.5) whatever model is unde
 - **Corpus range** is FY2023–FY2025. Any other year is `unsupported`, even if it appears as a comparative column ([I-005](DECISIONS.md#i-005)).
 - **Calculated answers** are computed by script from verified inputs; inputs go in `notes`.
 
-**Failure modes** (each ≥ 2 questions): `ambiguous_fiscal_year` · `shifted_fiscal_year` · `similar_numbers` · `unit_normalization` · `entity_naming` · `unsupported` · `false_premise`. Required behavior: [STAGE3_ANSWER.md](STAGE3_ANSWER.md#how-it-works).
+**Failure modes** (each ≥ 2 questions): `ambiguous_fiscal_year` · `shifted_fiscal_year` · `similar_numbers` · `unit_normalization` · `entity_naming` · `unsupported` · `false_premise`. Required behavior: [the V2 guide](V2_RAG.md#how-it-works).
 
 ## Verifying a question
 
