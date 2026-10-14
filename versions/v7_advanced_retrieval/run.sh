@@ -6,7 +6,7 @@
 #   versions/v7_advanced_retrieval/run.sh index      # ingest + embed data/tenk-parent-child.db (GPU free)
 #   versions/v7_advanced_retrieval/run.sh retrieval  # rows r1–r4, no model
 #   versions/v7_advanced_retrieval/run.sh ask        # rows r1–r4, Ask mode (model served)
-#   versions/v7_advanced_retrieval/run.sh research   # r4 in Research mode (model served)
+#   versions/v7_advanced_retrieval/run.sh research   # r5 (r4 + context cap) in Research mode (model served)
 #   versions/v7_advanced_retrieval/run.sh judge      # after: stop the model, serve gpt-oss-20b
 #   versions/v7_advanced_retrieval/run.sh compare    # reports in eval/reports/
 #
@@ -25,8 +25,11 @@ declare -A ROWS=(
   [r2-children]="TENK_SEARCH_CHILDREN=1 TENK_RETRIEVAL=dense TENK_ITEM_FILTER=0"
   [r3-hybrid]="TENK_SEARCH_CHILDREN=1 TENK_RETRIEVAL=hybrid TENK_ITEM_FILTER=0"
   [r4-items]="TENK_SEARCH_CHILDREN=1 TENK_RETRIEVAL=hybrid TENK_ITEM_FILTER=1"
+  [r5-capped]="TENK_SEARCH_CHILDREN=1 TENK_RETRIEVAL=hybrid TENK_ITEM_FILTER=1 TENK_CONTEXT_CHARS=12000"
 )
 ORDER=(r1-parents r2-children r3-hybrid r4-items)
+# Research adds a per-search cap: uncapped V7 results overflow the 32k context (D-033).
+RESEARCH_ROW=r5-capped
 
 # label <row> <system> <set>, e.g. v7-r4-items-ask-qwen3.6-27b-fp8-stress-20261014
 label() {
@@ -62,13 +65,13 @@ case "${1:-}" in
     for row in "${ORDER[@]}"; do run_row "$row" ask; done
     ;;
   research)
-    run_row r4-items research
+    run_row "$RESEARCH_ROW" research
     ;;
   judge)
     labels=()
     for set in "$SPLIT" stress; do
       for row in "${ORDER[@]}"; do labels+=("$(label "$row" ask "$set")"); done
-      labels+=("$(label r4-items research "$set")")
+      labels+=("$(label "$RESEARCH_ROW" research "$set")")
     done
     tenk eval judge "${labels[@]}"
     ;;
@@ -79,7 +82,7 @@ case "${1:-}" in
       args=("V2=$base_ask")
       for row in "${ORDER[@]}"; do args+=("V7-${row%%-*}=$(label "$row" ask "$set")"); done
       tenk eval compare "${args[@]}" --out "eval/reports/v7-ask-$model-$set-$TAG"
-      tenk eval compare "V4=$base_research" "V7=$(label r4-items research "$set")" \
+      tenk eval compare "V4=$base_research" "V7=$(label "$RESEARCH_ROW" research "$set")" \
         --out "eval/reports/v7-research-$model-$set-$TAG"
     done
     ;;
