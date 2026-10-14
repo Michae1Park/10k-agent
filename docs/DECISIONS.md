@@ -42,6 +42,7 @@ Why the project looks the way it does: decisions, and the issues found along the
 | [D-030](#d-030) | 2026-10-14 | A separate stress gold set, written to break the pipeline | Accepted |
 | [D-031](#d-031) | 2026-10-14 | V7: a second, parent-child index beside the naive one, not a rewrite of V0–V2 | Accepted |
 | [D-032](#d-032) | 2026-10-14 | V7 verification checks the company and the fiscal-year column of a number | Accepted |
+| [D-033](#d-033) | 2026-10-15 | V7 Research caps each search at 12,000 characters | Accepted |
 
 ### D-001
 **8 companies × FY2023–2025, 24 10-Ks.** Fiscal years end in different months, so "revenue in 2024" is a real disambiguation problem. The range is fixed so the corpus doesn't change when a company files a newer 10-K.
@@ -172,6 +173,9 @@ The 2026 baseline for financial RAG is structure-aware chunks, small-to-large (p
 
 ### D-032
 V4 verified a number if it appeared anywhere in a cited chunk. A 10-K's tables show three years side by side, and a later filing restates earlier ones, so a value can be "found" in the wrong column, or in another company's filing. With V7's row records the check also requires the claimed company and, in a table, a cell under the claimed fiscal year (undated cells and prose keep the old check). It runs automatically on the V7 index; the naive index has no row records.
+
+### D-033
+Children find a few long parents, so an uncapped V7 search returns more text than a naive one (mean 14.8k vs 12.2k characters, p90 25k vs 16k, max 42k vs 18k, over the test and stress questions). In Research mode those results pile up until the prompt passes Qwen3.6-27B's 32k context: 4 of 60 r4 questions errored (2 test, 2 stress). Row r5 caps each `search_filings` result at 12,000 characters (`TENK_CONTEXT_CHARS`), about a naive search's mean, keeping the best-ranked parents. Ask runs stay uncapped: one search fits.
 
 ## Issues
 
