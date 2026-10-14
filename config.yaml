@@ -7,6 +7,9 @@ ingest:                                         # V0 · docs/V0_DATA.md
   chunk_chars: 2400                             # prose chunk size (~600 tokens at 4 chars/token)
   table_chars: 7200                             # longer tables split into row groups (header rows repeated)
   overlap_chars: 600                            # start a chunk with the previous paragraph if it is this short
+  layout: flat                                  # env TENK_LAYOUT · flat (V0) | parent_child (V7, data/tenk-parent-child.db)
+  parent_chars: 6000                            # V7: prose parents, split at headings (~1,500 tokens)
+  child_chars: 800                              # V7: prose children searched (~200 tokens); tables: one child per row
 
 retrieve:                                       # V1 · docs/V1_SEARCH.md
   embedder: local:Qwen/Qwen3-Embedding-0.6B     # env TENK_EMBEDDER · or voyage:voyage-3.5
@@ -14,6 +17,8 @@ retrieve:                                       # V1 · docs/V1_SEARCH.md
   mode: dense                                   # env TENK_RETRIEVAL · keyword | dense | hybrid
   candidates: 40                                # chunks per search before reranking
   slot_search: true                             # one search per (company, filing) named in the question
+  search_children: true                         # env TENK_SEARCH_CHILDREN · V7: search children, return parents (false: parents only)
+  item_filter: false                            # env TENK_ITEM_FILTER · V7: "Item 7A", "risk factors" in the question filter by Item
   device: null                                  # env TENK_LOCAL_DEVICE · where local models run: null = GPU if any, cpu
 
 model:                                          # V2-V6
@@ -24,6 +29,7 @@ model:                                          # V2-V6
 
 answer:                                         # V2 · docs/V2_RAG.md
   k: 8                                          # chunks given to the model
+  context_chars: 0                              # env TENK_CONTEXT_CHARS · V7: cap on excerpt text per call (Ask and search_filings); 0 = all k
 
 agent:                                          # V3 · docs/V3_AGENT.md
   max_tool_calls: 15                            # env TENK_MAX_TOOL_CALLS

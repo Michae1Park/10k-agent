@@ -7,7 +7,7 @@ import time
 
 from tenk_agent.answers import ANSWER_FORMAT, RULES, corpus_table, finalize, unparsed
 from tenk_agent.models import Model, parse_json
-from tenk_agent.retrieval import ITEM_NAMES, Retriever
+from tenk_agent.retrieval import ITEM_NAMES, Retriever, fit_context
 from tenk_agent.store import Store
 from tenk_agent.tracing import Trace
 
@@ -50,20 +50,6 @@ def format_chunks(chunks, store: Store) -> str:
             f" ({c.kind}{units})\n{c.text}\n</chunk>"
         )
     return "\n\n".join(parts)
-
-
-def fit_context(chunks, max_chars: int):
-    """The leading chunks that fit in max_chars (0 = all); always at least one. Slot search
-    puts every filing's best chunk first, so trimming the tail keeps each filing covered."""
-    if not max_chars:
-        return chunks
-    kept, total = [], 0
-    for chunk in chunks:
-        total += len(chunk.text)
-        if kept and total > max_chars:
-            break
-        kept.append(chunk)
-    return kept
 
 
 def build_prompt(question: str, chunks, store: Store) -> tuple[str, list[dict]]:

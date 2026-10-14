@@ -30,7 +30,7 @@ KEYS = {
     "model.thinking": ("thinking", "TENK_OPENAI_THINKING"),
     "model.gpu_hourly_usd": ("gpu_hourly_usd", "TENK_GPU_HOURLY_USD"),
     "answer.k": ("ask_k", None),
-    "answer.context_chars": ("context_chars", None),
+    "answer.context_chars": ("context_chars", "TENK_CONTEXT_CHARS"),
     "agent.max_tool_calls": ("max_tool_calls", "TENK_MAX_TOOL_CALLS"),
     "agent.section_chars": ("section_chars", None),
     "agent.structured_data": ("structured_data", "TENK_STRUCTURED_DATA"),

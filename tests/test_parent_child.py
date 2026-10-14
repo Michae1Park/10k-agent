@@ -1,11 +1,10 @@
 import numpy as np
 
-from tenk_agent.ask import fit_context
 from tenk_agent.config import db_file
 from tenk_agent.edgar import Filing
 from tenk_agent.hierarchy import HierarchySizes, build
 from tenk_agent.parse import Block, Section
-from tenk_agent.retrieval import Retriever, items_in
+from tenk_agent.retrieval import Retriever, fit_context, items_in
 from tenk_agent.store import Store
 from tenk_agent.tables import table_rows
 

@@ -12,7 +12,7 @@ from pathlib import Path
 from tenk_agent.calculator import CalculatorError, calculate
 from tenk_agent.corpus import COMPANIES, FISCAL_YEARS, resolve_company
 from tenk_agent.models import ToolSpec
-from tenk_agent.retrieval import ITEM_NAMES, Retriever
+from tenk_agent.retrieval import ITEM_NAMES, Retriever, fit_context
 from tenk_agent.store import ChunkRecord, Store
 from tenk_agent.verify import find_text, find_value
 
@@ -138,11 +138,17 @@ class Toolbox:
     structured_data: bool = False  # XBRL ablation only
     data_dir: Path = field(default_factory=lambda: Path("data"))
     section_chars: int = 24_000  # one page of get_filing_section output
+    context_chars: int = 0  # V7: cap on one search's result text (0 = all k)
 
     @classmethod
     def from_settings(cls, store: Store, retriever: Retriever, settings) -> "Toolbox":
         return cls(
-            store, retriever, settings.structured_data, settings.data_dir, settings.section_chars
+            store,
+            retriever,
+            settings.structured_data,
+            settings.data_dir,
+            settings.section_chars,
+            settings.context_chars,
         )
 
     @property
@@ -177,6 +183,7 @@ class Toolbox:
         years = [_year(y) for y in fiscal_years] if fiscal_years else None
         k = max(1, min(int(k), MAX_K))
         chunks = self.retriever.search(query, tickers, years, items or None, k=k)
+        chunks = fit_context(chunks, self.context_chars)
         return {"results": [self._chunk_json(c) for c in chunks]}
 
     def get_filing_section(self, company, fiscal_year, item, start=0):
