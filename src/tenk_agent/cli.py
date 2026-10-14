@@ -33,6 +33,9 @@ def main(argv: list[str] | None = None) -> int:
     ingest_cmd.add_argument("--tickers", nargs="*", help="subset of corpus tickers (default: all)")
 
     gold_cmd = commands.add_parser("gold", help="review gold questions (default: list all)")
+    gold_cmd.add_argument(
+        "--gold", type=Path, default=gold.GOLD_PATH, help="question file, e.g. eval/gold/stress.jsonl"
+    )
     gold_actions = gold_cmd.add_subparsers(dest="gold_action")
     show = gold_actions.add_parser("show", help="print a question with its source text")
     show.add_argument("id")
@@ -212,7 +215,7 @@ def _gold(args: argparse.Namespace) -> int:
 def _gold_list(args: argparse.Namespace) -> int:
     """One line per question: verification, evidence resolution and XBRL cross-check."""
     store = Store(db_path(args.data_dir))
-    for q in gold.load():
+    for q in gold.load(args.gold):
         resolved = gold.resolve_evidence(store, q)
         checks = gold.xbrl_checks(q, args.data_dir)
         status = "verified  " if gold.is_verified(q) else "UNVERIFIED"
@@ -225,7 +228,7 @@ def _gold_list(args: argparse.Namespace) -> int:
 
 def _gold_show(args: argparse.Namespace) -> int:
     """Everything a reviewer needs to verify one question against the filing."""
-    q = next((q for q in gold.load() if q["id"] == args.id), None)
+    q = next((q for q in gold.load(args.gold) if q["id"] == args.id), None)
     if q is None:
         print(f"No gold question {args.id!r}", file=sys.stderr)
         return 1
@@ -262,12 +265,12 @@ def _gold_show(args: argparse.Namespace) -> int:
 
 
 def _gold_verify(args: argparse.Namespace) -> int:
-    questions = gold.load()
+    questions = gold.load(args.gold)
     unknown = gold.mark_verified(questions, args.ids, args.by, date.today())
     if unknown:
         print(f"Unknown question IDs (nothing saved): {', '.join(unknown)}", file=sys.stderr)
         return 1
-    gold.save(questions)
+    gold.save(questions, args.gold)
     print(f"Marked {len(args.ids)} question(s) verified by {args.by}")
     return 0
 
