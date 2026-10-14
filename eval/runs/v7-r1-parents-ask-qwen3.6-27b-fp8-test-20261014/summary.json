@@ -1,0 +1,78 @@
+{
+  "questions": 31,
+  "errors": 0,
+  "verified_questions": 0,
+  "retrieval": {
+    "recall@5": 0.7412,
+    "mrr": 0.5613,
+    "scored": 29
+  },
+  "answers": {
+    "correctness": 0.881,
+    "task_completion": 0.8571,
+    "faithfulness": null,
+    "citation_accuracy": 0.9444,
+    "unsupported_answer_rate": 0.5,
+    "false_abstention_rate": 0.0,
+    "format_error_rate": 0.0,
+    "correctness_scored": 21
+  },
+  "cost": {
+    "mean_latency_s": 42.4096,
+    "p95_latency_s": 74.593,
+    "mean_input_tokens": 5666.6129,
+    "mean_output_tokens": 353.1935,
+    "mean_cost_usd": 0.0096,
+    "total_cost_usd": 0.2973
+  },
+  "by_category": {
+    "agent_workflow": {
+      "questions": 3,
+      "correctness": null,
+      "task_completion": null
+    },
+    "failure_case": {
+      "questions": 5,
+      "correctness": 0.75,
+      "task_completion": 0.75
+    },
+    "grounding": {
+      "questions": 6,
+      "correctness": null,
+      "task_completion": null
+    },
+    "multi_document": {
+      "questions": 4,
+      "correctness": 0.875,
+      "task_completion": 0.75
+    },
+    "retrieval": {
+      "questions": 9,
+      "correctness": 1.0,
+      "task_completion": 1.0
+    },
+    "tool_use": {
+      "questions": 4,
+      "correctness": 0.75,
+      "task_completion": 0.75
+    }
+  },
+  "config": {
+    "label": "v7-r1-parents-ask-qwen3.6-27b-fp8-test-20261014",
+    "system": "ask",
+    "started_at": "2026-10-14T07:01:58.046331+00:00",
+    "model": "openai:Qwen/Qwen3.6-27B-FP8",
+    "thinking": false,
+    "judge_model": null,
+    "retriever": "dense local:Qwen/Qwen3-Embedding-0.6B rerank=local:BAAI/bge-reranker-v2-m3 parents",
+    "layout": "parent_child",
+    "context_chars": 0,
+    "verify": true,
+    "repair": true,
+    "structured_data": false,
+    "split": "test",
+    "gold": "eval/gold/questions.jsonl",
+    "questions": 31,
+    "includes_unverified": true
+  }
+}

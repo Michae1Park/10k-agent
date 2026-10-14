@@ -1,0 +1,18 @@
+{
+  "label": "v7-r2-children-ask-qwen3.6-27b-fp8-stress-20261014",
+  "system": "ask",
+  "started_at": "2026-10-14T07:20:25.286937+00:00",
+  "model": "openai:Qwen/Qwen3.6-27B-FP8",
+  "thinking": false,
+  "judge_model": null,
+  "retriever": "dense local:Qwen/Qwen3-Embedding-0.6B rerank=local:BAAI/bge-reranker-v2-m3 children->parents",
+  "layout": "parent_child",
+  "context_chars": 0,
+  "verify": true,
+  "repair": true,
+  "structured_data": false,
+  "split": "test",
+  "gold": "eval/gold/stress.jsonl",
+  "questions": 29,
+  "includes_unverified": true
+}
