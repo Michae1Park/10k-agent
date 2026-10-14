@@ -81,6 +81,7 @@ def ask_endpoint(body: Question) -> dict:
         _model(body.model),
         verify=settings.verify,
         k=settings.ask_k,
+        context_chars=settings.context_chars,
     )
 
 

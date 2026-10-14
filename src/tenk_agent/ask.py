@@ -52,6 +52,20 @@ def format_chunks(chunks, store: Store) -> str:
     return "\n\n".join(parts)
 
 
+def fit_context(chunks, max_chars: int):
+    """The leading chunks that fit in max_chars (0 = all); always at least one. Slot search
+    puts every filing's best chunk first, so trimming the tail keeps each filing covered."""
+    if not max_chars:
+        return chunks
+    kept, total = [], 0
+    for chunk in chunks:
+        total += len(chunk.text)
+        if kept and total > max_chars:
+            break
+        kept.append(chunk)
+    return kept
+
+
 def build_prompt(question: str, chunks, store: Store) -> tuple[str, list[dict]]:
     """The system prompt and the single user message: excerpts, then the question."""
     system = SYSTEM.replace("{corpus}", corpus_table(store))
@@ -73,6 +87,7 @@ def ask(
     verify: bool = True,
     k: int = ASK_K,
     closed_book: bool = False,
+    context_chars: int = 0,
 ) -> dict:
     """Ask mode; `closed_book` skips retrieval (the ablation baseline, no retriever needed)."""
     trace = Trace("closed-book" if closed_book else "ask", question, model.name)
@@ -81,7 +96,7 @@ def ask(
         system, messages = build_closed_book_prompt(question, store)
     else:
         start = time.monotonic()
-        chunks = retriever.search(question, k=k)
+        chunks = fit_context(retriever.search(question, k=k), context_chars)
         trace.retrieval(question, [c.id for c in chunks], time.monotonic() - start)
         system, messages = build_prompt(question, chunks, store)
     response = model.complete(messages, system=system, max_tokens=4000)

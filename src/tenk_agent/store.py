@@ -69,6 +69,24 @@ CREATE TABLE IF NOT EXISTS traces (
 );
 """
 
+# V7 parent-child layout only: small children are searched, their parent chunk is returned.
+CHILD_SCHEMA = """
+CREATE TABLE IF NOT EXISTS children (
+    id TEXT PRIMARY KEY,
+    parent_id TEXT NOT NULL REFERENCES chunks(id),
+    ticker TEXT NOT NULL,
+    fiscal_year INTEGER NOT NULL,
+    item TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    text TEXT NOT NULL,
+    row TEXT
+);
+CREATE INDEX IF NOT EXISTS children_filter ON children (ticker, fiscal_year, item);
+CREATE INDEX IF NOT EXISTS children_parent ON children (parent_id);
+CREATE VIRTUAL TABLE IF NOT EXISTS children_fts
+    USING fts5(text, content='children', content_rowid='rowid');
+"""
+
 # Filings from older databases lack the aliases column; add it in place.
 MIGRATIONS = ("ALTER TABLE companies ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'",)
 
@@ -83,6 +101,18 @@ class ChunkRecord:
     text: str
     units: str | None
     years_covered: list[int]
+
+
+@dataclass
+class ChildRecord:
+    id: str
+    parent_id: str
+    ticker: str
+    fiscal_year: int
+    item: str
+    kind: str  # "prose", "row" or "table_title"
+    text: str
+    row: dict | None  # table rows: {"group", "label", "cells": [[column, fiscal_year, value]]}
 
 
 @dataclass
@@ -126,11 +156,22 @@ class Store:
         sections: list[Section],
         chunks: list[Chunk],
         aliases: tuple[str, ...] = (),
+        children: list | None = None,
     ) -> None:
-        """Insert or replace one filing with its sections and chunks."""
+        """Insert or replace one filing with its sections and chunks (and V7 children)."""
         prefix = f"{filing.ticker}-FY{filing.fiscal_year}"
+        if children is not None:
+            self.db.executescript(CHILD_SCHEMA)
         with self._lock, self.db:
             db = self.db
+            if self.has_children():
+                if self._has_table("children_vec"):
+                    db.execute(
+                        "DELETE FROM children_vec WHERE rowid IN "
+                        "(SELECT rowid FROM children WHERE id LIKE ?)",
+                        (f"{prefix}-%",),
+                    )
+                db.execute("DELETE FROM children WHERE id LIKE ?", (f"{prefix}-%",))
             if self._has_vectors():
                 db.execute(
                     "DELETE FROM chunks_vec WHERE rowid IN "
@@ -176,17 +217,44 @@ class Store:
                     for c in chunks
                 ],
             )
+            if children:
+                parents = {c.id: c for c in chunks}
+                db.executemany(
+                    "INSERT INTO children VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    [
+                        (
+                            child.id,
+                            child.parent_id,
+                            filing.ticker,
+                            filing.fiscal_year,
+                            parents[child.parent_id].item,
+                            child.kind,
+                            child.text,
+                            child.row_json(),
+                        )
+                        for child in children
+                    ],
+                )
 
     def rebuild_search_index(self) -> None:
         with self._lock, self.db:
             self.db.execute("INSERT INTO chunks_fts(chunks_fts) VALUES ('rebuild')")
+            if self.has_children():
+                self.db.execute("INSERT INTO children_fts(children_fts) VALUES ('rebuild')")
 
     # --- Embeddings ----------------------------------------------------------------------
 
     def _has_vectors(self) -> bool:
+        return self._has_table("chunks_vec")
+
+    def _has_table(self, name: str) -> bool:
         return bool(
-            self.db.execute("SELECT 1 FROM sqlite_master WHERE name = 'chunks_vec'").fetchone()
+            self.db.execute("SELECT 1 FROM sqlite_master WHERE name = ?", (name,)).fetchone()
         )
+
+    def has_children(self) -> bool:
+        """True for a V7 parent-child database."""
+        return self._has_table("children")
 
     def embedding_model(self) -> str | None:
         rows = self._query("SELECT value FROM meta WHERE key = 'embedding_model'")
@@ -195,11 +263,12 @@ class Store:
     def reset_embeddings(self, model: str, dimensions: int) -> None:
         """Drop all vectors and prepare for a (possibly different) embedding model."""
         with self._lock, self.db:
-            self.db.execute("DROP TABLE IF EXISTS chunks_vec")
-            self.db.execute(
-                f"CREATE VIRTUAL TABLE chunks_vec USING vec0("
-                f"embedding float[{dimensions}] distance_metric=cosine)"
-            )
+            for table in ("chunks_vec", "children_vec") if self.has_children() else ("chunks_vec",):
+                self.db.execute(f"DROP TABLE IF EXISTS {table}")
+                self.db.execute(
+                    f"CREATE VIRTUAL TABLE {table} USING vec0("
+                    f"embedding float[{dimensions}] distance_metric=cosine)"
+                )
             self.db.execute("INSERT OR REPLACE INTO meta VALUES ('embedding_model', ?)", (model,))
 
     def chunks_without_embeddings(self) -> list[ChunkRecord]:
@@ -222,6 +291,30 @@ class Store:
                 [
                     (rowids[cid], vec.astype(np.float32).tobytes())
                     for cid, vec in zip(chunk_ids, vectors, strict=True)
+                ],
+            )
+
+    def children_without_embeddings(self) -> list[ChildRecord]:
+        rows = self._query(
+            "SELECT * FROM children WHERE rowid NOT IN (SELECT rowid FROM children_vec) ORDER BY id"
+        )
+        return [_child(r) for r in rows]
+
+    def add_child_embeddings(self, child_ids: list[str], vectors: np.ndarray) -> None:
+        with self._lock, self.db:
+            rowids = {
+                r["id"]: r["rowid"]
+                for r in self.db.execute(
+                    "SELECT rowid, id FROM children "
+                    f"WHERE id IN ({', '.join('?' * len(child_ids))})",
+                    child_ids,
+                )
+            }
+            self.db.executemany(
+                "INSERT INTO children_vec(rowid, embedding) VALUES (?, ?)",
+                [
+                    (rowids[cid], vec.astype(np.float32).tobytes())
+                    for cid, vec in zip(child_ids, vectors, strict=True)
                 ],
             )
 
@@ -319,6 +412,52 @@ class Store:
         )
         return [_record(r) for r in rows]
 
+    def child_search(
+        self,
+        query: str,
+        tickers: list[str] | None = None,
+        fiscal_years: list[int] | None = None,
+        items: list[str] | None = None,
+        k: int = 10,
+    ) -> list[ChildRecord]:
+        """Keyword search (BM25) over children, with the same filters as `search`."""
+        terms = [t for t in re.findall(r"\w+", query.lower()) if t not in STOPWORDS]
+        if not terms:
+            return []
+        match = " OR ".join(f'"{term}"' for term in terms)
+        where, params = _filters(tickers, fiscal_years, items, table="c")
+        rows = self._query(
+            f"SELECT c.* FROM children_fts JOIN children c ON c.rowid = children_fts.rowid "
+            f"WHERE children_fts MATCH ? AND {where} ORDER BY bm25(children_fts) LIMIT ?",
+            [match, *params, k],
+        )
+        return [_child(r) for r in rows]
+
+    def child_vector_search(
+        self,
+        vector: np.ndarray,
+        tickers: list[str] | None = None,
+        fiscal_years: list[int] | None = None,
+        items: list[str] | None = None,
+        k: int = 10,
+    ) -> list[ChildRecord]:
+        where, params = _filters(tickers, fiscal_years, items, table="c")
+        rows = self._query(
+            f"SELECT c.* FROM children c JOIN children_vec v ON v.rowid = c.rowid WHERE {where} "
+            f"ORDER BY vec_distance_cosine(v.embedding, ?) LIMIT ?",
+            [*params, vector.astype(np.float32).tobytes(), k],
+        )
+        return [_child(r) for r in rows]
+
+    def child_rows(self, parent_id: str) -> list[ChildRecord]:
+        """A table parent's row records (V7 cell-level verification)."""
+        if not self.has_children():
+            return []
+        rows = self._query(
+            "SELECT * FROM children WHERE parent_id = ? AND kind = 'row' ORDER BY id", (parent_id,)
+        )
+        return [_child(r) for r in rows]
+
     def coverage(self) -> dict[tuple[str, int], dict[str, tuple[int, int]]]:
         """(ticker, fiscal year) -> {item: (chunk count, table chunk count)}."""
         rows = self._query(
@@ -389,6 +528,19 @@ def _record(row: sqlite3.Row) -> ChunkRecord:
         text=row["text"],
         units=row["units"],
         years_covered=json.loads(row["years_covered"]),
+    )
+
+
+def _child(row: sqlite3.Row) -> ChildRecord:
+    return ChildRecord(
+        id=row["id"],
+        parent_id=row["parent_id"],
+        ticker=row["ticker"],
+        fiscal_year=row["fiscal_year"],
+        item=row["item"],
+        kind=row["kind"],
+        text=row["text"],
+        row=json.loads(row["row"]) if row["row"] else None,
     )
 
 
