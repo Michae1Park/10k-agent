@@ -69,7 +69,22 @@ claim ─► value in a cited parent? ─► (V7) right company? in a cell of th
 
 ## Results
 
-Pending: filled in from `eval/reports/v7-*` once the runs finish.
+`TAG=20261014`, Qwen3.6-27B-FP8, draft gold set (unverified, [I-011](DECISIONS.md#i-011)). Reports: `eval/reports/v7-*-20261014.{md,html}`.
+
+**Retrieval** (no model; Recall@5, paired against naive V1 on the same questions):
+
+| Row | Dev (68) | Test (26) | Stress (26) |
+|---|---|---|---|
+| Naive V1 | 59.3% | 71.2% | 88.5% |
+| r1 parents only | 58.3% (−1.0, p 0.80) | 74.1% | 84.6% |
+| **r2 children → parents** | **74.8% (+15.4, p 0.001)** | 83.3% (+12.1, p 0.14) | 90.4% |
+| r3 + hybrid | 74.0% (+14.7, p 0.004) | 81.6% | 94.2% (+5.8, p 0.55) |
+| r4 + Item filter | — | 81.6% | 94.2% |
+
+- **Searching small children is the gain**: +15 points Recall@5 and +0.11 MRR on dev (14 questions fixed, 2 regressed; McNemar p 0.004). Larger chunks on their own change nothing (r1).
+- **Hybrid** helps only the stress set (exact labels like "Other Bets", "Free cash flow"), within noise; it stays a switch.
+- **The Item filter is untested**: no gold question names an Item. It needs questions that do.
+- Test and stress alone are too small to call: the same direction, p > 0.05.
 
 ## Gotchas
 
