@@ -34,6 +34,7 @@ class Metric:
 
 ANSWER = frozenset({"ask", "research", "closed-book"})
 RESEARCH = frozenset({"research"})
+RANKED = frozenset({"retrieval", "ask"})  # runs that return a ranked chunk list
 METRICS = (
     Metric("Task completion", "answers", "task_completion", ANSWER),
     Metric("Answer correctness", "answers", "correctness", ANSWER),
@@ -44,6 +45,9 @@ METRICS = (
     Metric("Over-budget rate", "agent", "over_budget_rate", RESEARCH, higher_is_better=False),
     Metric("Unnecessary calls / q", "agent", "unnecessary_calls", RESEARCH, "num", False),
     Metric("Mean latency (s)", "cost", "mean_latency_s", ANSWER, "num", False),
+    Metric("Recall@5", "retrieval", "recall@5", RANKED),
+    Metric("Recall@10", "retrieval", "recall@10", frozenset({"retrieval"})),
+    Metric("MRR", "retrieval", "mrr", RANKED, "num"),
 )
 
 

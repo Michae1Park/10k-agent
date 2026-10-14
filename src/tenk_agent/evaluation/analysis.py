@@ -58,6 +58,8 @@ def failure_cause(row: dict) -> str | None:
     clean_citations = citations.get("accurate", 0) == citations.get("numeric_claims", 0)
     if ok:
         return None if clean_citations else "citation"
+    if row.get("retrieval_only"):  # set by compare.load: some source missed the top 5
+        return "retrieval miss"
     if row.get("format_error"):
         return "format"
     if row["should_abstain"]:
