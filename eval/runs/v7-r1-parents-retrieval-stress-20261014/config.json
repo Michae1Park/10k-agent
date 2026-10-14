@@ -1,0 +1,18 @@
+{
+  "label": "v7-r1-parents-retrieval-stress-20261014",
+  "system": "retrieval",
+  "started_at": "2026-10-14T06:51:45.606101+00:00",
+  "model": null,
+  "thinking": null,
+  "judge_model": null,
+  "retriever": "dense local:Qwen/Qwen3-Embedding-0.6B rerank=local:BAAI/bge-reranker-v2-m3 parents",
+  "layout": "parent_child",
+  "context_chars": null,
+  "verify": true,
+  "repair": true,
+  "structured_data": false,
+  "split": "test",
+  "gold": "eval/gold/stress.jsonl",
+  "questions": 29,
+  "includes_unverified": true
+}
