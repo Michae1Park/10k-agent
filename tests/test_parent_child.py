@@ -195,3 +195,54 @@ def test_fit_context_keeps_leading_chunks_within_the_budget():
     assert len(fit_context(chunks, 7000)) == 2
     assert len(fit_context(chunks, 0)) == 3
     assert len(fit_context([Text(9000)], 1000)) == 1  # never empty
+
+
+def segment_store(tmp_path, layout="parent_child") -> tuple[Store, str]:
+    from tenk_agent.chunking import chunk_sections
+
+    store = Store(db_file(tmp_path, layout))
+    if layout == "parent_child":
+        parents, children = build("MSFT-FY2025", segment_sections())
+    else:
+        parents, children = chunk_sections("MSFT-FY2025", segment_sections()), None
+    store.add_filing(FILING, "Microsoft", segment_sections(), parents, children=children)
+    table = next(p for p in parents if p.kind == "table")
+    return store, table.id
+
+
+def claim(value, year, chunk_id, company="Microsoft"):
+    return {
+        "value": value,
+        "unit": "USD millions",
+        "company": company,
+        "fiscal_year": year,
+        "chunk_ids": [chunk_id],
+    }
+
+
+def test_a_value_must_sit_in_its_fiscal_years_column(tmp_path):
+    from tenk_agent.verify import verify_claim
+
+    store, table = segment_store(tmp_path)
+
+    assert verify_claim(claim(87464, 2024, table), store)["status"] == "verified"
+    wrong_year = verify_claim(claim(87464, 2025, table), store)
+    assert wrong_year["status"] == "unverified"
+    assert wrong_year["status_reason"] == "found '$87,464' under FY2024, claim says FY2025"
+
+
+def test_a_value_from_another_companys_filing_fails(tmp_path):
+    from tenk_agent.verify import verify_claim
+
+    store, table = segment_store(tmp_path)
+    result = verify_claim(claim(87464, 2024, table, company="Apple"), store)
+
+    assert result["status"] == "unverified"
+    assert result["status_reason"] == "value found only in MSFT filings"
+
+
+def test_the_naive_database_keeps_value_only_verification(tmp_path):
+    from tenk_agent.verify import verify_claim
+
+    store, table = segment_store(tmp_path, layout="flat")
+    assert verify_claim(claim(87464, 2025, table), store)["status"] == "verified"
