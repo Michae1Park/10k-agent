@@ -43,6 +43,8 @@ def main(argv: list[str] | None = None) -> int:
     gold_actions = gold_cmd.add_subparsers(dest="gold_action")
     show = gold_actions.add_parser("show", help="print a question with its source text")
     show.add_argument("id")
+    render = gold_actions.add_parser("render", help="render the question file as a full PDF plus a summary")
+    render.add_argument("--out", type=Path, help="default: output/gold/<file name>.pdf")
     verify = gold_actions.add_parser("verify", help="record your sign-off on questions")
     verify.add_argument("ids", nargs="+")
     verify.add_argument("--by", required=True, help="reviewer initials")
@@ -217,6 +219,8 @@ def _gold(args: argparse.Namespace) -> int:
         return _gold_show(args)
     if args.gold_action == "verify":
         return _gold_verify(args)
+    if args.gold_action == "render":
+        return _gold_render(args)
     return _gold_list(args)
 
 
@@ -269,6 +273,18 @@ def _gold_show(args: argparse.Namespace) -> int:
         match = check.matched_concept or "no matching fact"
         print(f"XBRL: {check.value:,} {check.unit} -> {match}")
     print(f"\nVerified: {q.get('verified_by') or 'no'} {q.get('verified_on') or ''}".rstrip())
+    return 0
+
+
+def _gold_render(args: argparse.Namespace) -> int:
+    from tenk_agent.gold_render import render_pdf, render_summary_pdf
+
+    out = args.out or Path("output/gold") / f"{args.gold.stem}.pdf"
+    store = Store(_settings(args).db_path)
+    count = render_pdf(args.gold, store, args.data_dir, out)
+    summary = out.with_name(f"{out.stem}-summary.pdf")
+    render_summary_pdf(args.gold, summary)
+    print(f"Wrote {count} questions to {out} and the summary to {summary}")
     return 0
 
 
