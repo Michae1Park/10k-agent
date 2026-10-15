@@ -86,9 +86,35 @@ claim ─► value in a cited parent? ─► (V7) right company? in a cell of th
 - **The Item filter is untested**: no gold question names an Item. It needs questions that do.
 - Test and stress alone are too small to call: the same direction, p > 0.05.
 
+**Ask** (one search, then answer; task completion / correctness / citation accuracy, judged by gpt-oss-20b, paired against naive V2):
+
+| Row | Test (31) | Stress (29) |
+|---|---|---|
+| Naive V2 | 61.3% / 76.6% / 100% | 58.6% / 71.8% / 94.4% |
+| r1 parents only | 61.3% / 77.2% / 94.4% | 58.6% / 72.7% / 96.8% |
+| **r2 children → parents** | **71.0%** / 78.5% / 97.2% (3 fixed, 0 regressed, p 0.25) | 58.6% / 72.7% / 88.2% |
+| r3 + hybrid | 64.5% / 78.0% / 97.1% | 58.6% / 71.8% / 90.3% |
+| r4 + Item filter | 67.7% / 76.9% / 100% | 58.6% / 71.8% / 90.3% |
+
+- **Better retrieval reaches the answers only on the main test**, and not significantly: r2 fixes 3 questions and breaks none. On stress every row completes 17 of 29 (one fixed, one broken each); what fails there is reading (a recast column, the NVIDIA fiscal calendar, unlisted arithmetic, I-008), not finding.
+- **The cell check fired once**: r2 stress claimed "27%" R&D intensity for FY2024; the only "27%" in the cited table is the FY2022 cell. The other citation drops on stress are ordinary "value not found" misses on ~30 claims.
+
+**Research** (agent, r5 = r4 + a 12,000-character cap per search, [D-033](DECISIONS.md#d-033); against the V4 agent on the naive index, the test baseline is `v5-qwen3.6-27b-fp8-test-20261013`):
+
+| | Test (31) | Stress (29) |
+|---|---|---|
+| Task completion | 74.2% → 74.2% (2 fixed, 2 regressed) | 82.8% → 86.2% (4 fixed, 3 regressed) |
+| Answer correctness | 90.0% → 90.5% | 88.9% → 93.8% |
+| Evidence recall | 75.0% → 90.5% (p 0.13) | **77.1% → 100% (p 0.02)** |
+| Over-budget rate | 12.9% → 16.1% | 3.7% → 7.1% |
+| Context-overflow errors | 0 → 0 | 2 → 1 |
+
+- **The agent cites the right evidence far more often** (the one significant Research gain), but its answers barely move: the naive agent's answers were mostly right already, so finding the cited source is not where it lost points.
+- **Uncapped, V7 searches overflow the 32k context** on multi-year and multi-company questions (4 of 60 errored, runs `v7-r4-items-research-*`, unjudged). The cap removes 3; the last, `rd-intensity-highest-fy2024` (eight companies), overflowed in V4 too. The price is more, smaller searches: over-budget runs go up on both sets.
+
 ## Gotchas
 
 - **Two databases, two sets of chunk IDs.** V7 parent IDs look like V0 chunk IDs (`AAPL-FY2025-8-012`) but number different chunks. Traces and citations from one index don't resolve in the other. Gold questions are unaffected: evidence is matched by text ([EVAL.md](EVAL.md)).
 - **`tenk ingest` / `tenk embed` follow `TENK_LAYOUT`.** Without it they rebuild the naive index.
-- **Larger parents mean more tokens per search.** Research mode on a 32k-context model can overflow with long searches; `TENK_CONTEXT_CHARS` caps it.
+- **Larger parents mean more tokens per search.** Uncapped, Research mode on a 32k-context model overflows on multi-year questions; `TENK_CONTEXT_CHARS` caps each search (r5 uses 12,000, [D-033](DECISIONS.md#d-033)).
 - **Row records are heuristics.** Groups end at a "Total …" row or the next group header; a few tables (merged "$ %" change columns, maturity schedules) get generic column names. `python -c "from tenk_agent.tables import table_rows"` on a table's rows shows what V7 sees.
