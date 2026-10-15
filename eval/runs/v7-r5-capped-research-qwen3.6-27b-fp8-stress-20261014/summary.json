@@ -1,0 +1,84 @@
+{
+  "questions": 29,
+  "errors": 1,
+  "verified_questions": 0,
+  "retrieval": {
+    "evidence_recall": 1.0,
+    "scored": 25
+  },
+  "answers": {
+    "correctness": 0.9375,
+    "task_completion": 0.8621,
+    "faithfulness": 0.9767,
+    "citation_accuracy": 0.9844,
+    "unsupported_answer_rate": 0.0,
+    "false_abstention_rate": 0.0,
+    "format_error_rate": 0.0,
+    "correctness_scored": 28
+  },
+  "agent": {
+    "tool_selection": 1.0,
+    "tool_call_correctness": 0.9541,
+    "mean_tool_calls": 7.7857,
+    "unnecessary_calls": 1.1071,
+    "over_budget_rate": 0.0714
+  },
+  "cost": {
+    "mean_latency_s": 275.9831,
+    "p95_latency_s": 578.618,
+    "mean_input_tokens": 72376.4286,
+    "mean_output_tokens": 1560.6786,
+    "mean_cost_usd": 0.0656,
+    "total_cost_usd": 1.8373
+  },
+  "by_category": {
+    "agent_workflow": {
+      "questions": 2,
+      "correctness": 1.0,
+      "task_completion": 1.0
+    },
+    "failure_case": {
+      "questions": 9,
+      "correctness": 1.0,
+      "task_completion": 1.0
+    },
+    "grounding": {
+      "questions": 3,
+      "correctness": 0.9167,
+      "task_completion": 0.6667
+    },
+    "multi_document": {
+      "questions": 1,
+      "correctness": 1.0,
+      "task_completion": 1.0
+    },
+    "retrieval": {
+      "questions": 12,
+      "correctness": 0.9583,
+      "task_completion": 0.9167
+    },
+    "tool_use": {
+      "questions": 2,
+      "correctness": 0.5,
+      "task_completion": 0.5
+    }
+  },
+  "config": {
+    "label": "v7-r5-capped-research-qwen3.6-27b-fp8-stress-20261014",
+    "system": "research",
+    "started_at": "2026-10-15T00:32:40.105543+00:00",
+    "model": "openai:Qwen/Qwen3.6-27B-FP8",
+    "thinking": false,
+    "judge_model": "openai:openai/gpt-oss-20b",
+    "retriever": "hybrid local:Qwen/Qwen3-Embedding-0.6B rerank=local:BAAI/bge-reranker-v2-m3 children->parents item-filter",
+    "layout": "parent_child",
+    "context_chars": 12000,
+    "verify": true,
+    "repair": true,
+    "structured_data": false,
+    "split": "test",
+    "gold": "eval/gold/stress.jsonl",
+    "questions": 29,
+    "includes_unverified": true
+  }
+}
