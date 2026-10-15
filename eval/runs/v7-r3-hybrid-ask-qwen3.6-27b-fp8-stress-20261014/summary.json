@@ -8,14 +8,14 @@
     "scored": 26
   },
   "answers": {
-    "correctness": 0.7292,
-    "task_completion": 0.6667,
-    "faithfulness": null,
+    "correctness": 0.7184,
+    "task_completion": 0.5862,
+    "faithfulness": 0.9762,
     "citation_accuracy": 0.9032,
     "unsupported_answer_rate": 0.0,
     "false_abstention_rate": 0.0,
     "format_error_rate": 0.0,
-    "correctness_scored": 24
+    "correctness_scored": 29
   },
   "cost": {
     "mean_latency_s": 36.7692,
@@ -33,13 +33,13 @@
     },
     "failure_case": {
       "questions": 9,
-      "correctness": 1.0,
-      "task_completion": 1.0
+      "correctness": 0.963,
+      "task_completion": 0.8889
     },
     "grounding": {
       "questions": 3,
-      "correctness": null,
-      "task_completion": null
+      "correctness": 0.5556,
+      "task_completion": 0.0
     },
     "multi_document": {
       "questions": 1,
@@ -63,7 +63,7 @@
     "started_at": "2026-10-14T07:32:17.486948+00:00",
     "model": "openai:Qwen/Qwen3.6-27B-FP8",
     "thinking": false,
-    "judge_model": null,
+    "judge_model": "openai:openai/gpt-oss-20b",
     "retriever": "hybrid local:Qwen/Qwen3-Embedding-0.6B rerank=local:BAAI/bge-reranker-v2-m3 children->parents",
     "layout": "parent_child",
     "context_chars": 0,
