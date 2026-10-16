@@ -39,6 +39,10 @@ Why the project looks the way it does: decisions, and the issues found along the
 | [D-027](#d-027) | 2026-10-01 | Comparisons report bootstrap intervals and paired tests; "better/worse" needs p < 0.05 | Accepted |
 | [D-028](#d-028) | 2026-10-13 | Versions V0–V6, one folder each under `versions/`; XBRL and closed-book become ablation rows | Accepted |
 | [D-029](#d-029) | 2026-10-13 | Open models by default: Qwen3.6-27B-FP8 under test, gpt-oss-20b as the fixed judge (second pass) | Accepted |
+| [D-030](#d-030) | 2026-10-14 | A separate stress gold set, written to break the pipeline | Accepted |
+| [D-031](#d-031) | 2026-10-14 | V7: a second, parent-child index beside the naive one, not a rewrite of V0–V2 | Accepted |
+| [D-032](#d-032) | 2026-10-14 | V7 verification checks the company and the fiscal-year column of a number | Accepted |
+| [D-033](#d-033) | 2026-10-15 | V7 Research caps each search at 12,000 characters | Accepted |
 
 ### D-001
 **8 companies × FY2023–2025, 24 10-Ks.** Fiscal years end in different months, so "revenue in 2024" is a real disambiguation problem. The range is fixed so the corpus doesn't change when a company files a newer 10-K.
@@ -160,6 +164,18 @@ Closed-book (the model with no documents) and XBRL are not steps the others buil
 
 ### D-029
 **Open models by default.** Everything runs on one 46 GB L40S with no API key. Under test: Qwen3.6-27B-FP8 (the best open model that fits, with I-003's workaround; ahead of the 9B on every answer metric so far, 100% vs 95.2% correctness, though no difference is significant on 31 questions: `eval/reports/v4-v5-v6.md`); compared against Gemma 4 31B FP8 (another family, same size and precision), plus Claude when a key is set. The fine-tune base stays Qwen3.5-9B: the 27B's bf16 weights alone (~54 GB) don't fit for training, so V6 asks whether a tuned 9B closes the gap to the untuned 27B. **Judge:** gpt-oss-20b, fixed whatever is under test (D-014's rule) and from another family than every model compared, so no model grades itself. It can't share the GPU with the 27B/31B, so judging is a second pass (`tenk eval judge`) after the answers.
+
+### D-030
+The main gold set is mostly headline statement figures (129 of 195 sources in Item 8, 143 table rows) and V1 already finds 71% of them, so a better retriever has little room to show. `eval/gold/stress.jsonl` (29 questions, all `test`) targets what naive RAG gets wrong: recast segments, row labels that repeat under group headers, transposed and oldest-first tables, units in thousands vs dollars, footnote and Item 7A prose figures, calculations across companies, near-miss unsupported questions. Kept apart so the main set's history stays comparable; each question's `tags` say what makes it hard ([EVAL.md](EVAL.md#stress-set)). First finding: retrieval isn't where it's hard (V1 Recall@5 88%); reading the table right is.
+
+### D-031
+The 2026 baseline for financial RAG is structure-aware chunks, small-to-large (parent-child) retrieval, hybrid search, and lineage on every chunk. V0 already kept tables whole and V1 already prepended company / year / Item to what it embeds; V1 had hybrid search built (D-010: no clear win). What was missing: searching small units while reading large ones, and knowing which segment and fiscal year a table cell belongs to. V7 adds both as a second index (`data/tenk-parent-child.db`) and switches that default to the naive behavior, so V0–V6 keep running unchanged and each piece is one ablation row ([V7 guide](V7_ADVANCED_RETRIEVAL.md)). Layout-model parsers (LlamaParse, Unstructured) were not adopted: EDGAR filings are HTML, whose tables are already structured.
+
+### D-032
+V4 verified a number if it appeared anywhere in a cited chunk. A 10-K's tables show three years side by side, and a later filing restates earlier ones, so a value can be "found" in the wrong column, or in another company's filing. With V7's row records the check also requires the claimed company and, in a table, a cell under the claimed fiscal year (undated cells and prose keep the old check). It runs automatically on the V7 index; the naive index has no row records.
+
+### D-033
+Children find a few long parents, so an uncapped V7 search returns more text than a naive one (mean 14.8k vs 12.2k characters, p90 25k vs 16k, max 42k vs 18k, over the test and stress questions). In Research mode those results pile up until the prompt passes Qwen3.6-27B's 32k context: 4 of 60 r4 questions errored (2 test, 2 stress). Row r5 caps each `search_filings` result at 12,000 characters (`TENK_CONTEXT_CHARS`), about a naive search's mean, keeping the best-ranked parents. Ask runs stay uncapped: one search fits.
 
 ## Issues
 

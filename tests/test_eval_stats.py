@@ -93,3 +93,53 @@ def test_compare_report_keeps_dotted_labels(tmp_path, monkeypatch):
     assert (tmp_path / "v4-qwen3.6-27b-fp8-test.json").exists()
     md, _ = compare.write([("V4", "run")], tmp_path / "plain.md")  # an extension is optional
     assert md.name == "plain.md"
+
+
+def test_compare_retrieval_runs_on_recall(monkeypatch):
+    rows = {
+        "base": [
+            {
+                "id": "a",
+                "category": "retrieval",
+                "verified": False,
+                "recall@5": 0.0,
+                "recall@10": 1.0,
+                "mrr": 0.1,
+            },
+            {
+                "id": "b",
+                "category": "retrieval",
+                "verified": False,
+                "recall@5": 1.0,
+                "recall@10": 1.0,
+                "mrr": 1.0,
+            },
+        ],
+        "new": [
+            {
+                "id": "a",
+                "category": "retrieval",
+                "verified": False,
+                "recall@5": 1.0,
+                "recall@10": 1.0,
+                "mrr": 0.5,
+            },
+            {
+                "id": "b",
+                "category": "retrieval",
+                "verified": False,
+                "recall@5": 1.0,
+                "recall@10": 1.0,
+                "mrr": 1.0,
+            },
+        ],
+    }
+    monkeypatch.setattr(analysis, "load_config", lambda label: {"system": "retrieval"})
+    monkeypatch.setattr(analysis, "load_rows", lambda label: rows[label])
+
+    data = compare.build([("V1", "base"), ("V7", "new")])
+
+    assert data["primary"] == "recall@5"
+    assert data["mcnemar"]["V7"]["fixed"] == 1
+    assert data["causes"]["V1"] == {"retrieval miss": 1}
+    assert "## Question-level changes (Recall@5)" in compare.markdown(data)

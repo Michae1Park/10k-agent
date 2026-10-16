@@ -3,6 +3,11 @@
 Every search takes the same metadata filters (company, fiscal year, item). Comparative
 questions depend on them: "R&D expense" filtered to Apple FY2024 beats hoping the top 5
 happens to contain the right company-year.
+
+V7 (parent-child database): the same pipeline runs over small children, and each result is
+swapped for its parent chunk, so matching is precise and the model still reads a whole table
+or subsection. With `item_filter`, an Item the question names ("Item 7A", "risk factors")
+becomes a filter, like companies and years.
 """
 
 import logging
@@ -12,7 +17,7 @@ from dataclasses import dataclass
 from tenk_agent.config import Settings
 from tenk_agent.corpus import COMPANIES, FISCAL_YEARS, resolve_company
 from tenk_agent.embeddings import Embedder, Reranker, get_embedder, get_reranker
-from tenk_agent.store import ChunkRecord, Store
+from tenk_agent.store import ChildRecord, ChunkRecord, Store
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +32,7 @@ ITEM_NAMES = {
 }
 
 
-def chunk_header(chunk: ChunkRecord, company_name: str) -> str:
+def chunk_header(chunk: ChunkRecord | ChildRecord, company_name: str) -> str:
     """Context line prepended to chunk text for embedding and reranking (not for display)."""
     item = ITEM_NAMES.get(chunk.item, "")
     return (
@@ -40,6 +45,26 @@ COMPANY_NAMES = {c.ticker: c.name for c in COMPANIES}
 
 def embedding_text(chunk: ChunkRecord) -> str:
     return chunk_header(chunk, COMPANY_NAMES.get(chunk.ticker, chunk.ticker)) + "\n" + chunk.text
+
+
+def child_embedding_text(child: ChildRecord) -> str:
+    header = chunk_header(child, COMPANY_NAMES.get(child.ticker, child.ticker))
+    return header + "\n" + child.text
+
+
+ITEM_MENTION = re.compile(r"\bitem\s*(\d{1,2}[a-c]?)\b", re.IGNORECASE)
+ITEM_PHRASES = {
+    "1A": re.compile(r"\brisk factors?\b", re.IGNORECASE),
+    "7": re.compile(r"\bMD&A\b|management'?s discussion", re.IGNORECASE),
+    "7A": re.compile(r"\bmarket risk", re.IGNORECASE),
+}
+
+
+def items_in(question: str) -> list[str]:
+    """Items a question names: "Item 7A", or a section name ("risk factors" -> 1A)."""
+    items = [m.upper() for m in ITEM_MENTION.findall(question)]
+    items += [item for item, phrase in ITEM_PHRASES.items() if phrase.search(question)]
+    return list(dict.fromkeys(items))
 
 
 def companies_in(question: str) -> list[str]:
@@ -93,6 +118,10 @@ class Retriever:
     # evidence from every filing it needs.
     slot_search: bool = True
     candidates: int = 40  # chunks fetched per method before fusion / reranking
+    # V7: search children and return their parents (needs a parent-child database).
+    search_children: bool = False
+    # V7: an Item the question names becomes a filter.
+    item_filter: bool = False
 
     @classmethod
     def from_settings(cls, store: Store, settings: Settings, **overrides) -> "Retriever":
@@ -106,6 +135,8 @@ class Retriever:
         reranker = get_reranker(overrides.pop("reranker", settings.reranker), settings.device)
         overrides.setdefault("slot_search", settings.slot_search)
         overrides.setdefault("candidates", settings.candidates)
+        overrides.setdefault("search_children", settings.search_children and store.has_children())
+        overrides.setdefault("item_filter", settings.item_filter)
         return cls(store, mode, embedder, reranker, **overrides)
 
     @property
@@ -117,6 +148,10 @@ class Retriever:
             parts.append(f"rerank={self.reranker.name}")
         if not self.slot_search:
             parts.append("no-slot-search")
+        if self.store.has_children():
+            parts.append("children->parents" if self.search_children else "parents")
+        if self.item_filter:
+            parts.append("item-filter")
         return " ".join(parts)
 
     def slots(self, query: str) -> list[tuple[str | None, list[int] | None]]:
@@ -145,6 +180,8 @@ class Retriever:
         explain: list[dict] | None = None,
     ) -> list[ChunkRecord]:
         """Top-k chunks. Pass a list as `explain` to get each search's intermediate rankings."""
+        if items is None and self.item_filter:
+            items = items_in(query) or None
         if tickers or fiscal_years or not self.slot_search:
             return self._search(query, tickers, fiscal_years, items, k, explain)
         slots = self.slots(query)
@@ -166,22 +203,28 @@ class Retriever:
     def _search(self, query, tickers, fiscal_years, items, k, explain=None) -> list[ChunkRecord]:
         filters = {"tickers": tickers, "fiscal_years": fiscal_years, "items": items}
         size = max(self.candidates, k)
+        children = self.search_children
+        keyword = self.store.child_search if children else self.store.search
+        dense = self.store.child_vector_search if children else self.store.vector_search
+        text = child_embedding_text if children else embedding_text
         rankings = {}
         if self.mode in ("keyword", "hybrid"):
-            rankings["keyword"] = self.store.search(query, k=size, **filters)
+            rankings["keyword"] = keyword(query, k=size, **filters)
         if self.mode in ("dense", "hybrid"):
             assert self.embedder is not None, "dense retrieval needs an embedder"
             vector = self.embedder.embed_query(query)
-            rankings["dense"] = self.store.vector_search(vector, k=size, **filters)
+            rankings["dense"] = dense(vector, k=size, **filters)
         lists = list(rankings.values())
         candidates = _fuse(lists) if len(lists) > 1 else lists[0]
 
         scores = None
         if self.reranker and candidates:
             candidates = candidates[:size]
-            scores = self.reranker.scores(query, [embedding_text(c) for c in candidates])
+            scores = self.reranker.scores(query, [text(c) for c in candidates])
             order = sorted(range(len(candidates)), key=lambda i: scores[i], reverse=True)
             candidates, scores = [candidates[i] for i in order], [scores[i] for i in order]
+        if children:
+            candidates, scores = self._parents(candidates, scores)
         if explain is not None:
             explain.append(
                 {
@@ -196,6 +239,35 @@ class Retriever:
                 }
             )
         return candidates[:k]
+
+    def _parents(self, children: list[ChildRecord], scores: list[float] | None):
+        """Each child's parent, best child first, each parent once (with its best child's score)."""
+        parents: list[ChunkRecord] = []
+        parent_scores: list[float] = []
+        seen: set[str] = set()
+        for i, child in enumerate(children):
+            if child.parent_id in seen:
+                continue
+            seen.add(child.parent_id)
+            if parent := self.store.get_chunk(child.parent_id):
+                parents.append(parent)
+                if scores is not None:
+                    parent_scores.append(scores[i])
+        return parents, (parent_scores if scores is not None else None)
+
+
+def fit_context(chunks, max_chars: int):
+    """The leading chunks that fit in max_chars (0 = all); always at least one. Slot search
+    puts every filing's best chunk first, so trimming the tail keeps each filing covered."""
+    if not max_chars:
+        return chunks
+    kept, total = [], 0
+    for chunk in chunks:
+        total += len(chunk.text)
+        if kept and total > max_chars:
+            break
+        kept.append(chunk)
+    return kept
 
 
 def _fuse(rankings: list[list[ChunkRecord]]) -> list[ChunkRecord]:
@@ -220,4 +292,10 @@ def embed_corpus(store: Store, embedder: Embedder, batch: int = 256) -> int:
         vectors = embedder.embed_documents([embedding_text(c) for c in group])
         store.add_embeddings([c.id for c in group], vectors)
         log.info("Embedded %d/%d chunks", min(start + batch, len(pending)), len(pending))
-    return len(pending)
+    children = store.children_without_embeddings() if store.has_children() else []
+    for start in range(0, len(children), batch):
+        group = children[start : start + batch]
+        vectors = embedder.embed_documents([child_embedding_text(c) for c in group])
+        store.add_child_embeddings([c.id for c in group], vectors)
+        log.info("Embedded %d/%d children", min(start + batch, len(children)), len(children))
+    return len(pending) + len(children)

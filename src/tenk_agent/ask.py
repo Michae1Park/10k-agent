@@ -7,7 +7,7 @@ import time
 
 from tenk_agent.answers import ANSWER_FORMAT, RULES, corpus_table, finalize, unparsed
 from tenk_agent.models import Model, parse_json
-from tenk_agent.retrieval import ITEM_NAMES, Retriever
+from tenk_agent.retrieval import ITEM_NAMES, Retriever, fit_context
 from tenk_agent.store import Store
 from tenk_agent.tracing import Trace
 
@@ -73,6 +73,7 @@ def ask(
     verify: bool = True,
     k: int = ASK_K,
     closed_book: bool = False,
+    context_chars: int = 0,
 ) -> dict:
     """Ask mode; `closed_book` skips retrieval (the ablation baseline, no retriever needed)."""
     trace = Trace("closed-book" if closed_book else "ask", question, model.name)
@@ -81,7 +82,7 @@ def ask(
         system, messages = build_closed_book_prompt(question, store)
     else:
         start = time.monotonic()
-        chunks = retriever.search(question, k=k)
+        chunks = fit_context(retriever.search(question, k=k), context_chars)
         trace.retrieval(question, [c.id for c in chunks], time.monotonic() - start)
         system, messages = build_prompt(question, chunks, store)
     response = model.complete(messages, system=system, max_tokens=4000)

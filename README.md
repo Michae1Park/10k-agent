@@ -47,7 +47,8 @@ Built in versions, each adding one thing to the one before. Each has a guide in 
 | **V4 · Verified agent** | Every number checked against its source; failed claims labeled, one repair round; LLM judge | Is every number really in what it cites? | [V4_VERIFIED_AGENT.md](docs/V4_VERIFIED_AGENT.md) |
 | **V5 · Model comparison** | V4 with each open model (+ Claude with a key) | Which model should run it? | [V5_MODELS.md](docs/V5_MODELS.md) |
 | **V6 · Fine-tune + ablation** | LoRA on the 9B's own passing runs; one-change-at-a-time rows (closed-book, no rerank, no verify, XBRL, …) | Can tuning close the gap? What does each part add? | [V6_FINETUNE_ABLATION.md](docs/V6_FINETUNE_ABLATION.md) |
-| **Evaluate** | 100-question gold set; retrieval, answer, agent and cost metrics; intervals and paired tests | Does it work, and how well? | [EVAL](docs/EVAL.md) |
+| **V7 · Advanced retrieval** | A second, parent-child index: search ~200-token children and table rows, read whole tables and subsections; row records with segment and fiscal year per cell; hybrid search, Item filter; verification checks the cell's company and year | Does structure-aware RAG beat the naive pipeline where it's hard? | [V7_ADVANCED_RETRIEVAL.md](docs/V7_ADVANCED_RETRIEVAL.md) |
+| **Evaluate** | 100-question gold set + a 29-question stress set; retrieval, answer, agent and cost metrics; intervals and paired tests | Does it work, and how well? | [EVAL](docs/EVAL.md) |
 
 **Corpus:** Apple, Microsoft, Amazon, Alphabet, Meta, NVIDIA, Tesla, Netflix × fiscal years 2023–2025 (24 10-Ks, 6,299 chunks). Chosen because their fiscal years end in different months: "NVIDIA's revenue in 2024" is mostly its fiscal 2025 ([D-001](docs/DECISIONS.md#d-001)).
 
@@ -90,6 +91,7 @@ versions/v3_agent/run.sh                    # V3 the agent, vs V2
 versions/v4_verified_agent/run.sh           # V4 + verification, vs V3 (then `judge` with the judge served)
 versions/v5_models/run.sh <model>           # V5 one model at a time, then `compare`
 versions/v6_finetune_ablation/run.sh ablation   # V6 one change at a time (fine-tuning: see its guide)
+versions/v7_advanced_retrieval/run.sh index     # V7 build the parent-child index, then retrieval / ask / research / compare
 ```
 
 Playgrounds run one version's code by hand, print a report and write `output/<name>/<tag>.md`:
@@ -127,6 +129,7 @@ The UI has an Ask / Research toggle, a live step list, clickable citations with 
 | [V4 · Verified agent](docs/V4_VERIFIED_AGENT.md) | Number parsing, unit normalization, precision matching, repair |
 | [V5 · Model comparison](docs/V5_MODELS.md) | The models compared, one-at-a-time serving, the comparison report |
 | [V6 · Fine-tune + ablation](docs/V6_FINETUNE_ABLATION.md) | Training corpus, generated questions, rollouts, D-022 guards, LoRA training, merge, base-vs-tuned eval; ablation rows |
+| [V7 · Advanced retrieval](docs/V7_ADVANCED_RETRIEVAL.md) | Parent-child index, row records, hybrid search, Item filter, cell-level verification; the ablation ladder and the stress set |
 | [Evaluation](docs/EVAL.md) | Gold set format and rules, metrics, the judge, running evals, comparing runs (intervals, paired tests, error analysis, charts) |
 | [Serving](docs/SERVING.md) | Model layer, vLLM presets, API, UI, traces |
 | [Decisions & issues](docs/DECISIONS.md) | Why things are the way they are, known issues |
@@ -135,13 +138,13 @@ The UI has an Ask / Research toggle, a live step list, clickable citations with 
 
 | Path | Contents |
 |---|---|
-| `src/tenk_agent/` | The pipeline: `edgar`, `parse`, `chunking`, `ingest` · `store`, `embeddings`, `retrieval` · `ask`, `answers`, `agent`, `tools`, `calculator` · `verify` · `models`, `tracing`, `api`, `cli` · `xbrl` (V6 ablation) · `playground` (shared by the playgrounds) |
+| `src/tenk_agent/` | The pipeline: `edgar`, `parse`, `chunking`, `ingest` · `tables`, `hierarchy` (V7) · `store`, `embeddings`, `retrieval` · `ask`, `answers`, `agent`, `tools`, `calculator` · `verify` · `models`, `tracing`, `api`, `cli` · `xbrl` (V6 ablation) · `playground` (shared by the playgrounds) |
 | `src/tenk_agent/evaluation/` | Eval runner, scoring, LLM judge, report, judge calibration · `stats`, `analysis`, `compare` (run comparisons) |
 | `src/tenk_agent/finetune/` | V6 data: questions, rollouts, SFT dataset |
 | `versions/` | One folder per version: `run.sh`, playground script; `common.sh` shared by the run scripts; V6 also holds the training corpus, configs, `train.py`, `merge.py`, `ablation.sh` |
 | `docs/` | One guide per version (`V0_DATA.md` … `V6_FINETUNE_ABLATION.md`), evaluation, serving, decisions |
 | `web/` | Next.js UI |
-| `eval/` | Gold set, reference trajectories, every run (`runs/`), `results.md`, comparison reports (`reports/`) |
+| `eval/` | Gold set, stress set, reference trajectories, every run (`runs/`), `results.md`, comparison reports (`reports/`) |
 | `scripts/` | `serve_vllm.sh` (open models), `eval_all.sh` (one-command eval), `finetune.sh` (V6, step by step) |
 | `config.yaml` | Every tunable parameter, per stage |
 | `data/` | Filings, XBRL facts, `tenk.db` (generated, git-ignored) |

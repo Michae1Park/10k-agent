@@ -1,0 +1,1501 @@
+{
+  "primary": "recall@5",
+  "primary_label": "Recall@5",
+  "runs": [
+    {
+      "name": "V1",
+      "label": "v1-retrieval-stress-20261014",
+      "model": null,
+      "questions": 29
+    },
+    {
+      "name": "V7-r1",
+      "label": "v7-r1-parents-retrieval-stress-20261014",
+      "model": null,
+      "questions": 29
+    },
+    {
+      "name": "V7-r2",
+      "label": "v7-r2-children-retrieval-stress-20261014",
+      "model": null,
+      "questions": 29
+    },
+    {
+      "name": "V7-r3",
+      "label": "v7-r3-hybrid-retrieval-stress-20261014",
+      "model": null,
+      "questions": 29
+    },
+    {
+      "name": "V7-r4",
+      "label": "v7-r4-items-retrieval-stress-20261014",
+      "model": null,
+      "questions": 29
+    }
+  ],
+  "metrics": [
+    {
+      "key": "recall@5",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Recall@5",
+      "runs": {
+        "V1": {
+          "value": 0.8846,
+          "low": 0.7679,
+          "high": 0.98,
+          "n": 29
+        },
+        "V7-r1": {
+          "value": 0.8462,
+          "low": 0.7115,
+          "high": 0.9615,
+          "n": 29
+        },
+        "V7-r2": {
+          "value": 0.9038,
+          "low": 0.7917,
+          "high": 1.0,
+          "n": 29
+        },
+        "V7-r3": {
+          "value": 0.9423,
+          "low": 0.8462,
+          "high": 1.0,
+          "n": 29
+        },
+        "V7-r4": {
+          "value": 0.9423,
+          "low": 0.8462,
+          "high": 1.0,
+          "n": 29
+        }
+      }
+    },
+    {
+      "key": "recall@10",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Recall@10",
+      "runs": {
+        "V1": {
+          "value": 0.9231,
+          "low": 0.8261,
+          "high": 1.0,
+          "n": 29
+        },
+        "V7-r1": {
+          "value": 0.9038,
+          "low": 0.78,
+          "high": 1.0,
+          "n": 29
+        },
+        "V7-r2": {
+          "value": 0.9423,
+          "low": 0.8519,
+          "high": 1.0,
+          "n": 29
+        },
+        "V7-r3": {
+          "value": 0.9423,
+          "low": 0.8462,
+          "high": 1.0,
+          "n": 29
+        },
+        "V7-r4": {
+          "value": 0.9423,
+          "low": 0.8462,
+          "high": 1.0,
+          "n": 29
+        }
+      }
+    },
+    {
+      "key": "mrr",
+      "fmt": "num",
+      "higher_is_better": true,
+      "label": "MRR",
+      "runs": {
+        "V1": {
+          "value": 0.6555,
+          "low": 0.5137,
+          "high": 0.7942,
+          "n": 29
+        },
+        "V7-r1": {
+          "value": 0.6439,
+          "low": 0.5003,
+          "high": 0.7914,
+          "n": 29
+        },
+        "V7-r2": {
+          "value": 0.6577,
+          "low": 0.5179,
+          "high": 0.798,
+          "n": 29
+        },
+        "V7-r3": {
+          "value": 0.6904,
+          "low": 0.5519,
+          "high": 0.8173,
+          "n": 29
+        },
+        "V7-r4": {
+          "value": 0.6904,
+          "low": 0.5538,
+          "high": 0.8154,
+          "n": 29
+        }
+      }
+    }
+  ],
+  "paired": [
+    {
+      "key": "recall@5",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Recall@5",
+      "candidate": "V7-r1",
+      "base_value": 0.8846,
+      "candidate_value": 0.8462,
+      "diff": -0.0384000000000001,
+      "low": -0.12,
+      "high": 0.0,
+      "p": 1.0,
+      "n": 29
+    },
+    {
+      "key": "recall@5",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Recall@5",
+      "candidate": "V7-r2",
+      "base_value": 0.8846,
+      "candidate_value": 0.9038,
+      "diff": 0.019199999999999995,
+      "low": -0.12969999999999993,
+      "high": 0.17300000000000004,
+      "p": 1.0,
+      "n": 29
+    },
+    {
+      "key": "recall@5",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Recall@5",
+      "candidate": "V7-r3",
+      "base_value": 0.8846,
+      "candidate_value": 0.9423,
+      "diff": 0.057699999999999974,
+      "low": -0.055600000000000094,
+      "high": 0.1875,
+      "p": 0.5472263868065967,
+      "n": 29
+    },
+    {
+      "key": "recall@5",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Recall@5",
+      "candidate": "V7-r4",
+      "base_value": 0.8846,
+      "candidate_value": 0.9423,
+      "diff": 0.057699999999999974,
+      "low": -0.057600000000000096,
+      "high": 0.18520000000000003,
+      "p": 0.5552223888055972,
+      "n": 29
+    },
+    {
+      "key": "recall@10",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Recall@10",
+      "candidate": "V7-r1",
+      "base_value": 0.9231,
+      "candidate_value": 0.9038,
+      "diff": -0.019299999999999984,
+      "low": -0.11540000000000006,
+      "high": 0.055499999999999994,
+      "p": 1.0,
+      "n": 29
+    },
+    {
+      "key": "recall@10",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Recall@10",
+      "candidate": "V7-r2",
+      "base_value": 0.9231,
+      "candidate_value": 0.9423,
+      "diff": 0.019199999999999995,
+      "low": -0.09260000000000002,
+      "high": 0.1399999999999999,
+      "p": 1.0,
+      "n": 29
+    },
+    {
+      "key": "recall@10",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Recall@10",
+      "candidate": "V7-r3",
+      "base_value": 0.9231,
+      "candidate_value": 0.9423,
+      "diff": 0.019199999999999995,
+      "low": -0.07409999999999994,
+      "high": 0.125,
+      "p": 1.0,
+      "n": 29
+    },
+    {
+      "key": "recall@10",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Recall@10",
+      "candidate": "V7-r4",
+      "base_value": 0.9231,
+      "candidate_value": 0.9423,
+      "diff": 0.019199999999999995,
+      "low": -0.07150000000000001,
+      "high": 0.125,
+      "p": 1.0,
+      "n": 29
+    },
+    {
+      "key": "mrr",
+      "fmt": "num",
+      "higher_is_better": true,
+      "metric": "MRR",
+      "candidate": "V7-r1",
+      "base_value": 0.6555,
+      "candidate_value": 0.6439,
+      "diff": -0.011599999999999944,
+      "low": -0.034600000000000075,
+      "high": 0.006000000000000005,
+      "p": 0.3818090954522739,
+      "n": 29
+    },
+    {
+      "key": "mrr",
+      "fmt": "num",
+      "higher_is_better": true,
+      "metric": "MRR",
+      "candidate": "V7-r2",
+      "base_value": 0.6555,
+      "candidate_value": 0.6577,
+      "diff": 0.0021999999999999797,
+      "low": -0.11949999999999994,
+      "high": 0.11380000000000001,
+      "p": 0.9855072463768116,
+      "n": 29
+    },
+    {
+      "key": "mrr",
+      "fmt": "num",
+      "higher_is_better": true,
+      "metric": "MRR",
+      "candidate": "V7-r3",
+      "base_value": 0.6555,
+      "candidate_value": 0.6904,
+      "diff": 0.03490000000000004,
+      "low": -0.06730000000000003,
+      "high": 0.14600000000000002,
+      "p": 0.5632183908045977,
+      "n": 29
+    },
+    {
+      "key": "mrr",
+      "fmt": "num",
+      "higher_is_better": true,
+      "metric": "MRR",
+      "candidate": "V7-r4",
+      "base_value": 0.6555,
+      "candidate_value": 0.6904,
+      "diff": 0.03490000000000004,
+      "low": -0.06620000000000004,
+      "high": 0.13759999999999994,
+      "p": 0.568215892053973,
+      "n": 29
+    }
+  ],
+  "mcnemar": {
+    "V7-r1": {
+      "fixed": 0,
+      "regressed": 1,
+      "both_pass": 21,
+      "both_fail": 4,
+      "p": 1.0
+    },
+    "V7-r2": {
+      "fixed": 3,
+      "regressed": 2,
+      "both_pass": 20,
+      "both_fail": 1,
+      "p": 1.0
+    },
+    "V7-r3": {
+      "fixed": 3,
+      "regressed": 1,
+      "both_pass": 21,
+      "both_fail": 1,
+      "p": 0.625
+    },
+    "V7-r4": {
+      "fixed": 3,
+      "regressed": 1,
+      "both_pass": 21,
+      "both_fail": 1,
+      "p": 0.625
+    }
+  },
+  "causes": {
+    "V1": {
+      "retrieval miss": 4
+    },
+    "V7-r1": {
+      "retrieval miss": 5
+    },
+    "V7-r2": {
+      "retrieval miss": 3
+    },
+    "V7-r3": {
+      "retrieval miss": 2
+    },
+    "V7-r4": {
+      "retrieval miss": 2
+    }
+  },
+  "categories": {
+    "V1": {
+      "agent_workflow": {
+        "value": 0.75,
+        "low": 0.5,
+        "high": 1.0,
+        "n": 2
+      },
+      "failure_case": {
+        "value": 0.75,
+        "low": 0.4,
+        "high": 1.0,
+        "n": 9
+      },
+      "grounding": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 3
+      },
+      "multi_document": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 1
+      },
+      "retrieval": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 12
+      },
+      "tool_use": {
+        "value": 0.5,
+        "low": 0.0,
+        "high": 1.0,
+        "n": 2
+      }
+    },
+    "V7-r1": {
+      "agent_workflow": {
+        "value": 0.75,
+        "low": 0.5,
+        "high": 1.0,
+        "n": 2
+      },
+      "failure_case": {
+        "value": 0.75,
+        "low": 0.375,
+        "high": 1.0,
+        "n": 9
+      },
+      "grounding": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 3
+      },
+      "multi_document": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 1
+      },
+      "retrieval": {
+        "value": 0.9167,
+        "low": 0.75,
+        "high": 1.0,
+        "n": 12
+      },
+      "tool_use": {
+        "value": 0.5,
+        "low": 0.0,
+        "high": 1.0,
+        "n": 2
+      }
+    },
+    "V7-r2": {
+      "agent_workflow": {
+        "value": 0.75,
+        "low": 0.5,
+        "high": 1.0,
+        "n": 2
+      },
+      "failure_case": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 9
+      },
+      "grounding": {
+        "value": 0.6667,
+        "low": 0.0,
+        "high": 1.0,
+        "n": 3
+      },
+      "multi_document": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "n": 1
+      },
+      "retrieval": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 12
+      },
+      "tool_use": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 2
+      }
+    },
+    "V7-r3": {
+      "agent_workflow": {
+        "value": 0.5,
+        "low": 0.0,
+        "high": 1.0,
+        "n": 2
+      },
+      "failure_case": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 9
+      },
+      "grounding": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 3
+      },
+      "multi_document": {
+        "value": 0.5,
+        "low": 0.5,
+        "high": 0.5,
+        "n": 1
+      },
+      "retrieval": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 12
+      },
+      "tool_use": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 2
+      }
+    },
+    "V7-r4": {
+      "agent_workflow": {
+        "value": 0.5,
+        "low": 0.0,
+        "high": 1.0,
+        "n": 2
+      },
+      "failure_case": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 9
+      },
+      "grounding": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 3
+      },
+      "multi_document": {
+        "value": 0.5,
+        "low": 0.5,
+        "high": 0.5,
+        "n": 1
+      },
+      "retrieval": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 12
+      },
+      "tool_use": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 2
+      }
+    }
+  },
+  "transitions": {
+    "V7-r1": [
+      {
+        "id": "nvda-customer-concentration-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "regressed",
+        "base_cause": null,
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "msft-intelligent-cloud-growth-fy2025-recast",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "nvda-data-center-decline-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "nvda-rd-calendar-2023-shifted",
+        "category": "failure_case",
+        "failure_mode": "shifted_fiscal_year",
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "rd-intensity-highest-fy2024",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "aapl-iphone-greater-china-fy2025",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-instagram-revenue-2024",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-cybertruck-deliveries-2024",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-best-segment-margin-fy2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-fx-var-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-greater-china-oi-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-rate-sensitivity-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-state-aid-tax-fy2024",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-fcf-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-operating-lease-cost-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-msft-fcf-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-other-bets-loss-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-reality-labs-loss-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-reality-labs-profit-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-tax-rate-obbba-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-valuation-allowance-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-intelligent-cloud-fy2024-as-reported",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-rpo-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-segment-recast-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-constant-currency-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-content-obligations-growth-fy2024",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-ucan-arm-fy2024",
+        "category": "failure_case",
+        "failure_mode": "unit_normalization",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-regulatory-credits-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-warranty-reserve-fy2025",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      }
+    ],
+    "V7-r2": [
+      {
+        "id": "googl-msft-fcf-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "regressed",
+        "base_cause": null,
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "meta-tax-rate-obbba-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "regressed",
+        "base_cause": null,
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "msft-intelligent-cloud-growth-fy2025-recast",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "fixed",
+        "base_cause": "retrieval miss",
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-data-center-decline-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "fixed",
+        "base_cause": "retrieval miss",
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-rd-calendar-2023-shifted",
+        "category": "failure_case",
+        "failure_mode": "shifted_fiscal_year",
+        "change": "fixed",
+        "base_cause": "retrieval miss",
+        "candidate_cause": null
+      },
+      {
+        "id": "rd-intensity-highest-fy2024",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "aapl-iphone-greater-china-fy2025",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-instagram-revenue-2024",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-cybertruck-deliveries-2024",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-best-segment-margin-fy2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-fx-var-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-greater-china-oi-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-rate-sensitivity-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-state-aid-tax-fy2024",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-fcf-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-operating-lease-cost-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-other-bets-loss-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-reality-labs-loss-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-reality-labs-profit-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-valuation-allowance-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-intelligent-cloud-fy2024-as-reported",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-rpo-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-segment-recast-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-constant-currency-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-content-obligations-growth-fy2024",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-ucan-arm-fy2024",
+        "category": "failure_case",
+        "failure_mode": "unit_normalization",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-customer-concentration-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-regulatory-credits-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-warranty-reserve-fy2025",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      }
+    ],
+    "V7-r3": [
+      {
+        "id": "googl-msft-fcf-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "regressed",
+        "base_cause": null,
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "msft-intelligent-cloud-growth-fy2025-recast",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "fixed",
+        "base_cause": "retrieval miss",
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-data-center-decline-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "fixed",
+        "base_cause": "retrieval miss",
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-rd-calendar-2023-shifted",
+        "category": "failure_case",
+        "failure_mode": "shifted_fiscal_year",
+        "change": "fixed",
+        "base_cause": "retrieval miss",
+        "candidate_cause": null
+      },
+      {
+        "id": "rd-intensity-highest-fy2024",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "aapl-iphone-greater-china-fy2025",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-instagram-revenue-2024",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-cybertruck-deliveries-2024",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-best-segment-margin-fy2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-fx-var-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-greater-china-oi-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-rate-sensitivity-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-state-aid-tax-fy2024",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-fcf-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-operating-lease-cost-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-other-bets-loss-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-reality-labs-loss-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-reality-labs-profit-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-tax-rate-obbba-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-valuation-allowance-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-intelligent-cloud-fy2024-as-reported",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-rpo-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-segment-recast-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-constant-currency-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-content-obligations-growth-fy2024",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-ucan-arm-fy2024",
+        "category": "failure_case",
+        "failure_mode": "unit_normalization",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-customer-concentration-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-regulatory-credits-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-warranty-reserve-fy2025",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      }
+    ],
+    "V7-r4": [
+      {
+        "id": "googl-msft-fcf-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "regressed",
+        "base_cause": null,
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "msft-intelligent-cloud-growth-fy2025-recast",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "fixed",
+        "base_cause": "retrieval miss",
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-data-center-decline-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "fixed",
+        "base_cause": "retrieval miss",
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-rd-calendar-2023-shifted",
+        "category": "failure_case",
+        "failure_mode": "shifted_fiscal_year",
+        "change": "fixed",
+        "base_cause": "retrieval miss",
+        "candidate_cause": null
+      },
+      {
+        "id": "rd-intensity-highest-fy2024",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "aapl-iphone-greater-china-fy2025",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-instagram-revenue-2024",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-cybertruck-deliveries-2024",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "unscored",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-best-segment-margin-fy2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-fx-var-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-greater-china-oi-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-rate-sensitivity-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-state-aid-tax-fy2024",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-fcf-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-operating-lease-cost-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-other-bets-loss-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-reality-labs-loss-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-reality-labs-profit-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-tax-rate-obbba-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-valuation-allowance-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-intelligent-cloud-fy2024-as-reported",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-rpo-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-segment-recast-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-constant-currency-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-content-obligations-growth-fy2024",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-ucan-arm-fy2024",
+        "category": "failure_case",
+        "failure_mode": "unit_normalization",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-customer-concentration-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-regulatory-credits-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-warranty-reserve-fy2025",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      }
+    ]
+  },
+  "questions_for_5pt": 157,
+  "unverified": true
+}

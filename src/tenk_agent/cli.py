@@ -13,6 +13,7 @@ from tenk_agent.chunking import ChunkSizes
 from tenk_agent.config import Settings
 from tenk_agent.corpus import COMPANIES, FISCAL_YEARS, company_by_ticker
 from tenk_agent.edgar import EdgarClient, EdgarError, fetch_company
+from tenk_agent.hierarchy import HierarchySizes
 from tenk_agent.ingest import coverage_problems, db_path, ingest
 from tenk_agent.store import Store
 
@@ -33,9 +34,17 @@ def main(argv: list[str] | None = None) -> int:
     ingest_cmd.add_argument("--tickers", nargs="*", help="subset of corpus tickers (default: all)")
 
     gold_cmd = commands.add_parser("gold", help="review gold questions (default: list all)")
+    gold_cmd.add_argument(
+        "--gold",
+        type=Path,
+        default=gold.GOLD_PATH,
+        help="question file, e.g. eval/gold/stress.jsonl",
+    )
     gold_actions = gold_cmd.add_subparsers(dest="gold_action")
     show = gold_actions.add_parser("show", help="print a question with its source text")
     show.add_argument("id")
+    render = gold_actions.add_parser("render", help="render the question file as a full PDF plus a summary")
+    render.add_argument("--out", type=Path, help="default: output/gold/<file name>.pdf")
     verify = gold_actions.add_parser("verify", help="record your sign-off on questions")
     verify.add_argument("ids", nargs="+")
     verify.add_argument("--by", required=True, help="reviewer initials")
@@ -194,7 +203,11 @@ def _ingest(args: argparse.Namespace) -> int:
     tickers = [t.upper() for t in args.tickers] if args.tickers else None
     s = _settings(args)
     store = ingest(
-        args.data_dir, tickers, ChunkSizes(s.chunk_chars, s.table_chars, s.overlap_chars)
+        args.data_dir,
+        tickers,
+        ChunkSizes(s.chunk_chars, s.table_chars, s.overlap_chars),
+        s.layout,
+        HierarchySizes(s.parent_chars, s.child_chars, s.table_chars),
     )
     for problem in coverage_problems(store, EXPECTED_FILINGS):
         logging.warning("%s", problem)
@@ -206,13 +219,15 @@ def _gold(args: argparse.Namespace) -> int:
         return _gold_show(args)
     if args.gold_action == "verify":
         return _gold_verify(args)
+    if args.gold_action == "render":
+        return _gold_render(args)
     return _gold_list(args)
 
 
 def _gold_list(args: argparse.Namespace) -> int:
     """One line per question: verification, evidence resolution and XBRL cross-check."""
-    store = Store(db_path(args.data_dir))
-    for q in gold.load():
+    store = Store(_settings(args).db_path)
+    for q in gold.load(args.gold):
         resolved = gold.resolve_evidence(store, q)
         checks = gold.xbrl_checks(q, args.data_dir)
         status = "verified  " if gold.is_verified(q) else "UNVERIFIED"
@@ -225,11 +240,11 @@ def _gold_list(args: argparse.Namespace) -> int:
 
 def _gold_show(args: argparse.Namespace) -> int:
     """Everything a reviewer needs to verify one question against the filing."""
-    q = next((q for q in gold.load() if q["id"] == args.id), None)
+    q = next((q for q in gold.load(args.gold) if q["id"] == args.id), None)
     if q is None:
         print(f"No gold question {args.id!r}", file=sys.stderr)
         return 1
-    store = Store(db_path(args.data_dir))
+    store = Store(_settings(args).db_path)
     kind = q["category"] + (f" / {q['failure_mode']}" if q.get("failure_mode") else "")
     print(f"{q['id']}  [{q['split']}, {kind}, {q['origin']}]")
     print(f"Q: {q['question']}")
@@ -261,20 +276,32 @@ def _gold_show(args: argparse.Namespace) -> int:
     return 0
 
 
+def _gold_render(args: argparse.Namespace) -> int:
+    from tenk_agent.gold_render import render_pdf, render_summary_pdf
+
+    out = args.out or Path("output/gold") / f"{args.gold.stem}.pdf"
+    store = Store(_settings(args).db_path)
+    count = render_pdf(args.gold, store, args.data_dir, out)
+    summary = out.with_name(f"{out.stem}-summary.pdf")
+    render_summary_pdf(args.gold, summary)
+    print(f"Wrote {count} questions to {out} and the summary to {summary}")
+    return 0
+
+
 def _gold_verify(args: argparse.Namespace) -> int:
-    questions = gold.load()
+    questions = gold.load(args.gold)
     unknown = gold.mark_verified(questions, args.ids, args.by, date.today())
     if unknown:
         print(f"Unknown question IDs (nothing saved): {', '.join(unknown)}", file=sys.stderr)
         return 1
-    gold.save(questions)
+    gold.save(questions, args.gold)
     print(f"Marked {len(args.ids)} question(s) verified by {args.by}")
     return 0
 
 
 def _check(args: argparse.Namespace) -> int:
     """V0 exit criteria: all filings ingested with Items 1A/7/8, and 30 verified gold questions."""
-    store = Store(db_path(args.data_dir))
+    store = Store(_settings(args).db_path)
     questions = gold.load()
     problems = coverage_problems(store, EXPECTED_FILINGS) + gold.validate(questions)
 
@@ -317,7 +344,8 @@ def _embed(args: argparse.Namespace) -> int:
     settings = _settings(args)
     store = Store(settings.db_path)
     embedded = embed_corpus(store, get_embedder(settings.embedder, settings.device))
-    print(f"Embedded {embedded} chunks; {store.embedding_count()} total ({settings.embedder})")
+    total = store.embedding_count()
+    print(f"Embedded {embedded} chunks and children; {total} chunks total ({settings.embedder})")
     return 0
 
 
@@ -347,7 +375,15 @@ def _answer(args: argparse.Namespace) -> int:
     model = load_model(settings, args.model)
     verify = settings.verify and not args.no_verify
     if args.command == "ask":
-        answer = ask(args.question, store, retriever, model, verify=verify, k=settings.ask_k)
+        answer = ask(
+            args.question,
+            store,
+            retriever,
+            model,
+            verify=verify,
+            k=settings.ask_k,
+            context_chars=settings.context_chars,
+        )
     else:
         toolbox = Toolbox.from_settings(store, retriever, settings)
         answer = None
@@ -458,6 +494,7 @@ def _eval(args: argparse.Namespace) -> int:
         repair=settings.repair and not args.no_repair,
         repair_calls=settings.repair_calls,
         ask_k=settings.ask_k,
+        context_chars=settings.context_chars,
         gold_path=args.gold or gold.GOLD_PATH,
     )
     summary = runner.run(options, settings)

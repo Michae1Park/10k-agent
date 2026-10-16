@@ -7,6 +7,7 @@ source .venv/bin/activate
 tenk gold                                          # per question: verified?, evidence found, XBRL match
 tenk gold show aapl-rd-fy2024                      # question, expected answer, evidence + EDGAR link, XBRL check
 tenk gold verify aapl-rd-fy2024 --by MP            # your sign-off, after checking the filing
+tenk gold --gold eval/gold/stress.jsonl            # the same for the stress set (also show / verify)
 tenk check                                         # V0 exit criteria (filings + 30 verified questions)
 
 tenk eval run retrieval --split test               # V1 · verified questions only, unless --include-unverified
@@ -41,6 +42,7 @@ versions/v6_finetune_ablation/ablation.sh          # every ablation row + compar
 | Data | Where |
 |---|---|
 | **Gold questions** | `eval/gold/questions.jsonl`, one per line |
+| **Stress set** | `eval/gold/stress.jsonl`: deliberately hard questions, same format ([below](#stress-set)) |
 | Reference trajectories (unnecessary-calls metric) | `eval/gold/reference_trajectories.json` |
 | **Runs** | `eval/runs/<label>/`: `config.json`, `results.jsonl` (one scored row per question), `summary.json` |
 | Results table | `eval/results.md` |
@@ -57,6 +59,26 @@ versions/v6_finetune_ablation/ablation.sh          # every ablation row + compar
 | tool_use | 15 | a calculated value |
 | agent_workflow | 10 | figures + calculations + management's explanations |
 | failure_case | 15 | the seven failure modes below, ≥ 2 each |
+
+## Stress set
+
+`eval/gold/stress.jsonl`: 29 questions written to break the pipeline, kept apart from the main set so its results stay comparable across versions. All `test`: never tune on them. Run any system on it with `--gold eval/gold/stress.jsonl --label <name>-stress`.
+
+Each question has `tags` naming what makes it hard:
+
+| Tag | What it tests | Example |
+|---|---|---|
+| `recast` | A later filing restates the same label with a different number | Microsoft Intelligent Cloud FY2024: $105,362M as reported, $87,464M recast |
+| `row_group_header` | The row label ("Revenue", "Operating income") repeats under segment headers | Meta Reality Labs loss, Apple segment operating income |
+| `transposed_table` | Segments as columns, years as separate blocks | Apple FY2025 segment note |
+| `column_order` | Oldest year first (Alphabet, Amazon) | Amazon operating lease cost 2024 is the last column |
+| `missing_units` | A table without its own "(in millions)" line | Tesla warranty rollforward, Amazon free cash flow |
+| `item_7a`, `footnote`, `prose_number` | Figures outside the statements, often only in a sentence | Apple VaR, Microsoft remaining performance obligations |
+| `unit_normalization` | Thousands vs dollars vs billions in one table or answer | Netflix ARM ($17.20) in a table "in thousands" |
+| `calculation`, `multi_hop`, `cross_company` | Several figures, several filings, the calculator | Highest R&D share of revenue among all eight (FY2024) |
+| `near_miss`, `false_premise` | Close to answerable, or a wrong premise | Cybertruck deliveries, Instagram revenue |
+
+Same rules as the main set: drafted from the filings, verified by a person before results count.
 
 ## Metrics
 

@@ -1,0 +1,1861 @@
+{
+  "primary": "task_completion",
+  "primary_label": "task completion",
+  "runs": [
+    {
+      "name": "V2",
+      "label": "v2-ask-qwen3.6-27b-fp8-test-20261014",
+      "model": "openai:Qwen/Qwen3.6-27B-FP8",
+      "questions": 31
+    },
+    {
+      "name": "V7-r1",
+      "label": "v7-r1-parents-ask-qwen3.6-27b-fp8-test-20261014",
+      "model": "openai:Qwen/Qwen3.6-27B-FP8",
+      "questions": 31
+    },
+    {
+      "name": "V7-r2",
+      "label": "v7-r2-children-ask-qwen3.6-27b-fp8-test-20261014",
+      "model": "openai:Qwen/Qwen3.6-27B-FP8",
+      "questions": 31
+    },
+    {
+      "name": "V7-r3",
+      "label": "v7-r3-hybrid-ask-qwen3.6-27b-fp8-test-20261014",
+      "model": "openai:Qwen/Qwen3.6-27B-FP8",
+      "questions": 31
+    },
+    {
+      "name": "V7-r4",
+      "label": "v7-r4-items-ask-qwen3.6-27b-fp8-test-20261014",
+      "model": "openai:Qwen/Qwen3.6-27B-FP8",
+      "questions": 31
+    }
+  ],
+  "metrics": [
+    {
+      "key": "task_completion",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Task completion",
+      "runs": {
+        "V2": {
+          "value": 0.6129,
+          "low": 0.4516,
+          "high": 0.7742,
+          "n": 31
+        },
+        "V7-r1": {
+          "value": 0.6129,
+          "low": 0.4516,
+          "high": 0.7742,
+          "n": 31
+        },
+        "V7-r2": {
+          "value": 0.7097,
+          "low": 0.5484,
+          "high": 0.871,
+          "n": 31
+        },
+        "V7-r3": {
+          "value": 0.6452,
+          "low": 0.4839,
+          "high": 0.8065,
+          "n": 31
+        },
+        "V7-r4": {
+          "value": 0.6774,
+          "low": 0.5161,
+          "high": 0.8387,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Answer correctness",
+      "runs": {
+        "V2": {
+          "value": 0.7656,
+          "low": 0.6247,
+          "high": 0.8812,
+          "n": 31
+        },
+        "V7-r1": {
+          "value": 0.772,
+          "low": 0.6489,
+          "high": 0.8871,
+          "n": 31
+        },
+        "V7-r2": {
+          "value": 0.7855,
+          "low": 0.657,
+          "high": 0.9054,
+          "n": 31
+        },
+        "V7-r3": {
+          "value": 0.7801,
+          "low": 0.6586,
+          "high": 0.8866,
+          "n": 31
+        },
+        "V7-r4": {
+          "value": 0.7694,
+          "low": 0.6344,
+          "high": 0.8903,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "citation_accuracy",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Citation accuracy",
+      "runs": {
+        "V2": {
+          "value": 1.0,
+          "low": 1.0,
+          "high": 1.0,
+          "n": 31
+        },
+        "V7-r1": {
+          "value": 0.9444,
+          "low": 0.8667,
+          "high": 1.0,
+          "n": 31
+        },
+        "V7-r2": {
+          "value": 0.9722,
+          "low": 0.9143,
+          "high": 1.0,
+          "n": 31
+        },
+        "V7-r3": {
+          "value": 0.9714,
+          "low": 0.9032,
+          "high": 1.0,
+          "n": 31
+        },
+        "V7-r4": {
+          "value": 1.0,
+          "low": 1.0,
+          "high": 1.0,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "mean_latency_s",
+      "fmt": "num",
+      "higher_is_better": false,
+      "label": "Mean latency (s)",
+      "runs": {
+        "V2": {
+          "value": 43.8097,
+          "low": 37.5529,
+          "high": 50.8464,
+          "n": 31
+        },
+        "V7-r1": {
+          "value": 42.4096,
+          "low": 34.7982,
+          "high": 50.8796,
+          "n": 31
+        },
+        "V7-r2": {
+          "value": 45.5734,
+          "low": 37.3781,
+          "high": 56.0762,
+          "n": 31
+        },
+        "V7-r3": {
+          "value": 44.8191,
+          "low": 36.5775,
+          "high": 56.0386,
+          "n": 31
+        },
+        "V7-r4": {
+          "value": 43.4875,
+          "low": 35.946,
+          "high": 53.0897,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "recall@5",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Recall@5",
+      "runs": {
+        "V2": {
+          "value": 0.7124,
+          "low": 0.544,
+          "high": 0.8571,
+          "n": 31
+        },
+        "V7-r1": {
+          "value": 0.7412,
+          "low": 0.5939,
+          "high": 0.8792,
+          "n": 31
+        },
+        "V7-r2": {
+          "value": 0.8331,
+          "low": 0.702,
+          "high": 0.9464,
+          "n": 31
+        },
+        "V7-r3": {
+          "value": 0.8159,
+          "low": 0.6839,
+          "high": 0.9286,
+          "n": 31
+        },
+        "V7-r4": {
+          "value": 0.8159,
+          "low": 0.6875,
+          "high": 0.9333,
+          "n": 31
+        }
+      }
+    },
+    {
+      "key": "mrr",
+      "fmt": "num",
+      "higher_is_better": true,
+      "label": "MRR",
+      "runs": {
+        "V2": {
+          "value": 0.5259,
+          "low": 0.3966,
+          "high": 0.6533,
+          "n": 31
+        },
+        "V7-r1": {
+          "value": 0.5613,
+          "low": 0.439,
+          "high": 0.6927,
+          "n": 31
+        },
+        "V7-r2": {
+          "value": 0.5718,
+          "low": 0.4444,
+          "high": 0.7028,
+          "n": 31
+        },
+        "V7-r3": {
+          "value": 0.5644,
+          "low": 0.4443,
+          "high": 0.6905,
+          "n": 31
+        },
+        "V7-r4": {
+          "value": 0.5644,
+          "low": 0.4435,
+          "high": 0.6917,
+          "n": 31
+        }
+      }
+    }
+  ],
+  "paired": [
+    {
+      "key": "task_completion",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Task completion",
+      "candidate": "V7-r1",
+      "base_value": 0.6129,
+      "candidate_value": 0.6129,
+      "diff": 0.0,
+      "low": 0.0,
+      "high": 0.0,
+      "p": 1.0,
+      "n": 31
+    },
+    {
+      "key": "task_completion",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Task completion",
+      "candidate": "V7-r2",
+      "base_value": 0.6129,
+      "candidate_value": 0.7097,
+      "diff": 0.0968,
+      "low": 0.0,
+      "high": 0.2258,
+      "p": 0.239880059970015,
+      "n": 31
+    },
+    {
+      "key": "task_completion",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Task completion",
+      "candidate": "V7-r3",
+      "base_value": 0.6129,
+      "candidate_value": 0.6452,
+      "diff": 0.032299999999999995,
+      "low": 0.0,
+      "high": 0.0968,
+      "p": 1.0,
+      "n": 31
+    },
+    {
+      "key": "task_completion",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Task completion",
+      "candidate": "V7-r4",
+      "base_value": 0.6129,
+      "candidate_value": 0.6774,
+      "diff": 0.0645,
+      "low": 0.0,
+      "high": 0.1613,
+      "p": 0.4927536231884058,
+      "n": 31
+    },
+    {
+      "key": "correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Answer correctness",
+      "candidate": "V7-r1",
+      "base_value": 0.7656,
+      "candidate_value": 0.772,
+      "diff": 0.006400000000000072,
+      "low": -0.017699999999999938,
+      "high": 0.032299999999999995,
+      "p": 1.0,
+      "n": 31
+    },
+    {
+      "key": "correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Answer correctness",
+      "candidate": "V7-r2",
+      "base_value": 0.7656,
+      "candidate_value": 0.7855,
+      "diff": 0.01990000000000003,
+      "low": -0.06620000000000004,
+      "high": 0.11939999999999995,
+      "p": 0.7436281859070465,
+      "n": 31
+    },
+    {
+      "key": "correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Answer correctness",
+      "candidate": "V7-r3",
+      "base_value": 0.7656,
+      "candidate_value": 0.7801,
+      "diff": 0.014500000000000068,
+      "low": -0.0242,
+      "high": 0.059699999999999975,
+      "p": 0.7496251874062968,
+      "n": 31
+    },
+    {
+      "key": "correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Answer correctness",
+      "candidate": "V7-r4",
+      "base_value": 0.7656,
+      "candidate_value": 0.7694,
+      "diff": 0.0038000000000000256,
+      "low": -0.06719999999999993,
+      "high": 0.07469999999999999,
+      "p": 1.0,
+      "n": 31
+    },
+    {
+      "key": "citation_accuracy",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Citation accuracy",
+      "candidate": "V7-r1",
+      "base_value": 1.0,
+      "candidate_value": 0.9444,
+      "diff": -0.05559999999999998,
+      "low": -0.13329999999999997,
+      "high": 0.0,
+      "p": 0.24537731134432783,
+      "n": 31
+    },
+    {
+      "key": "citation_accuracy",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Citation accuracy",
+      "candidate": "V7-r2",
+      "base_value": 1.0,
+      "candidate_value": 0.9722,
+      "diff": -0.027800000000000047,
+      "low": -0.0857,
+      "high": 0.0,
+      "p": 0.5307346326836582,
+      "n": 31
+    },
+    {
+      "key": "citation_accuracy",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Citation accuracy",
+      "candidate": "V7-r3",
+      "base_value": 1.0,
+      "candidate_value": 0.9714,
+      "diff": -0.02859999999999996,
+      "low": -0.0968,
+      "high": 0.0,
+      "p": 0.3258370814592704,
+      "n": 31
+    },
+    {
+      "key": "citation_accuracy",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Citation accuracy",
+      "candidate": "V7-r4",
+      "base_value": 1.0,
+      "candidate_value": 1.0,
+      "diff": 0.0,
+      "low": 0.0,
+      "high": 0.0,
+      "p": 1.0,
+      "n": 31
+    },
+    {
+      "key": "mean_latency_s",
+      "fmt": "num",
+      "higher_is_better": false,
+      "metric": "Mean latency (s)",
+      "candidate": "V7-r1",
+      "base_value": 43.8097,
+      "candidate_value": 42.4096,
+      "diff": -1.400100000000002,
+      "low": -6.013600000000004,
+      "high": 4.0655,
+      "p": 0.6216891554222889,
+      "n": 31
+    },
+    {
+      "key": "mean_latency_s",
+      "fmt": "num",
+      "higher_is_better": false,
+      "metric": "Mean latency (s)",
+      "candidate": "V7-r2",
+      "base_value": 43.8097,
+      "candidate_value": 45.5734,
+      "diff": 1.7637,
+      "low": -3.5148999999999972,
+      "high": 8.903399999999998,
+      "p": 0.6991504247876063,
+      "n": 31
+    },
+    {
+      "key": "mean_latency_s",
+      "fmt": "num",
+      "higher_is_better": false,
+      "metric": "Mean latency (s)",
+      "candidate": "V7-r3",
+      "base_value": 43.8097,
+      "candidate_value": 44.8191,
+      "diff": 1.0093999999999994,
+      "low": -5.3782,
+      "high": 9.860799999999998,
+      "p": 0.9220389805097451,
+      "n": 31
+    },
+    {
+      "key": "mean_latency_s",
+      "fmt": "num",
+      "higher_is_better": false,
+      "metric": "Mean latency (s)",
+      "candidate": "V7-r4",
+      "base_value": 43.8097,
+      "candidate_value": 43.4875,
+      "diff": -0.32220000000000226,
+      "low": -5.178199999999997,
+      "high": 6.443300000000001,
+      "p": 0.952023988005997,
+      "n": 31
+    },
+    {
+      "key": "recall@5",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Recall@5",
+      "candidate": "V7-r1",
+      "base_value": 0.7124,
+      "candidate_value": 0.7412,
+      "diff": 0.028799999999999937,
+      "low": 0.0,
+      "high": 0.07410000000000005,
+      "p": 0.5012493753123438,
+      "n": 31
+    },
+    {
+      "key": "recall@5",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Recall@5",
+      "candidate": "V7-r2",
+      "base_value": 0.7124,
+      "candidate_value": 0.8331,
+      "diff": 0.12069999999999992,
+      "low": 0.01660000000000006,
+      "high": 0.25,
+      "p": 0.13143428285857073,
+      "n": 31
+    },
+    {
+      "key": "recall@5",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Recall@5",
+      "candidate": "V7-r3",
+      "base_value": 0.7124,
+      "candidate_value": 0.8159,
+      "diff": 0.10349999999999993,
+      "low": 0.0,
+      "high": 0.2258,
+      "p": 0.18990504747626186,
+      "n": 31
+    },
+    {
+      "key": "recall@5",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Recall@5",
+      "candidate": "V7-r4",
+      "base_value": 0.7124,
+      "candidate_value": 0.8159,
+      "diff": 0.10349999999999993,
+      "low": 0.0,
+      "high": 0.22419999999999995,
+      "p": 0.19640179910044978,
+      "n": 31
+    },
+    {
+      "key": "mrr",
+      "fmt": "num",
+      "higher_is_better": true,
+      "metric": "MRR",
+      "candidate": "V7-r1",
+      "base_value": 0.5259,
+      "candidate_value": 0.5613,
+      "diff": 0.03539999999999999,
+      "low": 0.0048000000000000265,
+      "high": 0.0786,
+      "p": 0.04847576211894053,
+      "n": 31
+    },
+    {
+      "key": "mrr",
+      "fmt": "num",
+      "higher_is_better": true,
+      "metric": "MRR",
+      "candidate": "V7-r2",
+      "base_value": 0.5259,
+      "candidate_value": 0.5718,
+      "diff": 0.04589999999999994,
+      "low": -0.047699999999999965,
+      "high": 0.1362,
+      "p": 0.3503248375812094,
+      "n": 31
+    },
+    {
+      "key": "mrr",
+      "fmt": "num",
+      "higher_is_better": true,
+      "metric": "MRR",
+      "candidate": "V7-r3",
+      "base_value": 0.5259,
+      "candidate_value": 0.5644,
+      "diff": 0.03849999999999998,
+      "low": -0.057599999999999985,
+      "high": 0.13149999999999995,
+      "p": 0.47726136931534235,
+      "n": 31
+    },
+    {
+      "key": "mrr",
+      "fmt": "num",
+      "higher_is_better": true,
+      "metric": "MRR",
+      "candidate": "V7-r4",
+      "base_value": 0.5259,
+      "candidate_value": 0.5644,
+      "diff": 0.03849999999999998,
+      "low": -0.05649999999999994,
+      "high": 0.12659999999999993,
+      "p": 0.4307846076961519,
+      "n": 31
+    }
+  ],
+  "mcnemar": {
+    "V7-r1": {
+      "fixed": 0,
+      "regressed": 0,
+      "both_pass": 19,
+      "both_fail": 12,
+      "p": 1.0
+    },
+    "V7-r2": {
+      "fixed": 3,
+      "regressed": 0,
+      "both_pass": 19,
+      "both_fail": 9,
+      "p": 0.25
+    },
+    "V7-r3": {
+      "fixed": 1,
+      "regressed": 0,
+      "both_pass": 19,
+      "both_fail": 11,
+      "p": 1.0
+    },
+    "V7-r4": {
+      "fixed": 2,
+      "regressed": 0,
+      "both_pass": 19,
+      "both_fail": 10,
+      "p": 0.5
+    }
+  },
+  "causes": {
+    "V2": {
+      "wrong value": 6,
+      "retrieval miss": 4,
+      "false abstention": 1,
+      "unsupported": 1
+    },
+    "V7-r1": {
+      "wrong value": 8,
+      "retrieval miss": 3,
+      "unsupported": 1
+    },
+    "V7-r2": {
+      "wrong value": 7,
+      "unsupported": 1,
+      "citation": 1,
+      "false abstention": 1
+    },
+    "V7-r3": {
+      "wrong value": 8,
+      "retrieval miss": 1,
+      "unsupported": 1,
+      "false abstention": 1
+    },
+    "V7-r4": {
+      "wrong value": 7,
+      "retrieval miss": 1,
+      "unsupported": 1,
+      "false abstention": 1
+    }
+  },
+  "categories": {
+    "V2": {
+      "agent_workflow": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "n": 3
+      },
+      "failure_case": {
+        "value": 0.6,
+        "low": 0.2,
+        "high": 1.0,
+        "n": 5
+      },
+      "grounding": {
+        "value": 0.1667,
+        "low": 0.0,
+        "high": 0.5,
+        "n": 6
+      },
+      "multi_document": {
+        "value": 0.75,
+        "low": 0.25,
+        "high": 1.0,
+        "n": 4
+      },
+      "retrieval": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 9
+      },
+      "tool_use": {
+        "value": 0.75,
+        "low": 0.25,
+        "high": 1.0,
+        "n": 4
+      }
+    },
+    "V7-r1": {
+      "agent_workflow": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "n": 3
+      },
+      "failure_case": {
+        "value": 0.6,
+        "low": 0.2,
+        "high": 1.0,
+        "n": 5
+      },
+      "grounding": {
+        "value": 0.1667,
+        "low": 0.0,
+        "high": 0.5,
+        "n": 6
+      },
+      "multi_document": {
+        "value": 0.75,
+        "low": 0.25,
+        "high": 1.0,
+        "n": 4
+      },
+      "retrieval": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 9
+      },
+      "tool_use": {
+        "value": 0.75,
+        "low": 0.25,
+        "high": 1.0,
+        "n": 4
+      }
+    },
+    "V7-r2": {
+      "agent_workflow": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "n": 3
+      },
+      "failure_case": {
+        "value": 0.8,
+        "low": 0.4,
+        "high": 1.0,
+        "n": 5
+      },
+      "grounding": {
+        "value": 0.1667,
+        "low": 0.0,
+        "high": 0.5,
+        "n": 6
+      },
+      "multi_document": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 4
+      },
+      "retrieval": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 9
+      },
+      "tool_use": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 4
+      }
+    },
+    "V7-r3": {
+      "agent_workflow": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "n": 3
+      },
+      "failure_case": {
+        "value": 0.6,
+        "low": 0.2,
+        "high": 1.0,
+        "n": 5
+      },
+      "grounding": {
+        "value": 0.1667,
+        "low": 0.0,
+        "high": 0.5,
+        "n": 6
+      },
+      "multi_document": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 4
+      },
+      "retrieval": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 9
+      },
+      "tool_use": {
+        "value": 0.75,
+        "low": 0.25,
+        "high": 1.0,
+        "n": 4
+      }
+    },
+    "V7-r4": {
+      "agent_workflow": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "n": 3
+      },
+      "failure_case": {
+        "value": 0.8,
+        "low": 0.4,
+        "high": 1.0,
+        "n": 5
+      },
+      "grounding": {
+        "value": 0.1667,
+        "low": 0.0,
+        "high": 0.5,
+        "n": 6
+      },
+      "multi_document": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 4
+      },
+      "retrieval": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 9
+      },
+      "tool_use": {
+        "value": 0.75,
+        "low": 0.25,
+        "high": 1.0,
+        "n": 4
+      }
+    }
+  },
+  "transitions": {
+    "V7-r1": [
+      {
+        "id": "aapl-msft-net-income-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "amzn-net-sales-fy2021-unsupported",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "both fail",
+        "base_cause": "unsupported",
+        "candidate_cause": "unsupported"
+      },
+      {
+        "id": "googl-cloud-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "googl-rd-cagr-fy2023-2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "msft-ai-risks-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nflx-competition-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nflx-revenue-drivers-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nvda-export-controls-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "tsla-competition-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "tsla-profitability-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "tsla-revenue-decline-2023-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "tsla-revenue-mix-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "false abstention",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "aapl-msft-operating-cash-flow-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-net-income-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-net-margin-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-rd-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-services-share-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-aws-growth-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-aws-sales-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-net-sales-fy2023",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "facebook-revenue-fy2024-entity",
+        "category": "failure_case",
+        "failure_mode": "entity_naming",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-net-income-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-operating-cash-flow-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-net-income-fy2023-2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-revenue-fy2024-similar",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-net-income-fy2023-2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-revenue-fy2023",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-revenue-growth-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "orcl-revenue-fy2025",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-automotive-revenue-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-rd-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      }
+    ],
+    "V7-r2": [
+      {
+        "id": "aapl-msft-net-income-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "fixed",
+        "base_cause": "wrong value",
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-rd-cagr-fy2023-2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "fixed",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "citation"
+      },
+      {
+        "id": "tsla-revenue-decline-2023-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "fixed",
+        "base_cause": "wrong value",
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-net-sales-fy2021-unsupported",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "both fail",
+        "base_cause": "unsupported",
+        "candidate_cause": "unsupported"
+      },
+      {
+        "id": "googl-cloud-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "msft-ai-risks-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nflx-competition-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nflx-revenue-drivers-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nvda-export-controls-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "tsla-competition-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "tsla-profitability-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "false abstention"
+      },
+      {
+        "id": "tsla-revenue-mix-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "false abstention",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "aapl-msft-operating-cash-flow-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-net-income-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-net-margin-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-rd-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-services-share-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-aws-growth-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-aws-sales-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-net-sales-fy2023",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "facebook-revenue-fy2024-entity",
+        "category": "failure_case",
+        "failure_mode": "entity_naming",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-net-income-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-operating-cash-flow-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-net-income-fy2023-2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-revenue-fy2024-similar",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-net-income-fy2023-2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-revenue-fy2023",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-revenue-growth-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "orcl-revenue-fy2025",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-automotive-revenue-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-rd-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      }
+    ],
+    "V7-r3": [
+      {
+        "id": "aapl-msft-net-income-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "fixed",
+        "base_cause": "wrong value",
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-net-sales-fy2021-unsupported",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "both fail",
+        "base_cause": "unsupported",
+        "candidate_cause": "unsupported"
+      },
+      {
+        "id": "googl-cloud-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "googl-rd-cagr-fy2023-2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "msft-ai-risks-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nflx-competition-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nflx-revenue-drivers-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nvda-export-controls-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "tsla-competition-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "tsla-profitability-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "false abstention"
+      },
+      {
+        "id": "tsla-revenue-decline-2023-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "tsla-revenue-mix-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "false abstention",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "aapl-msft-operating-cash-flow-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-net-income-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-net-margin-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-rd-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-services-share-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-aws-growth-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-aws-sales-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-net-sales-fy2023",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "facebook-revenue-fy2024-entity",
+        "category": "failure_case",
+        "failure_mode": "entity_naming",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-net-income-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-operating-cash-flow-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-net-income-fy2023-2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-revenue-fy2024-similar",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-net-income-fy2023-2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-revenue-fy2023",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-revenue-growth-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "orcl-revenue-fy2025",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-automotive-revenue-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-rd-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      }
+    ],
+    "V7-r4": [
+      {
+        "id": "aapl-msft-net-income-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "fixed",
+        "base_cause": "wrong value",
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-revenue-decline-2023-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "fixed",
+        "base_cause": "wrong value",
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-net-sales-fy2021-unsupported",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "both fail",
+        "base_cause": "unsupported",
+        "candidate_cause": "unsupported"
+      },
+      {
+        "id": "googl-cloud-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "googl-rd-cagr-fy2023-2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "retrieval miss"
+      },
+      {
+        "id": "msft-ai-risks-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nflx-competition-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nflx-revenue-drivers-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "wrong value",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nvda-export-controls-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "tsla-competition-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "tsla-profitability-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "retrieval miss",
+        "candidate_cause": "false abstention"
+      },
+      {
+        "id": "tsla-revenue-mix-fy2023-2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "false abstention",
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "aapl-msft-operating-cash-flow-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-net-income-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-net-margin-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-rd-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-services-share-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-aws-growth-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-aws-sales-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-net-sales-fy2023",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "facebook-revenue-fy2024-entity",
+        "category": "failure_case",
+        "failure_mode": "entity_naming",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-net-income-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-operating-cash-flow-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-net-income-fy2023-2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-revenue-fy2024-similar",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-net-income-fy2023-2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-revenue-fy2023",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-revenue-growth-fy2025",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "orcl-revenue-fy2025",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-automotive-revenue-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-rd-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      }
+    ]
+  },
+  "questions_for_5pt": 365,
+  "unverified": true
+}

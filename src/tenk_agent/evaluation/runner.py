@@ -52,6 +52,7 @@ class RunOptions:
     retrieval_overrides: dict | None = None
     max_tool_calls: int = 15
     ask_k: int = 8
+    context_chars: int = 0  # V7: excerpt budget for Ask and each search_filings call (0 = all k)
     repair: bool = True  # V4: send failed claims back to the agent once
     repair_calls: int = 4
     resume: bool = False  # keep finished rows in results.jsonl, run only the rest
@@ -90,6 +91,8 @@ def run(options: RunOptions, settings: Settings) -> dict:
         "thinking": settings.thinking if model else None,
         "judge_model": settings.judge_model if judge else None,
         "retriever": retriever.name,
+        "layout": settings.layout,
+        "context_chars": options.context_chars if options.system in ("ask", "research") else None,
         "verify": options.verify,
         "repair": options.repair and options.verify,
         "structured_data": settings.structured_data,
@@ -254,6 +257,7 @@ def _evaluate(q, options, store, retriever, model, toolbox, judge, references) -
             model,
             verify=options.verify,
             k=options.ask_k,
+            context_chars=options.context_chars,
             closed_book=closed,
         )
         retrieved = None if closed else answer["retrieved"]

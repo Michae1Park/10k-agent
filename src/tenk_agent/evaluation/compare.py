@@ -15,7 +15,9 @@ from pathlib import Path
 from tenk_agent.evaluation import analysis, stats
 
 REPORTS_DIR = Path("eval/reports")
-PRIMARY = "task_completion"
+# The metric a comparison is decided on, per system; retrieval-only runs have no answers.
+PRIMARY = {"retrieval": "recall@5"}
+PRIMARY_LABEL = {"recall@5": "Recall@5", "task_completion": "task completion"}
 
 
 @dataclass
@@ -31,10 +33,17 @@ def load(columns: list[tuple[str, str]]) -> list[Run]:
     runs = []
     for name, label in columns:
         config = analysis.load_config(label)
-        runs.append(
-            Run(name, label, config["system"], config.get("model"), analysis.load_rows(label))
-        )
+        rows = analysis.load_rows(label)
+        if config["system"] == "retrieval":
+            # Pass/fail for the question-level tests: every source in the top 5.
+            rows = [r | {"task_complete": _all_found(r), "retrieval_only": True} for r in rows]
+        runs.append(Run(name, label, config["system"], config.get("model"), rows))
     return runs
+
+
+def _all_found(row: dict) -> bool | None:
+    recall = row.get("recall@5")
+    return None if recall is None else recall == 1.0
 
 
 def build(columns: list[tuple[str, str]]) -> dict:
@@ -43,7 +52,10 @@ def build(columns: list[tuple[str, str]]) -> dict:
     base, candidates = runs[0], runs[1:]
     system = base.system
     metrics = stats.metrics_for(system)
+    primary = PRIMARY.get(system, "task_completion")
     data = {
+        "primary": primary,
+        "primary_label": PRIMARY_LABEL[primary],
         "runs": [
             {"name": r.name, "label": r.label, "model": r.model, "questions": len(r.rows)}
             for r in runs
@@ -66,16 +78,17 @@ def build(columns: list[tuple[str, str]]) -> dict:
             data["paired"].append(
                 info | {"metric": m.label, "candidate": name} | vars(results[m.key])
             )
-    completion = [m for m in metrics if m.key == PRIMARY]
+    completion = [m for m in metrics if m.key == primary]
     for r in runs:
         data["categories"][r.name] = {
-            name: vars(stats.intervals(group, system, completion)[PRIMARY])
+            name: vars(stats.intervals(group, system, completion)[primary])
             for name, group in analysis.slices(r.rows, "category").items()
         }
     for c in candidates:
         data["mcnemar"][c.name] = stats.mcnemar(base.rows, c.rows)
         data["transitions"][c.name] = analysis.transitions(base.rows, c.rows)
-    rate = data["metrics"][0]["runs"][base.name]["value"] or 0.5
+    primary_metric = next(m for m in data["metrics"] if m["key"] == primary)
+    rate = primary_metric["runs"][base.name]["value"] or 0.5
     data["questions_for_5pt"] = stats.questions_for_margin(min(max(rate, 0.05), 0.95))
     data["unverified"] = any(not row.get("verified") for r in runs for row in r.rows)
     return data
@@ -146,7 +159,8 @@ def markdown(data: dict) -> str:
         f"Baseline: {base}. Intervals are 95% bootstrap over questions; p-values are paired "
         f"sign-flip permutation tests on the questions both runs answered, and "
         f"a difference reads as better or worse only at p < {ALPHA}. "
-        f"A ±5-point interval on task completion needs ~{data['questions_for_5pt']} questions.",
+        f"A ±5-point interval on {data['primary_label']} needs "
+        f"~{data['questions_for_5pt']} questions.",
     ]
     if data["unverified"]:
         lines.append("\n**Provisional:** includes unverified gold questions.")
@@ -180,7 +194,7 @@ def markdown(data: dict) -> str:
 
     lines += [
         "",
-        "## Question-level changes (task completion)",
+        f"## Question-level changes ({data['primary_label']})",
         "",
         "| Run | Fixed | Regressed | Both pass | Both fail | McNemar p |",
         "| --- | --- | --- | --- | --- | --- |",
@@ -217,7 +231,7 @@ def markdown(data: dict) -> str:
     cats = sorted({c for per in data["categories"].values() for c in per})
     lines += [
         "",
-        "## Task completion by category",
+        f"## {data['primary_label'].capitalize()} by category",
         "",
         "| Category | " + " | ".join(names) + " |",
         "| --- |" + " --- |" * len(names),
@@ -338,7 +352,7 @@ def render_html(data: dict) -> str:
     parts.append(
         _section(
             "Quality vs latency",
-            "Task completion (with 95% interval) against mean seconds per question. Up and to the left is better.",
+            f"{data['primary_label'].capitalize()} (with 95% interval) against mean seconds per question. Up and to the left is better.",
             _scatter(data, names, color),
         )
     )
@@ -351,7 +365,7 @@ def render_html(data: dict) -> str:
     )
     parts.append(
         _section(
-            "Task completion by category",
+            f"{data['primary_label'].capitalize()} by category",
             "With 95% intervals; small categories have wide intervals.",
             _categories(data, names, color),
         )
@@ -359,7 +373,7 @@ def render_html(data: dict) -> str:
     parts.append(
         _section(
             "Question-level changes",
-            "Task completion per question, baseline → candidate. Regressions first.",
+            f"{data['primary_label'].capitalize()} per question, baseline → candidate. Regressions first.",
             _transitions(data),
         )
     )
@@ -393,14 +407,14 @@ def _legend(names, color) -> str:
 def _tiles(data, names) -> str:
     tiles = []
     for p in data["paired"]:
-        if p["key"] != PRIMARY:
+        if p["key"] != data["primary"]:
             continue
         m = data["mcnemar"][p["candidate"]]
         reading = verdict(p)
         cls = {"better": "better", "worse": "worse"}.get(reading, "")
         tiles.append(
             "<div class='tile'>"
-            f"<div class='label'>{html.escape(p['candidate'])} vs {html.escape(names[0])} · task completion</div>"
+            f"<div class='label'>{html.escape(p['candidate'])} vs {html.escape(names[0])} · {data['primary_label']}</div>"
             f"<div class='value'>{fmt(p['diff'], 'pct', True)}</div>"
             f"<div class='meta'>95% CI {span(p['low'], p['high'], 'pct', True)} · p {_p(p['p'])}</div>"
             f"<div class='meta'><span class='{cls}'>{reading}</span> · {m['fixed']} fixed, {m['regressed']} regressed</div>"
@@ -468,7 +482,7 @@ def _forest(data, names, color) -> str:
 
 
 def _scatter(data, names, color) -> str:
-    comp = next((m for m in data["metrics"] if m["key"] == PRIMARY), None)
+    comp = next((m for m in data["metrics"] if m["key"] == data["primary"]), None)
     lat = next((m for m in data["metrics"] if m["key"] == "mean_latency_s"), None)
     if not comp or not lat:
         return ""

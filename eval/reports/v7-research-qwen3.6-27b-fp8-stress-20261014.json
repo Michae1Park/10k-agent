@@ -1,0 +1,666 @@
+{
+  "primary": "task_completion",
+  "primary_label": "task completion",
+  "runs": [
+    {
+      "name": "V4",
+      "label": "v4-research-qwen3.6-27b-fp8-stress-20261014",
+      "model": "openai:Qwen/Qwen3.6-27B-FP8",
+      "questions": 29
+    },
+    {
+      "name": "V7",
+      "label": "v7-r5-capped-research-qwen3.6-27b-fp8-stress-20261014",
+      "model": "openai:Qwen/Qwen3.6-27B-FP8",
+      "questions": 29
+    }
+  ],
+  "metrics": [
+    {
+      "key": "task_completion",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Task completion",
+      "runs": {
+        "V4": {
+          "value": 0.8276,
+          "low": 0.6897,
+          "high": 0.9655,
+          "n": 29
+        },
+        "V7": {
+          "value": 0.8621,
+          "low": 0.7241,
+          "high": 0.9655,
+          "n": 29
+        }
+      }
+    },
+    {
+      "key": "correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Answer correctness",
+      "runs": {
+        "V4": {
+          "value": 0.8889,
+          "low": 0.7586,
+          "high": 1.0,
+          "n": 29
+        },
+        "V7": {
+          "value": 0.9375,
+          "low": 0.8482,
+          "high": 1.0,
+          "n": 29
+        }
+      }
+    },
+    {
+      "key": "citation_accuracy",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Citation accuracy",
+      "runs": {
+        "V4": {
+          "value": 0.9831,
+          "low": 0.9516,
+          "high": 1.0,
+          "n": 29
+        },
+        "V7": {
+          "value": 0.9844,
+          "low": 0.9474,
+          "high": 1.0,
+          "n": 29
+        }
+      }
+    },
+    {
+      "key": "evidence_recall",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Evidence recall",
+      "runs": {
+        "V4": {
+          "value": 0.7708,
+          "low": 0.6,
+          "high": 0.92,
+          "n": 29
+        },
+        "V7": {
+          "value": 1.0,
+          "low": 1.0,
+          "high": 1.0,
+          "n": 29
+        }
+      }
+    },
+    {
+      "key": "tool_selection",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Tool selection",
+      "runs": {
+        "V4": {
+          "value": 1.0,
+          "low": 1.0,
+          "high": 1.0,
+          "n": 29
+        },
+        "V7": {
+          "value": 1.0,
+          "low": 1.0,
+          "high": 1.0,
+          "n": 29
+        }
+      }
+    },
+    {
+      "key": "tool_call_correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "label": "Tool-call correctness",
+      "runs": {
+        "V4": {
+          "value": 0.9302,
+          "low": 0.8824,
+          "high": 0.9716,
+          "n": 29
+        },
+        "V7": {
+          "value": 0.9541,
+          "low": 0.9262,
+          "high": 0.9799,
+          "n": 29
+        }
+      }
+    },
+    {
+      "key": "over_budget_rate",
+      "fmt": "pct",
+      "higher_is_better": false,
+      "label": "Over-budget rate",
+      "runs": {
+        "V4": {
+          "value": 0.037,
+          "low": 0.0,
+          "high": 0.1154,
+          "n": 29
+        },
+        "V7": {
+          "value": 0.0714,
+          "low": 0.0,
+          "high": 0.1786,
+          "n": 29
+        }
+      }
+    },
+    {
+      "key": "unnecessary_calls",
+      "fmt": "num",
+      "higher_is_better": false,
+      "label": "Unnecessary calls / q",
+      "runs": {
+        "V4": {
+          "value": 0.4074,
+          "low": 0.087,
+          "high": 0.7692,
+          "n": 29
+        },
+        "V7": {
+          "value": 1.1071,
+          "low": 0.3846,
+          "high": 2.1154,
+          "n": 29
+        }
+      }
+    },
+    {
+      "key": "mean_latency_s",
+      "fmt": "num",
+      "higher_is_better": false,
+      "label": "Mean latency (s)",
+      "runs": {
+        "V4": {
+          "value": 251.9146,
+          "low": 182.4752,
+          "high": 330.3216,
+          "n": 29
+        },
+        "V7": {
+          "value": 275.9831,
+          "low": 216.0555,
+          "high": 339.4602,
+          "n": 29
+        }
+      }
+    }
+  ],
+  "paired": [
+    {
+      "key": "task_completion",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Task completion",
+      "candidate": "V7",
+      "base_value": 0.8276,
+      "candidate_value": 0.8621,
+      "diff": 0.034499999999999975,
+      "low": -0.1379999999999999,
+      "high": 0.20690000000000008,
+      "p": 1.0,
+      "n": 29
+    },
+    {
+      "key": "correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Answer correctness",
+      "candidate": "V7",
+      "base_value": 0.8889,
+      "candidate_value": 0.9375,
+      "diff": 0.04859999999999998,
+      "low": -0.08979999999999999,
+      "high": 0.20440000000000003,
+      "p": 0.5652173913043478,
+      "n": 29
+    },
+    {
+      "key": "citation_accuracy",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Citation accuracy",
+      "candidate": "V7",
+      "base_value": 0.9831,
+      "candidate_value": 0.9844,
+      "diff": 0.0013000000000000789,
+      "low": -0.0484,
+      "high": 0.045499999999999985,
+      "p": 0.800599700149925,
+      "n": 29
+    },
+    {
+      "key": "evidence_recall",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Evidence recall",
+      "candidate": "V7",
+      "base_value": 0.7708,
+      "candidate_value": 1.0,
+      "diff": 0.22919999999999996,
+      "low": 0.07999999999999996,
+      "high": 0.40380000000000005,
+      "p": 0.022988505747126436,
+      "n": 29
+    },
+    {
+      "key": "tool_selection",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Tool selection",
+      "candidate": "V7",
+      "base_value": 1.0,
+      "candidate_value": 1.0,
+      "diff": 0.0,
+      "low": 0.0,
+      "high": 0.0,
+      "p": 1.0,
+      "n": 29
+    },
+    {
+      "key": "tool_call_correctness",
+      "fmt": "pct",
+      "higher_is_better": true,
+      "metric": "Tool-call correctness",
+      "candidate": "V7",
+      "base_value": 0.9302,
+      "candidate_value": 0.9541,
+      "diff": 0.02389999999999992,
+      "low": -0.02289999999999992,
+      "high": 0.0827,
+      "p": 0.3583208395802099,
+      "n": 29
+    },
+    {
+      "key": "over_budget_rate",
+      "fmt": "pct",
+      "higher_is_better": false,
+      "metric": "Over-budget rate",
+      "candidate": "V7",
+      "base_value": 0.037,
+      "candidate_value": 0.0714,
+      "diff": 0.03440000000000001,
+      "low": -0.08299999999999999,
+      "high": 0.1523,
+      "p": 1.0,
+      "n": 29
+    },
+    {
+      "key": "unnecessary_calls",
+      "fmt": "num",
+      "higher_is_better": false,
+      "metric": "Unnecessary calls / q",
+      "candidate": "V7",
+      "base_value": 0.4074,
+      "candidate_value": 1.1071,
+      "diff": 0.6997,
+      "low": -0.022999999999999965,
+      "high": 1.5173,
+      "p": 0.0944527736131934,
+      "n": 29
+    },
+    {
+      "key": "mean_latency_s",
+      "fmt": "num",
+      "higher_is_better": false,
+      "metric": "Mean latency (s)",
+      "candidate": "V7",
+      "base_value": 251.9146,
+      "candidate_value": 275.9831,
+      "diff": 24.068499999999972,
+      "low": -41.88240000000002,
+      "high": 85.4186,
+      "p": 0.48875562218890556,
+      "n": 29
+    }
+  ],
+  "mcnemar": {
+    "V7": {
+      "fixed": 4,
+      "regressed": 3,
+      "both_pass": 21,
+      "both_fail": 1,
+      "p": 1.0
+    }
+  },
+  "causes": {
+    "V4": {
+      "error": 2,
+      "wrong value": 2,
+      "unsupported": 1,
+      "citation": 1
+    },
+    "V7": {
+      "wrong value": 3,
+      "error": 1,
+      "citation": 1
+    }
+  },
+  "categories": {
+    "V4": {
+      "agent_workflow": {
+        "value": 0.5,
+        "low": 0.0,
+        "high": 1.0,
+        "n": 2
+      },
+      "failure_case": {
+        "value": 0.7778,
+        "low": 0.4444,
+        "high": 1.0,
+        "n": 9
+      },
+      "grounding": {
+        "value": 0.6667,
+        "low": 0.0,
+        "high": 1.0,
+        "n": 3
+      },
+      "multi_document": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 1
+      },
+      "retrieval": {
+        "value": 0.9167,
+        "low": 0.75,
+        "high": 1.0,
+        "n": 12
+      },
+      "tool_use": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 2
+      }
+    },
+    "V7": {
+      "agent_workflow": {
+        "value": 0.5,
+        "low": 0.0,
+        "high": 1.0,
+        "n": 2
+      },
+      "failure_case": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 9
+      },
+      "grounding": {
+        "value": 0.6667,
+        "low": 0.0,
+        "high": 1.0,
+        "n": 3
+      },
+      "multi_document": {
+        "value": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 1
+      },
+      "retrieval": {
+        "value": 0.9167,
+        "low": 0.75,
+        "high": 1.0,
+        "n": 12
+      },
+      "tool_use": {
+        "value": 0.5,
+        "low": 0.0,
+        "high": 1.0,
+        "n": 2
+      }
+    }
+  },
+  "transitions": {
+    "V7": [
+      {
+        "id": "meta-tax-rate-obbba-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "regressed",
+        "base_cause": null,
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "nflx-content-obligations-growth-fy2024",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "regressed",
+        "base_cause": null,
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "tsla-regulatory-credits-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "regressed",
+        "base_cause": null,
+        "candidate_cause": "wrong value"
+      },
+      {
+        "id": "msft-rpo-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "fixed",
+        "base_cause": "wrong value",
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-segment-recast-fy2025",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "fixed",
+        "base_cause": "error",
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-rd-calendar-2023-shifted",
+        "category": "failure_case",
+        "failure_mode": "shifted_fiscal_year",
+        "change": "fixed",
+        "base_cause": "wrong value",
+        "candidate_cause": "citation"
+      },
+      {
+        "id": "tsla-cybertruck-deliveries-2024",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "fixed",
+        "base_cause": "unsupported",
+        "candidate_cause": null
+      },
+      {
+        "id": "rd-intensity-highest-fy2024",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both fail",
+        "base_cause": "error",
+        "candidate_cause": "error"
+      },
+      {
+        "id": "aapl-best-segment-margin-fy2025",
+        "category": "agent_workflow",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-fx-var-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-greater-china-oi-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-iphone-greater-china-fy2025",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-rate-sensitivity-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "aapl-state-aid-tax-fy2024",
+        "category": "grounding",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-fcf-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "amzn-operating-lease-cost-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-msft-fcf-fy2025",
+        "category": "multi_document",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": "citation",
+        "candidate_cause": null
+      },
+      {
+        "id": "googl-other-bets-loss-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-instagram-revenue-2024",
+        "category": "failure_case",
+        "failure_mode": "unsupported",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-reality-labs-loss-fy2024",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-reality-labs-profit-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "meta-valuation-allowance-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-intelligent-cloud-fy2024-as-reported",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "msft-intelligent-cloud-growth-fy2025-recast",
+        "category": "tool_use",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-constant-currency-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nflx-ucan-arm-fy2024",
+        "category": "failure_case",
+        "failure_mode": "unit_normalization",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-customer-concentration-fy2025",
+        "category": "retrieval",
+        "failure_mode": null,
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "nvda-data-center-decline-premise",
+        "category": "failure_case",
+        "failure_mode": "false_premise",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      },
+      {
+        "id": "tsla-warranty-reserve-fy2025",
+        "category": "failure_case",
+        "failure_mode": "similar_numbers",
+        "change": "both pass",
+        "base_cause": null,
+        "candidate_cause": null
+      }
+    ]
+  },
+  "questions_for_5pt": 220,
+  "unverified": true
+}
