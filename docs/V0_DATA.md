@@ -18,7 +18,14 @@ python versions/v0_data/ingest.py --ticker NVDA --year 2025 --tag nvda    # NVID
 python versions/v0_data/ingest.py --chunk-chars 1200 --tag small         # smaller prose chunks
 python versions/v0_data/ingest.py --find "Total net sales"               # which chunks contain this text
 python versions/v0_data/ingest.py --help
+
+python versions/v0_data/trace.py --demo                                   # every parse step on a real excerpt (AAPL FY2025, Item 6 → part of Item 7)
+python versions/v0_data/trace.py --demo msft                              # the same on all of MSFT FY2025 Items 6, 7, 7A
+python versions/v0_data/trace.py --toy                                    # the same on a tiny hand-made HTML
+python versions/v0_data/trace.py --anchor "CONSOLIDATED STATEMENTS OF OPERATIONS"   # every step on a slice of AAPL FY2025
+python versions/v0_data/trace.py --ticker NVDA                            # whole filing
 ```
+The trace prints the first `--limit` lines of each step and saves `output/ingest/<tag>-trace.md` with everything: the entire raw HTML, then every node, table, block, section and chunk in full.
 The playground prints a report and saves `output/ingest/<tag>.md` (sections table + every chunk of `--item`, default 8).
 
 ## Data
