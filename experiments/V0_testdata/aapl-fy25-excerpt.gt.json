@@ -8,7 +8,8 @@
    "Item 1A: 27 risk factors in 5 categories, no summary, a 180-token preamble ('The following summarizes factors ...').",
    "Tables: the HTML has 41 <table>s = 38 data + 1 index (T08, 'Index to Consolidated Financial Statements') + 2 that hold the auditor's critical audit matter as prose (read as paragraphs).",
    "Units: T21 (Note 6) and T37 (continuation of T36) state none of their own; inherited 'in millions'. T31, T32 are share counts 'in thousands'.",
-   "Not headings: 'Apple Inc.' over each statement (a label, 6x); the italic 581-char MD&A intro (body text)."
+   "Not headings: 'Apple Inc.' over each statement (a label, 6x); the italic 581-char MD&A intro (body text).",
+   "T04 (gross margin percentages) has no scale: units set to null (2026-10-19; found during the V0 chunking evaluation, the draft had borrowed T03's caption)."
   ]
  },
  "spec": "experiments/V0_PARSING_CHUNKING.md §4",
@@ -1879,8 +1880,8 @@
    ],
    "rows": 4,
    "first_row": "Gross margin percentage:",
-   "units": "in millions",
-   "units_from": "caption"
+   "units": null,
+   "units_from": null
   },
   {
    "id": "T05",
