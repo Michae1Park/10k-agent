@@ -4,6 +4,8 @@
 
 Full design, criteria and results: [here](V0_PARSING_CHUNKING.md).
 
+Code: [v0/](v0/). Run: `taskset -c 16-31 .venv/bin/python experiments/v0/run.py` (needs the vLLM server).
+
 ### Preprocessing: HTML → one structured document
 
 Two steps, run in order:

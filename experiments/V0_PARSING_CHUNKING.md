@@ -8,7 +8,7 @@
 | Chunking | One of three options on that document: rule-based, parent-child, agentic | §3 |
 | Evaluation | Three criteria, scored against a hand-reviewed ground truth | §4 |
 
-**Status:** design only. The prompt, schema and ground truth exist; no preprocessing or chunking code yet.
+**Status:** implemented and run on the AAPL excerpt. Code: [experiments/v0/](v0/) (§5 has the commands); results in §5.
 
 **Tokens** are counted with the `Qwen/Qwen3-Embedding-0.6B` tokenizer (the embedder, since children are what it embeds). On this excerpt, 1 token ≈ 4.3 chars.
 
@@ -91,7 +91,7 @@ A rule belongs here only if it follows from one of these, never from a filer's s
 |---|---|
 | `emph` | `font-weight` ≥ 600, `<b>`, `<strong>` (bold); `font-style:italic`, `<i>`, `<em>` (italic); `runin:N` when only a leading run of N chars is emphasized |
 | `chars` | Text length |
-| `item_label` | Text starts with a Form 10-K Item label (`^items?\s*\d{1,2}[a-c]?\.`) |
+| `item_label` | Text starts with a Form 10-K Item label (`^items?\s+\d{1,2}[a-c]?\b`) |
 | `xbrl` | D2 |
 | `pb` | A page break follows |
 | `link` | The text is an `<a href="#…">` |
@@ -168,6 +168,8 @@ Emphasis is the main heading signal (0 of 24 filings use `<h1–h6>`), but decid
 - Code checks every window's labels.
 - The LLM fixes violations, at most 2 rounds per window.
 - Blocks still failing keep their last label and go into the document's `review` list.
+- Fields that don't belong to a label's role are dropped, not repaired (V4).
+- V3 needs a full filing, so it isn't checked on an excerpt.
 
 | # | Check | Source |
 |---|---|---|
@@ -236,7 +238,7 @@ Block ids carry through, so every chunk maps back to blocks and every claim to t
 |---|---|---|
 | R (rule-based) | `Section` / `Block` (`parse.py` dataclasses + `heading_path`, `level`) | One function, both directions |
 | P (LlamaIndex) | One `Document` per leaf subsection, `metadata` = T1; each data table its own `TextNode` | Group blocks by `heading_path` |
-| A (agentic) | Markdown: Item as `#`, heading level n as `#`×(n+1), tables as pipe tables, each block preceded by `<!-- b0412 -->` | Renderer; chunk offsets → anchors → blocks |
+| A (agentic) | Markdown: Item as `#`, heading level n as `#`×(n+1), tables as `[TABLE n]` placeholders | Renderer that records each block's character span; chunk offsets → spans → blocks |
 
 The Markdown also works with other Markdown-aware splitters (LlamaIndex `MarkdownNodeParser`, LangChain `MarkdownHeaderTextSplitter`), should one be added later.
 
@@ -282,6 +284,13 @@ Every chunker's output goes through the same step, so criterion 1 is computed th
 
 **Why C10:** without it, C6 only knows Items and packs several risk factors into one chunk, which fails criterion 2 by design.
 
+**As implemented** ([chunkers.py](v0/chunkers.py) `rule_based`): the same rules, counted in Qwen3 tokens instead of `chunking.py`'s characters.
+- Headings with no text between them (a category, then its first risk factor) open one subsection together.
+- A heading over only tables makes no prose chunk of its own; it is already the tables' caption (C3).
+- Prose before and after a table in the same subsection is packed separately.
+- Long paragraphs split to leave room for the heading lines, so prose chunks stay ≤ 600 tokens.
+- C7 carries a paragraph over only when it still fits.
+
 ### 3.2 Parent-child
 
 Small **children** are matched at search time; the larger **parent** is what the model reads and cites.
@@ -304,6 +313,12 @@ Small **children** are matched at search time; the larger **parent** is what the
 
 Criteria 1 and 2 are scored on **parents** (what gets cited); children are only checked for metadata.
 
+**As implemented** ([chunkers.py](v0/chunkers.py) `parent_child`):
+- Two `SentenceSplitter`s (1,280 / 256 tokens, overlap 0 / 20) in `HierarchicalNodeParser`'s `node_parser_map`, both counting with the Qwen3 tokenizer.
+- Metadata is attached to every node but excluded from the size count.
+- Each data table is a parent without children.
+- `AutoMergingRetriever` is only used at query time, so this evaluation doesn't run it.
+
 **Question:** do parents keep every risk factor whole where R has to cut five of them?
 
 ### 3.3 Agentic
@@ -320,9 +335,15 @@ An LLM reads the text and chooses where each chunk ends.
 | Input | One Item at a time, as Markdown (§2.4). Each table becomes a `[TABLE n]` placeholder and is put back whole afterwards (C2 still holds) |
 | Headings | Markdown headings: `## Business Risks`, `### The Company depends on …` |
 | Size | `chunk_size` ≈ 600 tokens; a candidate window just big enough to show the next few paragraphs |
-| Metadata | Chunk offsets → block anchors → T1/T2 |
+| Metadata | Chunk offsets → block character spans → T1/T2 |
 
 **Order:** Items 1 + 1A first (no tables, ~14k tokens), then Items 7–8.
+
+**As implemented** ([chunkers.py](v0/chunkers.py) `agentic`):
+- `OpenAIGenie` subclass for temperature 0, thinking off and schema-constrained JSON. The stock genie can't set either.
+- Candidates: paragraphs, then sentences, then words, at most 128 tokens each.
+- `min_characters_per_chunk=1`: the default 24 merged short headings into the previous candidate.
+- No anchors in the text; block character spans map chunks back to blocks.
 
 **Question:** with the same headings as R, does an LLM place better boundaries than one rule?
 
@@ -412,6 +433,14 @@ For parent-child, 2a–2c are scored on parents, so the target is 1,280.
 
 Matching is **by text, not by block id**, so the same key scores any method, even one that never saw our blocks.
 
+**How the scorer matches** ([score.py](v0/score.py))
+- The filing's text stream is rebuilt with the ground-truth builder's block reader, not the preprocessing.
+- Each stream block gets its Item, heading path and risk-factor unit by walking the reviewed headings in order.
+- Text is compared as alphanumeric-only keys, so `$1,234` and `$ | 1,234` match.
+- Each chunk is pinned by its rarest line. Every other line takes the occurrence nearest its expected position. So rows shared by sibling tables, statement titles that also appear in the index, and heading words inside paragraphs land in the right place.
+- Lines under 8 key characters ("2024", "Level 1:") are too ambiguous to locate and don't count toward a block's coverage.
+- A label (a short line repeated over tables, e.g. "Apple Inc.") is path-neutral in 1b, like an ancestor heading.
+
 **Status:** AAPL excerpt reviewed → [aapl-fy25-excerpt.gt.json](V0_testdata/aapl-fy25-excerpt.gt.json). Its `review` field lists what was checked by hand.
 
 **How it's built**
@@ -490,19 +519,71 @@ A method can't pass by dropping or duplicating text, or by breaking tables.
 
 One table: the three chunking methods on the **same preprocessing**, scored against the ground truth (§4.4). Speed and cost are not measured for now.
 
-*Run label → `output/chunking/<label>/`. Fill in as runs land.*
+**Run it** (vLLM serving `Qwen/Qwen3.6-27B-FP8`: `scripts/serve_vllm.sh qwen3.6-27b-fp8`)
+
+```bash
+uv sync --all-extras --all-groups --link-mode copy                      # once; copy mode, see below
+taskset -c 16-31 .venv/bin/python experiments/v0/run.py                 # preprocess → chunk → score
+taskset -c 16-31 .venv/bin/python experiments/v0/run.py --stage chunk --method rule   # one stage / method
+```
+
+- **Outputs:** `output/chunking/<label>/`: `blocks.json`, `labels.json` (cached; `--relabel` to call the LLM again), `document.json`, `chunks-<method>.json`, `scores.json`.
+- **Install:** LlamaIndex's bundled NLTK stopwords are refused by NLTK's path check when uv hard-links them (`st_nlink=2`). Install with `--link-mode copy`.
+- **`uv sync` scope:** a plain `uv sync --group experiments` removes the project's extras. Always sync with `--all-extras --all-groups`.
 
 | Method | 1a Item | 1b Path exact / merged / coarse / wrong | 2a Purity | 2b Intact | 2c Frag. | 2d Heading | 3b Ratio (median · % in 4–6) | Coverage · noise · tables (§4.5) |
 |---|---|---|---|---|---|---|---|---|
-| Rule-based | | | | | | | — | |
-| Parent-child | | | | | | | | |
-| Agentic | | | | | | | — | |
+| Rule-based | 100% | 92.0 / 0.5 / 1.4 / 6.1 | 100% (34) | 100% (22/22) | 1.01 | 100% (7) | — | 99.3% · 0 · 38/38 |
+| Parent-child | 100% | 93.4 / 0.5 / 2.2 / 3.8 | 100% (28) | 100% (27/27) | 1.00 | n/a (none split) | 5.5 · 100% (2 full parents) | 99.4% · 0 · 38/38 |
+| Agentic | 100% | 83.6 / 4.8 / 11.0 / 0.7 | 97.4% (39) | 95.5% (21/22) | 1.15 | 100% (12) | — | 99.3% · 0 · 38/38 |
 
-Shared preprocessing, recorded once (it's the same input for every row): 1c headings precision / recall / level = __ · __ · __
+- **Parentheses:** the number of chunks or risk factors scored.
+- **2b targets:** 600 tokens for rule-based and agentic, 1,280 for parent-child (parents), so every AAPL risk factor counts for parent-child.
+
+**Shared preprocessing**, recorded once (the same input for every row)
+- **1c headings:** precision 94.0% · recall 100% · level 99.4% (166 found, 156 in the ground truth).
+- **Items:** 5 of 5. Dropped: 47 footers, 1 index table. Validator: 0 violations, no repairs, empty review list.
+
+**Chunks**
+
+| Method | Chunks | Mean / p95 / max tokens | Notes |
+|---|---|---|---|
+| Rule-based | 213 | 188 / 546 / 1,036 | Prose ≤ 592 |
+| Parent-child | 182 parents, 204 children | 217 / 664 / 1,241 | Children ≤ 256 |
+| Agentic | 146 | 270 / 557 / 1,036 | Prose ≤ 563 |
+
+The 1,036-token maximum is a table (C2 keeps tables whole).
+
+**Ground-truth fix found during scoring:** T04 (gross-margin percentages) had borrowed T03's "in millions" caption. Corrected to no units and recorded in the file's `review` field.
 
 ### Takeaways
 
--
+**All three are solid on the basics**
+- Every chunk cites the right Item.
+- All 38 tables are whole, with their units.
+- No page footers in any chunk; coverage ≥ 99.3%.
+
+**Criterion 2 (risk factors): rule-based and parent-child are perfect, agentic isn't**
+- Rule-based and parent-child cut at every heading the structure agent labeled, and it found all 27 risk factors.
+- Agentic merged two adjacent risk factors (RF24 + RF25, both on credit risk) into one chunk. It also split some more than needed (fragmentation 1.15).
+
+**Criterion 1 (paths): the remaining errors are preprocessing errors, and the methods inherit them differently**
+- Rule-based and parent-child cut at every heading, so they carry over the agent's 10 false headings: "Apple Inc." above each statement, "First/Second/Third/Fourth Quarter 2025:" in Item 7. One level error ("Segment Reporting") adds to that.
+- Rule-based suffers most (6.1% wrong), since it makes a small prose chunk on each side of every statement table.
+- Agentic ignores weak headings, so it's almost never wrong (0.7%), but it's coarse more often (11%), because it also ignores some real boundaries.
+
+**Criterion 3 (5:1) holds where it can, but rarely matters**
+- The 2 full parents are 5.5:1.
+- 99% of parents are cut short by a subsection boundary; 103 of 144 have a single child.
+- The median ratio across all prose parents is 1.0. On a 10-K, "boundaries win" means most parent-child pairs are the same text.
+
+**Verdict on this excerpt**
+- **Parent-child** scores best overall: the most exact paths, perfect risk-factor separation, and the 5:1 target where it applies. Rule-based is a close second.
+- **Agentic** costs an LLM call per chunk and does worse on the criterion that motivated it.
+
+**Next**
+- The biggest lever is preprocessing, not chunking. The prompt already says the company-name label isn't a heading, and the model still made it one. A validator check could catch it: short headings repeated ≥ 3 times over tables, sent back for repair.
+- The real test is a second filer with harder styling (NVDA, NFLX, MSFT; §4.4 drafts) once their ground truth is reviewed.
 
 ---
 
