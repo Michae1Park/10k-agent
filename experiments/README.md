@@ -1,5 +1,29 @@
 # Experiments
 
-| Version | Topics | Stack | Test data |
-|---|---|---|---|
-| [V0 · Parsing and chunking](V0_PARSING_CHUNKING.md) | 1. Rule-based baseline<br>2. Library splitters<br>3. Semantic chunking<br>4. Agentic chunking<br>5. LLM-assisted structural chunking | 1. BeautifulSoup + lxml<br>2. LangChain, LlamaIndex, Unstructured, Docling<br>3. LlamaIndex / LangChain + Qwen3-Embedding<br>4. Qwen3.6-27B + Chonkie<br>5. Qwen3.6-27B + custom rules | [AAPL FY2025 excerpt](V0_testdata/aapl-fy25-excerpt.html) (Items 7, 7A, 8 complete; 41 tables) |
+## V0 · Parsing and chunking
+
+Full design, criteria and results: [here](V0_PARSING_CHUNKING.md).
+
+### Preprocessing: HTML → one structured document
+
+Two steps, run in order:
+
+1. **Step 1 · Rules** (BeautifulSoup + lxml): only what is the same in every 10-K
+   - HTML mechanics: hidden elements, whitespace, paragraphs and tables, split cells
+   - Inline XBRL: unwrap facts, record note / policy / table tags
+   - Filing metadata from the `dei:` cover tags
+2. **Step 2 · LLM structure agent** (Qwen3.6-27B on vLLM): everything else
+   - Labels Items, headings and levels, risk factors, tables and units, page furniture
+   - Validated against the Form 10-K Item rules, then repaired
+   - Prompt: [system.md](v0_structure/system.md); output format it enforces: [labels.schema.json](v0_structure/labels.schema.json)
+
+### Chunking: one of three options, compared on the same document
+
+- **Option · Rule-based** (R): custom rules (`chunking.py`), new chunk at every heading
+- **Option · Parent-child** (P; 5:1 tokens): LlamaIndex `HierarchicalNodeParser`
+- **Option · Agentic** (A): Chonkie `SlumberChunker` + Qwen3.6-27B
+
+### Test data
+
+- [AAPL FY2025 excerpt](V0_testdata/aapl-fy25-excerpt.html): Items 1, 1A, 7, 7A, 8 complete (27 risk factors, 38 data tables)
+- [Ground truth](V0_testdata/aapl-fy25-excerpt.gt.json), built by [v0_ground_truth.py](V0_testdata/v0_ground_truth.py)
