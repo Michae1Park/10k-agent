@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "V0 structure labels (one window)",
+  "description": "What the LLM returns for one window (the output format in experiments/v0_structure/system.md). Enforced by vLLM guided decoding; the cross-field rules are checked by the validator.",
+  "type": "object",
+  "properties": {
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "role": {
+            "enum": ["cover", "toc", "part_heading", "item_heading", "heading", "body",
+                     "data_table", "layout_table", "index_table", "furniture"]
+          },
+          "item": {
+            "enum": ["1", "1A", "1B", "1C", "2", "3", "4", "5", "6", "7", "7A", "8",
+                     "9", "9A", "9B", "9C", "10", "11", "12", "13", "14", "15", "16"]
+          },
+          "level": {"type": "integer", "minimum": 1, "maximum": 6},
+          "kind": {
+            "enum": ["risk_summary", "risk_category", "risk_factor", "statement", "notes_header",
+                     "note", "auditor_report", "critical_audit_matter", "other"]
+          },
+          "run_in": {"type": "boolean"},
+          "units": {"type": ["string", "null"], "maxLength": 60},
+          "units_from": {"enum": ["caption", "header", "inherited", null]},
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": {"enum": ["heading", "body", "furniture"]},
+                "level": {"type": "integer", "minimum": 1, "maximum": 6},
+                "kind": {
+                  "enum": ["risk_summary", "risk_category", "risk_factor", "statement", "notes_header",
+                           "note", "auditor_report", "critical_audit_matter", "other"]
+                }
+              },
+              "required": ["role"],
+              "additionalProperties": false
+            }
+          },
+          "uncertain": {"type": "boolean"}
+        },
+        "required": ["id", "role"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["labels"],
+  "additionalProperties": false
+}
