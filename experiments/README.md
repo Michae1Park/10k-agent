@@ -29,3 +29,4 @@ Two steps, run in order:
 
 - [AAPL FY2025 excerpt](V0_testdata/aapl-fy25-excerpt.html): Items 1, 1A, 7, 7A, 8 complete (27 risk factors, 38 data tables)
 - [Ground truth](V0_testdata/aapl-fy25-excerpt.gt.json), built by [v0_ground_truth.py](V0_testdata/v0_ground_truth.py)
+- [Sanity cases](V0_testdata/aapl-fy25-sanity.yaml): 21 hand-checkable cases, one per kind of chunk, run by [sanity.py](v0/sanity.py)

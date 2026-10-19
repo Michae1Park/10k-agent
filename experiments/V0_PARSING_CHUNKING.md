@@ -520,6 +520,25 @@ A method can't pass by dropping or duplicating text, or by breaking tables.
 |---|---|---|
 | M1 | Blind chunk review | Item 1A's chunks from each method, shown unlabeled. Score each chunk 1–3: one topic? Sensible start and end? Heading present? |
 
+### 4.7 Sanity cases (small enough to check by hand)
+
+The §4.4 ground truth (156 headings, 27 risk factors, 39 tables) is too long to check by hand, and no person has read all of it, despite its "reviewed" status. So 21 cases cover each kind of chunk once, and a person can check them in about 20 minutes.
+
+**File:** [aapl-fy25-sanity.yaml](V0_testdata/aapl-fy25-sanity.yaml). Each case quotes a few words (`find`, unique in the filing) and the printed page. It says what the chunk holding the quote must carry.
+
+| Cases | Kind of chunk | Checks |
+|---|---|---|
+| S01–S08 | Prose under headings: levels 1, 2 and 4; the same heading text under different parents; an italic intro that isn't a heading; an auditor report; an Item boundary | `item`, `heading_path` |
+| S09–S12 | Item 1A: the preamble; a short risk factor; two adjacent risk factors on one topic; a long one across a page break | Path, plus text it must and mustn't share a chunk with |
+| S13–S19 | Tables: an MD&A table; one without units; a full statement; units stated once for several tables; a continuation table; thousands; text cells | `kind`, `units`, whole table, path |
+| S20–S21 | Dropped: a page footer; the index table | In no chunk |
+
+**Grades:** `ok`; `coarser` (the path is an ancestor of the expected one: right place, less precise); `fail`.
+
+**Run:** `python experiments/v0/sanity.py` (writes `sanity.json` next to the chunks). [test_v0_sanity.py](../tests/test_v0_sanity.py) checks that every quote is in the filing.
+
+**First run (unreviewed cases):** rule-based and parent-child 20 ok + 1 coarser (S05, the "Segment Reporting" level error from preprocessing). Agentic 14 ok, 6 coarser, 1 fail (S11: RF24 and RF25 in one chunk). These match §5.
+
 ---
 
 ## 5. Results
