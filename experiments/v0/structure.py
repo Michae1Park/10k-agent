@@ -66,8 +66,9 @@ class Outline:
     def advance(self, label: dict) -> None:
         """Move past one labeled block."""
         if label["role"] == "item_heading":
-            self.item = label["item"]
-            self.items.append(label["item"])
+            self.item = label.get("item")
+            if self.item in ITEMS:
+                self.items.append(self.item)
             self.path = []
         elif label["role"] == "heading" and isinstance(label.get("level"), int):
             level = min(label["level"], len(self.path) + 1)
@@ -307,7 +308,7 @@ def assemble(blocks: list[Block], labels: dict[str, dict], filing: dict) -> dict
             review.append(b.id)
         if role == "item_heading":  # A2: each Item heading opens a section
             title = ITEM_PREFIX.sub("", b.text) or b.text
-            sections.append({"item": label["item"], "title": title, "blocks": []})
+            sections.append({"item": label.get("item"), "title": title, "blocks": []})
         elif not sections:  # everything before the first Item is the cover
             dropped["cover"] += 1
         elif role in DROPPED_ROLES:
