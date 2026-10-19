@@ -44,7 +44,7 @@
 ## 2. Preprocessing: HTML → structured document
 
 ```
-HTML ─► D1–D7 (code) ─► blocks + features ─► LLM labels per window ─► validate ─► repair ─► assemble ─► document (JSON)
+HTML ─► D1–D8 (code) ─► blocks + features ─► LLM labels per window ─► validate ─► repair ─► assemble ─► document (JSON)
                                                      ▲                      │                                 │
                                          v0_structure/system.md      violations → repair template   adapters per chunker (§2.4)
 ```
@@ -70,6 +70,7 @@ A rule belongs here only if it follows from one of these, never from a filer's s
 | D5 | **Blocks:** split the page into paragraphs and tables (details below) | HTML structure |
 | D6 | **Split cells:** `$` / `(` / `$(` join the next cell; `)`, `%`, `)%` join the previous one. `( 7,763 )` → `(7,763)` | Lossless (only cell boundaries move), and every filing agent's HTML does it |
 | D7 | **Features per block** for the LLM, then drop all styles (details below) | Reading the markup, not deciding anything |
+| D8 | **Page** of each block: 1 + the page breaks (`pb`) before it. Metadata only, not shown to the LLM | Lets a chunk cite where it came from |
 
 **D2 details (inline XBRL)**
 - Every `ix:*` fact is unwrapped: the text stays, the tag goes.
@@ -189,12 +190,13 @@ Emphasis is the main heading signal (0 of 24 filings use `<h1–h6>`), but decid
 | A2 | Sections start at each `item_heading`. `cover`, `toc`, `part_heading`, `furniture`, `index_table` leave the sections (counted in `dropped`). `layout_table` rows become headings or paragraphs per their `rows` labels |
 | A3 | If Item 8 has no `statement`, the span from the first `statement` / `notes_header` / `auditor_report` elsewhere, up to the next Item heading, moves into Item 8 (NVIDIA, Netflix: under Item 15) |
 | A4 | Every block gets a `heading_path` from the heading levels (a heading's path includes itself) |
+| A5 | Every block gets a `printed_page`: the number at the end of its page's `furniture` ("… \| 12", "F-3"), or null if none |
 
 **Question:** does one prompt work on every filer's styling (AAPL, and the hard cases NVDA, NFLX, MSFT in §6)?
 
 ### 2.3 Output: the structured document
 
-One JSON file per filing, built by code (A1–A4), never written by the LLM.
+One JSON file per filing, built by code (A1–A5), never written by the LLM.
 
 | Field | What |
 |---|---|
@@ -209,6 +211,7 @@ One JSON file per filing, built by code (A1–A4), never written by the LLM.
 | `kind` | all | `heading`, `paragraph` or `table` |
 | `text` | all | The filing's own text; tables as `\| a \| b \|` lines |
 | `heading_path` | all | Headings above the block; a heading includes itself |
+| `page`, `printed_page` | all | D8's page count; A5's printed page number (a string, e.g. "F-3"), or null |
 | `xbrl` | all | The inline-XBRL text block it sits in, or null |
 | `level`, `heading_kind` | headings | From the labels |
 | `rows`, `units`, `units_from` | tables | Cells, and units from the labels |
@@ -248,7 +251,7 @@ Every chunker's output goes through the same step, so criterion 1 is computed th
 
 | # | Rule |
 |---|---|
-| T1 | Every chunk records `ticker`, `fiscal_year`, `item`, `item_title`, `heading_path`, `kind` (prose / table); tables also `units` (from the label) and `years_covered` |
+| T1 | Every chunk records `ticker`, `fiscal_year`, `item`, `item_title`, `heading_path`, `kind` (prose / table); `pages` and `printed_pages` (first and last block's); tables also `units` (from the label) and `years_covered` |
 | T2 | A chunk's `heading_path` is the deepest path shared by **all** of its blocks. Inside one risk factor: `[category, risk factor]`. Spanning two risk factors: only `[category]` |
 | T3 | IDs: `<TICKER>-FY<year>-<item>-<seq>`, e.g. `AAPL-FY2025-1A-007` |
 
