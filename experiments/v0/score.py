@@ -26,11 +26,10 @@ from bs4 import BeautifulSoup
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "V0_testdata"))
 
 import v0_ground_truth as gtb  # noqa: E402
-from chunkers import PARENT, TARGET  # noqa: E402
 
 WHOLE = 0.95  # share of a block's text that must be in a chunk to count as "whole"
 MIN_KEY = 8  # shorter lines ("2024", "Level 1:") are too ambiguous to locate
-FULL_PARENT = 0.8  # criterion 3: a parent this full (× PARENT) counts as "full"
+FULL_PARENT = 0.8  # criterion 3: a parent this full (× the parent size) counts as "full"
 
 Cover = dict[int, set[int]]  # one chunk's coverage: stream block index → stream positions covered
 
@@ -181,13 +180,17 @@ def _locatable(text: str) -> int:
 # ---------- scoring ----------
 
 
-def score_all(html_path: Path, gt: dict, document: dict, chunks: dict[str, list[dict]]) -> dict:
-    """{"preprocessing": 1c, <method>: its scores}."""
+def score_all(
+    html_path: Path, gt: dict, document: dict, chunks: dict[str, list[dict]], chunking: dict
+) -> dict:
+    """{"preprocessing": 1c, <method>: its scores}. `chunking` is config.yaml's `chunking:`, the
+    sizes the chunks were made to."""
     ref = Reference(Path(html_path), gt)
     out = {"preprocessing": headings_score(document, gt)}
     for method, cs in chunks.items():
-        parents = method == "parent_child"  # scored on parents, so its size target is PARENT
-        out[method] = score_method(ref, gt, cs, PARENT if parents else TARGET, parents)
+        parents = method == "parent_child"  # scored on parents, so its size target is the parent's
+        target = chunking["parent"] if parents else chunking["target"]
+        out[method] = score_method(ref, gt, cs, target, parents)
     return out
 
 
@@ -204,7 +207,7 @@ def score_method(ref: Reference, gt: dict, chunks: list[dict], target: int, pare
         },
         **_criterion_1(ref, chunks, covers),
         **_criterion_2(ref, gt, chunks, covers, target),
-        "3_ratio": _criterion_3(chunks) if parents else None,
+        "3_ratio": _criterion_3(chunks, target) if parents else None,
         **_sanity_checks(ref, chunks, covers),
     }
 
@@ -319,20 +322,20 @@ def _criterion_2(
     }
 
 
-def _criterion_3(chunks: list[dict]) -> dict:
+def _criterion_3(chunks: list[dict], parent: int) -> dict:
     """3b: parent tokens ÷ mean child tokens over full prose parents; 3c: share of small parents."""
     prose = [c for c in chunks if c["kind"] == "prose"]
     ratios = [
         c["tokens"] / statistics.mean(k["tokens"] for k in c["children"])
         for c in prose
-        if c["tokens"] >= FULL_PARENT * PARENT and c.get("children")
+        if c["tokens"] >= FULL_PARENT * parent and c.get("children")
     ]
     return {
         "full_parents": len(ratios),
         "median": round(statistics.median(ratios), 2) if ratios else None,
         "pct_4_6": pct(sum(4 <= r <= 6 for r in ratios), len(ratios)),
         "small_parents_pct": pct(
-            sum(c["tokens"] < FULL_PARENT * PARENT for c in prose), len(prose)
+            sum(c["tokens"] < FULL_PARENT * parent for c in prose), len(prose)
         ),
     }
 

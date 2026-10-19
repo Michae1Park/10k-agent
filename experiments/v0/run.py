@@ -11,10 +11,10 @@ ground truth. Spec and results: experiments/V0_PARSING_CHUNKING.md.
   taskset -c 16-31 python experiments/v0/run.py --stage chunk --stage score
   taskset -c 16-31 python experiments/v0/run.py --config my-config.yaml
 
-Settings (inputs, LLM, labeling window) are in config.yaml. Needs the vLLM server
+Settings (inputs, LLM, labeling window, chunk sizes) are in config.yaml. Needs the vLLM server
 (scripts/serve_vllm.sh qwen3.6-27b-fp8) for preprocessing and the agentic chunker. Writes
 output/chunking/<label>/: config.yaml (the settings used), blocks.json, labels.json,
-labels-log.json, document.json, chunks-<method>.json, scores.json.
+labels-log.json, document.json, chunks-<method>.json, chunks-log.json, scores.json.
 """
 
 import argparse
@@ -59,11 +59,11 @@ def main() -> None:
 
     if "preprocess" in stages:
         preprocess(html, cover, out, llm, config["labeling"], args.relabel)
-        (out / "config.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
     if "chunk" in stages:
-        chunk(out, llm, args.method or METHODS)
+        chunk(out, llm, config["chunking"], args.method or METHODS)
     if "score" in stages:
-        score(html, gt, out)
+        score(html, gt, out, config["chunking"])
+    (out / "config.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
 
 
 def preprocess(
@@ -107,22 +107,34 @@ def preprocess(
     )
 
 
-def chunk(out: Path, llm: dict, methods) -> None:
-    """document.json → chunks-<method>.json."""
+def chunk(out: Path, llm: dict, chunking: dict, methods) -> None:
+    """document.json → chunks-<method>.json; chunks-log.json records each method's sizes."""
     document = json.loads((out / "document.json").read_text())
-    for method, chunks in run_all(document, llm["model"], llm["base_url"], methods).items():
+    log_path = out / "chunks-log.json"
+    log = json.loads(log_path.read_text()) if log_path.exists() else {}
+    for method, chunks in run_all(
+        document, chunking, llm["model"], llm["base_url"], methods
+    ).items():
         _write(out / f"chunks-{method}.json", chunks)
+        log[method] = chunking
         print(f"{method}: {len(chunks)} chunks")
+    _write(log_path, log)
 
 
-def score(html: Path, gt_path: Path, out: Path) -> None:
+def score(html: Path, gt_path: Path, out: Path, chunking: dict) -> None:
     """Every method's chunks vs the ground truth → scores.json."""
     from score import score_all  # loads the ground-truth builder
 
+    log_path = out / "chunks-log.json"
+    log = json.loads(log_path.read_text()) if log_path.exists() else {}
+    if stale := [m for m in METHODS if log.get(m) != chunking]:
+        sys.exit(
+            f"chunks for {stale} weren't made with this config's `chunking:`: run --stage chunk"
+        )
     gt = json.loads(gt_path.read_text())
     document = json.loads((out / "document.json").read_text())
     chunks = {m: json.loads((out / f"chunks-{m}.json").read_text()) for m in METHODS}
-    scores = score_all(html, gt, document, chunks)
+    scores = score_all(html, gt, document, chunks, chunking)
     _write(out / "scores.json", scores, ensure_ascii=True)
     print(json.dumps(scores, indent=1))
 

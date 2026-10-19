@@ -1,7 +1,7 @@
 """Three chunkers on the structured document, all sharing table handling and chunk metadata:
 
-  rule          rule-based: a new chunk at every heading, prose packed to ~600 tokens  (C1–C10)
-  parent_child  LlamaIndex HierarchicalNodeParser: 1,280-token parents, 256-token children
+  rule          rule-based: a new chunk at every heading, prose packed to TARGET tokens (C1–C10)
+  parent_child  LlamaIndex HierarchicalNodeParser: PARENT-token parents, CHILD-token children
   agentic       Chonkie SlumberChunker: the LLM picks each boundary
 
 Every chunk stays inside one Item (C1); each data table is its own chunk (C2–C4); metadata and
@@ -13,16 +13,33 @@ import os
 import re
 from functools import lru_cache
 
-TOKENIZER = "Qwen/Qwen3-Embedding-0.6B"  # the embedder's, so sizes are what it sees
-TARGET = 600  # rule-based and agentic chunk size, tokens
-PARENT, CHILD = 1280, 256  # parent-child sizes, tokens (5:1)
-CAPTION_CHARS = 300  # C3: longest paragraph that counts as a table caption
-TABLE_CHARS = 7200  # C4: longer tables split into row groups
-OVERLAP_CHARS = 600  # C7: longest paragraph carried into the next chunk
-HEADER_ROWS = 2  # C4: rows repeated at the top of every row group
+# Sizes from config.yaml's `chunking:` (meanings there), set by configure() before chunking.
+TOKENIZER: str
+TARGET: int
+PARENT: int
+CHILD: int
+CHILD_OVERLAP: int
+CANDIDATE_SIZE: int
+CAPTION_CHARS: int
+TABLE_CHARS: int
+HEADER_ROWS: int
+OVERLAP_CHARS: int
 YEAR = re.compile(r"\b(20[0-3]\d)\b")  # C8
 SENTENCE_END = re.compile(r"(?<=[.;])\s+")  # C5
 METHODS = ("rule", "parent_child", "agentic")
+
+
+def configure(chunking: dict) -> None:
+    """Set the sizes above from config.yaml's `chunking:`."""
+    global TOKENIZER, TARGET, PARENT, CHILD, CHILD_OVERLAP, CANDIDATE_SIZE
+    global CAPTION_CHARS, TABLE_CHARS, HEADER_ROWS, OVERLAP_CHARS
+    TOKENIZER = chunking["tokenizer"]
+    TARGET = chunking["target"]
+    PARENT, CHILD, CHILD_OVERLAP = chunking["parent"], chunking["child"], chunking["child_overlap"]
+    CANDIDATE_SIZE = chunking["candidate_size"]
+    CAPTION_CHARS, TABLE_CHARS = chunking["caption_chars"], chunking["table_chars"]
+    HEADER_ROWS, OVERLAP_CHARS = chunking["header_rows"], chunking["overlap_chars"]
+    tokenizer.cache_clear()
 
 
 @lru_cache(maxsize=1)
@@ -36,8 +53,12 @@ def tokens(text: str) -> int:
     return len(tokenizer().encode(text, add_special_tokens=False))
 
 
-def run_all(document: dict, model: str, base_url: str, methods=METHODS) -> dict[str, list[dict]]:
-    """method → its chunks. `model` and `base_url` are the LLM the agentic chunker calls."""
+def run_all(
+    document: dict, chunking: dict, model: str, base_url: str, methods=METHODS
+) -> dict[str, list[dict]]:
+    """method → its chunks. `chunking` is config.yaml's `chunking:`; `model` and `base_url` are
+    the LLM the agentic chunker calls."""
+    configure(chunking)
     run = {
         "rule": lambda: rule_based(document),
         "parent_child": lambda: parent_child(document),
@@ -227,7 +248,7 @@ def _hierarchical_parser():
 
     return HierarchicalNodeParser.from_defaults(
         node_parser_ids=["parent", "child"],
-        node_parser_map={"parent": splitter(PARENT, 0), "child": splitter(CHILD, 20)},
+        node_parser_map={"parent": splitter(PARENT, 0), "child": splitter(CHILD, CHILD_OVERLAP)},
     )
 
 
@@ -292,7 +313,7 @@ def _slumber_chunker(model: str, base_url: str):
         tokenizer=tokenizer(),
         chunk_size=TARGET,
         rules=candidates,
-        candidate_size=128,
+        candidate_size=CANDIDATE_SIZE,
         min_characters_per_chunk=1,  # the default 24 merges short headings into the previous one
         extract_mode="json",
         verbose=False,
