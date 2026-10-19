@@ -138,23 +138,41 @@ def assign_ids(document: dict, chunks: list[dict]) -> list[dict]:
     return chunks
 
 
-def table_chunks(section: dict, i: int, **extra) -> list[dict]:
-    """C2–C4: the chunk(s) for the table at section["blocks"][i]: the caption (up to 2 short
-    blocks right before it) and its rows, split into row groups only if over TABLE_CHARS."""
-    blocks = section["blocks"]
-    caption: list[dict] = []
+def caption(blocks: list[dict], i: int) -> list[dict]:
+    """C3: the table at blocks[i]'s caption, up to 2 short blocks right before it."""
+    out: list[dict] = []
     for b in reversed(blocks[max(0, i - 2) : i]):
         if b["kind"] == "table" or len(b["text"]) > CAPTION_CHARS:
             break
-        caption.insert(0, b)
+        out.insert(0, b)
+    return out
+
+
+def captions(section: dict, body: list[dict]) -> set[str]:
+    """C3: ids of the blocks that caption a table in `body`. They are in the table's chunk, so
+    prose leaves them out rather than repeat them in a chunk of their own."""
+    index = {b["id"]: i for i, b in enumerate(section["blocks"])}
+    return {
+        c["id"]
+        for b in body
+        if b["kind"] == "table"
+        for c in caption(section["blocks"], index[b["id"]])
+    }
+
+
+def table_chunks(section: dict, i: int, **extra) -> list[dict]:
+    """C2–C4: the chunk(s) for the table at section["blocks"][i]: the caption and its rows, split
+    into row groups only if over TABLE_CHARS."""
+    blocks = section["blocks"]
+    cap = caption(blocks, i)
     rows = ["| " + " | ".join(r) + " |" for r in blocks[i]["rows"]]
-    head = [c["text"] for c in caption] + rows[:HEADER_ROWS]  # repeated in every row group
+    head = [c["text"] for c in cap] + rows[:HEADER_ROWS]  # repeated in every row group
     groups: list[list[str]] = [[]]
     for row in rows[HEADER_ROWS:]:
         if groups[-1] and len("\n".join(head + groups[-1] + [row])) > TABLE_CHARS:
             groups.append([])
         groups[-1].append(row)
-    sources = caption + [blocks[i]]
+    sources = cap + [blocks[i]]
     return [make_chunk(section, "table", "\n".join(head + g), sources, **extra) for g in groups]
 
 
@@ -196,12 +214,13 @@ def rule_based(document: dict) -> list[dict]:
             # C5 leaves room for the heading lines every chunk starts with (C10).
             limit = max(TARGET // 2, TARGET - tokens("\n".join(h["text"] for h in heads)) - 2)
             prose: list[tuple[str, dict]] = []  # (paragraph text, source block), to be packed
+            captioned = captions(section, group["body"])
             for b in group["body"]:
                 if b["kind"] == "table":
                     chunks += _pack(section, heads, prose)
                     prose = []
                     chunks += table_chunks(section, index[b["id"]])
-                else:
+                elif b["id"] not in captioned:
                     prose += [(p, b) for p in split_at_sentences(b["text"], limit)]
             chunks += _pack(section, heads, prose)
     return assign_ids(document, chunks)
@@ -211,7 +230,7 @@ def _pack(section: dict, heads: list[dict], prose: list[tuple[str, dict]]) -> li
     """C6: pack a subsection's paragraphs greedily up to TARGET tokens. C10: the first chunk starts
     with all its heading lines, later ones with its own (last) heading. C7: a later chunk also
     repeats the previous chunk's last paragraph if it's short and still fits."""
-    if not prose:  # a heading over only tables is already in their captions
+    if not prose:  # a heading over only tables (and their captions) is already in their chunks
         return []
 
     def text(lines: list[tuple[str, dict]]) -> str:
@@ -242,8 +261,11 @@ def parent_child(document: dict) -> list[dict]:
     for section in document["sections"]:
         index = {b["id"]: i for i, b in enumerate(section["blocks"])}
         for group in subsections(section["blocks"]):
-            paragraphs = [b for b in group["body"] if b["kind"] != "table"]
-            if paragraphs:  # a heading over only tables is already in their captions
+            captioned = captions(section, group["body"])
+            paragraphs = [
+                b for b in group["body"] if b["kind"] != "table" and b["id"] not in captioned
+            ]
+            if paragraphs:  # a heading over only tables (and their captions) is in their chunks
                 chunks += _parents(section, group["headings"] + paragraphs, parser)
             for b in group["body"]:
                 if b["kind"] == "table":
