@@ -3,7 +3,7 @@
   label     the LLM gives every block a role (Item heading, heading, table, noise…),
             one window of ~150 blocks per call                      Labeler
   validate  code checks each window's labels (V1, V2, V4–V7)        validate (rules.py)
-  repair    violations go back to the LLM, at most 2 rounds         Labeler._label_window
+  repair    violations go back to the LLM, for a few rounds         Labeler._label_window
   assemble  code applies the labels to the blocks' own text (A1–A4) assemble
 
 The LLM only labels; the document's text is always the filing's own. Spec:
@@ -22,10 +22,6 @@ from blocks import Block
 from rules import ITEMS, Context, Violation, check_block, keep_role_fields, missing_labels
 
 PROMPTS = Path(__file__).resolve().parent.parent / "v0_structure"
-WINDOW = 150  # blocks labeled per call
-CONTEXT = 10  # labeled blocks from the previous window shown as context
-REPAIR_ROUNDS = 2
-
 DROPPED_ROLES = {"cover", "toc", "part_heading", "furniture", "index_table"}  # A2
 STATEMENT_KINDS = {"statement", "notes_header", "auditor_report"}  # A3: where statements start
 ITEM_PREFIX = re.compile(  # "Item 1A." / "Items 10 and 11:" before a section title
@@ -74,12 +70,16 @@ class Outline:
 
 class Labeler:
     """Labels a filing window by window: one schema-constrained call (temperature 0, thinking
-    off), then validate → repair."""
+    off), then validate → repair. `labeling` is config.yaml's `labeling:` (window, context,
+    repair_rounds)."""
 
-    def __init__(self, model: str, base_url: str, filing: dict):
+    def __init__(self, model: str, base_url: str, filing: dict, labeling: dict):
         self.client = openai.OpenAI(base_url=base_url, api_key="not-needed", timeout=1800)
         self.model = model
         self.filing = filing
+        self.window = labeling["window"]  # blocks labeled per call
+        self.context = labeling["context"]  # labeled blocks from the previous window shown
+        self.repair_rounds = labeling["repair_rounds"]
         self.system, self.window_template, self.repair_template = load_prompts()
         schema = json.loads((PROMPTS / "labels.schema.json").read_text())
         self.response_format = {
@@ -93,9 +93,9 @@ class Labeler:
         """block id → label. Blocks the repair couldn't fix are marked `unresolved`."""
         labels: dict[str, dict] = {}
         outline = Outline({b.id: b.text[:80] for b in blocks})
-        for start in range(0, len(blocks), WINDOW):
-            window = blocks[start : start + WINDOW]
-            context = blocks[max(0, start - CONTEXT) : start]
+        for start in range(0, len(blocks), self.window):
+            window = blocks[start : start + self.window]
+            context = blocks[max(0, start - self.context) : start]
             got, violations = self._label_window(window, context, labels, outline)
             for b in window:
                 missing = {"id": b.id, "role": "body", "uncertain": True}
@@ -109,7 +109,7 @@ class Labeler:
     def _label_window(
         self, window: list[Block], context: list[Block], labels: dict, outline: Outline
     ) -> tuple[dict[str, dict], list[Violation]]:
-        """The window's labels after up to REPAIR_ROUNDS repairs, and the violations left."""
+        """The window's labels after up to `repair_rounds` repairs, and the violations left."""
         user = self.window_template.format(
             company=self.filing["registrant"],
             ticker=self.filing["ticker"],
@@ -123,7 +123,7 @@ class Labeler:
         got = _by_id(self._call(messages))
         violations = validate(window, got, outline)
         rounds = [list(map(str, violations))]
-        for _ in range(REPAIR_ROUNDS):
+        for _ in range(self.repair_rounds):
             if not violations:
                 break
             # Show the LLM its own reply, the violations and the flagged blocks with their labels.

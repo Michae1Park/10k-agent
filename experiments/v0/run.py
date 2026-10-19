@@ -9,10 +9,12 @@ ground truth. Spec and results: experiments/V0_PARSING_CHUNKING.md.
   taskset -c 16-31 python experiments/v0/run.py                  # all stages (LLM steps cached)
   taskset -c 16-31 python experiments/v0/run.py --stage preprocess
   taskset -c 16-31 python experiments/v0/run.py --stage chunk --stage score
+  taskset -c 16-31 python experiments/v0/run.py --config my-config.yaml
 
-Needs the vLLM server (scripts/serve_vllm.sh qwen3.6-27b-fp8) for preprocessing and the agentic
-chunker. Writes output/chunking/<label>/: blocks.json, labels.json, labels-log.json,
-document.json, chunks-<method>.json, scores.json.
+Settings (inputs, LLM, labeling window) are in config.yaml. Needs the vLLM server
+(scripts/serve_vllm.sh qwen3.6-27b-fp8) for preprocessing and the agentic chunker. Writes
+output/chunking/<label>/: config.yaml (the settings used), blocks.json, labels.json,
+labels-log.json, document.json, chunks-<method>.json, scores.json.
 """
 
 import argparse
@@ -22,6 +24,8 @@ import time
 from dataclasses import asdict
 from pathlib import Path
 
+import yaml
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from blocks import cover_metadata, read_blocks  # noqa: E402
@@ -29,9 +33,7 @@ from chunkers import METHODS, run_all  # noqa: E402
 from structure import Labeler, assemble  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
-TESTDATA = ROOT / "experiments" / "V0_testdata"
-MODEL = "Qwen/Qwen3.6-27B-FP8"
-BASE_URL = "http://localhost:8001/v1"
+CONFIG = Path(__file__).resolve().parent / "config.yaml"
 STAGES = ["preprocess", "chunk", "score"]
 
 
@@ -39,15 +41,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument("--html", type=Path, default=TESTDATA / "aapl-fy25-excerpt.html")
-    ap.add_argument(
-        "--cover",
-        type=Path,
-        default=ROOT / "data/raw/filings/AAPL/FY2025/aapl-20250927.htm",
-        help="full filing for the dei: cover tags (the excerpt has no cover page)",
-    )
-    ap.add_argument("--gt", type=Path, default=TESTDATA / "aapl-fy25-excerpt.gt.json")
-    ap.add_argument("--label", default="aapl-fy25-excerpt")
+    ap.add_argument("--config", type=Path, default=CONFIG, help="default: %(default)s")
     ap.add_argument("--stage", action="append", choices=STAGES, help="default: all")
     ap.add_argument(
         "--relabel", action="store_true", help="call the LLM again even if labels.json exists"
@@ -56,32 +50,49 @@ def main() -> None:
         "--method", action="append", choices=METHODS, help="chunk stage: only these (default: all)"
     )
     args = ap.parse_args()
-    out = ROOT / "output" / "chunking" / args.label
+    config = yaml.safe_load(args.config.read_text())
+    run, llm = config["run"], config["llm"]
+    html, cover, gt = (ROOT / run[k] for k in ("html", "cover", "gt"))
+    out = ROOT / "output" / "chunking" / run["label"]
     out.mkdir(parents=True, exist_ok=True)
     stages = args.stage or STAGES
 
     if "preprocess" in stages:
-        preprocess(args.html, args.cover, out, args.relabel)
+        preprocess(html, cover, out, llm, config["labeling"], args.relabel)
+        (out / "config.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
     if "chunk" in stages:
-        chunk(out, args.method or METHODS)
+        chunk(out, llm, args.method or METHODS)
     if "score" in stages:
-        score(args.html, args.gt, out)
+        score(html, gt, out)
 
 
-def preprocess(html: Path, cover: Path, out: Path, relabel: bool) -> None:
+def preprocess(
+    html: Path, cover: Path, out: Path, llm: dict, labeling: dict, relabel: bool
+) -> None:
     """HTML → blocks → labels (cached in labels.json) → document.json."""
     blocks = read_blocks(html.read_text(encoding="utf-8"))
     filing = cover_metadata(cover)
     _write(out / "blocks.json", [asdict(b) for b in blocks])
     labels_path = out / "labels.json"
     if labels_path.exists() and not relabel:
+        cached = json.loads((out / "labels-log.json").read_text()).get("labeling")
+        if cached != labeling:
+            sys.exit(
+                f"{labels_path} was labeled with {cached}, not {labeling}: "
+                "pass --relabel, or set another run.label to keep both"
+            )
         labels = json.loads(labels_path.read_text())
     else:
         t = time.time()
-        labeler = Labeler(MODEL, BASE_URL, filing)
+        labeler = Labeler(llm["model"], llm["base_url"], filing, labeling)
         labels = labeler.label(blocks)
         _write(labels_path, labels)
-        log = {"seconds": round(time.time() - t), "usage": labeler.usage, "windows": labeler.log}
+        log = {
+            "labeling": labeling,
+            "seconds": round(time.time() - t),
+            "usage": labeler.usage,
+            "windows": labeler.log,
+        }
         _write(out / "labels-log.json", log)
         print(f"labeled {len(blocks)} blocks in {log['seconds']} s, {labeler.usage}")
     document = assemble(blocks, labels, filing)
@@ -96,10 +107,10 @@ def preprocess(html: Path, cover: Path, out: Path, relabel: bool) -> None:
     )
 
 
-def chunk(out: Path, methods) -> None:
+def chunk(out: Path, llm: dict, methods) -> None:
     """document.json → chunks-<method>.json."""
     document = json.loads((out / "document.json").read_text())
-    for method, chunks in run_all(document, MODEL, BASE_URL, methods).items():
+    for method, chunks in run_all(document, llm["model"], llm["base_url"], methods).items():
         _write(out / f"chunks-{method}.json", chunks)
         print(f"{method}: {len(chunks)} chunks")
 
