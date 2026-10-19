@@ -306,10 +306,12 @@ def _criterion_2(
         ):
             intact += 1
         # 2d: every chunk after the first still names the risk factor (text or heading_path).
-        for c, _ in touching[1:]:
+        # Parent-child is checked on its children, the pieces that get embedded.
+        pieces = [p for c, _ in touching for p in (c.get("children") or [c])]
+        for p in pieces[1:]:
             later += 1
-            carried += key(u["heading"]) in key(c["text"]) or bool(
-                c["heading_path"] and key(c["heading_path"][-1]) == key(u["heading"])
+            carried += key(u["heading"]) in key(p["text"]) or bool(
+                p.get("heading_path") and key(p["heading_path"][-1]) == key(u["heading"])
             )
     return {
         "2a_purity": pct(pure, len(rf_units)),

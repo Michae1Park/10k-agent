@@ -256,10 +256,12 @@ def _hierarchical_parser():
 
 
 def _parents(section: dict, blocks: list[dict], parser) -> list[dict]:
-    """One subsection's text as parent chunks, each listing its children."""
+    """One subsection's text as parent chunks, each listing its children. Every child carries the
+    subsection's heading path, since most children's text doesn't include the heading (T2)."""
     from llama_index.core import Document
 
-    meta = {"item": section["item"], "heading_path": " › ".join(chunk_path(blocks))}
+    path = chunk_path(blocks)
+    meta = {"item": section["item"], "heading_path": " › ".join(path)}
     doc = Document(
         text="\n".join(b["text"] for b in blocks),
         metadata=meta,
@@ -271,7 +273,7 @@ def _parents(section: dict, blocks: list[dict], parser) -> list[dict]:
     out = []
     for parent in (n for n in nodes.values() if n.parent_node is None):
         kids = [nodes[c.node_id] for c in (parent.child_nodes or []) if c.node_id in nodes]
-        children = [{"text": k.text, "tokens": tokens(k.text)} for k in kids]
+        children = [{"text": k.text, "tokens": tokens(k.text), "heading_path": path} for k in kids]
         out.append(make_chunk(section, "prose", parent.text, blocks, children=children))
     return out
 

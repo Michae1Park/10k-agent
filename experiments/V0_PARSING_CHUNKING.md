@@ -314,11 +314,12 @@ Small **children** are matched at search time; the larger **parent** is what the
 |---|---|---|---|
 | P | ≤ 1,280 tokens; never cross a leaf subsection | ≤ 256 tokens, the parser's sentence splits | 5:1 |
 
-Criteria 1 and 2 are scored on **parents** (what gets cited); children are only checked for metadata.
+Criteria 1 and 2 are scored on **parents** (what gets cited), except 2d, which is scored on **children** (what gets embedded).
 
 **As implemented** ([chunkers.py](v0/chunkers.py) `parent_child`):
 - Two `SentenceSplitter`s (1,280 / 256 tokens, overlap 0 / 20) in `HierarchicalNodeParser`'s `node_parser_map`, both counting with the Qwen3 tokenizer.
 - Metadata is attached to every node but excluded from the size count.
+- Every child stores its subsection's `heading_path`, since only the first child's text holds the heading. The embedder prefixes it (as rule-based C10 does in the text).
 - Each data table is a parent without children.
 - `AutoMergingRetriever` is only used at query time, so this evaluation doesn't run it.
 
@@ -399,7 +400,7 @@ Each chunk carries the structure it was cut from (T1, T2):
 | 2c. Fragmentation | Mean over risk factors of chunks used ÷ the minimum ⌈tokens / target⌉ | 1.0 |
 | 2d. Heading carried | % of a risk factor's later chunks that still carry its heading (in the text or `heading_path`) | 100% |
 
-For parent-child, 2a–2c are scored on parents, so the target is 1,280.
+For parent-child, 2a–2c are scored on parents, so the target is 1,280; 2d is scored on children, since parents never split a risk factor but children do.
 
 ### 4.3 Criterion 3: parent-child token ratio ≈ 5:1 (P only)
 
@@ -537,7 +538,7 @@ taskset -c 16-31 .venv/bin/python experiments/v0/run.py --stage chunk --method r
 | Method | 1a Item | 1b Path exact / merged / coarse / wrong | 2a Purity | 2b Intact | 2c Frag. | 2d Heading | 3b Ratio (median · % in 4–6) | Coverage · noise · tables (§4.5) |
 |---|---|---|---|---|---|---|---|---|
 | Rule-based | 100% | 92.0 / 0.5 / 1.4 / 6.1 | 100% (34) | 100% (22/22) | 1.01 | 100% (7) | — | 99.3% · 0 · 38/38 |
-| Parent-child | 100% | 93.4 / 0.5 / 2.2 / 3.8 | 100% (28) | 100% (27/27) | 1.00 | n/a (none split) | 5.5 · 100% (2 full parents) | 99.4% · 0 · 38/38 |
+| Parent-child | 100% | 93.4 / 0.5 / 2.2 / 3.8 | 100% (28) | 100% (27/27) | 1.00 | 100% (36) | 5.5 · 100% (2 full parents) | 99.4% · 0 · 38/38 |
 | Agentic | 100% | 83.6 / 4.8 / 11.0 / 0.7 | 97.4% (39) | 95.5% (21/22) | 1.15 | 100% (12) | — | 99.3% · 0 · 38/38 |
 
 - **Parentheses:** the number of chunks or risk factors scored.
