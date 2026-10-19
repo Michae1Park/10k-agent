@@ -2,7 +2,7 @@
 
   label     the LLM gives every block a role (Item heading, heading, table, noise…),
             one window of ~150 blocks per call                      Labeler
-  validate  code checks each window's labels (V1, V2, V4–V7)        validate
+  validate  code checks each window's labels (V1, V2, V4–V7)        validate (rules.py)
   repair    violations go back to the LLM, at most 2 rounds         Labeler._label_window
   assemble  code applies the labels to the blocks' own text (A1–A4) assemble
 
@@ -19,23 +19,14 @@ from pathlib import Path
 
 import openai
 from blocks import Block
+from rules import ITEMS, Context, Violation, check_block, keep_role_fields, missing_labels
 
 PROMPTS = Path(__file__).resolve().parent.parent / "v0_structure"
 WINDOW = 150  # blocks labeled per call
 CONTEXT = 10  # labeled blocks from the previous window shown as context
 REPAIR_ROUNDS = 2
 
-ITEMS = "1 1A 1B 1C 2 3 4 5 6 7 7A 8 9 9A 9B 9C 10 11 12 13 14 15 16".split()  # Form 10-K order
-TABLE_ONLY_ROLES = {"data_table", "layout_table", "index_table"}  # V4: tables only
-TABLE_ROLES = TABLE_ONLY_ROLES | {"toc", "furniture", "cover"}  # V4: all a table can be
-ROLE_FIELDS = {  # V4: fields a role may carry besides id, role and uncertain
-    "item_heading": {"item"},
-    "heading": {"level", "kind", "run_in"},
-    "data_table": {"units", "units_from"},
-    "layout_table": {"rows"},
-}
 DROPPED_ROLES = {"cover", "toc", "part_heading", "furniture", "index_table"}  # A2
-ITEM8_KINDS = {"statement", "note", "notes_header"}  # V6: headings only in Item 8 (or 15)
 STATEMENT_KINDS = {"statement", "notes_header", "auditor_report"}  # A3: where statements start
 ITEM_PREFIX = re.compile(  # "Item 1A." / "Items 10 and 11:" before a section title
     r"^items?\s+\d{1,2}[a-c]?(\s*(,|and|&)\s*\d{1,2}[a-c]?)*\s*[.:]?\s*", re.I
@@ -108,7 +99,7 @@ class Labeler:
             got, violations = self._label_window(window, context, labels, outline)
             for b in window:
                 missing = {"id": b.id, "role": "body", "uncertain": True}
-                label = _keep_role_fields(b, got.get(b.id) or missing)
+                label = keep_role_fields(b, got.get(b.id) or missing)
                 if any(b.id in v.ids for v in violations):
                     label["unresolved"] = True
                 labels[b.id] = label
@@ -117,7 +108,7 @@ class Labeler:
 
     def _label_window(
         self, window: list[Block], context: list[Block], labels: dict, outline: Outline
-    ) -> tuple[dict[str, dict], list["Violation"]]:
+    ) -> tuple[dict[str, dict], list[Violation]]:
         """The window's labels after up to REPAIR_ROUNDS repairs, and the violations left."""
         user = self.window_template.format(
             company=self.filing["registrant"],
@@ -200,96 +191,22 @@ def _by_id(reply: dict) -> dict[str, dict]:
 # ---------- validation ----------
 
 
-@dataclass
-class Violation:
-    rule: str  # V1–V7
-    ids: list[str]  # blocks to relabel
-    text: str  # what the LLM is told
-
-    def __str__(self) -> str:
-        return f"{self.rule}: {self.text}"
-
-
 def validate(window: list[Block], got: dict[str, dict], outline: Outline) -> list[Violation]:
-    """V1, V2, V4–V7 (§2.2) on one window's labels. V3 (every required Item present) needs a full
-    filing, so it isn't checked here."""
-    out: list[Violation] = []
-    missing = [b.id for b in window if b.id not in got]
-    if missing:
-        text = f"no label for {', '.join(missing)}; give exactly one label per block"
-        out.append(Violation("V1", missing, text))
+    """V1, V2, V4–V7 (§2.2, rules.py) on one window's labels. V3 (every required Item present)
+    needs a full filing, so it isn't checked here."""
+    out = missing_labels(window, got)
     outline = outline.copy()  # walk the window without moving the caller's outline
     previous: dict = {}
     for b in window:
         label = got.get(b.id)
         if label:
-            out += _check_block(b, label, outline, previous)
+            ctx = Context(
+                item=outline.item, items=outline.items, depth=len(outline.path), previous=previous
+            )
+            out += check_block(b, label, ctx)
             outline.advance({**label, "id": b.id})
         previous = label or {}
     return out
-
-
-def _check_block(b: Block, label: dict, outline: Outline, previous: dict) -> list[Violation]:
-    """V2, V4–V7 for one label, given the outline open before it and the previous label."""
-    out: list[Violation] = []
-
-    def flag(rule: str, text: str) -> None:
-        out.append(Violation(rule, [b.id], text))
-
-    role = label.get("role")
-    # V4: the role fits the block (tables and paragraphs have different roles).
-    if (b.kind == "table" and role not in TABLE_ROLES) or (
-        b.kind == "paragraph" and role in TABLE_ONLY_ROLES
-    ):
-        flag("V4", f"{b.id} is a {b.kind}, which can't be `{role}`")
-
-    if role == "item_heading":
-        item = label.get("item")
-        # V4: a valid Item; V2: Items appear once each, in Form 10-K order.
-        if item not in ITEMS:
-            flag("V4", f"{b.id}: item_heading needs a valid `item`")
-        elif outline.items and ITEMS.index(item) <= ITEMS.index(outline.items[-1]):
-            flag(
-                "V2",
-                f"{b.id}: Item {item} after Item {outline.items[-1]}; Items appear once, in order",
-            )
-
-    if role == "heading":
-        # V4: headings need level and kind; V5: levels go down one at a time.
-        if not isinstance(label.get("level"), int) or not label.get("kind"):
-            flag("V4", f"{b.id}: a heading needs `level` and `kind`")
-        elif label["level"] > len(outline.path) + 1:
-            flag(
-                "V5",
-                f"{b.id}: level {label['level']} jumps from {len(outline.path)}; "
-                "go down one level at a time",
-            )
-        # V6: risk-factor kinds only in Item 1A; financial-statement kinds only in Item 8 (or 15).
-        kind = label.get("kind", "")
-        if kind.startswith("risk_") and outline.item != "1A":
-            flag("V6", f"{b.id}: `{kind}` outside Item 1A (open Item: {outline.item})")
-        if kind in ITEM8_KINDS and outline.item not in {"8", "15"}:
-            flag("V6", f"{b.id}: `{kind}` outside Item 8 (open Item: {outline.item})")
-
-    # V4: a layout table labels each of its rows.
-    if role == "layout_table" and len(label.get("rows") or []) != len(b.rows):
-        flag("V4", f"{b.id}: `rows` needs one label per row ({len(b.rows)} rows)")
-
-    # V7: where an XBRL note text block starts, there is (or just was) a `note` heading.
-    if b.xbrl_start == "note":
-        is_note = role == "heading" and label.get("kind") == "note"
-        if not (is_note or previous.get("kind") == "note"):
-            flag(
-                "V7",
-                f"{b.id}: an XBRL note starts here; it should be (or follow) a `note` heading",
-            )
-    return out
-
-
-def _keep_role_fields(block: Block, label: dict) -> dict:
-    """V4 for extra fields: keep only the role's own fields (dropped, not repaired)."""
-    keep = {"id", "role", "uncertain"} | ROLE_FIELDS.get(label.get("role", "body"), set())
-    return {k: v for k, v in label.items() if k in keep} | {"id": block.id}
 
 
 # ---------- assembly ----------
