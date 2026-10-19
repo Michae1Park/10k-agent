@@ -399,15 +399,23 @@ def _parents(section: dict, blocks: list[dict], parser) -> list[dict]:
 
 def agentic(document: dict, model: str, base_url: str) -> list[dict]:
     """Each Item is rendered as Markdown, tables as [TABLE n] placeholders. The LLM picks each
-    chunk's end among paragraph (then sentence) candidates. Character spans map chunks back to
-    blocks; a table placeholder is replaced by the table's own chunk(s)."""
+    chunk's end among paragraph (then sentence) candidates, within two rules it can't break: each
+    risk factor is chunked on its own (one within TARGET stays whole, without a call), and a chunk
+    never ends on a heading. Character spans map chunks back to blocks; a table placeholder is
+    replaced by the table's own chunk(s)."""
     chunker = _slumber_chunker(model, base_url)
     chunks: list[dict] = []
     for section in document["sections"]:
         text, spans = render_markdown(section)
         index = {b["id"]: i for i, b in enumerate(section["blocks"])}
-        for piece in chunker.chunk(text):
-            start, end = piece.start_index, piece.end_index
+        cuts: list[int] = []
+        for s, e in _segments(text, spans):
+            if tokens(text[s:e]) <= TARGET:
+                cuts.append(s)
+            else:
+                cuts += [s + p.start_index for p in chunker.chunk(text[s:e])]
+        cuts = _glue_headings(text, cuts)
+        for start, end in zip(cuts, cuts[1:] + [len(text)], strict=True):
             touched = [(b, s) for b, s, e in spans if s < end and e > start]
             prose = [b for b, _ in touched if b["kind"] != "table"]
             body = _strip_markdown(text[start:end], section)
@@ -417,6 +425,35 @@ def agentic(document: dict, model: str, base_url: str) -> list[dict]:
                 if b["kind"] == "table" and start <= s < end:  # the placeholder starts here
                     chunks += table_chunks(section, index[b["id"]])
     return assign_ids(document, chunks)
+
+
+HEADING_LINE = re.compile(r"#{1,7} ")
+
+
+def _segments(text: str, spans: list[tuple[dict, int, int]]) -> list[tuple[int, int]]:
+    """Spans of `text` chunked separately: a new one starts at each risk-factor heading, or at
+    the first of the headings directly above it (its category)."""
+    starts, run = [0], None  # run: where the current run of consecutive headings starts
+    for b, s, _ in spans:
+        run = (s if run is None else run) if b["kind"] == "heading" else None
+        if b.get("heading_kind") == "risk_factor" and run > starts[-1]:
+            starts.append(run)
+    return list(zip(starts, starts[1:] + [len(text)], strict=True))
+
+
+def _glue_headings(text: str, cuts: list[int]) -> list[int]:
+    """Chunk starts, each moved back over the headings right before it, so no chunk ends on a
+    heading; a chunk left empty goes."""
+    out: list[int] = []
+    for c in cuts:
+        while c > 0 and text[c - 2 : c] == "\n\n":
+            prev = text.rfind("\n\n", 0, c - 2) + 2 if "\n\n" in text[: c - 2] else 0
+            if prev < (out[-1] if out else 0) or not HEADING_LINE.match(text, prev):
+                break
+            c = prev
+        if not out or c > out[-1]:
+            out.append(c)
+    return out
 
 
 def _slumber_chunker(model: str, base_url: str):

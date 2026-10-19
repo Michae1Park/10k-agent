@@ -95,3 +95,35 @@ def test_row_groups_repeat_the_caption_and_header_only(monkeypatch):
     assert body == ["| " + " | ".join(r) + " |" for r in rows[1:]]
     kids = [k["text"] for c in chunks for k in c["children"] if k["kind"] == "row"]
     assert kids == [f"Line {n}: 2025 = ${n},000; 2024 = ${n},500" for n in range(6)]
+
+
+RISKS = [
+    {"kind": "paragraph", "text": "Preamble text."},
+    {"kind": "heading", "text": "Business Risks", "heading_kind": "risk_category", "level": 1},
+    {"kind": "heading", "text": "Risk one.", "heading_kind": "risk_factor", "level": 2},
+    {"kind": "paragraph", "text": "Body one."},
+    {"kind": "heading", "text": "Risk two.", "heading_kind": "risk_factor", "level": 2},
+    {"kind": "paragraph", "text": "Body two."},
+]
+
+
+def test_agentic_segments_start_at_each_risk_factor_and_its_category():
+    text, spans = chunkers.render_markdown({"item": "1A", "title": "Risk Factors", "blocks": RISKS})
+    assert [text[s:e] for s, e in chunkers._segments(text, spans)] == [
+        "# Item 1A. Risk Factors\n\nPreamble text.\n\n",
+        "## Business Risks\n\n### Risk one.\n\nBody one.\n\n",
+        "### Risk two.\n\nBody two.",
+    ]
+
+
+def test_agentic_chunks_never_end_on_a_heading():
+    text, _ = chunkers.render_markdown({"item": "1A", "title": "Risk Factors", "blocks": RISKS})
+    at = text.index
+    # a cut after "### Risk two." moves before it; one after both headings moves before both
+    cuts = chunkers._glue_headings(text, [0, at("Body one."), at("Body two.")])
+    assert cuts == [0, at("## Business Risks"), at("### Risk two.")]
+    # a chunk of only headings goes: its headings join the next chunk
+    assert chunkers._glue_headings(text, [0, at("### Risk one."), at("Body one.")]) == [
+        0,
+        at("## Business Risks"),
+    ]
