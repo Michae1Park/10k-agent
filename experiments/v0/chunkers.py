@@ -268,7 +268,7 @@ def agentic(document: dict, model: str, base_url: str) -> list[dict]:
             start, end = piece.start_index, piece.end_index
             touched = [(b, s) for b, s, e in spans if s < end and e > start]
             prose = [b for b, _ in touched if b["kind"] != "table"]
-            body = _strip_markdown(text[start:end])
+            body = _strip_markdown(text[start:end], section)
             if prose and body:
                 chunks.append(make_chunk(section, "prose", body, prose))
             for b, s in touched:
@@ -324,13 +324,12 @@ def render_markdown(section: dict) -> tuple[str, list[tuple[dict, int, int]]]:
     return "\n\n".join(parts), spans
 
 
-def _strip_markdown(text: str) -> str:
+def _strip_markdown(text: str, section: dict) -> str:
     """Back to plain lines: no # marks, table placeholders or Item title."""
     lines = [re.sub(r"^#{1,7} ", "", ln) for ln in text.strip().split("\n\n")]
+    drop = {_item_title(section), ""}
     return "\n".join(
-        ln
-        for ln in lines
-        if ln and not re.fullmatch(r"\[TABLE \d+\]", ln) and not ln.startswith("Item ")
+        ln for ln in lines if ln not in drop and not re.fullmatch(r"\[TABLE \d+\]", ln)
     )
 
 
