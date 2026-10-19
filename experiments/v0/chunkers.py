@@ -272,14 +272,20 @@ def _hierarchical_parser():
 
 
 def _parents(section: dict, blocks: list[dict], parser) -> list[dict]:
-    """One subsection's text as parent chunks, each listing its children. Every child carries the
-    subsection's heading path, since most children's text doesn't include the heading (T2)."""
+    """One subsection's text as parent chunks, each listing its children. A parent's blocks are
+    the ones its text spans. Every child carries the subsection's heading path, since most
+    children's text doesn't include the heading (T2)."""
     from llama_index.core import Document
 
     path = chunk_path(blocks)
     meta = {"item": section["item"], "heading_path": " › ".join(path)}
+    text = "\n".join(b["text"] for b in blocks)
+    spans, pos = [], 0
+    for b in blocks:
+        spans.append((b, pos, pos + len(b["text"])))
+        pos += len(b["text"]) + 1
     doc = Document(
-        text="\n".join(b["text"] for b in blocks),
+        text=text,
         metadata=meta,
         # Metadata rides along but doesn't count toward chunk sizes.
         excluded_embed_metadata_keys=list(meta),
@@ -289,8 +295,10 @@ def _parents(section: dict, blocks: list[dict], parser) -> list[dict]:
     out = []
     for parent in (n for n in nodes.values() if n.parent_node is None):
         kids = [nodes[c.node_id] for c in (parent.child_nodes or []) if c.node_id in nodes]
+        start, end = parent.start_char_idx, parent.end_char_idx
+        own = [b for b, s, e in spans if s < end and e > start]
         children = [{"text": k.text, "tokens": tokens(k.text), "heading_path": path} for k in kids]
-        out.append(make_chunk(section, "prose", parent.text, blocks, children=children))
+        out.append(make_chunk(section, "prose", parent.text, own, children=children))
     return out
 
 
