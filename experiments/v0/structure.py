@@ -1,55 +1,45 @@
-"""V0 structure agent: label every block with the LLM, validate, repair, and assemble the
-structured document. Spec: experiments/V0_PARSING_CHUNKING.md §2.2–2.3; prompt and output
-format: experiments/v0_structure/system.md and labels.schema.json.
+"""Preprocessing step 2: the LLM structure agent, then assembly into the structured document.
+
+  label     the LLM gives every block a role (Item heading, heading, table, noise…),
+            one window of ~150 blocks per call                      Labeler
+  validate  code checks each window's labels (V1, V2, V4–V7)        validate
+  repair    violations go back to the LLM, at most 2 rounds         Labeler._label_window
+  assemble  code applies the labels to the blocks' own text (A1–A4) assemble
+
+The LLM only labels; the document's text is always the filing's own. Spec:
+experiments/V0_PARSING_CHUNKING.md §2.2–2.3; prompt and output format:
+experiments/v0_structure/system.md and labels.schema.json.
 """
 
 import json
 import re
+from collections import Counter
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import openai
 from blocks import Block
 
-HERE = Path(__file__).resolve().parent
-PROMPTS = HERE.parent / "v0_structure"
-WINDOW = 150
-CONTEXT = 10
+PROMPTS = Path(__file__).resolve().parent.parent / "v0_structure"
+WINDOW = 150  # blocks labeled per call
+CONTEXT = 10  # labeled blocks from the previous window shown as context
 REPAIR_ROUNDS = 2
-ITEMS = [
-    "1",
-    "1A",
-    "1B",
-    "1C",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "7A",
-    "8",
-    "9",
-    "9A",
-    "9B",
-    "9C",
-    "10",
-    "11",
-    "12",
-    "13",
-    "14",
-    "15",
-    "16",
-]
-TABLE_ONLY = {"data_table", "layout_table", "index_table"}
-TABLE_ROLES = TABLE_ONLY | {"toc", "furniture", "cover"}
-FIELDS = {
+
+ITEMS = "1 1A 1B 1C 2 3 4 5 6 7 7A 8 9 9A 9B 9C 10 11 12 13 14 15 16".split()  # Form 10-K order
+TABLE_ONLY_ROLES = {"data_table", "layout_table", "index_table"}  # V4: tables only
+TABLE_ROLES = TABLE_ONLY_ROLES | {"toc", "furniture", "cover"}  # V4: all a table can be
+ROLE_FIELDS = {  # V4: fields a role may carry besides id, role and uncertain
     "item_heading": {"item"},
     "heading": {"level", "kind", "run_in"},
     "data_table": {"units", "units_from"},
     "layout_table": {"rows"},
 }
-DROPPED = {"cover", "toc", "part_heading", "furniture", "index_table"}
-ITEM_PREFIX = re.compile(r"^items?\s+\d{1,2}[a-c]?(\s*(,|and|&)\s*\d{1,2}[a-c]?)*\s*[.:]?\s*", re.I)
+DROPPED_ROLES = {"cover", "toc", "part_heading", "furniture", "index_table"}  # A2
+ITEM8_KINDS = {"statement", "note", "notes_header"}  # V6: headings only in Item 8 (or 15)
+STATEMENT_KINDS = {"statement", "notes_header", "auditor_report"}  # A3: where statements start
+ITEM_PREFIX = re.compile(  # "Item 1A." / "Items 10 and 11:" before a section title
+    r"^items?\s+\d{1,2}[a-c]?(\s*(,|and|&)\s*\d{1,2}[a-c]?)*\s*[.:]?\s*", re.I
+)
 
 
 def load_prompts() -> tuple[str, str, str]:
@@ -61,80 +51,109 @@ def load_prompts() -> tuple[str, str, str]:
     return system.strip(), window.strip(), repair.strip()
 
 
+# ---------- labeling ----------
+
+
+@dataclass
+class Outline:
+    """Where the labels so far leave off: the open Item, the Items seen, the open heading path."""
+
+    texts: dict[str, str]  # block id → text, to show the path in the prompt
+    item: str | None = None
+    items: list[str] = field(default_factory=list)
+    path: list[tuple[int, str]] = field(default_factory=list)  # (level, heading block id)
+
+    def advance(self, label: dict) -> None:
+        """Move past one labeled block."""
+        if label["role"] == "item_heading":
+            self.item = label["item"]
+            self.items.append(label["item"])
+            self.path = []
+        elif label["role"] == "heading" and isinstance(label.get("level"), int):
+            level = min(label["level"], len(self.path) + 1)
+            self.path = self.path[: level - 1] + [(level, label["id"])]
+
+    def path_text(self) -> str:
+        return " › ".join(f"L{level} {self.texts.get(i, i)}" for level, i in self.path) or "(none)"
+
+    def copy(self) -> "Outline":
+        return replace(self, items=list(self.items), path=list(self.path))
+
+
 class Labeler:
-    """One schema-constrained call per window (temperature 0, no thinking); validate → repair."""
+    """Labels a filing window by window: one schema-constrained call (temperature 0, thinking
+    off), then validate → repair."""
 
     def __init__(self, model: str, base_url: str, filing: dict):
         self.client = openai.OpenAI(base_url=base_url, api_key="not-needed", timeout=1800)
         self.model = model
         self.filing = filing
-        self.system, self.window_tpl, self.repair_tpl = load_prompts()
+        self.system, self.window_template, self.repair_template = load_prompts()
         schema = json.loads((PROMPTS / "labels.schema.json").read_text())
         self.response_format = {
             "type": "json_schema",
             "json_schema": {"name": "labels", "schema": schema},
         }
         self.usage = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
-        self.log: list[dict] = []
+        self.log: list[dict] = []  # per window: its violations after each round
 
     def label(self, blocks: list[Block]) -> dict[str, dict]:
+        """block id → label. Blocks the repair couldn't fix are marked `unresolved`."""
         labels: dict[str, dict] = {}
-        state = State()
-        state.texts = {b.id: b.text[:80] for b in blocks}
+        outline = Outline({b.id: b.text[:80] for b in blocks})
         for start in range(0, len(blocks), WINDOW):
             window = blocks[start : start + WINDOW]
             context = blocks[max(0, start - CONTEXT) : start]
-            user = self.window_tpl.format(
-                company=self.filing["registrant"],
-                ticker=self.filing["ticker"],
-                fiscal_year=self.filing["fiscal_year"],
-                open_item=state.item or "none",
-                open_path=state.path_text(),
-                context="\n".join(_context_line(b, labels[b.id]) for b in context) or "(none)",
-                blocks="\n".join(_input_line(b) for b in window),
-            )
-            messages = [
-                {"role": "system", "content": self.system},
-                {"role": "user", "content": user},
-            ]
-            reply = self._call(messages)
-            got = _by_id(reply)
-            violations = validate(window, got, state)
-            entry = {
-                "start": window[0].id,
-                "end": window[-1].id,
-                "violations": [list(map(str, violations))],
-            }
-            for _ in range(REPAIR_ROUNDS):
-                if not violations:
-                    break
-                involved = sorted({i for v in violations for i in v.ids}, key=lambda i: i)
-                lines = [
-                    f"{_input_line(b)}\n    your label: {json.dumps(got.get(b.id))}"
-                    for b in window
-                    if b.id in involved
-                ]
-                messages += [
-                    {"role": "assistant", "content": json.dumps({"labels": list(got.values())})},
-                    {
-                        "role": "user",
-                        "content": self.repair_tpl.format(
-                            violations="\n".join(f"- {v}" for v in violations),
-                            blocks="\n".join(lines),
-                        ),
-                    },
-                ]
-                got.update({k: v for k, v in _by_id(self._call(messages)).items() if k in involved})
-                violations = validate(window, got, state)
-                entry["violations"].append(list(map(str, violations)))
+            got, violations = self._label_window(window, context, labels, outline)
             for b in window:
-                label = clean(b, got.get(b.id) or {"id": b.id, "role": "body", "uncertain": True})
+                missing = {"id": b.id, "role": "body", "uncertain": True}
+                label = _keep_role_fields(b, got.get(b.id) or missing)
                 if any(b.id in v.ids for v in violations):
                     label["unresolved"] = True
                 labels[b.id] = label
-                state.advance(label)
-            self.log.append(entry)
+                outline.advance(label)
         return labels
+
+    def _label_window(
+        self, window: list[Block], context: list[Block], labels: dict, outline: Outline
+    ) -> tuple[dict[str, dict], list["Violation"]]:
+        """The window's labels after up to REPAIR_ROUNDS repairs, and the violations left."""
+        user = self.window_template.format(
+            company=self.filing["registrant"],
+            ticker=self.filing["ticker"],
+            fiscal_year=self.filing["fiscal_year"],
+            open_item=outline.item or "none",
+            open_path=outline.path_text(),
+            context="\n".join(_context_line(b, labels[b.id]) for b in context) or "(none)",
+            blocks="\n".join(_input_line(b) for b in window),
+        )
+        messages = [{"role": "system", "content": self.system}, {"role": "user", "content": user}]
+        got = _by_id(self._call(messages))
+        violations = validate(window, got, outline)
+        rounds = [list(map(str, violations))]
+        for _ in range(REPAIR_ROUNDS):
+            if not violations:
+                break
+            # Show the LLM its own reply, the violations and the flagged blocks with their labels.
+            flagged = {i for v in violations for i in v.ids}
+            lines = [
+                f"{_input_line(b)}\n    your label: {json.dumps(got.get(b.id))}"
+                for b in window
+                if b.id in flagged
+            ]
+            repair = self.repair_template.format(
+                violations="\n".join(f"- {v}" for v in violations), blocks="\n".join(lines)
+            )
+            messages += [
+                {"role": "assistant", "content": json.dumps({"labels": list(got.values())})},
+                {"role": "user", "content": repair},
+            ]
+            fixed = _by_id(self._call(messages))
+            got.update({i: label for i, label in fixed.items() if i in flagged})
+            violations = validate(window, got, outline)
+            rounds.append(list(map(str, violations)))
+        self.log.append({"start": window[0].id, "end": window[-1].id, "violations": rounds})
+        return got, violations
 
     def _call(self, messages: list[dict]) -> dict:
         r = self.client.chat.completions.create(
@@ -151,200 +170,189 @@ class Labeler:
         try:
             return json.loads(r.choices[0].message.content)
         except json.JSONDecodeError:
-            return {"labels": []}
+            return {"labels": []}  # every block then fails V1 and goes to repair
 
 
+def _input_line(b: Block) -> str:
+    """How the LLM sees a block: `id | features | text`, long text and tables shortened."""
+    if b.kind == "table":
+        rows = b.rows if len(b.rows) <= 6 else b.rows[:3] + b.rows[-1:]
+        return (
+            f"{b.id} | TABLE rows={len(b.rows)} cols={max(len(r) for r in b.rows)} "
+            + f"{b.features()} | "
+            + " ‖ ".join(" | ".join(r) for r in rows)
+        )
+    text = b.text if len(b.text) <= 300 else f"{b.text[:200]} … {b.text[-60:]}"
+    return f"{b.id} | {b.features()} | {text}"
+
+
+def _context_line(b: Block, label: dict) -> str:
+    """An already-labeled block from the previous window, shown with its label."""
+    extra = " ".join(f"{k}={label[k]}" for k in ("item", "level", "kind") if k in label)
+    return f"{b.id} | {label['role']} {extra} | {b.text[:100]}"
+
+
+def _by_id(reply: dict) -> dict[str, dict]:
+    return {lb["id"]: lb for lb in reply.get("labels", []) if isinstance(lb, dict) and "id" in lb}
+
+
+# ---------- validation ----------
+
+
+@dataclass
 class Violation:
-    def __init__(self, rule: str, ids: list[str], text: str):
-        self.rule, self.ids, self.text = rule, ids, text
+    rule: str  # V1–V7
+    ids: list[str]  # blocks to relabel
+    text: str  # what the LLM is told
 
     def __str__(self) -> str:
         return f"{self.rule}: {self.text}"
 
 
-class State:
-    """What is open at the end of the labels so far: the Item, Items seen, the heading path."""
-
-    def __init__(self):
-        self.item: str | None = None
-        self.items: list[str] = []
-        self.path: list[tuple[int, str, str]] = []  # (level, kind, block id)
-        self.texts: dict[str, str] = {}
-
-    def advance(self, label: dict) -> None:
-        if label["role"] == "item_heading":
-            self.item = label["item"]
-            self.items.append(label["item"])
-            self.path = []
-        elif label["role"] == "heading" and isinstance(label.get("level"), int):
-            level = min(label["level"], len(self.path) + 1)
-            self.path = self.path[: level - 1] + [(level, label.get("kind", "other"), label["id"])]
-
-    def path_text(self) -> str:
-        return " › ".join(f"L{lv} {self.texts.get(i, i)}" for lv, _, i in self.path) or "(none)"
-
-    def copy(self) -> "State":
-        s = State()
-        s.item, s.items, s.path, s.texts = self.item, list(self.items), list(self.path), self.texts
-        return s
-
-
-def validate(window: list[Block], got: dict[str, dict], state: State) -> list[Violation]:
-    """V1–V7 (§2.2). V3 (every required Item) needs a full filing, so it is not checked here."""
+def validate(window: list[Block], got: dict[str, dict], outline: Outline) -> list[Violation]:
+    """V1, V2, V4–V7 (§2.2) on one window's labels. V3 (every required Item present) needs a full
+    filing, so it isn't checked here."""
     out: list[Violation] = []
     missing = [b.id for b in window if b.id not in got]
     if missing:
-        out.append(
-            Violation(
-                "V1",
-                missing,
-                f"no label for {', '.join(missing)}; give exactly one label per block",
-            )
-        )
-    s = state.copy()
-    prev: Block | None = None
+        text = f"no label for {', '.join(missing)}; give exactly one label per block"
+        out.append(Violation("V1", missing, text))
+    outline = outline.copy()  # walk the window without moving the caller's outline
+    previous: dict = {}
     for b in window:
         label = got.get(b.id)
-        if not label:
-            prev = b
-            continue
-        role = label.get("role")
-        if (b.kind == "table" and role not in TABLE_ROLES) or (
-            b.kind == "paragraph" and role in TABLE_ONLY
-        ):
-            out.append(Violation("V4", [b.id], f"{b.id} is a {b.kind}, which can't be `{role}`"))
-        if role == "item_heading":
-            item = label.get("item")
-            if item not in ITEMS:
-                out.append(Violation("V4", [b.id], f"{b.id}: item_heading needs a valid `item`"))
-            elif s.items and ITEMS.index(item) <= ITEMS.index(s.items[-1]):
-                out.append(
-                    Violation(
-                        "V2",
-                        [b.id],
-                        f"{b.id}: Item {item} after Item {s.items[-1]}; "
-                        "Items appear once, in order",
-                    )
-                )
-        if role == "heading":
-            if not isinstance(label.get("level"), int) or not label.get("kind"):
-                out.append(Violation("V4", [b.id], f"{b.id}: a heading needs `level` and `kind`"))
-            elif label["level"] > len(s.path) + 1:
-                out.append(
-                    Violation(
-                        "V5",
-                        [b.id],
-                        f"{b.id}: level {label['level']} jumps from {len(s.path)}; "
-                        "go down one level at a time",
-                    )
-                )
-            kind = label.get("kind", "")
-            if kind.startswith("risk_") and s.item != "1A":
-                out.append(
-                    Violation(
-                        "V6", [b.id], f"{b.id}: `{kind}` outside Item 1A (open Item: {s.item})"
-                    )
-                )
-            if kind in {"statement", "note", "notes_header"} and s.item not in {"8", "15"}:
-                out.append(
-                    Violation(
-                        "V6", [b.id], f"{b.id}: `{kind}` outside Item 8 (open Item: {s.item})"
-                    )
-                )
-        if role == "layout_table" and len(label.get("rows") or []) != len(b.rows):
-            out.append(
-                Violation(
-                    "V4", [b.id], f"{b.id}: `rows` needs one label per row ({len(b.rows)} rows)"
-                )
-            )
-        if b.xbrl_start == "note":
-            here = role == "heading" and label.get("kind") == "note"
-            before = prev is not None and (got.get(prev.id) or {}).get("kind") == "note"
-            if not (here or before):
-                out.append(
-                    Violation(
-                        "V7",
-                        [b.id],
-                        f"{b.id}: an XBRL note starts here; "
-                        "it should be (or follow) a `note` heading",
-                    )
-                )
-        s.advance({**label, "id": b.id})
-        prev = b
+        if label:
+            out += _check_block(b, label, outline, previous)
+            outline.advance({**label, "id": b.id})
+        previous = label or {}
     return out
 
 
-def clean(block: Block, label: dict) -> dict:
+def _check_block(b: Block, label: dict, outline: Outline, previous: dict) -> list[Violation]:
+    """V2, V4–V7 for one label, given the outline open before it and the previous label."""
+    out: list[Violation] = []
+
+    def flag(rule: str, text: str) -> None:
+        out.append(Violation(rule, [b.id], text))
+
+    role = label.get("role")
+    # V4: the role fits the block (tables and paragraphs have different roles).
+    if (b.kind == "table" and role not in TABLE_ROLES) or (
+        b.kind == "paragraph" and role in TABLE_ONLY_ROLES
+    ):
+        flag("V4", f"{b.id} is a {b.kind}, which can't be `{role}`")
+
+    if role == "item_heading":
+        item = label.get("item")
+        # V4: a valid Item; V2: Items appear once each, in Form 10-K order.
+        if item not in ITEMS:
+            flag("V4", f"{b.id}: item_heading needs a valid `item`")
+        elif outline.items and ITEMS.index(item) <= ITEMS.index(outline.items[-1]):
+            flag(
+                "V2",
+                f"{b.id}: Item {item} after Item {outline.items[-1]}; Items appear once, in order",
+            )
+
+    if role == "heading":
+        # V4: headings need level and kind; V5: levels go down one at a time.
+        if not isinstance(label.get("level"), int) or not label.get("kind"):
+            flag("V4", f"{b.id}: a heading needs `level` and `kind`")
+        elif label["level"] > len(outline.path) + 1:
+            flag(
+                "V5",
+                f"{b.id}: level {label['level']} jumps from {len(outline.path)}; "
+                "go down one level at a time",
+            )
+        # V6: risk-factor kinds only in Item 1A; financial-statement kinds only in Item 8 (or 15).
+        kind = label.get("kind", "")
+        if kind.startswith("risk_") and outline.item != "1A":
+            flag("V6", f"{b.id}: `{kind}` outside Item 1A (open Item: {outline.item})")
+        if kind in ITEM8_KINDS and outline.item not in {"8", "15"}:
+            flag("V6", f"{b.id}: `{kind}` outside Item 8 (open Item: {outline.item})")
+
+    # V4: a layout table labels each of its rows.
+    if role == "layout_table" and len(label.get("rows") or []) != len(b.rows):
+        flag("V4", f"{b.id}: `rows` needs one label per row ({len(b.rows)} rows)")
+
+    # V7: where an XBRL note text block starts, there is (or just was) a `note` heading.
+    if b.xbrl_start == "note":
+        is_note = role == "heading" and label.get("kind") == "note"
+        if not (is_note or previous.get("kind") == "note"):
+            flag(
+                "V7",
+                f"{b.id}: an XBRL note starts here; it should be (or follow) a `note` heading",
+            )
+    return out
+
+
+def _keep_role_fields(block: Block, label: dict) -> dict:
     """V4 for extra fields: keep only the role's own fields (dropped, not repaired)."""
-    role = label.get("role", "body")
-    keep = {"id", "role", "uncertain"} | FIELDS.get(role, set())
+    keep = {"id", "role", "uncertain"} | ROLE_FIELDS.get(label.get("role", "body"), set())
     return {k: v for k, v in label.items() if k in keep} | {"id": block.id}
 
 
+# ---------- assembly ----------
+
+
 def assemble(blocks: list[Block], labels: dict[str, dict], filing: dict) -> dict:
-    """A1–A4: sections from Item headings, run-in splits, layout-table rows, heading paths."""
+    """The structured document (§2.3) from blocks + labels: sections, run-in splits and layout
+    rows (A1–A2), statements moved into Item 8 (A3), heading paths (A4)."""
     sections: list[dict] = []
-    dropped: dict[str, int] = {}
+    dropped: Counter[str] = Counter()
     review: list[str] = []
     for b in blocks:
         label = labels[b.id]
         role = label["role"]
         if label.get("uncertain") or label.get("unresolved"):
             review.append(b.id)
-        if role == "item_heading":
-            sections.append(
-                {
-                    "item": label["item"],
-                    "title": ITEM_PREFIX.sub("", b.text) or b.text,
-                    "blocks": [],
-                }
-            )
-            continue
-        if role in DROPPED or not sections:
-            dropped[role if sections else "cover"] = (
-                dropped.get(role if sections else "cover", 0) + 1
-            )
-            continue
-        out = sections[-1]["blocks"]
-        if role == "heading":
-            if label.get("run_in") and b.emph == "runin":  # A1
-                out.append(_heading(f"{b.id}.h", b.text[: b.runin], label, b))
-                out.append(_para(f"{b.id}.b", b.text[b.runin :].strip(), b))
-            else:
-                out.append(_heading(b.id, b.text, label, b))
-        elif role == "data_table":
-            out.append(
-                {
-                    "id": b.id,
-                    "kind": "table",
-                    "text": "\n".join("| " + " | ".join(r) + " |" for r in b.rows),
-                    "rows": b.rows,
-                    "units": label.get("units"),
-                    "units_from": label.get("units_from"),
-                    "xbrl": b.xbrl,
-                }
-            )
-        elif role == "layout_table":  # A2: rows become headings or paragraphs
-            for k, (row, rl) in enumerate(
-                zip(b.rows, label.get("rows") or [{"role": "body"}] * len(b.rows), strict=False)
-            ):
-                text = " ".join(row)
-                if rl.get("role") == "heading":
-                    out.append(_heading(f"{b.id}.r{k}", text, rl, b))
-                elif rl.get("role") == "body":
-                    out.append(_para(f"{b.id}.r{k}", text, b))
+        if role == "item_heading":  # A2: each Item heading opens a section
+            title = ITEM_PREFIX.sub("", b.text) or b.text
+            sections.append({"item": label["item"], "title": title, "blocks": []})
+        elif not sections:  # everything before the first Item is the cover
+            dropped["cover"] += 1
+        elif role in DROPPED_ROLES:
+            dropped[role] += 1
         else:
-            out.append(_para(b.id, b.text, b))
-    _move_statements(sections)  # A3
-    for section in sections:  # A4
-        stack: list[str] = []
-        for blk in section["blocks"]:
-            if blk["kind"] == "heading":
-                level = max(1, min(blk["level"], len(stack) + 1))
-                blk["level"] = level
-                stack = stack[: level - 1] + [blk["text"]]
-            blk["heading_path"] = list(stack)
-    return {"filing": filing, "sections": sections, "dropped": dropped, "review": review}
+            sections[-1]["blocks"] += _document_blocks(b, label)
+    _move_statements_into_item8(sections)
+    _add_heading_paths(sections)
+    return {"filing": filing, "sections": sections, "dropped": dict(dropped), "review": review}
+
+
+def _document_blocks(b: Block, label: dict) -> list[dict]:
+    """The document block(s) one labeled block becomes."""
+    role = label["role"]
+    if role == "heading" and label.get("run_in") and b.emph == "runin":
+        # A1: the emphasized lead is the heading, the rest a paragraph.
+        return [
+            _heading(f"{b.id}.h", b.text[: b.runin], label, b),
+            _paragraph(f"{b.id}.b", b.text[b.runin :].strip(), b),
+        ]
+    if role == "heading":
+        return [_heading(b.id, b.text, label, b)]
+    if role == "data_table":
+        return [
+            {
+                "id": b.id,
+                "kind": "table",
+                "text": "\n".join("| " + " | ".join(r) + " |" for r in b.rows),
+                "rows": b.rows,
+                "units": label.get("units"),
+                "units_from": label.get("units_from"),
+                "xbrl": b.xbrl,
+            }
+        ]
+    if role == "layout_table":
+        # A2: each row becomes a heading or a paragraph; furniture rows are dropped.
+        row_labels = label.get("rows") or [{"role": "body"}] * len(b.rows)
+        out = []
+        for k, (row, row_label) in enumerate(zip(b.rows, row_labels, strict=False)):
+            if row_label.get("role") == "heading":
+                out.append(_heading(f"{b.id}.r{k}", " ".join(row), row_label, b))
+            elif row_label.get("role") == "body":
+                out.append(_paragraph(f"{b.id}.r{k}", " ".join(row), b))
+        return out
+    return [_paragraph(b.id, b.text, b)]
 
 
 def _heading(id_: str, text: str, label: dict, b: Block) -> dict:
@@ -358,38 +366,31 @@ def _heading(id_: str, text: str, label: dict, b: Block) -> dict:
     }
 
 
-def _para(id_: str, text: str, b: Block) -> dict:
+def _paragraph(id_: str, text: str, b: Block) -> dict:
     return {"id": id_, "kind": "paragraph", "text": text, "xbrl": b.xbrl}
 
 
-def _move_statements(sections: list[dict]) -> None:
+def _move_statements_into_item8(sections: list[dict]) -> None:
+    """A3: if Item 8 has no statement, move the span from the first statement / notes / auditor
+    heading after it, up to the end of that section, into Item 8 (NVIDIA, Netflix: Item 15)."""
     item8 = next((s for s in sections if s["item"] == "8"), None)
     if item8 is None or any(b.get("heading_kind") == "statement" for b in item8["blocks"]):
         return
-    for s in sections[sections.index(item8) + 1 :]:
-        for i, b in enumerate(s["blocks"]):
-            if b.get("heading_kind") in {"statement", "notes_header", "auditor_report"}:
-                item8["blocks"].extend(s["blocks"][i:])
-                del s["blocks"][i:]
+    for section in sections[sections.index(item8) + 1 :]:
+        for i, b in enumerate(section["blocks"]):
+            if b.get("heading_kind") in STATEMENT_KINDS:
+                item8["blocks"] += section["blocks"][i:]
+                del section["blocks"][i:]
                 return
 
 
-def _input_line(b: Block) -> str:
-    if b.kind == "table":
-        rows = b.rows if len(b.rows) <= 6 else b.rows[:3] + b.rows[-1:]
-        return (
-            f"{b.id} | TABLE rows={len(b.rows)} cols={max(len(r) for r in b.rows)} "
-            + f"{b.features()} | "
-            + " ‖ ".join(" | ".join(r) for r in rows)
-        )
-    text = b.text if len(b.text) <= 300 else f"{b.text[:200]} … {b.text[-60:]}"
-    return f"{b.id} | {b.features()} | {text}"
-
-
-def _context_line(b: Block, label: dict) -> str:
-    extra = " ".join(f"{k}={label[k]}" for k in ("item", "level", "kind") if k in label)
-    return f"{b.id} | {label['role']} {extra} | {b.text[:100]}"
-
-
-def _by_id(reply: dict) -> dict[str, dict]:
-    return {lb["id"]: lb for lb in reply.get("labels", []) if isinstance(lb, dict) and "id" in lb}
+def _add_heading_paths(sections: list[dict]) -> None:
+    """A4: every block's heading_path, the headings above it (a heading includes itself).
+    Levels that jump by more than one are clamped."""
+    for section in sections:
+        path: list[str] = []
+        for b in section["blocks"]:
+            if b["kind"] == "heading":
+                b["level"] = max(1, min(b["level"], len(path) + 1))
+                path = path[: b["level"] - 1] + [b["text"]]
+            b["heading_path"] = list(path)

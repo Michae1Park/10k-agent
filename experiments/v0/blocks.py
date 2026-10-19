@@ -1,20 +1,33 @@
-"""V0 deterministic layer (D1–D7): 10-K HTML → blocks with features. Only rules that hold for
-every 10-K; everything that needs judgment is left to the structure agent (structure.py).
+"""Preprocessing step 1, deterministic: 10-K HTML → blocks (paragraphs and tables) with features.
+
+Only rules that hold for every 10-K (spec §2.1); anything that needs judgment is left to the
+structure agent (structure.py). Where each rule lives:
+
+  D1  drop hidden elements               _walk (parse._hidden)
+  D2  inline-XBRL text-block spans       _continuation_names, _xbrl_context
+  D3  filing metadata from dei: tags     cover_metadata
+  D4  clean text                         parse._clean
+  D5  split into paragraphs and tables   _walk
+  D6  rejoin split table cells           parse._row_cells
+  D7  features for the LLM               _emphasis, _is_link, Block.features
+
 Spec: experiments/V0_PARSING_CHUNKING.md §2.1.
 """
 
 import json
 import re
 from dataclasses import dataclass, field
+from itertools import groupby
 from pathlib import Path
 
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 
 from tenk_agent.parse import BLOCK_TAGS, _clean, _hidden, _row_cells
 
-ITEM_LABEL = re.compile(r"^items?\s+\d{1,2}[a-c]?\b", re.I)
-TEXT_BLOCK = {"ix:nonnumeric", "ix:continuation"}
-DEI = [
+ITEM_LABEL = re.compile(r"^items?\s+\d{1,2}[a-c]?\b", re.I)  # "Item 1A", "Items 10 and 11"
+TEXT_BLOCK_TAGS = {"ix:nonnumeric", "ix:continuation"}  # tags that can carry an XBRL text block
+INTERNAL_LINK = re.compile("^#")  # href to a place in the same document
+COVER_TAGS = [  # D3
     "TradingSymbol",
     "DocumentFiscalYearFocus",
     "DocumentPeriodEndDate",
@@ -25,21 +38,21 @@ DEI = [
 
 @dataclass
 class Block:
-    id: str
-    kind: str  # "paragraph" or "table"
-    text: str
-    rows: list[list[str]] = field(default_factory=list)
-    emph: str = "-"  # B, I, BI, - or runin
-    runin: int = 0  # length of the emphasized lead when emph == "runin"
-    xbrl: str | None = None  # innermost inline-XBRL text block the block sits in
-    xbrl_start: str | None = (
-        None  # note / policy / table: an outermost text block of that kind starts here
-    )
+    """One paragraph or table. Field names match the D7 feature names in the spec."""
+
+    id: str = ""  # b0001… in reading order, set by read_blocks
+    kind: str = "paragraph"  # "paragraph" or "table"
+    text: str = ""  # tables: one "a | b" line per row
+    rows: list[list[str]] = field(default_factory=list)  # tables: cells per row
+    emph: str = "-"  # emphasis of the whole text: B, I, BI, "-" (none), or "runin"
+    runin: int = 0  # when emph == "runin": length of the emphasized lead
+    xbrl: str | None = None  # innermost XBRL text block the block sits in
+    xbrl_start: str | None = None  # "note" / "policy" / "table": an XBRL text block starts here
     pb: bool = False  # a page break follows
-    link: bool = False  # the text links within the document
+    link: bool = False  # the text is a link within the document (e.g. a TOC entry)
 
     def features(self) -> str:
-        """The `features` field of the LLM input line (system.md # Input)."""
+        """The `features` field of the block's line in the LLM input (system.md # Input)."""
         parts = [
             f"emph=runin:{self.runin}" if self.emph == "runin" else f"emph={self.emph}",
             f"chars={len(self.text)}",
@@ -56,89 +69,48 @@ class Block:
 
 
 def read_blocks(html: str) -> list[Block]:
+    """D1–D7: the filing's blocks in reading order, with ids and features."""
     soup = BeautifulSoup(html, "lxml")
-    names = _text_block_names(soup)
     blocks: list[Block] = []
-    _walk(soup.body or soup, blocks, names)
-    for i, b in enumerate(blocks):
-        b.id = f"b{i + 1:04d}"
+    _walk(soup.body or soup, blocks, _continuation_names(soup))
+    for i, b in enumerate(blocks, start=1):
+        b.id = f"b{i:04d}"
     return blocks
 
 
 def cover_metadata(full_filing: Path) -> dict:
     """D3: filing metadata from the dei: cover tags, plus accession and URL from metadata.json."""
     html = full_filing.read_text(encoding="utf-8")
-    meta: dict = {}
-    for name in DEI:
+    tags: dict = {}
+    for name in COVER_TAGS:
         m = re.search(rf'name="dei:{name}"[^>]*>(.*?)</ix:', html, re.S)
-        meta[name] = _clean(BeautifulSoup(m.group(1), "lxml").get_text(" ")) if m else None
-    assert meta["DocumentType"] == "10-K", meta["DocumentType"]
-    side = json.loads((full_filing.parent / "metadata.json").read_text())
+        tags[name] = _clean(BeautifulSoup(m.group(1), "lxml").get_text(" ")) if m else None
+    assert tags["DocumentType"] == "10-K", tags["DocumentType"]
+    manifest = json.loads((full_filing.parent / "metadata.json").read_text())
     return {
-        "ticker": meta["TradingSymbol"],
-        "registrant": meta["EntityRegistrantName"],
-        "fiscal_year": int(meta["DocumentFiscalYearFocus"]),
-        "period_end": side.get("period_end_date"),
-        "accession": side.get("accession_no"),
-        "source_url": side.get("source_url"),
+        "ticker": tags["TradingSymbol"],
+        "registrant": tags["EntityRegistrantName"],
+        "fiscal_year": int(tags["DocumentFiscalYearFocus"]),
+        "period_end": manifest.get("period_end_date"),
+        "accession": manifest.get("accession_no"),
+        "source_url": manifest.get("source_url"),
     }
 
 
-def _text_block_names(soup: BeautifulSoup) -> dict[str, str]:
-    """D2: the element name behind every ix:continuation id, following continuedAt chains."""
-    names: dict[str, str] = {}
-    for tag in soup.find_all("ix:nonnumeric", attrs={"name": re.compile("TextBlock$")}):
-        nxt = tag.get("continuedat")
-        while nxt and nxt not in names:
-            names[nxt] = tag["name"]
-            cont = soup.find("ix:continuation", attrs={"id": nxt})
-            nxt = cont.get("continuedat") if cont else None
-    return names
-
-
-def _block_kind(name: str) -> str:
-    local = name.split(":")[-1]
-    if "Policy" in local:
-        return "policy"
-    return "table" if "Table" in local or local.startswith("Schedule") else "note"
-
-
-def _xbrl(tag: Tag, names: dict[str, str]) -> tuple[str | None, str | None]:
-    """(innermost text block name, kind of an outermost text block that starts in this block).
-    A text block can wrap many blocks (an ancestor) or start inside one, e.g. mid-heading."""
-    spans = [(p, n) for p in [tag, *tag.parents] if (n := _text_block(p, names))]
-    inner = spans[0][1] if spans else None
-    if spans:
-        outer_tag, outer_name = spans[-1]
-        if outer_tag.name == "ix:nonnumeric" and _first_text(outer_tag) is _first_text(tag):
-            return inner, _block_kind(outer_name)
-        return inner, None
-    for child in tag.find_all("ix:nonnumeric"):
-        if name := _text_block(child, names):
-            return name, _block_kind(name)
-    return None, None
-
-
-def _text_block(tag, names: dict[str, str]) -> str | None:
-    if not isinstance(tag, Tag) or tag.name not in TEXT_BLOCK:
-        return None
-    name = tag.get("name") if tag.name == "ix:nonnumeric" else names.get(tag.get("id", ""))
-    return name if name and name.endswith("TextBlock") else None
-
-
-def _first_text(tag: Tag):
-    return next((s for s in tag.find_all(string=True) if s.strip()), None)
+# ---------- D5: blocks ----------
 
 
 def _walk(element: Tag, blocks: list[Block], names: dict[str, str]) -> None:
-    """D5: paragraphs and tables in reading order; D1 drops hidden elements."""
+    """D5: append the element's paragraphs and tables to `blocks`. A tag with no block-level
+    descendants is one paragraph; a container is walked into. D1: hidden tags are skipped."""
     for child in element.children:
         if isinstance(child, Comment):
             continue
         if isinstance(child, NavigableString):
+            # Loose text beside block tags is its own paragraph.
             text = _clean(str(child))
             if text and element.find(BLOCK_TAGS):
-                blocks.append(Block("", "paragraph", text))
+                blocks.append(Block(text=text))
             continue
         if not isinstance(child, Tag) or _hidden(child):
             continue
@@ -146,50 +118,78 @@ def _walk(element: Tag, blocks: list[Block], names: dict[str, str]) -> None:
         if "page-break-before:always" in style and blocks:
             blocks[-1].pb = True
         if child.name == "table":
-            rows = [cells for tr in child.find_all("tr") if (cells := _row_cells(tr))]
-            if rows:
-                block = Block("", "table", "\n".join(" | ".join(r) for r in rows), rows=rows)
-                block.link = bool(child.find("a", href=re.compile("^#")))
-                block.xbrl, block.xbrl_start = _xbrl(child, names)
-                blocks.append(block)
+            if table := _table_block(child, names):
+                blocks.append(table)
         elif child.find(BLOCK_TAGS):
             _walk(child, blocks, names)
         elif text := _clean(child.get_text(" ")):
-            block = Block("", "paragraph", text)
-            block.emph, block.runin = _emphasis(child, text)
-            link = child.find("a", href=re.compile("^#"))
-            block.link = bool(link) and len(_clean(link.get_text(" "))) >= len(text) / 2
-            block.xbrl, block.xbrl_start = _xbrl(child, names)
-            blocks.append(block)
+            blocks.append(_paragraph_block(child, text, names))
         if "page-break-after:always" in style and blocks:
             blocks[-1].pb = True
 
 
+def _table_block(tag: Tag, names: dict[str, str]) -> Block | None:
+    """Every <table> is one block (empty rows dropped); data vs layout is the LLM's call."""
+    rows = [cells for tr in tag.find_all("tr") if (cells := _row_cells(tr))]
+    if not rows:
+        return None
+    xbrl, xbrl_start = _xbrl_context(tag, names)
+    return Block(
+        kind="table",
+        text="\n".join(" | ".join(r) for r in rows),
+        rows=rows,
+        xbrl=xbrl,
+        xbrl_start=xbrl_start,
+        link=bool(tag.find("a", href=INTERNAL_LINK)),
+    )
+
+
+def _paragraph_block(tag: Tag, text: str, names: dict[str, str]) -> Block:
+    emph, runin = _emphasis(tag, text)
+    xbrl, xbrl_start = _xbrl_context(tag, names)
+    return Block(
+        text=text,
+        emph=emph,
+        runin=runin,
+        xbrl=xbrl,
+        xbrl_start=xbrl_start,
+        link=_is_link(tag, text),
+    )
+
+
+# ---------- D7: features ----------
+
+
+def _is_link(tag: Tag, text: str) -> bool:
+    """An internal link covers at least half the paragraph's text."""
+    link = tag.find("a", href=INTERNAL_LINK)
+    return bool(link) and len(_clean(link.get_text(" "))) >= len(text) / 2
+
+
 def _emphasis(tag: Tag, text: str) -> tuple[str, int]:
-    """D7: B / I / BI when all text shares it; runin + N when only a leading run is emphasized."""
-    runs: list[tuple[str, str]] = []
-    for s in tag.find_all(string=True):
-        if not s.strip():
-            continue
-        e = _run_emphasis(s, tag)
-        if runs and runs[-1][0] == e:
-            runs[-1] = (e, runs[-1][1] + str(s))
-        else:
-            runs.append((e, str(s)))
-    styles = {e for e, t in runs if re.search(r"\w", t)}
+    """(emph, runin): B / I / BI when all the text shares it; ("runin", N) when only a leading
+    run of N chars is emphasized (a run-in heading); ("-", 0) otherwise."""
+    strings = [s for s in tag.find_all(string=True) if s.strip()]
+    # Runs of consecutive strings with the same emphasis.
+    runs = [
+        (emph, "".join(map(str, group)))
+        for emph, group in groupby(strings, key=lambda s: _emphasis_of(s, tag))
+    ]
+    styles = {emph for emph, run in runs if re.search(r"\w", run)}  # ignore punctuation-only runs
     if len(styles) == 1 and "-" not in styles:
         return styles.pop(), 0
     if len(runs) > 1 and runs[0][0] != "-":
         lead = _clean(runs[0][1])
-        if lead and text.startswith(lead) and any(e == "-" for e, _ in runs[1:]):
+        if lead and text.startswith(lead) and any(emph == "-" for emph, _ in runs[1:]):
             return "runin", len(lead)
     return "-", 0
 
 
-def _run_emphasis(node: NavigableString, stop: Tag) -> str:
+def _emphasis_of(node: NavigableString, block: Tag) -> str:
+    """B, I, BI or "-" for one string, from its tags and styles up to the block's tag."""
     bold = italic = False
     for parent in node.parents:
-        if parent is stop.parent:
+        if parent is block.parent:
             break
         style = (parent.get("style") or "").replace(" ", "").lower()
         bold |= parent.name in ("b", "strong") or bool(
@@ -197,3 +197,57 @@ def _run_emphasis(node: NavigableString, stop: Tag) -> str:
         )
         italic |= parent.name in ("i", "em") or "font-style:italic" in style
     return ("B" if bold else "") + ("I" if italic else "") or "-"
+
+
+# ---------- D2: inline-XBRL text blocks ----------
+
+
+def _continuation_names(soup: BeautifulSoup) -> dict[str, str]:
+    """ix:continuation id → the TextBlock element it continues, following continuedAt chains."""
+    names: dict[str, str] = {}
+    for tag in soup.find_all("ix:nonnumeric", attrs={"name": re.compile("TextBlock$")}):
+        next_id = tag.get("continuedat")
+        while next_id and next_id not in names:
+            names[next_id] = tag["name"]
+            continuation = soup.find("ix:continuation", attrs={"id": next_id})
+            next_id = continuation.get("continuedat") if continuation else None
+    return names
+
+
+def _xbrl_context(tag: Tag, names: dict[str, str]) -> tuple[str | None, str | None]:
+    """(innermost text block the block sits in, kind of a text block that starts in it).
+
+    A text block can wrap the block (an ancestor) or start inside it, e.g. mid-heading."""
+    enclosing = [(t, name) for t in [tag, *tag.parents] if (name := _text_block_name(t, names))]
+    if enclosing:
+        innermost = enclosing[0][1]
+        outer_tag, outer_name = enclosing[-1]
+        # The outermost one starts here if it isn't a continuation and its text starts here.
+        is_start_tag = outer_tag.name == "ix:nonnumeric"
+        starts_here = is_start_tag and _first_text(outer_tag) is _first_text(tag)
+        return innermost, (_text_block_kind(outer_name) if starts_here else None)
+    for child in tag.find_all("ix:nonnumeric"):
+        if name := _text_block_name(child, names):
+            return name, _text_block_kind(name)
+    return None, None
+
+
+def _text_block_name(tag, names: dict[str, str]) -> str | None:
+    """The *TextBlock element name the tag carries (directly or as a continuation), if any."""
+    if not isinstance(tag, Tag) or tag.name not in TEXT_BLOCK_TAGS:
+        return None
+    name = tag.get("name") if tag.name == "ix:nonnumeric" else names.get(tag.get("id", ""))
+    return name if name and name.endswith("TextBlock") else None
+
+
+def _text_block_kind(name: str) -> str:
+    """note, policy or table, from the element name (us-gaap:LeasesOfLesseeDisclosureTextBlock)."""
+    local = name.split(":")[-1]
+    if "Policy" in local:
+        return "policy"
+    return "table" if "Table" in local or local.startswith("Schedule") else "note"
+
+
+def _first_text(tag: Tag):
+    """The first non-blank string inside the tag."""
+    return next((s for s in tag.find_all(string=True) if s.strip()), None)
