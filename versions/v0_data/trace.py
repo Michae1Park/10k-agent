@@ -26,9 +26,32 @@ from tenk_agent.chunking import ChunkSizes, chunk_sections
 from tenk_agent.ingest import document_path, downloaded_filings
 from tenk_agent.playground import settings, write_report
 
-HERE = Path(__file__).parent
-DEMOS = {"aapl": HERE / "trace_demo_aapl.html", "msft": HERE / "trace_demo_msft.html"}
-TOY = HERE / "trace_toy.html"
+# Demo excerpts sliced from the downloaded FY2025 filing: (ticker, start text, its occurrence, end text).
+# The slice runs from the <div> holding the start text to the </div> closing the end text.
+DEMOS = {
+    "aapl": ("AAPL", "Item 6.", 2, "Apple Inc. | 2025 Form 10-K | 23"),
+    "msft": ("MSFT", "ITEM 6.", 1, "Refer to accompanying notes."),
+}
+TOY = """<html><body>
+<div>Table of Contents</div>
+<table><tr><td>Item 7.</td><td>Management's Discussion</td><td>20</td></tr>
+<tr><td>Item 8.</td><td>Financial Statements</td><td>25</td></tr></table>
+<div><span style="display:none">hidden xbrl junk</span></div>
+<div><span>Item 7. Management's Discussion and Analysis</span></div>
+<div><div><span>Net sales grew&#160;<b>6%</b> year over year.</span></div>
+<ul><li>Products up</li><li>Services up</li></ul></div>
+<div>(In millions)</div>
+<table>
+<tr><td></td><td>2025</td><td></td><td>2024</td></tr>
+<tr><td>Revenue</td><td>$</td><td>1,234</td><td></td><td>$</td><td>1,100</td></tr>
+<tr><td>Change</td><td>(3</td><td>)%</td><td></td><td>( 7,763 </td><td>)</td></tr>
+</table>
+<div>22</div>
+<div>Apple Inc. | 2025 Form 10-K | 22</div>
+<div>Item 8. Financial Statements and Supplementary Data</div>
+<div>See the index below.</div>
+</body></html>
+"""
 report: list[str] = []
 
 
@@ -52,20 +75,33 @@ def capped(items, limit: int):
         print(f"... {len(items) - limit} more in the report (or raise --limit)")
 
 
-def load_html(a, s) -> tuple[str, str]:
-    if a.demo:
-        return DEMOS[a.demo].read_text(), f"{a.demo.upper()}-demo"
-    if a.toy:
-        return TOY.read_text(), "toy"
-    if a.html:
-        return Path(a.html).read_text(encoding="utf-8", errors="ignore"), Path(a.html).stem
+def filing_html(s, ticker: str, year: int) -> tuple[str, str]:
     filing = next(
         f
         for f in downloaded_filings(s.data_dir)
-        if (f.ticker, f.fiscal_year) == (a.ticker.upper(), a.year)
+        if (f.ticker, f.fiscal_year) == (ticker.upper(), year)
     )
     html = document_path(s.data_dir, filing).read_text(encoding="utf-8", errors="ignore")
-    label = f"{filing.ticker}-FY{filing.fiscal_year}"
+    return html, f"{filing.ticker}-FY{filing.fiscal_year}"
+
+
+def demo_html(s, demo: str) -> str:
+    ticker, start_text, occurrence, end_text = DEMOS[demo]
+    html, _ = filing_html(s, ticker, 2025)
+    at = -1
+    for _ in range(occurrence):
+        at = html.find(start_text, at + 1)
+    return html[html.rfind("<div", 0, at) : html.find("</div>", html.find(end_text, at)) + len("</div>")]
+
+
+def load_html(a, s) -> tuple[str, str]:
+    if a.demo:
+        return demo_html(s, a.demo), f"{a.demo.upper()}-demo"
+    if a.toy:
+        return TOY, "toy"
+    if a.html:
+        return Path(a.html).read_text(encoding="utf-8", errors="ignore"), Path(a.html).stem
+    html, label = filing_html(s, a.ticker, a.year)
     if not a.anchor:
         return html, label
     hits = [m.start() for m in re.finditer(re.escape(a.anchor), html)]
@@ -122,8 +158,8 @@ def main():
     p.add_argument("--occurrence", type=int, default=1, help="which match of --anchor (1 = first)")
     p.add_argument("--span", type=int, default=30000, help="HTML chars to keep after the anchor")
     p.add_argument("--html", help="trace this HTML file instead of a filing")
-    p.add_argument("--demo", nargs="?", const="aapl", choices=sorted(DEMOS), help="trace a bundled excerpt")
-    p.add_argument("--toy", action="store_true", help="trace the hand-made trace_toy.html")
+    p.add_argument("--demo", nargs="?", const="aapl", choices=sorted(DEMOS), help="trace an excerpt of a downloaded filing")
+    p.add_argument("--toy", action="store_true", help="trace a tiny hand-made HTML")
     p.add_argument("--limit", type=int, default=80, help="max terminal lines per step (the report has all)")
     p.add_argument("--tag", help="report name (default: from the input)")
     a = p.parse_args()
