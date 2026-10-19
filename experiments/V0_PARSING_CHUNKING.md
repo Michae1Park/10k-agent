@@ -279,7 +279,7 @@ Every chunker's output goes through the same step, so criterion 1 is computed th
 | C2 | Each data table is **one chunk**, rendered as `\| cell \| cell \|` lines. Never split mid-row ([D-003](../docs/DECISIONS.md#d-003)) | |
 | C3 | Table caption = up to 2 paragraphs right before it, each ≤ 300 chars (title, "(In millions)") | |
 | C4 | A table over `table_chars` splits into row groups; each repeats the caption + first 2 rows (header) | 7,200 chars (never triggered; max in corpus 4,747) |
-| C5 | A paragraph over the size target is split at sentence ends (`.` or `;` + whitespace) | |
+| C5 | A paragraph over the size target is split at sentence ends (`.` or `;` + whitespace), not after an abbreviation (U.S., Inc., No., e.g. …) | |
 | C6 | Prose paragraphs are packed greedily up to the size target | 600 tokens (today 2,400 chars) |
 | C7 | Overlap: a new prose chunk starts with the previous chunk's last paragraph if it's ≤ `overlap_chars` | 600 chars |
 | C8 | `years_covered` (`20[0-3]\d`) from the table's top 6 lines | |
@@ -317,7 +317,7 @@ Small **children** are matched at search time; the larger **parent** is what the
 Criteria 1 and 2 are scored on **parents** (what gets cited), except 2d, which is scored on **children** (what gets embedded).
 
 **As implemented** ([chunkers.py](v0/chunkers.py) `parent_child`):
-- Two `SentenceSplitter`s (1,280 / 256 tokens, overlap 0 / 20) in `HierarchicalNodeParser`'s `node_parser_map`, both counting with the Qwen3 tokenizer.
+- Two `SentenceSplitter`s (1,280 / 256 tokens, overlap 0 / 20) in `HierarchicalNodeParser`'s `node_parser_map`, both counting with the Qwen3 tokenizer and cutting sentences as C5 does (the default punkt splitter cuts at "U.S. Tariffs").
 - Metadata is attached to every node but excluded from the size count.
 - Every child stores its subsection's `heading_path`, since only the first child's text holds the heading. The embedder prefixes it (as rule-based C10 does in the text).
 - Each data table is a parent without children.

@@ -25,7 +25,9 @@ TABLE_CHARS: int
 HEADER_ROWS: int
 OVERLAP_CHARS: int
 YEAR = re.compile(r"\b(20[0-3]\d)\b")  # C8
-SENTENCE_END = re.compile(r"(?<=[.;])\s+")  # C5
+SENTENCE_END = re.compile(r"[.;]\s+")  # C5
+# C5: a period after one of these doesn't end a sentence ("the U.S. Department of Commerce").
+ABBREVIATION = re.compile(r"(?:^|[\s(])(?:U\.S|U\.K|Inc|Corp|Co|Ltd|No|Nos|e\.g|i\.e|vs)\.$")
 METHODS = ("rule", "parent_child", "agentic")
 
 
@@ -156,12 +158,24 @@ def table_chunks(section: dict, i: int, **extra) -> list[dict]:
     return [make_chunk(section, "table", "\n".join(head + g), sources, **extra) for g in groups]
 
 
+def sentences(text: str) -> list[str]:
+    """C5: text cut after each sentence end (`.` or `;` then whitespace, not after an
+    abbreviation). Pieces keep their trailing whitespace, so they join back to `text`; the
+    parent-child splitters use this too."""
+    pieces, start = [], 0
+    for m in SENTENCE_END.finditer(text):
+        if not ABBREVIATION.search(text[max(start, m.start() - 8) : m.start() + 1]):
+            pieces.append(text[start : m.end()])
+            start = m.end()
+    return pieces + ([text[start:]] if start < len(text) else [])
+
+
 def split_at_sentences(text: str, limit: int) -> list[str]:
     """C5: a paragraph over `limit` tokens splits at sentence ends."""
     if tokens(text) <= limit:
         return [text]
     parts, current = [], ""
-    for sentence in SENTENCE_END.split(text):
+    for sentence in (s.strip() for s in sentences(text)):
         if current and tokens(f"{current} {sentence}") > limit:
             parts.append(current)
             current = ""
@@ -238,7 +252,8 @@ def parent_child(document: dict) -> list[dict]:
 
 
 def _hierarchical_parser():
-    """Two sentence splitters, parent then child, counting Qwen3 tokens."""
+    """Two sentence splitters, parent then child, counting Qwen3 tokens and cutting sentences
+    as C5 does (LlamaIndex's default punkt splitter cuts at "U.S. Tariffs")."""
     from llama_index.core.node_parser import HierarchicalNodeParser, SentenceSplitter
 
     def splitter(size: int, overlap: int) -> SentenceSplitter:
@@ -247,6 +262,7 @@ def _hierarchical_parser():
             chunk_overlap=overlap,
             tokenizer=lambda s: tokenizer().encode(s, add_special_tokens=False),
             paragraph_separator="\n",
+            chunking_tokenizer_fn=sentences,
         )
 
     return HierarchicalNodeParser.from_defaults(
