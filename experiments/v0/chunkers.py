@@ -101,8 +101,9 @@ def chunk_path(blocks: list[dict]) -> list[str]:
 
 
 def make_chunk(section: dict, kind: str, text: str, blocks: list[dict], **extra) -> dict:
-    """T1: a chunk with its Item, heading path and source blocks; tables add units and years (C8).
-    Ids (T3) are added by assign_ids."""
+    """T1: a chunk with its Item, heading path, source blocks and pages (first, last); tables add
+    units and years (C8). Ids (T3) are added by assign_ids."""
+    printed = [b["printed_page"] for b in blocks if b.get("printed_page")]
     chunk = {
         "item": section["item"],
         "item_title": section["title"],
@@ -110,6 +111,8 @@ def make_chunk(section: dict, kind: str, text: str, blocks: list[dict], **extra)
         "kind": kind,
         "text": text,
         "block_ids": [b["id"] for b in blocks],
+        "pages": [blocks[0]["page"], blocks[-1]["page"]],
+        "printed_pages": [printed[0], printed[-1]] if printed else None,
         "tokens": tokens(text),
     }
     if kind == "table":

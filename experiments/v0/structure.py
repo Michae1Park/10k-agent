@@ -4,7 +4,7 @@
             one window of ~150 blocks per call                      Labeler
   validate  code checks each window's labels (V1, V2, V4–V7)        validate (rules.py)
   repair    violations go back to the LLM, for a few rounds         Labeler._label_window
-  assemble  code applies the labels to the blocks' own text (A1–A4) assemble
+  assemble  code applies the labels to the blocks' own text (A1–A5) assemble
 
 The LLM only labels; the document's text is always the filing's own. Spec:
 experiments/V0_PARSING_CHUNKING.md §2.2–2.3; prompt and output format:
@@ -24,6 +24,7 @@ from rules import ITEMS, Context, Violation, check_block, keep_role_fields, miss
 PROMPTS = Path(__file__).resolve().parent.parent / "v0_structure"
 DROPPED_ROLES = {"cover", "toc", "part_heading", "furniture", "index_table"}  # A2
 STATEMENT_KINDS = {"statement", "notes_header", "auditor_report"}  # A3: where statements start
+PRINTED_PAGE = re.compile(r"(?<![\w-])([A-Z]-\d{1,3}|\d{1,3})\s*$")  # A5: "… | 12", "F-3"
 ITEM_PREFIX = re.compile(  # "Item 1A." / "Items 10 and 11:" before a section title
     r"^items?\s+\d{1,2}[a-c]?(\s*(,|and|&)\s*\d{1,2}[a-c]?)*\s*[.:]?\s*", re.I
 )
@@ -214,7 +215,8 @@ def validate(window: list[Block], got: dict[str, dict], outline: Outline) -> lis
 
 def assemble(blocks: list[Block], labels: dict[str, dict], filing: dict) -> dict:
     """The structured document (§2.3) from blocks + labels: sections, run-in splits and layout
-    rows (A1–A2), statements moved into Item 8 (A3), heading paths (A4)."""
+    rows (A1–A2), statements moved into Item 8 (A3), heading paths (A4), printed pages (A5)."""
+    printed = _printed_pages(blocks, labels)
     sections: list[dict] = []
     dropped: Counter[str] = Counter()
     review: list[str] = []
@@ -231,10 +233,20 @@ def assemble(blocks: list[Block], labels: dict[str, dict], filing: dict) -> dict
         elif role in DROPPED_ROLES:
             dropped[role] += 1
         else:
-            sections[-1]["blocks"] += _document_blocks(b, label)
+            pages = {"page": b.page, "printed_page": printed.get(b.page)}
+            sections[-1]["blocks"] += [d | pages for d in _document_blocks(b, label)]
     _move_statements_into_item8(sections)
     _add_heading_paths(sections)
     return {"filing": filing, "sections": sections, "dropped": dict(dropped), "review": review}
+
+
+def _printed_pages(blocks: list[Block], labels: dict[str, dict]) -> dict[int, str]:
+    """A5: page → the page number printed in its furniture (footer or header), if any."""
+    printed: dict[int, str] = {}
+    for b in blocks:
+        if labels[b.id]["role"] == "furniture" and (m := PRINTED_PAGE.search(b.text)):
+            printed[b.page] = m.group(1)
+    return printed
 
 
 def _document_blocks(b: Block, label: dict) -> list[dict]:

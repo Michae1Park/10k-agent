@@ -10,6 +10,7 @@ structure agent (structure.py). Where each rule lives:
   D5  split into paragraphs and tables   _walk
   D6  rejoin split table cells           parse._row_cells
   D7  features for the LLM               _emphasis, _is_link, Block.features
+  D8  page of each block                 read_blocks
 
 Spec: experiments/V0_PARSING_CHUNKING.md §2.1.
 """
@@ -50,6 +51,7 @@ class Block:
     xbrl_start: str | None = None  # "note" / "policy" / "table": an XBRL text block starts here
     pb: bool = False  # a page break follows
     link: bool = False  # the text is a link within the document (e.g. a TOC entry)
+    page: int = 0  # D8: 1 + page breaks before the block; metadata, not shown to the LLM
 
     def features(self) -> str:
         """The `features` field of the block's line in the LLM input (system.md # Input)."""
@@ -69,12 +71,15 @@ class Block:
 
 
 def read_blocks(html: str) -> list[Block]:
-    """D1–D7: the filing's blocks in reading order, with ids and features."""
+    """D1–D8: the filing's blocks in reading order, with ids, features and pages."""
     soup = BeautifulSoup(html, "lxml")
     blocks: list[Block] = []
     _walk(soup.body or soup, blocks, _continuation_names(soup))
+    page = 1
     for i, b in enumerate(blocks, start=1):
         b.id = f"b{i:04d}"
+        b.page = page
+        page += b.pb
     return blocks
 
 
