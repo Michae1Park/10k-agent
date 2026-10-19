@@ -540,8 +540,8 @@ taskset -c 16-31 .venv/bin/python experiments/v0/run.py --stage chunk --method r
 
 | Method | 1a Item | 1b Path exact / merged / coarse / wrong | 2a Purity | 2b Intact | 2c Frag. | 2d Heading | 3b Ratio (median · % in 4–6) | Coverage · noise · tables (§4.5) |
 |---|---|---|---|---|---|---|---|---|
-| Rule-based | 100% | 92.0 / 0.5 / 1.4 / 6.1 | 100% (34) | 100% (22/22) | 1.01 | 100% (7) | — | 99.3% · 0 · 38/38 |
-| Parent-child | 100% | 93.4 / 0.5 / 2.2 / 3.8 | 100% (28) | 100% (27/27) | 1.00 | 100% (36) | 5.5 · 100% (2 full parents) | 99.4% · 0 · 38/38 |
+| Rule-based | 100% | 93.7 / 0.5 / 1.6 / 4.2 | 100% (35) | 100% (22/22) | 1.01 | 100% (7) | — | 99.3% · 0 · 38/38 |
+| Parent-child | 100% | 93.2 / 0.6 / 2.3 / 4.0 | 100% (28) | 100% (27/27) | 1.00 | 100% (35) | 5.5 · 100% (2 full parents) | 99.4% · 0 · 38/38 |
 | Agentic | 100% | 83.6 / 4.8 / 11.0 / 0.7 | 97.4% (39) | 95.5% (21/22) | 1.15 | 100% (12) | — | 99.3% · 0 · 38/38 |
 
 - **Parentheses:** the number of chunks or risk factors scored.
@@ -555,8 +555,8 @@ taskset -c 16-31 .venv/bin/python experiments/v0/run.py --stage chunk --method r
 
 | Method | Chunks | Mean / p95 / max tokens | Notes |
 |---|---|---|---|
-| Rule-based | 213 | 188 / 546 / 1,036 | Prose ≤ 592 |
-| Parent-child | 182 parents, 204 children | 217 / 664 / 1,241 | Children ≤ 256 |
+| Rule-based | 190 | 203 / 547 / 1,036 | Prose ≤ 592 |
+| Parent-child | 177 parents; 195 prose, 38 table-title and 309 row children | 216 / 671 / 1,241 | Children ≤ 256 |
 | Agentic | 146 | 270 / 557 / 1,036 | Prose ≤ 563 |
 
 The 1,036-token maximum is a table (C2 keeps tables whole).
@@ -576,16 +576,16 @@ The 1,036-token maximum is a table (C2 keeps tables whole).
 
 **Criterion 1 (paths): the remaining errors are preprocessing errors, and the methods inherit them differently**
 - Rule-based and parent-child cut at every heading, so they carry over the agent's 10 false headings: "Apple Inc." above each statement, "First/Second/Third/Fourth Quarter 2025:" in Item 7. One level error ("Segment Reporting") adds to that.
-- Rule-based suffers most (6.1% wrong), since it makes a small prose chunk on each side of every statement table.
+- Rule-based used to suffer most (6.1% wrong), from a small prose chunk on each side of every statement table. With captions left out of prose (C3) the chunk before the table is gone: 4.2% wrong, about parent-child's 4.0%.
 - Agentic ignores weak headings, so it's almost never wrong (0.7%), but it's coarse more often (11%), because it also ignores some real boundaries.
 
 **Criterion 3 (5:1) holds where it can, but rarely matters**
 - The 2 full parents are 5.5:1.
-- 99% of parents are cut short by a subsection boundary; 103 of 144 have a single child.
+- 99% of parents are cut short by a subsection boundary; 101 of 139 prose parents have a single child.
 - The median ratio across all prose parents is 1.0. On a 10-K, "boundaries win" means most parent-child pairs are the same text.
 
 **Verdict on this excerpt**
-- **Parent-child** scores best overall: the most exact paths, perfect risk-factor separation, and the 5:1 target where it applies. Rule-based is a close second.
+- **Parent-child** and **rule-based** are level: perfect risk-factor separation and ~93% exact paths (rule-based 93.7, parent-child 93.2). Parent-child adds the 5:1 target where it applies and row-level children for every table.
 - **Agentic** costs an LLM call per chunk and does worse on the criterion that motivated it.
 
 **Next**
