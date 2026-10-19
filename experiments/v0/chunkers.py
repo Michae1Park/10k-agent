@@ -22,25 +22,26 @@ CHILD_OVERLAP: int
 CANDIDATE_SIZE: int
 CAPTION_CHARS: int
 TABLE_CHARS: int
-HEADER_ROWS: int
 OVERLAP_CHARS: int
 YEAR = re.compile(r"\b(20[0-3]\d)\b")  # C8
 SENTENCE_END = re.compile(r"[.;]\s+")  # C5
 # C5: a period after one of these doesn't end a sentence ("the U.S. Department of Commerce").
 ABBREVIATION = re.compile(r"(?:^|[\s(])(?:U\.S|U\.K|Inc|Corp|Co|Ltd|No|Nos|e\.g|i\.e|vs)\.$")
+VALUE = re.compile(r"\(?\$?\s*\(?[\d,]*\.?\d+\)?\s*%?\)?")  # a table cell holding a number
+BARE_YEAR = re.compile(r"(19|20)\d\d")
 METHODS = ("rule", "parent_child", "agentic")
 
 
 def configure(chunking: dict) -> None:
     """Set the sizes above from config.yaml's `chunking:`."""
     global TOKENIZER, TARGET, PARENT, CHILD, CHILD_OVERLAP, CANDIDATE_SIZE
-    global CAPTION_CHARS, TABLE_CHARS, HEADER_ROWS, OVERLAP_CHARS
+    global CAPTION_CHARS, TABLE_CHARS, OVERLAP_CHARS
     TOKENIZER = chunking["tokenizer"]
     TARGET = chunking["target"]
     PARENT, CHILD, CHILD_OVERLAP = chunking["parent"], chunking["child"], chunking["child_overlap"]
     CANDIDATE_SIZE = chunking["candidate_size"]
     CAPTION_CHARS, TABLE_CHARS = chunking["caption_chars"], chunking["table_chars"]
-    HEADER_ROWS, OVERLAP_CHARS = chunking["header_rows"], chunking["overlap_chars"]
+    OVERLAP_CHARS = chunking["overlap_chars"]
     tokenizer.cache_clear()
 
 
@@ -160,20 +161,88 @@ def captions(section: dict, body: list[dict]) -> set[str]:
     }
 
 
-def table_chunks(section: dict, i: int, **extra) -> list[dict]:
+def table_chunks(section: dict, i: int, children: bool = False) -> list[dict]:
     """C2–C4: the chunk(s) for the table at section["blocks"][i]: the caption and its rows, split
-    into row groups only if over TABLE_CHARS."""
+    into row groups only if over TABLE_CHARS, each repeating the caption and header rows. With
+    `children`, each chunk lists a title child (caption + header rows) and one child per row
+    (row_children)."""
     blocks = section["blocks"]
     cap = caption(blocks, i)
+    header = header_rows(blocks[i]["rows"])
     rows = ["| " + " | ".join(r) + " |" for r in blocks[i]["rows"]]
-    head = [c["text"] for c in cap] + rows[:HEADER_ROWS]  # repeated in every row group
-    groups: list[list[str]] = [[]]
-    for row in rows[HEADER_ROWS:]:
-        if groups[-1] and len("\n".join(head + groups[-1] + [row])) > TABLE_CHARS:
+    head = [c["text"] for c in cap] + rows[:header]  # repeated in every row group
+    groups: list[list[int]] = [[]]  # row numbers
+    for n in range(header, len(rows)):
+        if (
+            groups[-1]
+            and len("\n".join(head + [rows[k] for k in groups[-1]] + [rows[n]])) > TABLE_CHARS
+        ):
             groups.append([])
-        groups[-1].append(row)
+        groups[-1].append(n)
     sources = cap + [blocks[i]]
-    return [make_chunk(section, "table", "\n".join(head + g), sources, **extra) for g in groups]
+    labelled = row_children(blocks[i]["rows"]) if children else {}
+    path = chunk_path(sources)
+    out = []
+    for g in groups:
+        text = "\n".join(head + [rows[n] for n in g])
+        extra = {}
+        if children:
+            kids = [("table_title", "\n".join(head))] + [
+                ("row", labelled[n]) for n in g if n in labelled
+            ]
+            extra["children"] = [_child(kind, t, path) for kind, t in kids]
+        out.append(make_chunk(section, "table", text, sources, **extra))
+    return out
+
+
+def _is_value(cell: str) -> bool:
+    return bool(VALUE.fullmatch(cell.strip())) and not BARE_YEAR.fullmatch(cell.strip())
+
+
+def header_rows(rows: list[list[str]]) -> int:
+    """C4: how many leading rows are the header: those before the first row with a number (years
+    and dates aren't numbers) or a group label ("Federal:"). A table with no numbers at all has
+    its first row as the header."""
+    for n, r in enumerate(rows):
+        if any(_is_value(c) for c in r[1:]) or (len(r) == 1 and r[0].endswith(":")):
+            return n
+    return min(1, len(rows))
+
+
+def row_children(rows: list[list[str]]) -> dict[int, str]:
+    """Row number → that row as a sentence naming its columns, e.g. "Americas: 2025 = $178,353;
+    Change = 7%; …", for every row under the header (header_rows). A value-less row such as
+    "Federal:" is a group label, prefixed to the rows under it until a "Total" row. Values align
+    to the columns from the right, or to the year columns when there are exactly that many (a
+    "Percentage of total net sales" row)."""
+    header = rows[: header_rows(rows)]
+    widest = max(header, key=len) if header else []
+    data_width = max((len(r) for r in rows[len(header) :]), default=0)
+    # The widest header row names the value columns; it names the label column too if it is as
+    # wide as the data rows.
+    columns = widest[1:] if widest and len(widest) >= data_width else widest
+    years = [c for c in columns if YEAR.search(c)]
+
+    out, group = {}, ""
+    for n, r in enumerate(rows[len(header) :], start=len(header)):
+        label, values = r[0].strip(), [c.strip() for c in r[1:]]
+        if not any(values):  # a group label
+            group = label.rstrip(":")
+            continue
+        name = f"{group} › {label}" if group else label
+        names = years if len(values) == len(years) < len(columns) else columns[-len(values) :]
+        if len(names) == len(values):
+            cells = "; ".join(f"{c} = {v}" for c, v in zip(names, values, strict=True))
+        else:  # no header to name them
+            cells = " ".join(values)
+        out[n] = f"{name}: {cells}"
+        if label.lower().startswith("total"):
+            group = ""
+    return out
+
+
+def _child(kind: str, text: str, path: list[str]) -> dict:
+    return {"kind": kind, "text": text, "tokens": tokens(text), "heading_path": path}
 
 
 def sentences(text: str) -> list[str]:
@@ -255,7 +324,8 @@ def _pack(section: dict, heads: list[dict], prose: list[tuple[str, dict]]) -> li
 
 def parent_child(document: dict) -> list[dict]:
     """Parents ≤ PARENT tokens that never cross a subsection, each with children ≤ CHILD tokens
-    (what search matches). Each data table is its own parent with no children."""
+    (what search matches). Each data table is its own parent; its children are a title (caption
+    + header rows) and one per row."""
     parser = _hierarchical_parser()
     chunks: list[dict] = []
     for section in document["sections"]:
@@ -269,7 +339,7 @@ def parent_child(document: dict) -> list[dict]:
                 chunks += _parents(section, group["headings"] + paragraphs, parser)
             for b in group["body"]:
                 if b["kind"] == "table":
-                    chunks += table_chunks(section, index[b["id"]], children=[])
+                    chunks += table_chunks(section, index[b["id"]], children=True)
     return assign_ids(document, chunks)
 
 
@@ -319,7 +389,7 @@ def _parents(section: dict, blocks: list[dict], parser) -> list[dict]:
         kids = [nodes[c.node_id] for c in (parent.child_nodes or []) if c.node_id in nodes]
         start, end = parent.start_char_idx, parent.end_char_idx
         own = [b for b, s, e in spans if s < end and e > start]
-        children = [{"text": k.text, "tokens": tokens(k.text), "heading_path": path} for k in kids]
+        children = [_child("prose", k.text, path) for k in kids]
         out.append(make_chunk(section, "prose", parent.text, own, children=children))
     return out
 

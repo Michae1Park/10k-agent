@@ -25,5 +25,4 @@ chunking:                                               # chunkers.py, spec §3
   candidate_size: 128                                   # agentic: candidate pieces over this many tokens split further (paragraph → sentence → word)
   caption_chars: 300                                    # C3: longest paragraph that counts as a table caption
   table_chars: 7200                                     # C4: longer tables split into row groups
-  header_rows: 2                                        # C4: rows repeated at the top of every row group
   overlap_chars: 600                                    # C7: longest paragraph carried into the next chunk
