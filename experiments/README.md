@@ -37,8 +37,8 @@ Full design, metrics and results: [here](V1_RETRIEVAL.md).
 
 Code: [v1/v1_src/](v1/v1_src/); test data in [v1/v1_testdata/](v1/v1_testdata/). Run: `taskset -c 16-31 .venv/bin/python experiments/v1/v1_src/run.py` (GPU for the embedder and reranker; no vLLM).
 
-- **Pipeline:** slots → keyword (BM25) + dense (`Qwen3-Embedding-0.6B`) → RRF → rerank (`bge-reranker-v2-m3`) → round-robin → top 8
+- **Pipeline:** query decomposition (one sub-question per company) → keyword (BM25) + dense (`Qwen3-Embedding-0.6B`) → RRF → rerank (`bge-reranker-v2-m3`) → round-robin → top 8
 - **Corpora:** V0's rule-based, parent-child and agentic chunks of the four FY2025 filings ([build_corpus.py](v1/v1_src/build_corpus.py) → `data/v0-chunking/<method>.db`)
-- **Result:** parent-child is best (Recall@5 82.1%, MRR 0.670 on 46 questions). Questions spanning several filings are the weak spot for every chunking
+- **Result:** parent-child is best (Recall@5 87.3%, Recall@8 91.7%, MRR 0.758 on 46 questions). Questions spanning several filings are the weak spot for every chunking
 - **Test data:** 46 FY2025 questions on AAPL, AMZN, MSFT, NVDA, reviewed, including cross-company, cross-year and no-company questions ([retrieval-gold-fy2025.jsonl](v1/v1_testdata/retrieval-gold-fy2025.jsonl); readable: [PDF](v1/v1_testdata/retrieval-gold-fy2025.pdf), [summary](v1/v1_testdata/retrieval-gold-fy2025-summary.pdf))
-- **Metrics:** Recall@1, Recall@5, MRR, per question kind
+- **Metrics:** Recall@1, Recall@5, Recall@8, MRR, per question kind
