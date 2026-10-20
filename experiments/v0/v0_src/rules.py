@@ -17,7 +17,7 @@ is told when the label breaks the rule, or None when it doesn't.
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from blocks import Block
+from blocks import ITEM_LABEL, Block
 
 ITEMS = "1 1A 1B 1C 2 3 4 5 6 7 7A 8 9 9A 9B 9C 10 11 12 13 14 15 16".split()  # Form 10-K order
 TABLE_ONLY_ROLES = {"data_table", "layout_table", "index_table"}  # V4: tables only
@@ -105,12 +105,19 @@ def role_fits_block(b: Block, label: dict, ctx: Context) -> str | None:
     """Tables and paragraphs have different roles."""
     role = label.get("role")
     fits = role in TABLE_ROLES if b.kind == "table" else role not in TABLE_ONLY_ROLES
+    if role == "item_heading" and is_item_table(b):  # AMZN sets each Item heading in a table
+        fits = True
     if not fits:
         return f"{b.id} is a {b.kind}, which can't be `{role}`"
     return None
 
 
 # ---------- Item headings ----------
+
+
+def is_item_table(b: Block) -> bool:
+    """A one-row table whose cells read as an Item heading: | Item 1A. | Risk Factors |."""
+    return b.kind == "table" and len(b.rows) == 1 and bool(ITEM_LABEL.match(" ".join(b.rows[0])))
 
 
 @rule("V4", role="item_heading")

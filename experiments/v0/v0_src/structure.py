@@ -226,7 +226,8 @@ def assemble(blocks: list[Block], labels: dict[str, dict], filing: dict) -> dict
         if label.get("uncertain") or label.get("unresolved"):
             review.append(b.id)
         if role == "item_heading":  # A2: each Item heading opens a section
-            title = ITEM_PREFIX.sub("", b.text) or b.text
+            text = " ".join(b.rows[0]) if b.kind == "table" else b.text  # | Item 1. | Business |
+            title = ITEM_PREFIX.sub("", text) or text
             sections.append({"item": label.get("item"), "title": title, "blocks": []})
         elif not sections:  # everything before the first Item is the cover
             dropped["cover"] += 1

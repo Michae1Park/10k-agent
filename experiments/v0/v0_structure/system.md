@@ -23,7 +23,7 @@ Texts over 300 characters show their first 200 and last 60 characters, joined by
 | `cover` | Before the first Item heading, except a table of contents: cover page, forward-looking statements, glossary | |
 | `toc` | Table of contents entries, anywhere | |
 | `part_heading` | "PART I" … "PART IV" as a heading | The part name repeated on every page (`furniture`) |
-| `item_heading` | The heading that starts an Item in the body. Set `item` | The same label in the TOC (`toc`); a cross-reference in a sentence, e.g. "see Item 7", "Item 5.02 of Form 8-K" (`body`) |
+| `item_heading` | The heading that starts an Item in the body, also when it is set in a one-row table (`TABLE rows=1 … item_label`). Set `item` | The same label in the TOC (`toc`); a cross-reference in a sentence, e.g. "see Item 7", "Item 5.02 of Form 8-K" (`body`) |
 | `heading` | A line that titles the text after it, inside an Item. Set `level`, `kind`, and `run_in` if run-in | Table row labels; a short label repeated over many tables, e.g. the company name above each statement; long emphasized body text, e.g. an italic intro paragraph (all `body`) |
 | `body` | Prose, bullets, notes under tables, signatures | |
 | `data_table` | A table of figures: statements, schedules, segment data. Set `units`, `units_from` | |
