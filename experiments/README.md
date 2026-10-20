@@ -54,5 +54,6 @@ Code: [v2/v2_src/](v2/v2_src/); prompt in [v2/v2_prompt/](v2/v2_prompt/); test d
   - **Retrieved**: V1's top 8, as in production
   - **Oracle**: V1's top 8 with every gold source it missed swapped in (differs from Retrieved only where V1 failed)
   - **None**: no excerpts; the model should decline everything
+- **Result:** with V1's retrieval, 21 of 30 number questions right (25 of 30 with every gold source shown); all 8 declines declined; nothing answered from memory. Text questions await required points rewritten for answers
 - **Test data:** V1's 46 answerable questions ([retrieval-gold-fy2025.jsonl](v1/v1_testdata/retrieval-gold-fy2025.jsonl)) and 8 to decline ([decline-gold-fy2025.jsonl](v2/v2_testdata/decline-gold-fy2025.jsonl)): companies, years and figures outside the filings, investment advice
 - **Metrics:** correct (numbers by code, text by an LLM judge against required points), declined when it should / when it shouldn't, numeric claims grounded in a cited chunk, gold sources cited
