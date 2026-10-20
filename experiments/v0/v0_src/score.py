@@ -247,8 +247,9 @@ def _criterion_1(ref: Reference, chunks: list[dict], covers: list[Cover]) -> dic
 
 
 def path_class(ref: Reference, chunk: dict, idx: list[int], cover: Cover) -> str:
-    """1b (§4.1): exact (one deepest heading, named), merged (whole sibling subsections, their
-    parent named), coarse (part of a subsection plus other text, common ancestor named), wrong."""
+    """1b (§4, criterion 1): exact (one deepest heading, named), merged (whole sibling
+    subsections, their parent named), coarse (part of a subsection plus other text, common
+    ancestor named), wrong."""
     idx = [i for i in idx if not ref.blocks[i].label] or idx  # labels are path-neutral
     paths = [tuple(ref.blocks[i].path) for i in idx]
     # Like T2: a heading above other blocks in the chunk is an ancestor and doesn't narrow it.
@@ -275,7 +276,7 @@ def path_class(ref: Reference, chunk: dict, idx: list[int], cover: Cover) -> str
 def _criterion_2(
     ref: Reference, gt: dict, chunks: list[dict], covers: list[Cover], target: int
 ) -> dict:
-    """Item 1A: 2a purity, 2b intact, 2c fragmentation, 2d heading carried (§4.2)."""
+    """Item 1A: 2a purity, 2b intact, 2c fragmentation, 2d heading carried (§4, criterion 2)."""
     units = [
         u for u in (gt["risk_factors"] or {"units": []})["units"] if u["kind"] == "risk_factor"
     ]
@@ -343,8 +344,8 @@ def _criterion_3(chunks: list[dict], parent: int) -> dict:
 
 
 def _sanity_checks(ref: Reference, chunks: list[dict], covers: list[Cover]) -> dict:
-    """§4.5: coverage and duplication of the stream, furniture lines in chunks, data tables whole
-    with the right units."""
+    """Sanity checks: coverage and duplication of the stream, furniture lines in chunks, data
+    tables whole with the right units."""
     covered = set().union(*(positions for cover in covers for positions in cover.values()))
     noise = sum(
         key(line) in ref.furniture for c in chunks for line in c["text"].split("\n") if key(line)

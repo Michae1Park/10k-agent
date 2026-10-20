@@ -1,5 +1,5 @@
 # V0 sanity cases: a small answer key a person can check by hand in ~20 minutes.
-# Spec: experiments/V0_PARSING_CHUNKING.md §4.7. Checker: experiments/v0/v0_src/sanity.py.
+# Checker: experiments/v0/v0_src/sanity.py.
 #
 # Each case quotes a few words of the filing (`find`) and says what the chunk holding them must
 # carry. Text is matched on letters and digits only, so "$1,234" = "1234" and quote styles don't
@@ -154,7 +154,7 @@ cases:
       - highly competitive and subject to rapid technological change, and the Company may be unable
     checked: false
 
-  # ---------- tables (§4.5) ----------
+  # ---------- tables ----------
   - id: S13
     tests: small MD&A table, units in the sentence above it
     page: 24
@@ -246,7 +246,7 @@ cases:
       - Term debt | 100 basis points, all tenors | Increase in annual interest expense
     checked: false
 
-  # ---------- dropped text (§4.5 noise) ----------
+  # ---------- dropped text ----------
   - id: S20
     tests: a page footer in the middle of a risk factor (S12) is dropped
     page: 6

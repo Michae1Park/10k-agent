@@ -4,7 +4,7 @@
 
 Full design, criteria and results: [here](V0_PARSING_CHUNKING.md).
 
-Code: [v0/](v0/v0_src/). Run: `taskset -c 16-31 .venv/bin/python experiments/v0/v0_src/run.py` (needs the vLLM server).
+Code: [v0/v0_src/](v0/v0_src/); prompt in [v0/v0_structure/](v0/v0_structure/); test data in [v0/v0_testdata/](v0/v0_testdata/). Run: `taskset -c 16-31 .venv/bin/python experiments/v0/v0_src/run.py` (needs the vLLM server).
 
 ### Preprocessing: HTML → one structured document
 
@@ -30,3 +30,15 @@ Two steps, run in order:
 - [AAPL FY2025 excerpt](v0/v0_testdata/aapl-fy25-excerpt.html): Items 1, 1A, 7, 7A, 8 complete (27 risk factors, 38 data tables)
 - [Ground truth](v0/v0_testdata/aapl-fy25-excerpt.gt.json), built by [v0_ground_truth.py](v0/v0_testdata/v0_ground_truth.py)
 - [Sanity cases](v0/v0_testdata/aapl-fy25-sanity.yaml): 21 hand-checkable cases, one per kind of chunk, run by [sanity.py](v0/v0_src/sanity.py)
+
+## V1 · Retrieval
+
+Full design, metrics and results: [here](V1_RETRIEVAL.md).
+
+Code: [v1/v1_src/](v1/v1_src/); test data in [v1/v1_testdata/](v1/v1_testdata/). Run: `taskset -c 16-31 .venv/bin/python experiments/v1/v1_src/run.py` (GPU for the embedder and reranker; no vLLM).
+
+- **Pipeline:** slots → keyword (BM25) + dense (`Qwen3-Embedding-0.6B`) → RRF → rerank (`bge-reranker-v2-m3`) → round-robin → top 8
+- **Corpora:** V0's rule-based, parent-child and agentic chunks of the four FY2025 filings ([build_corpus.py](v1/v1_src/build_corpus.py) → `data/v0-chunking/<method>.db`)
+- **Result:** parent-child is best (Recall@5 97.9%, MRR 0.776). Its table-row children win figure questions; rule-based and agentic win risk questions
+- **Test data:** 16 FY2025 questions on AAPL, AMZN, MSFT, NVDA: 10 figures, 4 risks, 2 drivers ([retrieval-gold-fy2025.jsonl](v1/v1_testdata/retrieval-gold-fy2025.jsonl); readable: [PDF](v1/v1_testdata/retrieval-gold-fy2025.pdf), [summary](v1/v1_testdata/retrieval-gold-fy2025-summary.pdf))
+- **Metrics:** Recall@1, Recall@5, MRR, per question kind

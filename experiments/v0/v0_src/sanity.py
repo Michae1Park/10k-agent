@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check each method's chunks against the hand-checkable sanity cases (spec §4.7).
+"""Check each method's chunks against the hand-checkable sanity cases.
 
 Each case quotes a few words of the filing and says what the chunk holding them must carry: Item,
 heading path, kind, units, text it must or must not share a chunk with, or that it's in no chunk.
