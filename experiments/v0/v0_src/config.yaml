@@ -3,9 +3,9 @@
 
 run:
   label: aapl-fy25-excerpt                              # writes output/chunking/<label>/
-  html: experiments/V0_testdata/aapl-fy25-excerpt.html  # the filing (or excerpt) to preprocess
+  html: experiments/v0/v0_testdata/aapl-fy25-excerpt.html  # the filing (or excerpt) to preprocess
   cover: data/raw/filings/AAPL/FY2025/aapl-20250927.htm # full filing for the dei: cover tags (the excerpt has no cover page)
-  gt: experiments/V0_testdata/aapl-fy25-excerpt.gt.json # ground truth for scoring
+  gt: experiments/v0/v0_testdata/aapl-fy25-excerpt.gt.json # ground truth for scoring
 
 llm:                                                    # structure agent and agentic chunker
   model: Qwen/Qwen3.6-27B-FP8                           # scripts/serve_vllm.sh qwen3.6-27b-fp8

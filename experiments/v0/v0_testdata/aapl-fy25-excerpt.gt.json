@@ -14,7 +14,7 @@
  },
  "spec": "experiments/V0_PARSING_CHUNKING.md §4",
  "source": {
-  "file": "experiments/V0_testdata/aapl-fy25-excerpt.html",
+  "file": "experiments/v0/v0_testdata/aapl-fy25-excerpt.html",
   "ticker": "AAPL",
   "fiscal_year": 2025
  },

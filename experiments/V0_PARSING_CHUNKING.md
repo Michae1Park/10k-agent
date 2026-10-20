@@ -8,7 +8,7 @@
 | Chunking | Three methods on that document: rule-based, parent-child, agentic | §3 |
 | Evaluation | Three criteria, scored against a hand-reviewed ground truth | §4 |
 
-**Status:** implemented and run on the AAPL excerpt. Code: [experiments/v0/](v0/). Commands and results: §5.
+**Status:** implemented and run on the AAPL excerpt. Code: [experiments/v0/v0_src/](v0/v0_src/). Commands and results: §5.
 
 **At a glance** (details in §5)
 - Rule-based and parent-child are level: perfect on risk factors, ~93% exact paths.
@@ -23,7 +23,7 @@
 
 ## 1. Test data
 
-**File:** [aapl-fy25-excerpt.html](V0_testdata/aapl-fy25-excerpt.html). 1.15 MB HTML, ~166k chars, 38.5k tokens.
+**File:** [aapl-fy25-excerpt.html](v0/v0_testdata/aapl-fy25-excerpt.html). 1.15 MB HTML, ~166k chars, 38.5k tokens.
 
 - Two verbatim slices of the AAPL FY2025 10-K (accession 0000320193-25-000079), in filing order.
 - Each slice runs from one Item heading up to the next.
@@ -46,7 +46,7 @@
 
 **Cover tags:** the excerpt has no cover page, so the `dei:` tags (§2.1) come from the full filing.
 
-**Ground truth:** [aapl-fy25-excerpt.gt.json](V0_testdata/aapl-fy25-excerpt.gt.json), reviewed (§4.4).
+**Ground truth:** [aapl-fy25-excerpt.gt.json](v0/v0_testdata/aapl-fy25-excerpt.gt.json), reviewed (§4.4).
 
 ---
 
@@ -140,8 +140,8 @@ Emphasis is the main heading signal (0 of 24 filings use `<h1–h6>`). Deciding 
 
 | File | What |
 |---|---|
-| [v0_structure/system.md](v0_structure/system.md) | **The prompt.** Above `END SYSTEM PROMPT`: the system prompt, using the ground truth's definitions (§4.4). Below: the **window** and **repair** templates |
-| [v0_structure/labels.schema.json](v0_structure/labels.schema.json) | The output format. vLLM enforces it, so every reply is valid JSON |
+| [v0_structure/system.md](v0/v0_structure/system.md) | **The prompt.** Above `END SYSTEM PROMPT`: the system prompt, using the ground truth's definitions (§4.4). Below: the **window** and **repair** templates |
+| [v0_structure/labels.schema.json](v0/v0_structure/labels.schema.json) | The output format. vLLM enforces it, so every reply is valid JSON |
 
 **The LLM labels; code builds the document**
 - One label per block: `{"id": "b0412", "role": "heading", "level": 2, "kind": "risk_factor"}`.
@@ -267,11 +267,11 @@ All three use the same step, so criterion 1 is computed the same way for all.
 
 5 of the 27 risk factors are over 600 tokens (max 1,241), so R and A must split them.
 
-**Shared by all three** ([chunkers.py](v0/chunkers.py))
+**Shared by all three** ([chunkers.py](v0/v0_src/chunkers.py))
 - **C1:** no chunk crosses an Item.
 - **Tables (C2–C4, C8):** each data table is its own chunk, with its caption. Same function for all three.
 - **Metadata and ids:** T1–T3.
-- **Settings:** [config.yaml](v0/config.yaml) `chunking:`. `run.py` refuses to score chunks made with other settings.
+- **Settings:** [config.yaml](v0/v0_src/config.yaml) `chunking:`. `run.py` refuses to score chunks made with other settings.
 
 ### 3.1 Rule-based
 
@@ -436,7 +436,7 @@ Without it, "is this path right?" and "does this chunk mix two risk factors?" ar
 | 2a–2d | Which units each 1A chunk's text comes from | `risk_factors.units` |
 | §4.5 checks | Tables, footers, coverage | `tables`, `furniture`, Item `ends_with` |
 
-**How the scorer matches** ([score.py](v0/score.py))
+**How the scorer matches** ([score.py](v0/v0_src/score.py))
 - The text stream is rebuilt with the ground-truth builder's block reader, not the preprocessing.
 - Each stream block gets its Item, path and risk-factor unit from the reviewed headings.
 - Text is compared as alphanumeric-only keys: `$1,234` = `$ | 1,234`.
@@ -445,15 +445,15 @@ Without it, "is this path right?" and "does this chunk mix two risk factors?" ar
 - A short label repeated over tables ("Apple Inc.") is path-neutral in 1b.
 
 **How it's built**
-1. **Draft:** [v0_ground_truth.py](V0_testdata/v0_ground_truth.py) reads any 10-K HTML. It uses styling rules on purpose and shares no code with the preprocessing, so it can't inherit the agent's mistakes.
+1. **Draft:** [v0_ground_truth.py](v0/v0_testdata/v0_ground_truth.py) reads any 10-K HTML. It uses styling rules on purpose and shares no code with the preprocessing, so it can't inherit the agent's mistakes.
 2. **Review:** a person checks the draft against the rendered filing. Fix levels, drop false headings, add missed ones. Record each fix in `review`, then set `"status": "reviewed"`.
 
 ```bash
-python -I experiments/V0_testdata/v0_ground_truth.py experiments/V0_testdata/aapl-fy25-excerpt.html \
-    --out experiments/V0_testdata/aapl-fy25-excerpt.gt.json
+python -I experiments/v0/v0_testdata/v0_ground_truth.py experiments/v0/v0_testdata/aapl-fy25-excerpt.html \
+    --out experiments/v0/v0_testdata/aapl-fy25-excerpt.gt.json
 ```
 
-**Definitions (any 10-K).** [system.md](v0_structure/system.md) gives the LLM the same ones.
+**Definitions (any 10-K).** [system.md](v0/v0_structure/system.md) gives the LLM the same ones.
 
 | Thing | Is | Is not |
 |---|---|---|
@@ -515,7 +515,7 @@ A method can't pass by dropping or duplicating text, or breaking tables.
 
 No person has read all of the §4.4 ground truth (156 headings, 27 risk factors, 39 tables). So 21 cases cover each kind of chunk once; a person can check them in ~20 minutes.
 
-**File:** [aapl-fy25-sanity.yaml](V0_testdata/aapl-fy25-sanity.yaml). Each case quotes a few unique words (`find`) and the printed page, and says what the chunk holding them must carry.
+**File:** [aapl-fy25-sanity.yaml](v0/v0_testdata/aapl-fy25-sanity.yaml). Each case quotes a few unique words (`find`) and the printed page, and says what the chunk holding them must carry.
 
 | Cases | Kind of chunk | Checks |
 |---|---|---|
@@ -526,7 +526,7 @@ No person has read all of the §4.4 ground truth (156 headings, 27 risk factors,
 
 **Grades:** `ok`; `coarser` (the path is an ancestor of the expected one); `fail`.
 
-**Run:** `python experiments/v0/sanity.py` (writes `sanity.json` next to the chunks). [test_v0_sanity.py](../tests/test_v0_sanity.py) checks that every quote is in the filing.
+**Run:** `python experiments/v0/v0_src/sanity.py` (writes `sanity.json` next to the chunks). [test_v0_sanity.py](../tests/test_v0_sanity.py) checks that every quote is in the filing.
 
 ---
 
@@ -538,8 +538,8 @@ The three methods on the **same preprocessing**, scored against the ground truth
 
 ```bash
 uv sync --all-extras --all-groups --link-mode copy                      # once (see below)
-taskset -c 16-31 .venv/bin/python experiments/v0/run.py                 # preprocess → chunk → score
-taskset -c 16-31 .venv/bin/python experiments/v0/run.py --stage chunk --method rule   # one stage / method
+taskset -c 16-31 .venv/bin/python experiments/v0/v0_src/run.py                 # preprocess → chunk → score
+taskset -c 16-31 .venv/bin/python experiments/v0/v0_src/run.py --stage chunk --method rule   # one stage / method
 ```
 
 - **Outputs** in `output/chunking/<label>/`: `blocks.json`, `labels.json` (cached; `--relabel` to redo), `document.json`, `chunks-<method>.json`, `scores.json`.

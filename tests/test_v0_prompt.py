@@ -10,8 +10,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PROMPTS = ROOT / "experiments" / "v0_structure"
-sys.path.insert(0, str(ROOT / "experiments" / "v0"))
+PROMPTS = ROOT / "experiments" / "v0" / "v0_structure"
+sys.path.insert(0, str(ROOT / "experiments" / "v0" / "v0_src"))
 
 from rules import ITEMS, ROLE_FIELDS  # noqa: E402
 

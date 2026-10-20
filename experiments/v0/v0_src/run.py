@@ -6,10 +6,10 @@ ground truth. Spec and results: experiments/V0_PARSING_CHUNKING.md.
   chunk       document → chunks, per method (chunkers.py)
   score       chunks vs the ground truth (score.py)
 
-  taskset -c 16-31 python experiments/v0/run.py                  # all stages (LLM steps cached)
-  taskset -c 16-31 python experiments/v0/run.py --stage preprocess
-  taskset -c 16-31 python experiments/v0/run.py --stage chunk --stage score
-  taskset -c 16-31 python experiments/v0/run.py --config my-config.yaml
+  taskset -c 16-31 python experiments/v0/v0_src/run.py                  # all stages (LLM steps cached)
+  taskset -c 16-31 python experiments/v0/v0_src/run.py --stage preprocess
+  taskset -c 16-31 python experiments/v0/v0_src/run.py --stage chunk --stage score
+  taskset -c 16-31 python experiments/v0/v0_src/run.py --config my-config.yaml
 
 Settings (inputs, LLM, labeling window, chunk sizes) are in config.yaml. Needs the vLLM server
 (scripts/serve_vllm.sh qwen3.6-27b-fp8) for preprocessing and the agentic chunker. Writes
@@ -32,7 +32,7 @@ from blocks import cover_metadata, read_blocks  # noqa: E402
 from chunkers import METHODS, run_all  # noqa: E402
 from structure import Labeler, assemble  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 CONFIG = Path(__file__).resolve().parent / "config.yaml"
 STAGES = ["preprocess", "chunk", "score"]
 

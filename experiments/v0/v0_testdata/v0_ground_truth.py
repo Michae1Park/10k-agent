@@ -3,8 +3,8 @@
 Spec: experiments/V0_PARSING_CHUNKING.md §4. Shares no code with src/tenk_agent/parse.py, so the
 ground truth doesn't inherit the baseline's rules.
 
-  python -I experiments/V0_testdata/v0_ground_truth.py experiments/V0_testdata/aapl-fy25-excerpt.html \
-      --out experiments/V0_testdata/aapl-fy25-excerpt.gt.json
+  python -I experiments/v0/v0_testdata/v0_ground_truth.py experiments/v0/v0_testdata/aapl-fy25-excerpt.html \
+      --out experiments/v0/v0_testdata/aapl-fy25-excerpt.gt.json
 
 Outside Item 8, heading levels are guessed from styling (first style seen in an Item = level 1, the
 next = 2, ...); Item 8 levels come from its standard parts. Styling is not structure, so every

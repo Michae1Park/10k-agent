@@ -23,7 +23,7 @@ from pathlib import Path
 
 from bs4 import BeautifulSoup
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "V0_testdata"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "v0_testdata"))
 
 import v0_ground_truth as gtb  # noqa: E402
 

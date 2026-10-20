@@ -8,7 +8,7 @@
 
 The LLM only labels; the document's text is always the filing's own. Spec:
 experiments/V0_PARSING_CHUNKING.md §2.2–2.3; prompt and output format:
-experiments/v0_structure/system.md and labels.schema.json.
+experiments/v0/v0_structure/system.md and labels.schema.json.
 """
 
 import json

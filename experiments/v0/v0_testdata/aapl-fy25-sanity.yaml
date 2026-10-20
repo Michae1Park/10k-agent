@@ -1,5 +1,5 @@
 # V0 sanity cases: a small answer key a person can check by hand in ~20 minutes.
-# Spec: experiments/V0_PARSING_CHUNKING.md §4.7. Checker: experiments/v0/sanity.py.
+# Spec: experiments/V0_PARSING_CHUNKING.md §4.7. Checker: experiments/v0/v0_src/sanity.py.
 #
 # Each case quotes a few words of the filing (`find`) and says what the chunk holding them must
 # carry. Text is matched on letters and digits only, so "$1,234" = "1234" and quote styles don't
@@ -16,7 +16,7 @@
 # Fix anything that's wrong, set the case's `checked: true`, and when all are checked fill in
 # `review`. Until then the results are a draft, not ground truth.
 
-source: experiments/V0_testdata/aapl-fy25-excerpt.html
+source: experiments/v0/v0_testdata/aapl-fy25-excerpt.html
 review:
   status: draft # → "reviewed" once every case is checked: true
   by: null

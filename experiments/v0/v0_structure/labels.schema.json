@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "V0 structure labels (one window)",
-  "description": "What the LLM returns for one window (the output format in experiments/v0_structure/system.md). Enforced by vLLM guided decoding; the cross-field rules are checked by the validator.",
+  "description": "What the LLM returns for one window (the output format in experiments/v0/v0_structure/system.md). Enforced by vLLM guided decoding; the cross-field rules are checked by the validator.",
   "type": "object",
   "properties": {
     "labels": {

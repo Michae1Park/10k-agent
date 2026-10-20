@@ -5,8 +5,8 @@ Each case quotes a few words of the filing and says what the chunk holding them 
 heading path, kind, units, text it must or must not share a chunk with, or that it's in no chunk.
 Matching is on letters and digits only, like score.py. Parent-child is checked on its parents.
 
-  python experiments/v0/sanity.py                     # cases and run label from the defaults
-  python experiments/v0/sanity.py --cases my.yaml --label other-run
+  python experiments/v0/v0_src/sanity.py                     # cases and run label from the defaults
+  python experiments/v0/v0_src/sanity.py --cases my.yaml --label other-run
 
 Reads output/chunking/<label>/chunks-<method>.json; writes sanity.json there.
 """
@@ -18,9 +18,9 @@ from pathlib import Path
 import yaml
 from score import key, scale
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 CONFIG = Path(__file__).resolve().parent / "config.yaml"
-CASES = ROOT / "experiments" / "V0_testdata" / "aapl-fy25-sanity.yaml"
+CASES = ROOT / "experiments" / "v0" / "v0_testdata" / "aapl-fy25-sanity.yaml"
 METHODS = ["rule", "parent_child", "agentic"]
 RANK = {"ok": 0, "coarser": 1, "fail": 2}
 
