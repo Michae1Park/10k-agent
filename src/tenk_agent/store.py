@@ -450,11 +450,14 @@ class Store:
         return [_child(r) for r in rows]
 
     def child_rows(self, parent_id: str) -> list[ChildRecord]:
-        """A table parent's row records (V7 cell-level verification)."""
+        """A table parent's row records (V7 cell-level verification); none for row children
+        built without them (the V0 parent-child corpus)."""
         if not self.has_children():
             return []
         rows = self._query(
-            "SELECT * FROM children WHERE parent_id = ? AND kind = 'row' ORDER BY id", (parent_id,)
+            "SELECT * FROM children WHERE parent_id = ? AND kind = 'row' AND row IS NOT NULL "
+            "ORDER BY id",
+            (parent_id,),
         )
         return [_child(r) for r in rows]
 
