@@ -4,11 +4,18 @@
 
 **Result:** parent-child is best on every metric. It misses 3 of 46 questions; the other two chunkings miss 9 each.
 
-| Chunking | Recall@1 | Recall@5 | MRR | Missed |
-|---|---|---|---|---|
-| Rule-based | 33.9% | 62.5% | 0.541 | 9 |
-| **Parent-child** | **44.2%** | **82.1%** | **0.670** | **3** |
-| Agentic | 39.3% | 61.6% | 0.580 | 9 |
+| Chunking | Recall@1 | Recall@5 | Recall@8 | MRR | Missed |
+|---|---|---|---|---|---|
+| Rule-based | 33.9% | 62.5% | 74.3% | 0.541 | 9 |
+| **Parent-child** | **44.2%** | **82.1%** | **88.6%** | **0.670** | **3** |
+| Agentic | 39.3% | 61.6% | 71.7% | 0.580 | 9 |
+
+**Single vs several sources.** Parent-child finds every single-source question in the top 8, but only 69% of the sources of multi-source questions.
+
+| Recall@5 / Recall@8 | Rule-based | Parent-child | Agentic |
+|---|---|---|---|
+| One source (29 questions) | 69.0% / 82.8% | **96.6% / 100%** | 69.0% / 82.8% |
+| Several sources (17 questions) | 51.5% / 59.8% | **57.4% / 69.1%** | 49.0% / 52.9% |
 
 **Contents:** [1 Test data](#1-test-data) · [2 Corpora](#2-corpora) · [3 Pipeline](#3-pipeline) · [4 Metrics](#4-metrics) · [5 Results](#5-results) · [6 Without slot search](#6-without-slot-search)
 
@@ -71,7 +78,7 @@ Code: [retrieve.py](v1/v1_src/retrieve.py). Settings: [config.yaml](v1/v1_src/co
 
 | Metric | Definition |
 |---|---|
-| **Recall@k** | Share of a question's gold sources with a gold chunk in the top k, averaged over questions |
+| **Recall@k** | Share of a question's gold sources with a gold chunk in the top k, averaged over questions. Recall@8 covers everything the answer step reads |
 | **MRR** | Mean of 1 / rank of the first gold chunk in the top 8; 0 if none |
 
 ---
@@ -104,6 +111,7 @@ The 3 questions parent-child misses, and the weak spots behind the lower scores:
 ### Takeaways
 
 - **Parent-child wins figures and years through its row children.** Each table row is a child that names its line item in words; for `msft-capex` the top match is the cash-flow row itself. It leads on `compare_year` by the widest margin (Recall@5 89% vs 33–44%).
+- **Row children matter most when several companies share the 8 places.** In `cmp-net-income-all4`, dense search ranks the gold statement 1st–5th with parent-child (`Net income: 2025 = $112,010 …` is its own child) but 9th–33rd with rule-based, where it's one line of a whole income statement. Rule-based gets 1 of 4 sources into the top 5; parent-child gets 3, and all 4 into the top 8.
 - **Rule-based and agentic win risks.** Each risk factor is its own chunk, so a risk question matches one whole risk factor (MRR 1.00).
 - **Agentic adds nothing over rule-based.** Its scores are level or lower, and it costs an LLM call per chunk.
 - **Questions that span several filings are the weak spot for every chunking.** The misses come from how a question becomes searches (slots, the shared 8 places, the query's wording), not from chunking.

@@ -16,4 +16,4 @@ retrieval:                                              # retrieve.py, spec §2
   device: null                                          # null = GPU if any; cpu when vLLM fills the GPU
 
 score:
-  recall_at: [1, 5]                                     # Recall@k reported; MRR over the full top k
+  recall_at: [1, 5, 8]                                  # Recall@k reported; MRR over the full top k
