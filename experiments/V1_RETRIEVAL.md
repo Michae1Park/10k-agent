@@ -1,6 +1,6 @@
 # V1 · Retrieval
 
-**Goal:** how often the retrieval pipeline puts the chunk that answers a question at the top, for each of V0's three chunkings.
+**Goal:** how often the retrieval pipeline puts the chunk that answers a question at the top, for three ways of chunking the same 10-Ks.
 
 **Result:** parent-child is best overall; rule-based and agentic lead only on `risk` and `open` questions. Parent-child misses 2 of 46 questions; rule-based misses 7 and agentic 5.
 
@@ -17,7 +17,7 @@
 | One source (29 questions) | 75.9% / 86.2% | **96.6% / 100%** | 82.8% / 89.7% |
 | Several sources (17 questions) | 65.2% / 74.5% | **71.6% / 77.5%** | 66.7% / 73.0% |
 
-**Contents:** [1 Test data](#1-test-data) · [2 Corpora](#2-corpora) · [3 Pipeline](#3-pipeline) · [4 Metrics](#4-metrics) · [5 Results](#5-results) · [6 Decomposition and restatements](#6-decomposition-and-restatements) · [7 Without slot search](#7-without-slot-search)
+**Contents:** [1 Test data](#1-test-data) · [2 Corpora](#2-corpora) · [3 Pipeline](#3-pipeline) · [4 Results](#4-results) · [5 Query decomposition](#5-query-decomposition) · [6 Without slot search](#6-without-slot-search)
 
 ---
 
@@ -38,13 +38,26 @@
 
 **Gold chunks:** each source quotes one verbatim line from the filing. A chunk is gold if it contains that line. Every source resolves on every corpus.
 
-**Restatements:** a figure is often stated twice, in the Item 8 statement and again in an MD&A table or a note (`Net income | $72,880 | $29,760 | Up 145%`). 25 such lines on 13 questions are `acceptable_sources`, each tied to the source it restates (`restates`). A chunk holding one counts for that source.
+**Repeated figures:** a 10-K often states the same figure twice: in the Item 8 financial statement, and again in an MD&A table or a note.
+
+| Where | NVIDIA's FY2025 net income |
+|---|---|
+| Item 8, income statement (the gold source) | `Net income \| $72,880 \| $29,760 \| $4,368` |
+| Item 7, MD&A summary table | `Net income \| $72,880 \| $29,760 \| Up 145%` |
+
+Either line answers the question, so both count. The gold set lists 25 such repeated lines on 13 questions (`acceptable_sources`), each tied to the source whose figure it repeats.
 
 ---
 
 ## 2. Corpora
 
-The four filings went through V0's preprocessing and each of its three chunkers ([V0](V0_PARSING_CHUNKING.md) §2–3). Each chunking was loaded into its own database and embedded.
+Each filing was parsed into a structured document (Items, headings, tables) and split into chunks three ways. Each chunking was loaded into its own database and embedded.
+
+| Chunking | How it splits |
+|---|---|
+| Rule-based | A new chunk at every heading; prose packed up to 600 tokens; each table one chunk |
+| Parent-child | Parents up to 1,280 tokens, never crossing a heading; small children (≤ 256 tokens) are searched. Each table row is its own child, naming its columns: `Net income: 2025 = $112,010; 2024 = $93,736; …` |
+| Agentic | An LLM picks where each chunk ends (up to 600 tokens); each risk factor kept whole |
 
 | Chunking | Database | Chunks |
 |---|---|---|
@@ -54,7 +67,7 @@ The four filings went through V0's preprocessing and each of its three chunkers 
 
 - **One SQLite file per chunking.** Chunk text and metadata (ticker, fiscal year, Item) are ordinary tables. The BM25 index (FTS5) and the vectors (sqlite-vec) are virtual tables on the same rows, so a search filters on the metadata in the same query that ranks.
 - **Parent-child:** search runs over the children, and each child is swapped for its parent. A child's text starts with its heading path, since most children have no heading of their own.
-- **Built by** [build_corpus.py](v1/v1_src/build_corpus.py). V0's outputs for each filing are in `data/v0-chunking/<TICKER>-FY2025/`.
+- **Built by** [build_corpus.py](v1/v1_src/build_corpus.py). Each filing's parsed document and chunks are in `data/v0-chunking/<TICKER>-FY2025/`.
 
 ---
 
@@ -92,16 +105,7 @@ Both models are off-the-shelf, not trained here.
 
 ---
 
-## 4. Metrics
-
-| Metric | Definition |
-|---|---|
-| **Recall@k** | Share of a question's gold sources with a gold chunk (or a restatement) in the top k, averaged over questions. Recall@8 covers everything the answer step reads |
-| **MRR** | Mean of 1 / rank of the first gold chunk in the top 8; 0 if none |
-
----
-
-## 5. Results
+## 4. Results
 
 ### By kind
 
@@ -118,11 +122,14 @@ Recall@1 / Recall@5 / Recall@8 / MRR
 
 ### Where retrieval still fails
 
-| Pattern | Questions | Why |
-|---|---|---|
-| **The question's words aren't the filing's** | `cmp-capex-all4` (0 of 4) and `open-largest-capex` (0 of 4), on every chunking | No filer calls the line "capital expenditures": each names it differently ("payments for acquisition of…", "additions to…", "purchases related to…") |
-| **Fan-out spreads a one-company answer** | `open` MRR 0.67 for parent-child (0.75 without fan-out) | "Which company says tariff costs lowered its margin?" now searches all four companies. The answer is still in the top 8, but other companies' best chunks can rank above it |
-| **Merge order moves a source past rank 5** | `cmp-supply-risk`: 1 → 0 of 2 sources in the top 5, still 1 of 2 in the top 8 | The score-ordered merge (§3) puts the other company's chunk first; Apple's gold moves from rank 5 to 6 |
+Parent-child misses 2 questions, both about capex: `cmp-capex-all4` and `open-largest-capex` (0 of 4 sources on every chunking). No filer calls the line "capital expenditures"; each names it differently:
+
+| Company | The statement line |
+|---|---|
+| Apple | Payments for acquisition of property, plant and equipment |
+| Amazon | Purchases of property and equipment |
+| Microsoft | Additions to property and equipment |
+| NVIDIA | Purchases related to property and equipment and intangible assets |
 
 ### Takeaways
 
@@ -130,45 +137,41 @@ Recall@1 / Recall@5 / Recall@8 / MRR
 - **Row children matter most when several companies share the 8 places.** In `cmp-net-income-all4`, dense search ranks the gold statement 1st–5th with parent-child (`Net income: 2025 = $112,010 …` is its own child) but 9th–33rd with rule-based, where it's one line of a whole income statement.
 - **Rule-based and agentic win risks.** Each risk factor is its own chunk, so a risk question matches one whole risk factor (MRR 1.00).
 - **Agentic adds nothing over rule-based** that's worth an LLM call per chunk.
-- **Vocabulary is the main remaining gap.** Both remaining parent-child misses are capex questions.
 
 ---
 
-## 6. Decomposition and restatements
+## 5. Query decomposition
 
-Each change added in turn, parent-child. A is the pipeline before both changes, with strict gold.
+Does rewriting the question per company, and searching every company for "which company" questions, help? The same 46 questions with both turned off: each company's search gets the question as asked, and a question naming no company gets one unfiltered search.
 
-| Variant | Recall@1 | Recall@5 | Recall@8 | MRR | Missed |
-|---|---|---|---|---|---|
-| A. Before | 44.2% | 82.1% | 88.6% | 0.670 | 3 |
-| B. + restatements in the gold | 55.3% | 85.5% | 90.0% | 0.762 | 3 |
-| C. + one rewritten sub-question per company | **56.0%** | 86.2% | 90.0% | **0.773** | 3 |
-| D. + fan-out when no company is named (current) | 53.3% | **87.3%** | **91.7%** | 0.758 | **2** |
+Recall@8, with → without
 
-B–D use the score-ordered merge (§3); with it, A gives 82.6% / 87.9% / 0.654.
-
-| Recall@8, A → D | Rule-based | Parent-child | Agentic |
-|---|---|---|---|
-| All | 74.3% → 81.9% | 88.6% → 91.7% | 71.7% → 83.5% |
-| `compare_company` | 54% → 77% | 76% → 82% | 48% → 77% |
-
-- **Restatements change the measurement, not retrieval.** They lift MRR most (0.670 → 0.762): the retrieved MD&A tables and notes were already stating the right figure.
-- **Rewriting helps the weaker chunkings most.** `compare_company` Recall@8 for rule-based and agentic rises from 54% and 48% to 77%. Parent-child gains less because its row children already matched well.
-- **Fan-out finds `open-highest-revenue`** (0 → 2 of 4 sources) at the cost of MRR on one-company `open` questions.
-- **The gains sit mostly in `dev`.** Parent-child's `test` questions (14) keep Recall@8 at 80.4%; two improve and one (`cmp-supply-risk`, through the merge order) drops out of the top 5. The restatements happen to fall mostly on `dev` questions.
-
----
-
-## 7. Without slot search
-
-The same 46 questions with `slot_search: false`: one unfiltered search with the question as asked.
-
-| Chunking | Recall@5 / Recall@8 / MRR, current | Without slot search | `compare_company` Recall@8 | `open` Recall@8 |
+| Chunking | All | `compare_company` | `open` | `figure`, `risk`, `drivers`, `compare_year` |
 |---|---|---|---|---|
-| Rule-based | 71.9% / 81.9% / 0.648 | 67.8% / 73.0% / 0.611 | 77% → 48% | 75% → 72% |
-| **Parent-child** | **87.3% / 91.7% / 0.758** | 83.9% / 87.7% / 0.759 | 82% → 72% | 78% → 69% |
-| Agentic | 76.8% / 83.5% / 0.672 | 67.9% / 74.6% / 0.626 | 77% → 51% | 78% → 72% |
+| Rule-based | 81.9% → 79.7% | 77% → 69% | 75% → 72% | unchanged |
+| **Parent-child** | **91.7% → 90.0%** | 82% → 82% | 78% → 69% | unchanged |
+| Agentic | 83.5% → 78.6% | 77% → 59% | 78% → 72% | unchanged |
 
-- **Single-company questions barely move.** `figure`, `risk` and `drivers` are unchanged for parent-child and agentic; rule-based's `figure` shifts slightly.
-- **Why:** every chunk is embedded and reranked with its company and fiscal year, so an unfiltered search for "Apple's net income" already ranks Apple's chunks first.
-- **Decomposition matters when several companies share the 8 places.** Without it, one or two companies take most of the places.
+| Part | Example | Effect |
+|---|---|---|
+| **Rewrite per company** | "Which spent the most on R&D in fiscal 2025: Apple, Microsoft or NVIDIA?" → NVIDIA's search is run with "…in fiscal 2025: NVIDIA?" and its R&D line moves from 3rd to 1st | Helps rule-based and agentic on `compare_company`. Parent-child doesn't need it: its row children already match |
+| **Search every company** | "Which of the companies covered reported the highest revenue?": one unfiltered search returned only Microsoft and NVIDIA chunks (0 of 4 revenue lines); four searches return 2 chunks per company (2 of 4) | Finds sources across companies. Cost: when one company is the answer ("Which company says tariff costs lowered its margin?"), the others now compete with it; parent-child's `open` MRR is 0.67 instead of 0.75 |
+
+---
+
+## 6. Without slot search
+
+Is filtering by company doing the work? The same 46 questions with `slot_search: false`: no decomposition, one unfiltered search with the question as asked.
+
+Recall@8, with → without
+
+| Chunking | All | `compare_company` | `open` | `figure`, `risk`, `drivers` |
+|---|---|---|---|---|
+| Rule-based | 81.9% → 73.0% | 77% → 48% | 75% → 72% | almost unchanged |
+| **Parent-child** | **91.7% → 87.7%** | 82% → 72% | 78% → 69% | unchanged |
+| Agentic | 83.5% → 74.6% | 77% → 51% | 78% → 72% | unchanged |
+
+**Why only multi-company questions change**
+
+- **One company named: the filter adds nothing.** Every chunk is embedded with a header line naming its company and year (`Apple Inc. (AAPL) fiscal 2025 10-K, Item 8 Financial Statements`). So an unfiltered search for "Apple's net income" already ranks Apple's chunks first.
+- **Several companies: one search can't share its 8 places fairly.** The one or two best-matching companies take most of them. With slot search, each company gets its own search and its own places.
