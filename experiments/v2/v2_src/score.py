@@ -1,14 +1,18 @@
 """V2 metrics: is the answer right, is it grounded, and does it decline when it should.
 Spec: experiments/V2_GENERATION.md §4.
 
-Numbers are scored by code (tenk_agent.evaluation.scoring.score_numbers: each expected value
-matched by a claim for the right company and fiscal year, within the tolerance). Text answers
+Numbers are scored by code, two ways. `numbers`: each expected value stated in the answer
+text or table, within the tolerance; this decides correctness, since it is what a reader sees.
+`claimed`: each expected value listed as a claim for the right company and fiscal year
+(tenk_agent.evaluation.scoring.score_numbers); only claims can be verified. Text answers
 are scored by the LLM judge (judge.py) against the question's required points; until then
 they are unjudged. Citations are checked by code: a numeric claim is grounded when its value
 is in a chunk it cites (or its calculation reruns from them).
 """
 
-from tenk_agent.evaluation.scoring import score_numbers
+from tenk_agent import gold
+from tenk_agent.evaluation.scoring import _matches, _text_unit, score_numbers
+from tenk_agent.verify import numbers_in
 
 
 def grade(q: dict, answer: dict, context: list[str], per_source: list[set[str]]) -> dict:
@@ -19,9 +23,10 @@ def grade(q: dict, answer: dict, context: list[str], per_source: list[set[str]])
     cited = {cid for c in claims for cid in c["chunk_ids"]}
     shown = set(context)
     row = {
-        "numbers": score_numbers(q, answer),  # None: not a number question
+        "numbers": stated_numbers(q, answer),  # None: not a number question
+        "claimed": score_numbers(q, answer),
         "points": None,  # judge.py: [covered, …] per required point
-        "claims": len(claims),
+        "claim_count": len(claims),
         "numeric_claims": len(numeric),
         "grounded": sum(c["status"] in ("verified", "calculated") for c in numeric),
         "cited_unseen": sorted(cited - shown),  # ids the model wasn't shown
@@ -29,6 +34,22 @@ def grade(q: dict, answer: dict, context: list[str], per_source: list[set[str]])
         "gold_cited": _share([bool(cited & ids) for ids in per_source]),
     }
     return row | {"correct": correct(q, answer["abstained"], row)}
+
+
+def stated_numbers(q: dict, answer: dict) -> dict | None:
+    """Per expected value, whether the answer's text or table states it. Any number counts,
+    whatever company or year it is next to: the text has no structure to check those."""
+    expected = gold.expected_values(q)
+    if not expected:
+        return None
+    table = answer["table"] or {}
+    cells = [str(cell) for row in table.get("rows") or [] for cell in row]
+    found = numbers_in(" ".join([answer["answer"], *cells]))
+    tolerance = q.get("tolerance", 0.005)
+    matched = [
+        any(_matches(value, n.value, _text_unit(n), tolerance) for n in found) for value in expected
+    ]
+    return {"expected": len(expected), "matched": sum(matched), "all": all(matched)}
 
 
 def correct(q: dict, abstained: bool, row: dict) -> bool | None:
@@ -49,6 +70,7 @@ def summarize(rows: list[dict]) -> dict:
     declines = [r for r in rows if r["should_abstain"]]
     scored = [r for r in rows if r["correct"] is not None]
     numbers = [r["numbers"] for r in rows if r["numbers"]]
+    claimed = [r["claimed"] for r in rows if r["claimed"]]
     points = [p for r in rows if r["points"] for p in r["points"]]
     numeric = sum(r["numeric_claims"] for r in rows)
     full = [r for r in answerable if r["gold_in_context"] == 1 and r["correct"] is not None]
@@ -68,6 +90,11 @@ def summarize(rows: list[dict]) -> dict:
         "numbers_matched": (
             sum(n["matched"] for n in numbers) / sum(n["expected"] for n in numbers)
             if numbers
+            else None
+        ),
+        "numbers_claimed": (
+            sum(n["matched"] for n in claimed) / sum(n["expected"] for n in claimed)
+            if claimed
             else None
         ),
         "points_covered": _share(points),
