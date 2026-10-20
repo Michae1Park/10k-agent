@@ -1,0 +1,25 @@
+# V2 experiment settings, read by run.py and judge.py (--config to use another file).
+# Spec: experiments/V2_GENERATION.md. Paths are relative to the repo root.
+
+run:
+  label: qwen3.6-27b-fp8                                # writes output/generation/<label>/
+  db: data/v0-chunking/parent_child.db                  # V1's best chunking (build_corpus.py)
+  gold:                                                 # 46 answerable (V1's set) + 8 to decline
+    - experiments/v1/v1_testdata/retrieval-gold-fy2025.jsonl
+    - experiments/v2/v2_testdata/decline-gold-fy2025.jsonl
+  contexts: [retrieved, oracle, none]                   # spec §2: V1's top k · missing gold swapped in · no excerpts
+  workers: 4                                            # model calls in parallel
+
+retrieval: experiments/v1/v1_src/config.yaml            # V1's settings, unchanged (its `retrieval:` section, k: 8)
+
+generation:                                             # generate.py, spec §3
+  model: openai:Qwen/Qwen3.6-27B-FP8                    # scripts/serve_vllm.sh qwen3.6-27b-fp8 · or anthropic:<id>
+  base_url: http://localhost:8001/v1                    # vLLM, for openai:* models
+  thinking: false                                       # Qwen's reasoning mode; null = model default
+  max_tokens: 4000
+  prompt: experiments/v2/v2_prompt/system.md            # rules + answer format; {corpus} = the filings table
+
+score:                                                  # score.py, spec §4
+  restatements: true                                    # acceptable sources (MD&A tables, notes) count for the source they restate
+  judge_model: openai:openai/gpt-oss-20b                # judge.py · scripts/serve_vllm.sh gpt-oss-20b (stop the 27B first)
+  judge_base_url: http://localhost:8002/v1

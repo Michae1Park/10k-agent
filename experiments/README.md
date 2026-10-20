@@ -42,3 +42,17 @@ Code: [v1/v1_src/](v1/v1_src/); test data in [v1/v1_testdata/](v1/v1_testdata/).
 - **Result:** parent-child is best (Recall@5 87.3%, Recall@8 91.7%, MRR 0.758 on 46 questions). Questions spanning several filings are the weak spot for every chunking
 - **Test data:** 46 FY2025 questions on AAPL, AMZN, MSFT, NVDA, reviewed, including cross-company, cross-year and no-company questions ([retrieval-gold-fy2025.jsonl](v1/v1_testdata/retrieval-gold-fy2025.jsonl); readable: [PDF](v1/v1_testdata/retrieval-gold-fy2025.pdf), [summary](v1/v1_testdata/retrieval-gold-fy2025-summary.pdf))
 - **Metrics:** Recall@1, Recall@5, Recall@8, MRR, per question kind
+
+## V2 · Generation
+
+Full design, metrics and results: [here](V2_GENERATION.md).
+
+Code: [v2/v2_src/](v2/v2_src/); prompt in [v2/v2_prompt/](v2/v2_prompt/); test data in [v2/v2_testdata/](v2/v2_testdata/). Run: `taskset -c 16-31 .venv/bin/python experiments/v2/v2_src/run.py` (needs the vLLM server), then `judge.py` with the judge served.
+
+- **Pipeline:** V1's retrieval, unchanged (parent-child, top 8) → one model call (`Qwen3.6-27B`) → JSON answer with claims citing chunk IDs → each claim checked against the chunks it cites
+- **Contexts:** the same questions three ways, to separate generation from retrieval:
+  - **Retrieved**: V1's top 8, as in production
+  - **Oracle**: V1's top 8 with every gold source it missed swapped in (differs from Retrieved only where V1 failed)
+  - **None**: no excerpts; the model should decline everything
+- **Test data:** V1's 46 answerable questions ([retrieval-gold-fy2025.jsonl](v1/v1_testdata/retrieval-gold-fy2025.jsonl)) and 8 to decline ([decline-gold-fy2025.jsonl](v2/v2_testdata/decline-gold-fy2025.jsonl)): companies, years and figures outside the filings, investment advice
+- **Metrics:** correct (numbers by code, text by an LLM judge against required points), declined when it should / when it shouldn't, numeric claims grounded in a cited chunk, gold sources cited
