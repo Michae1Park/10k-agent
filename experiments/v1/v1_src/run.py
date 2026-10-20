@@ -12,7 +12,8 @@ it. Spec and results: experiments/V1_RETRIEVAL.md.
 
 Settings are in config.yaml. Needs a database with vectors from the configured embedder
 (`tenk embed`, or build_corpus.py for the V0 chunkings). A question whose evidence quote no
-chunk contains is unscorable on that database: listed, not scored.
+chunk contains is unscorable on that database: listed, not scored. Questions that should be
+declined have no gold: they get no Recall or MRR, only the reranker's top score.
 Writes output/retrieval/<label>/: config.yaml (the settings used),
 results.json (per question: slots, top k, gold ranks, each search's candidates), scores.json.
 """
@@ -70,8 +71,21 @@ def main() -> None:
     if args.question:
         questions = [q for q in questions if q["id"] in args.question]
 
-    results, unscorable = [], []
+    results, declined, unscorable = [], [], []
     for q in questions:
+        if q.get("should_abstain"):
+            result = pipeline.search(q["question"], settings["k"])
+            declined.append(
+                {
+                    "id": q["id"],
+                    "kind": q.get("kind"),
+                    "question": q["question"],
+                    "top_score": top_score(result),
+                    "retrieved": [c.id for c in result.chunks],
+                }
+            )
+            print(f"{q['id']:<40} decline: top score {declined[-1]['top_score']:.2f}")
+            continue
         gold = gold_chunks(store, q)
         if not all(gold.per_source):  # an evidence quote no chunk contains (split by chunking)
             unscorable.append(q["id"])
@@ -90,6 +104,7 @@ def main() -> None:
             **{f"recall@{k}": recall_at(ids, gold, k) for k in at},
             "rr": reciprocal_rank(ids, gold),
             "first_gold_rank": first_gold_rank(ids, gold),
+            "top_score": top_score(result),
             "seconds": round(seconds, 3),
             "retrieved": ids,
             "gold": [sorted(s) for s in gold.per_source],
@@ -119,12 +134,21 @@ def main() -> None:
         },
         "missed": [r["id"] for r in results if r["first_gold_rank"] is None],
         "unscorable": unscorable,
+        "top_score_mean": {
+            "answerable": sum(r["top_score"] for r in results) / n,
+            "decline": sum(d["top_score"] for d in declined) / len(declined) if declined else None,
+        },
         "seconds_mean": sum(r["seconds"] for r in results) / n,
     }
     print(json.dumps(scores, indent=1))
-    _write(out / "results.json", results)
+    _write(out / "results.json", results + declined)
     _write(out / "scores.json", scores)
     (out / "config.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
+
+
+def top_score(result) -> float:
+    """The reranker's best score over the question's searches: how well anything matched."""
+    return max((s for search in result.searches for _, s in search.reranked[:1]), default=0.0)
 
 
 def _write(path: Path, data) -> None:
