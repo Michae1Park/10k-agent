@@ -2,8 +2,8 @@
 """V1 experiment: run the fixed retrieval pipeline on the retrieval gold questions and score
 it. Spec and results: experiments/V1_RETRIEVAL.md.
 
-  slots → keyword (BM25) + dense → RRF → rerank → round-robin → top k   (retrieve.py)
-  Recall@1, Recall@5, MRR against the gold chunks                        (score.py)
+  sub-questions → keyword + dense → RRF → rerank → round-robin → top k   (retrieve.py)
+  Recall@1, @5, @8 and MRR against the gold chunks and their restatements   (score.py)
 
   taskset -c 16-31 python experiments/v1/v1_src/run.py
   taskset -c 16-31 python experiments/v1/v1_src/run.py --question aapl-tariffs-fy2025
@@ -29,11 +29,10 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from retrieve import Pipeline  # noqa: E402
-from score import first_gold_rank, recall_at, reciprocal_rank  # noqa: E402
+from retrieve import HybridSearch, QueryDecomposer, SubQuestionRetriever  # noqa: E402
+from score import first_gold_rank, gold_chunks, recall_at, reciprocal_rank  # noqa: E402
 
 from tenk_agent.embeddings import get_embedder, get_reranker  # noqa: E402
-from tenk_agent.evaluation.retrieval import gold_chunks  # noqa: E402
 from tenk_agent.store import Store  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -59,12 +58,16 @@ def main() -> None:
     embedder = get_embedder(settings["embedder"], settings["device"])
     if store.embedding_model() != embedder.name:
         sys.exit(f"{run['db']} vectors are {store.embedding_model()!r}, not {embedder.name!r}")
-    pipeline = Pipeline(
-        store,
-        embedder,
-        get_reranker(settings["reranker"], settings["device"]),
-        candidates=settings["candidates"],
-        rrf_k=settings["rrf_k"],
+    decompose = settings["decompose"]
+    pipeline = SubQuestionRetriever(
+        QueryDecomposer(store, rewrite=decompose["rewrite"], fan_out=decompose["fan_out"]),
+        HybridSearch(
+            store,
+            embedder,
+            get_reranker(settings["reranker"], settings["device"]),
+            candidates=settings["candidates"],
+            rrf_k=settings["rrf_k"],
+        ),
         slot_search=settings["slot_search"],
     )
     questions = [json.loads(line) for line in (ROOT / run["gold"]).read_text().splitlines()]
@@ -86,6 +89,8 @@ def main() -> None:
             )
             print(f"{q['id']:<40} decline: top score {declined[-1]['top_score']:.2f}")
             continue
+        if not config["score"]["restatements"]:
+            q = q | {"acceptable_sources": []}
         gold = gold_chunks(store, q)
         if not all(gold.per_source):  # an evidence quote no chunk contains (split by chunking)
             unscorable.append(q["id"])

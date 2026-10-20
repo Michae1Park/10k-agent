@@ -12,8 +12,12 @@ retrieval:                                              # retrieve.py, spec §2
   candidates: 40                                        # per retriever, per slot; and the fused list cut before reranking
   rrf_k: 60                                             # reciprocal rank fusion constant
   slot_search: true                                     # one search per (company, filing) the question names
+  decompose:                                            # QueryDecomposer, spec §3
+    rewrite: true                                       # each company's sub-question names only that company
+    fan_out: true                                       # "which company…" with no company named: one sub-question per company
   k: 8                                                  # chunks returned (answer.k in config.yaml)
   device: null                                          # null = GPU if any; cpu when vLLM fills the GPU
 
 score:
   recall_at: [1, 5, 8]                                  # Recall@k reported; MRR over the full top k
+  restatements: true                                    # acceptable sources (MD&A tables, notes) count for the source they restate

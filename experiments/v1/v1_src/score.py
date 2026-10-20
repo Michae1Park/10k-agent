@@ -1,10 +1,24 @@
-"""V1 metrics: Recall@k and MRR against the gold chunks. Spec: experiments/V1_RETRIEVAL.md §3.
+"""V1 metrics: Recall@k and MRR against the gold chunks. Spec: experiments/V1_RETRIEVAL.md §4.
 
 Gold chunks come from each source's verbatim evidence quote, resolved against the database
-(tenk_agent.evaluation.retrieval.gold_chunks), so they follow whatever chunking the db holds.
+(tenk_agent.gold.resolve_evidence), so they follow whatever chunking the db holds. An acceptable
+source names the primary source it restates (`restates`: its index), e.g. an MD&A table stating
+the same figure as the Item 8 statement, and its chunks count for that source.
 """
 
+from tenk_agent import gold as gold_set
 from tenk_agent.evaluation.retrieval import GoldChunks
+from tenk_agent.store import Store
+
+
+def gold_chunks(store: Store, q: dict) -> GoldChunks:
+    """Per primary source, the chunks that contain it or a restatement of it."""
+    sources = q.get("sources", [])
+    resolved = gold_set.resolve_evidence(store, q)
+    per_source = [set(ids) for ids in resolved[: len(sources)]]
+    for alt, ids in zip(q.get("acceptable_sources", []), resolved[len(sources) :], strict=True):
+        per_source[alt["restates"]] |= set(ids)
+    return GoldChunks(per_source)
 
 
 def recall_at(retrieved: list[str], gold: GoldChunks, k: int) -> float:
