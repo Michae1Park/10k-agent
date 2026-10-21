@@ -55,6 +55,12 @@ def test_find_value_normalizes_units():
     assert find_value(29916, "USD millions", table) is None
 
 
+def test_find_value_reads_scale_before_except_clause():
+    table = chunk("| Net income | $112,010 | $93,736 |", units="in millions, except per-share amounts")
+    assert find_value(112010, "USD millions", table) == "$112,010"
+    assert find_value(112.01, "USD billions", table) == "$112,010"
+
+
 def test_find_value_respects_rounding_of_prose_figures():
     prose = chunk("Revenue grew to $1.2 billion in 2024.")
     assert find_value(1234, "USD millions", prose) == "$1.2 billion"

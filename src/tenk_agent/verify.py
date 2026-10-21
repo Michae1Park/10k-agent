@@ -78,8 +78,10 @@ def chunk_scales(chunk: ChunkRecord) -> list[float]:
     """Candidate scales for bare numbers in a chunk: its stated units, else every scale."""
     stated = chunk.units or (m.group(0) if (m := CHUNK_UNITS.search(chunk.text)) else None)
     if stated:
-        word = stated.lower().split()[-1].rstrip("s")
-        return [WORD_SCALES.get(word, 1.0), 1.0]
+        # "in millions, except per-share amounts" is millions; "net income in millions and
+        # shares in thousands" is both
+        words = re.findall(r"\b(thousand|million|billion|trillion)s?\b", stated.lower())
+        return [*dict.fromkeys(WORD_SCALES[w] for w in words), 1.0]
     return [1.0, 1e3, 1e6, 1e9]
 
 
