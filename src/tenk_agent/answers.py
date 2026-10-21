@@ -97,6 +97,8 @@ def finalize(raw: dict, store: Store, verify: bool = True) -> dict:
                     chunk.item
                 ),
                 "url": filing.source_url if filing else None,
+                "pages": chunk.pages,
+                "printed_pages": chunk.printed_pages,
                 "kind": chunk.kind,
                 "text": chunk.text,
             }

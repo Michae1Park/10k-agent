@@ -7,10 +7,13 @@ one database per method, embedded. Spec: experiments/V1_RETRIEVAL.md §5.
          method's chunks are reused when their settings match
   load   chunks → <out>/<method>.db in the production schema; parent-child adds children
   embed  vectors for every chunk (and child) with the V1 embedder. Stop vLLM first
+  pages  each chunk's pages, written into an already built <method>.db in place (no reload,
+         no re-embedding); load writes them too
 
   taskset -c 16-31 python experiments/v1/v1_src/build_corpus.py --stage chunk --jobs 8
   taskset -c 16-31 python experiments/v1/v1_src/build_corpus.py --stage load --stage embed
   taskset -c 16-31 python experiments/v1/v1_src/build_corpus.py --stage chunk --filing AAPL/FY2025
+  taskset -c 16-31 python experiments/v1/v1_src/build_corpus.py --stage pages
 
 Filings: data/raw/filings/<TICKER>/FY<year>/. Writes <out>/<TICKER>-FY<year>/ (V0's
 blocks, labels, document, chunks-<method>.json, chunk.log) and <out>/<method>.db.
@@ -41,7 +44,7 @@ FILINGS = ROOT / "data" / "raw" / "filings"
 OUT = ROOT / "data" / "v0-chunking"
 V0_CONFIG = V0 / "config.yaml"
 V1_CONFIG = Path(__file__).resolve().parent / "config.yaml"
-STAGES = ["chunk", "load", "embed"]
+STAGES = ["chunk", "load", "embed", "pages"]
 NAMES = {c.ticker: c for c in COMPANIES}
 
 
@@ -49,7 +52,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument("--stage", action="append", choices=STAGES, help="default: all")
+    ap.add_argument("--stage", action="append", choices=STAGES, help="default: chunk, load, embed")
     ap.add_argument("--filing", action="append", help="TICKER/FYyear (default: all)")
     ap.add_argument("--method", action="append", choices=METHODS, help="default: all")
     ap.add_argument("--jobs", type=int, default=8, help="chunk: filings at once")
@@ -58,7 +61,7 @@ def main() -> None:
     args = ap.parse_args()
     filings = [FILINGS / f for f in args.filing] if args.filing else sorted(FILINGS.glob("*/FY*"))
     methods = args.method or list(METHODS)
-    stages = args.stage or STAGES
+    stages = args.stage or STAGES[:3]
 
     if args.one:
         chunk_one(filings[0], args.out / label(filings[0]), methods)
@@ -76,6 +79,9 @@ def main() -> None:
             t = time.time()
             n = embed_corpus(store, embedder)
             print(f"{method}: embedded {n} in {time.time() - t:.0f} s")
+    if "pages" in stages:
+        for method in methods:
+            add_pages(method, filings, args.out)
 
 
 def label(filing: Path) -> str:
@@ -172,12 +178,9 @@ def load(method: str, filings: list[Path], out: Path) -> None:
                 "INSERT INTO sections VALUES (?, ?, ?, ?)",
                 [(f"{prefix}-{i}", meta["accession_no"], i, t) for i, t in items.items()],
             )
-            seq: dict[str, int] = {}
-            for c in chunks:
-                n = seq[c["item"]] = seq.get(c["item"], -1) + 1
-                chunk_id = f"{prefix}-{c['item']}-{n:03d}"
+            for (chunk_id, n), c in zip(chunk_ids(chunks, prefix), chunks):
                 db.execute(
-                    "INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         chunk_id,
                         f"{prefix}-{c['item']}",
@@ -189,6 +192,8 @@ def load(method: str, filings: list[Path], out: Path) -> None:
                         c["text"],
                         c.get("units"),
                         json.dumps(c.get("years_covered") or []),
+                        json.dumps(c["pages"]) if c.get("pages") else None,
+                        json.dumps(c["printed_pages"]) if c.get("printed_pages") else None,
                     ),
                 )
                 counts["chunks"] += 1
@@ -209,6 +214,44 @@ def load(method: str, filings: list[Path], out: Path) -> None:
                     counts["children"] += 1
     store.rebuild_search_index()
     print(f"{method}: {len(filings)} filings, {counts} → {path}")
+
+
+def add_pages(method: str, filings: list[Path], out: Path) -> None:
+    """Each chunk's pages and printed pages (V0 D8, A5) from chunks-<method>.json into the
+    built <method>.db, matched by id; a chunk whose text differs from the db's is skipped."""
+    store = Store(out / f"{method}.db")  # adds the page columns to an older db
+    db = store.db
+    loaded = {(f.ticker, f.fiscal_year) for f in store.filings()}
+    counts = {"updated": 0, "mismatched": 0}
+    with db:
+        for filing in filings:
+            meta = json.loads((filing / "metadata.json").read_text())
+            if (meta["ticker"], meta["fiscal_year"]) not in loaded:
+                continue
+            prefix = f"{meta['ticker']}-FY{meta['fiscal_year']}"
+            chunks = json.loads((out / label(filing) / f"chunks-{method}.json").read_text())
+            for (chunk_id, _), c in zip(chunk_ids(chunks, prefix), chunks):
+                updated = db.execute(
+                    "UPDATE chunks SET pages = ?, printed_pages = ? WHERE id = ? AND text = ?",
+                    (
+                        json.dumps(c["pages"]) if c.get("pages") else None,
+                        json.dumps(c["printed_pages"]) if c.get("printed_pages") else None,
+                        chunk_id,
+                        c["text"],
+                    ),
+                ).rowcount
+                counts["updated" if updated else "mismatched"] += 1
+    print(f"{method}: pages for {counts} → {out / f'{method}.db'}")
+
+
+def chunk_ids(chunks: list[dict], prefix: str) -> list[tuple[str, int]]:
+    """Each chunk's id and its position within its Item: <prefix>-<item>-<nnn>."""
+    seq: dict[str, int] = {}
+    ids = []
+    for c in chunks:
+        n = seq[c["item"]] = seq.get(c["item"], -1) + 1
+        ids.append((f"{prefix}-{c['item']}-{n:03d}", n))
+    return ids
 
 
 def child_text(child: dict) -> str:

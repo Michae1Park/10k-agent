@@ -50,7 +50,9 @@ CREATE TABLE IF NOT EXISTS chunks (
     kind TEXT NOT NULL,
     text TEXT NOT NULL,
     units TEXT,
-    years_covered TEXT NOT NULL
+    years_covered TEXT NOT NULL,
+    pages TEXT,
+    printed_pages TEXT
 );
 CREATE INDEX IF NOT EXISTS chunks_filter ON chunks (ticker, fiscal_year, item);
 CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts
@@ -87,8 +89,12 @@ CREATE VIRTUAL TABLE IF NOT EXISTS children_fts
     USING fts5(text, content='children', content_rowid='rowid');
 """
 
-# Filings from older databases lack the aliases column; add it in place.
-MIGRATIONS = ("ALTER TABLE companies ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'",)
+# Older databases lack these columns; add them in place.
+MIGRATIONS = (
+    "ALTER TABLE companies ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'",
+    "ALTER TABLE chunks ADD COLUMN pages TEXT",
+    "ALTER TABLE chunks ADD COLUMN printed_pages TEXT",
+)
 
 
 @dataclass
@@ -101,6 +107,8 @@ class ChunkRecord:
     text: str
     units: str | None
     years_covered: list[int]
+    pages: list[int] | None = None  # V0 chunks: first and last page in the document
+    printed_pages: list[str] | None = None  # the page numbers printed on those pages
 
 
 @dataclass
@@ -200,7 +208,7 @@ class Store:
                 [(f"{prefix}-{s.item}", filing.accession_no, s.item, s.title) for s in sections],
             )
             db.executemany(
-                "INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)",
                 [
                     (
                         c.id,
@@ -531,6 +539,8 @@ def _record(row: sqlite3.Row) -> ChunkRecord:
         text=row["text"],
         units=row["units"],
         years_covered=json.loads(row["years_covered"]),
+        pages=json.loads(row["pages"]) if row["pages"] else None,
+        printed_pages=json.loads(row["printed_pages"]) if row["printed_pages"] else None,
     )
 
 
