@@ -8,7 +8,7 @@
 #   scripts/serve_vllm.sh gpt-oss-20b           # the LLM judge, on port 8002 (tenk eval judge)
 #
 # Everything must fit on one L40S (48 GB). The tenk process also keeps the embedder and
-# reranker on the GPU (3–6 GB per process), so vLLM gets 72% of memory by default.
+# reranker on the GPU (3–6 GB per process), so vLLM gets 72% of memory by default (the 27B 80%).
 # VLLM_BIN points at the vLLM executable (default: `vllm` on PATH, else the vllm_py311 conda env).
 # On this machine the i9-14900K's P-cores crash under load; CPUS pins the server to E-cores.
 set -euo pipefail
@@ -34,16 +34,19 @@ case "$preset" in
     ;;
   qwen3.6-27b-fp8)
     model=Qwen/Qwen3.6-27B-FP8
-    # 28.5 GB of weights: skip CUDA graphs and the unused vision encoder, or the KV cache
-    # allocation runs out of memory on a 48 GB card. An fp8 KV cache would double context
-    # but makes FlashInfer JIT-compile kernels, which needs a CUDA toolkit (nvcc).
+    # 28.5 GB of weights and no vision encoder. CUDA graphs (~17 tok/s vs ~11.5 eager) fit
+    # only with few sequences: the default 256 makes startup profiling fill the card. Graphs
+    # cost 0.08 GiB, but compiling leaves 1.6 GiB of KV cache at 72% (under one 32k request);
+    # 80% gives 3.2 requests at 32k and leaves ~8 GB for the embedder and reranker. An fp8 KV
+    # cache would double context but makes FlashInfer JIT-compile kernels, which needs nvcc.
     MAX_LEN=${MAX_LEN_27B:-32768}
+    GPU_UTIL=${GPU_UTIL_27B:-0.80}
     args=(--tool-call-parser qwen3_coder --reasoning-parser qwen3
-      --enforce-eager --limit-mm-per-prompt '{"image":0,"video":0}')
+      --max-num-seqs "${MAX_SEQS_27B:-4}" --limit-mm-per-prompt '{"image":0,"video":0}')
     ;;
   gemma-4-31b-fp8)
     # Gemma 4 31B in bf16 is 62 GB; this FP8 build is ~32 GB, the same precision as the
-    # Qwen 27B. Same memory limits as qwen3.6-27b-fp8 (I-003): eager mode, no vision, 32k.
+    # Qwen 27B. Memory limits as qwen3.6-27b-fp8 had (I-003): eager mode, no vision, 32k.
     # Its 30.4 GiB of weights leave 0.4 GiB of KV cache at 72%; 86% gives 6.6 GiB (1.4
     # requests at 32k) and leaves ~6 GB for the eval's embedder and reranker.
     model=RedHatAI/gemma-4-31B-it-FP8-block

@@ -16,6 +16,12 @@ generation:                                             # generate.py, spec §3
   thinking: false                                       # Qwen's reasoning mode; null = model default
   max_tokens: 4000
   prompt: experiments/v2/v2_prompt/system.md            # rules + answer format; {corpus} = the filings table
+  serve:                                                # the vLLM server: scripts/serve_vllm.sh qwen3.6-27b-fp8 (keep in step)
+    gpu_memory_utilization: 0.80                        # 0.72 leaves too little KV cache once compiled
+    max_model_len: 32768
+    max_num_seqs: 4                                     # one user, or run.workers; 256 (default) OOMs at startup
+    enforce_eager: false                                # CUDA graphs: ~17 tok/s vs ~11.5 eager
+    prefix_caching: true
 
 score:                                                  # score.py, spec §4
   restatements: true                                    # acceptable sources (MD&A tables, notes) count for the source they restate
