@@ -4,9 +4,7 @@
 run:
   label: qwen3.6-27b-fp8                                # writes output/generation/<label>/
   db: data/v0-chunking/parent_child.db                  # V1's best chunking (build_corpus.py)
-  gold:                                                 # 46 answerable (V1's set) + 8 to decline
-    - experiments/v1/v1_testdata/retrieval-gold-fy2025.jsonl
-    - experiments/v2/v2_testdata/decline-gold-fy2025.jsonl
+  gold: experiments/v2/v2_testdata/generation-gold-fy2025.jsonl # V1's 46 answerable + 8 to decline
   contexts: [retrieved, oracle, none]                   # spec §2: V1's top k · missing gold swapped in · no excerpts
   workers: 4                                            # model calls in parallel
 

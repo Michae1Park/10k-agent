@@ -18,10 +18,16 @@
 
 ## 1. Test data
 
-| File | Questions | What |
-|---|---|---|
-| [retrieval-gold-fy2025.jsonl](v1/v1_testdata/retrieval-gold-fy2025.jsonl) | 46 | V1's answerable questions, reviewed: 30 with expected numbers, 16 with required points |
-| [decline-gold-fy2025.jsonl](v2/v2_testdata/decline-gold-fy2025.jsonl) | 8 | Should be declined: Oracle and Tesla (not in the corpus), FY2026 and FY2027, a stock price, CEO pay (proxy statement), Azure's dollar revenue, investment advice |
+**File:** [generation-gold-fy2025.jsonl](v2/v2_testdata/generation-gold-fy2025.jsonl). To read it: [PDF](v2/v2_testdata/generation-gold-fy2025.pdf) (one card per question, evidence highlighted) and [summary](v2/v2_testdata/generation-gold-fy2025-summary.pdf).
+
+54 questions, built up from V1's set:
+
+| Part | Questions | What | Reviewed |
+|---|---|---|---|
+| From V1, unchanged | 46 | [V1's questions](V1_RETRIEVAL.md#1-test-data): 30 with expected numbers, 16 with required points | Yes |
+| Added in V2 | 8 | Should be declined: Oracle and Tesla (not in the corpus), FY2026 and FY2027, a stock price, CEO pay (proxy statement), Azure's dollar revenue, investment advice | Not yet |
+
+**Earlier years come from the FY2025 filings.** Each FY2025 10-K shows the prior years beside the current one (three years in the income and cash-flow statements, two in the balance sheet), so "from 2023 to 2025" is answerable from one filing: `Net income | 30,425 | 59,248 | 77,670` (Amazon).
 
 All on the FY2025 10-Ks of AAPL, AMZN, MSFT and NVDA, in V1's parent-child corpus (`data/v0-chunking/parent_child.db`).
 
@@ -95,7 +101,7 @@ Correct, Retrieved → Oracle
 |---|---|---|
 | **Answers with a company missing from the context** | 2, Retrieved only | "Which company reported the highest revenue?": Amazon's line wasn't retrieved, and the model answers **Apple**; "most employees" answers Microsoft. Neither says Amazon is missing (in `cmp-employees-all4` it does say Apple's count isn't in the excerpts) |
 | **Picks the wrong line** | 2 | Capex (`cmp-capex-all4`, Retrieved): gives Apple's R&D ($34,550M) as its capex. `open-largest-capex`: gross property and equipment instead of purchases |
-| **Skips the middle year** | 3 | "How did Amazon's net income change from 2023 to 2025?": gives 2023 and 2025, not 2024 |
+| **Skips the middle year** | 3 | "How did Amazon's net income change from 2023 to 2025?": gives 2023 and 2025, not 2024, though the context holds the row with all three (`Net income \| 30,425 \| 59,248 \| 77,670`) |
 | **Gives the change, not the values** | 1 | "NVIDIA's revenue growth, FY2024 to FY2025": "$69,575 million, 114%" without either year's revenue |
 | **Several numbers in one claim** | most `compare_year` | `"text": "…$383,285 million in fiscal 2023 and $416,161 million in fiscal 2025", "value": null`. The answer is right but the claim can't be verified; hence Numbers in claims 63% against 90% stated (Oracle) |
 

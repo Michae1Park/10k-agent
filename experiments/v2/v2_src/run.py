@@ -74,9 +74,7 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
 
     store = Store(ROOT / run["db"])
-    questions = [
-        json.loads(line) for path in run["gold"] for line in (ROOT / path).read_text().splitlines()
-    ]
+    questions = [json.loads(line) for line in (ROOT / run["gold"]).read_text().splitlines()]
     if args.question:
         questions = [q for q in questions if q["id"] in args.question]
     if not config["score"]["restatements"]:
