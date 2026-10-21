@@ -6,17 +6,12 @@ prompt must name every value the schema allows, and the validator must check the
 
 import json
 import re
-import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-PROMPTS = ROOT / "experiments" / "v0" / "v0_structure"
-sys.path.insert(0, str(ROOT / "experiments" / "v0" / "v0_src"))
+from tenk_agent.preprocess.validation import ITEMS, ROLE_FIELDS
+from tenk_agent.prompts import PROMPTS
 
-from rules import ITEMS, ROLE_FIELDS  # noqa: E402
-
-PROMPT = (PROMPTS / "system.md").read_text(encoding="utf-8").split("<!-- END SYSTEM PROMPT")[0]
-LABEL = json.loads((PROMPTS / "labels.schema.json").read_text())["properties"]["labels"]["items"]
+PROMPT = (PROMPTS / "structure.md").read_text(encoding="utf-8").split("<!-- END SYSTEM PROMPT")[0]
+LABEL = json.loads((PROMPTS / "structure.schema.json").read_text())["properties"]["labels"]["items"]
 FIELDS = LABEL["properties"]
 ROW_FIELDS = FIELDS["rows"]["items"]["properties"]
 

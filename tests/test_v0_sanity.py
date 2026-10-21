@@ -11,10 +11,10 @@ import yaml
 from bs4 import BeautifulSoup
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "experiments" / "v0" / "v0_src"))
-sys.path.insert(0, str(ROOT / "experiments" / "v0" / "v0_testdata"))
+sys.path.insert(0, str(ROOT / "experiments" / "v0"))
+sys.path.insert(0, str(ROOT / "experiments" / "v0" / "testdata"))
 
-import v0_ground_truth as gtb  # noqa: E402
+import ground_truth as gtb  # noqa: E402
 from sanity import CASES, check, finds  # noqa: E402
 from score import key  # noqa: E402
 

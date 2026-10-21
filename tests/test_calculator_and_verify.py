@@ -1,8 +1,8 @@
 import pytest
 
-from tenk_agent.calculator import CalculatorError, calculate
+from tenk_agent.generation.calculator import CalculatorError, calculate
+from tenk_agent.generation.verify import find_text, find_value, numbers_in
 from tenk_agent.store import ChunkRecord
-from tenk_agent.verify import find_text, find_value, numbers_in
 
 
 def chunk(text: str, units: str | None = None) -> ChunkRecord:
@@ -56,7 +56,9 @@ def test_find_value_normalizes_units():
 
 
 def test_find_value_reads_scale_before_except_clause():
-    table = chunk("| Net income | $112,010 | $93,736 |", units="in millions, except per-share amounts")
+    table = chunk(
+        "| Net income | $112,010 | $93,736 |", units="in millions, except per-share amounts"
+    )
     assert find_value(112010, "USD millions", table) == "$112,010"
     assert find_value(112.01, "USD billions", table) == "$112,010"
 

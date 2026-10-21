@@ -1,12 +1,7 @@
 """The V0 chunkers' sentence cuts (C5), table captions (C3) and table row children."""
 
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "experiments" / "v0" / "v0_src"))
-
-import chunkers  # noqa: E402
+from tenk_agent.chunking import agentic
+from tenk_agent.chunking import common as chunkers
 
 chunkers.CAPTION_CHARS = 300
 
@@ -108,8 +103,8 @@ RISKS = [
 
 
 def test_agentic_segments_start_at_each_risk_factor_and_its_category():
-    text, spans = chunkers.render_markdown({"item": "1A", "title": "Risk Factors", "blocks": RISKS})
-    assert [text[s:e] for s, e in chunkers._segments(text, spans)] == [
+    text, spans = agentic.render_markdown({"item": "1A", "title": "Risk Factors", "blocks": RISKS})
+    assert [text[s:e] for s, e in agentic._segments(text, spans)] == [
         "# Item 1A. Risk Factors\n\nPreamble text.\n\n",
         "## Business Risks\n\n### Risk one.\n\nBody one.\n\n",
         "### Risk two.\n\nBody two.",
@@ -117,13 +112,13 @@ def test_agentic_segments_start_at_each_risk_factor_and_its_category():
 
 
 def test_agentic_chunks_never_end_on_a_heading():
-    text, _ = chunkers.render_markdown({"item": "1A", "title": "Risk Factors", "blocks": RISKS})
+    text, _ = agentic.render_markdown({"item": "1A", "title": "Risk Factors", "blocks": RISKS})
     at = text.index
     # a cut after "### Risk two." moves before it; one after both headings moves before both
-    cuts = chunkers._glue_headings(text, [0, at("Body one."), at("Body two.")])
+    cuts = agentic._glue_headings(text, [0, at("Body one."), at("Body two.")])
     assert cuts == [0, at("## Business Risks"), at("### Risk two.")]
     # a chunk of only headings goes: its headings join the next chunk
-    assert chunkers._glue_headings(text, [0, at("### Risk one."), at("Body one.")]) == [
+    assert agentic._glue_headings(text, [0, at("### Risk one."), at("Body one.")]) == [
         0,
         at("## Business Risks"),
     ]

@@ -1,18 +1,20 @@
-"""Retrieval metrics: Recall@k and MRR against gold chunks.
+"""V1 metrics: Recall@k and MRR against the gold chunks. Spec: experiments/V1_RETRIEVAL.md §4.
 
-Gold chunks are resolved at evaluation time from each source's verbatim evidence quote
-(gold.resolve_evidence), so re-chunking never invalidates the gold set.
+Gold chunks come from each source's verbatim evidence quote, resolved against the database
+(gold.resolve_evidence), so they follow whatever chunking the db holds. An acceptable
+source names the primary source it restates (`restates`: its index), e.g. an MD&A table stating
+the same figure as the Item 8 statement, and its chunks count for that source.
 """
 
 from dataclasses import dataclass
 
-from tenk_agent import gold
+from tenk_agent.evaluation import gold as gold_set
 from tenk_agent.store import Store
 
 
 @dataclass
 class GoldChunks:
-    """Per primary source, the chunk IDs that satisfy it (its own, or an acceptable alternative)."""
+    """Per primary source, the chunk IDs that satisfy it (its own, or a restatement)."""
 
     per_source: list[set[str]]
 
@@ -22,39 +24,29 @@ class GoldChunks:
 
 
 def gold_chunks(store: Store, q: dict) -> GoldChunks:
-    """An acceptable source (the same figure in a later filing) counts for the primary source
-    it restates, matched by item and section name."""
+    """Per primary source, the chunks that contain it or a restatement of it."""
     sources = q.get("sources", [])
-    alternatives = q.get("acceptable_sources", [])
-    resolved = gold.resolve_evidence(store, q)
-    primary, extra = resolved[: len(sources)], resolved[len(sources) :]
-    per_source = []
-    for source, chunk_ids in zip(sources, primary, strict=True):
-        satisfying = set(chunk_ids)
-        for alt, alt_ids in zip(alternatives, extra, strict=True):
-            if (alt["item"], alt["section"]) == (source["item"], source["section"]):
-                satisfying |= set(alt_ids)
-        per_source.append(satisfying)
+    resolved = gold_set.resolve_evidence(store, q)
+    per_source = [set(ids) for ids in resolved[: len(sources)]]
+    for alt, ids in zip(q.get("acceptable_sources", []), resolved[len(sources) :], strict=True):
+        per_source[alt["restates"]] |= set(ids)
     return GoldChunks(per_source)
 
 
-def recall_at_k(retrieved: list[str], gold_set: GoldChunks, k: int) -> float:
-    """Share of primary sources with at least one satisfying chunk in the top k."""
-    if not gold_set.per_source:
-        return 0.0
+def recall_at(retrieved: list[str], gold: GoldChunks, k: int) -> float:
+    """Share of gold sources with at least one satisfying chunk in the top k."""
     top = set(retrieved[:k])
-    return sum(bool(top & chunks) for chunks in gold_set.per_source) / len(gold_set.per_source)
+    return sum(bool(top & ids) for ids in gold.per_source) / len(gold.per_source)
 
 
-def reciprocal_rank(retrieved: list[str], gold_set: GoldChunks) -> float:
-    relevant = gold_set.all
+def reciprocal_rank(retrieved: list[str], gold: GoldChunks) -> float:
+    """1 / rank of the first gold chunk in the list; 0 if none is retrieved."""
+    relevant = gold.all
     for rank, chunk_id in enumerate(retrieved, 1):
         if chunk_id in relevant:
             return 1 / rank
     return 0.0
 
 
-def is_scorable(store: Store, q: dict) -> bool:
-    """Retrieval is scored only for questions with sources whose evidence resolves."""
-    gold_set = gold_chunks(store, q)
-    return bool(gold_set.per_source) and all(gold_set.per_source)
+def first_gold_rank(retrieved: list[str], gold: GoldChunks) -> int | None:
+    return next((r for r, cid in enumerate(retrieved, 1) if cid in gold.all), None)

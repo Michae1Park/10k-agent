@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Serve an open tool-calling model with vLLM's OpenAI-compatible API.
 #
-#   scripts/serve_vllm.sh qwen3.6-27b-fp8       # the default model (config.yaml model.name)
-#   scripts/serve_vllm.sh gemma-4-31b-fp8       # V5 comparison: TENK_MODEL=openai:RedHatAI/gemma-4-31B-it-FP8-block
-#   scripts/serve_vllm.sh qwen3.5-9b            # V6 fine-tune base: TENK_MODEL=openai:Qwen/Qwen3.5-9B
-#   scripts/serve_vllm.sh qwen3.5-9b-v6         # V6 fine-tuned: TENK_MODEL=openai:tenk/qwen3.5-9b-v6
-#   scripts/serve_vllm.sh gpt-oss-20b           # the LLM judge, on port 8002 (tenk eval judge)
+#   scripts/serve_vllm.sh qwen3.6-27b-fp8       # the default model (config.yaml llm, generation)
+#   scripts/serve_vllm.sh gemma-4-31b-fp8       # another model: --model openai:RedHatAI/gemma-4-31B-it-FP8-block
+#   scripts/serve_vllm.sh qwen3.5-9b            # a smaller one: --model openai:Qwen/Qwen3.5-9B
+#   scripts/serve_vllm.sh qwen3.5-9b-v6         # V6 fine-tune (archive/): --model openai:tenk/qwen3.5-9b-v6
+#   scripts/serve_vllm.sh gpt-oss-20b           # the V2 judge, on port 8002 (experiments/v2/judge.py)
 #
 # Everything must fit on one L40S (48 GB). The tenk process also keeps the embedder and
 # reranker on the GPU (3–6 GB per process), so vLLM gets 72% of memory by default (the 27B 80%).
@@ -27,7 +27,7 @@ case "$preset" in
     args=(--dtype bfloat16 --tool-call-parser qwen3_coder --reasoning-parser qwen3)
     ;;
   qwen3.5-9b-v6)
-    # The merged V6 fine-tune (scripts/finetune.sh merge); same settings as its base.
+    # The merged V6 fine-tune (archive/scripts/finetune.sh merge); same settings as its base.
     model=${TUNED_MODEL:-data/finetune/v6/merged}
     name=${TUNED_NAME:-tenk/qwen3.5-9b-v6}  # variants: TUNED_MODEL=data/finetune/v6-r64/merged TUNED_NAME=tenk/qwen3.5-9b-v6-r64
     args=(--dtype bfloat16 --tool-call-parser qwen3_coder --reasoning-parser qwen3)

@@ -1,11 +1,9 @@
-"""Deterministic scoring of answers and agent traces against gold questions."""
+"""Deterministic scoring of numeric answers against gold questions: expected values matched
+within the question's tolerance, after unit normalization."""
 
-import json
-
-from tenk_agent import gold
-from tenk_agent.agent import BUDGET_EXHAUSTED
-from tenk_agent.store import Store
-from tenk_agent.verify import numbers_in, unit_scale, verify_claim
+from tenk_agent.corpus import resolve_company
+from tenk_agent.evaluation import gold
+from tenk_agent.generation.verify import numbers_in, unit_scale
 
 
 def _absolute(value: float, unit: str | None) -> tuple[float, bool]:
@@ -14,7 +12,7 @@ def _absolute(value: float, unit: str | None) -> tuple[float, bool]:
     return (value * scale, True) if scale is not None else (value, False)
 
 
-def _matches(expected: dict, claim_value, claim_unit, tolerance: float) -> bool:
+def matches(expected: dict, claim_value, claim_unit, tolerance: float) -> bool:
     try:
         value = float(str(claim_value).replace(",", "").replace("$", "").replace("%", ""))
     except ValueError:
@@ -45,7 +43,7 @@ def score_numbers(q: dict, answer: dict) -> dict | None:
         company = value.get("company", default_company)
         year = value.get("fiscal_year", default_year)
         hit = any(
-            _matches(value, c["value"], c.get("unit"), tolerance)
+            matches(value, c["value"], c.get("unit"), tolerance)
             and (year is None or c.get("fiscal_year") in (None, year))
             and (company is None or not c.get("company") or _same_company(c["company"], company))
             for c in claims
@@ -53,7 +51,7 @@ def score_numbers(q: dict, answer: dict) -> dict | None:
         if not hit and not claims:
             # Unstructured answer: fall back to numbers in the text (single values only).
             hit = len(expected) == 1 and any(
-                _matches(value, n.value, _text_unit(n), tolerance)
+                matches(value, n.value, text_unit(n), tolerance)
                 for n in numbers_in(answer.get("answer", ""))
             )
         matched.append(hit)
@@ -61,43 +59,11 @@ def score_numbers(q: dict, answer: dict) -> dict | None:
 
 
 def _same_company(claimed: str, ticker: str) -> bool:
-    from tenk_agent.corpus import resolve_company
-
     company = resolve_company(claimed)
     return company is not None and company.ticker == ticker
 
 
-def _text_unit(number) -> str | None:
+def text_unit(number) -> str | None:
     if number.percent:
         return "percent"
     return {1e3: "USD thousands", 1e6: "USD millions", 1e9: "USD billions"}.get(number.scale)
-
-
-def citation_accuracy(answer: dict, store: Store) -> dict:
-    """Numeric claims whose cited chunks contain the value (or reproduce the calculation)."""
-    numeric = [c for c in answer.get("claims", []) if c.get("value") is not None]
-    accurate = sum(verify_claim(c, store)["status"] in ("verified", "calculated") for c in numeric)
-    return {"numeric_claims": len(numeric), "accurate": accurate}
-
-
-def agent_metrics(q: dict, trace: dict, reference: dict | None = None) -> dict:
-    spans = [s for s in trace.get("spans", []) if s["type"] == "tool"]
-    # Calls refused for exceeding the tool budget had valid arguments; they count as
-    # unnecessary, not as incorrect calls.
-    over_budget = [s for s in spans if s["is_error"] and BUDGET_EXHAUSTED in s["output"]]
-    tools = [s for s in spans if s not in over_budget]
-    used = {s["name"] for s in tools}
-    expected = set(q.get("expected_tools") or [])
-    signatures = [(s["name"], json.dumps(s["input"], sort_keys=True)) for s in tools]
-    duplicates = len(signatures) - len(set(signatures))
-    beyond = max(0, len(tools) - len(reference["steps"])) if reference else None
-    return {
-        "tool_calls": len(tools),
-        "tools_used": sorted(used),
-        # Tool selection: every tool a correct answer needs was used (none needed -> 1).
-        "tool_selection": expected <= used,
-        "valid_calls": sum(not s["is_error"] for s in tools),
-        "duplicate_calls": duplicates,
-        "over_budget_calls": len(over_budget),
-        "calls_beyond_reference": beyond,
-    }

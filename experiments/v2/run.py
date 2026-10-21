@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+"""V2 experiment: answer the gold questions from V1's retrieval with one model call each, and
+score the answers. Spec and results: experiments/V2_GENERATION.md.
+
+  V1 pipeline (unchanged) ─► context: retrieved · oracle · none ─► one model call ─► claims
+  correct, declined, grounded, gold cited   (score.py; text answers after judge.py)
+
+  taskset -c 16-31 python experiments/v2/run.py
+  taskset -c 16-31 python experiments/v2/run.py --question aapl-tariffs-fy2025
+  taskset -c 16-31 python experiments/v2/run.py --context retrieved
+  taskset -c 16-31 python experiments/v2/run.py --model openai:Qwen/Qwen3.5-9B --label 9b
+  taskset -c 16-31 python experiments/v2/run.py --dry-run --question nvda-rd-fy2025
+
+Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and the GPU for V1's embedder
+and reranker. Text answers are scored afterwards by the LLM judge: stop the model, serve the
+judge, run judge.py. Writes output/generation/<label>/: config.yaml (the settings used),
+results.json (per question and context: the chunks shown, answer, claims, scores, raw
+replies), scores.json (per context). --dry-run writes the prompts to prompts/ instead.
+"""
+
+import argparse
+import json
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+import yaml
+from score import grade, summarize
+
+from tenk_agent.evaluation import gold as gold_set
+from tenk_agent.evaluation.retrieval import gold_chunks
+from tenk_agent.generation.generate import build_prompt, generate
+from tenk_agent.models import get_model
+from tenk_agent.retrieval.search import SubQuestionRetriever
+from tenk_agent.store import ChunkRecord, Store
+
+ROOT = Path(__file__).resolve().parents[2]
+CONFIG = Path(__file__).resolve().parent / "config.yaml"
+CONTEXTS = ("retrieved", "oracle", "none")
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument("--config", type=Path, default=CONFIG, help="default: %(default)s")
+    ap.add_argument("--question", action="append", help="only these gold ids (default: all)")
+    ap.add_argument("--context", action="append", choices=CONTEXTS, help="default: run.contexts")
+    ap.add_argument("--model", help="override generation.model")
+    ap.add_argument("--label", help="override run.label")
+    ap.add_argument("--dry-run", action="store_true", help="write the prompts, call no model")
+    args = ap.parse_args()
+    config = yaml.safe_load(args.config.read_text())
+    run, generation = config["run"], config["generation"]
+    run.update({k: v for k, v in (("label", args.label), ("contexts", args.context)) if v})
+    if args.model:
+        generation["model"] = args.model
+    retrieval = yaml.safe_load((ROOT / config["retrieval"]).read_text())["retrieval"]
+    config["retrieval"] = {"from": config["retrieval"]} | retrieval
+    out = ROOT / "output" / "generation" / run["label"]
+    out.mkdir(parents=True, exist_ok=True)
+
+    store = Store(ROOT / run["db"])
+    questions = [json.loads(line) for line in (ROOT / run["gold"]).read_text().splitlines()]
+    if args.question:
+        questions = [q for q in questions if q["id"] in args.question]
+    if not config["score"]["restatements"]:
+        questions = [q | {"acceptable_sources": []} for q in questions]
+
+    # 1. Retrieve (V1) and resolve each question's gold chunks.
+    try:
+        pipeline = SubQuestionRetriever.from_settings(store, retrieval)
+    except RuntimeError as e:
+        sys.exit(str(e))
+    prepared = []
+    for q in questions:
+        per_source = gold_chunks(store, q).per_source
+        primary = gold_set.resolve_evidence(store, q)[: len(q.get("sources", []))]
+        retrieved = pipeline.search(q["question"], retrieval["k"]).chunks
+        contexts = {
+            "retrieved": retrieved,
+            "oracle": oracle_context(retrieved, per_source, primary, store, retrieval["k"]),
+            "none": [],
+        }
+        for name in run["contexts"]:
+            prepared.append((q, name, contexts[name], per_source))
+        print(f"{q['id']:<40} retrieved {len(retrieved)}, oracle +{_added(contexts)}")
+
+    prompt = ROOT / generation["prompt"]
+    if args.dry_run:
+        folder = out / "prompts"
+        folder.mkdir(exist_ok=True)
+        for q, name, chunks, _ in prepared:
+            system, user = build_prompt(q["question"], chunks, store, prompt)
+            (folder / f"{q['id']}.{name}.md").write_text(
+                f"# System\n\n{system}\n\n# User\n\n{user}\n"
+            )
+        print(f"prompts in {folder}")
+        return
+
+    # 2. Generate: one call per (question, context), in parallel.
+    model = get_model(
+        generation["model"], base_url=generation["base_url"], thinking=generation["thinking"]
+    )
+
+    def answer(task) -> dict:
+        q, name, chunks, per_source = task
+        system, user = build_prompt(q["question"], chunks, store, prompt)
+        result = generate(model, system, user, store, generation["max_tokens"])
+        context = [c.id for c in chunks]
+        row = {
+            "id": q["id"],
+            "context": name,
+            "split": q.get("split"),
+            "kind": q.get("kind"),
+            "question": q["question"],
+            "should_abstain": bool(q.get("should_abstain")),
+            "required_points": q.get("required_points") or [],
+            "chunks": context,
+            **result.answer,
+            **grade(q, result.answer, context, per_source),
+            "calls": len(result.replies),
+            "seconds": result.seconds,
+            "input_tokens": result.input_tokens,
+            "output_tokens": result.output_tokens,
+            "replies": result.replies,
+        }
+        print(f"{q['id']:<40} {name:<9} {_verdict(row)} {result.seconds:.1f}s")
+        return row
+
+    with ThreadPoolExecutor(max_workers=run["workers"]) as pool:
+        rows = list(pool.map(answer, prepared))
+
+    scores = {n: summarize([r for r in rows if r["context"] == n]) for n in run["contexts"]}
+    _write(out / "results.json", rows)
+    _write(out / "scores.json", scores)
+    (out / "config.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
+    print_scores(scores)
+    unjudged = sum(len(s["unjudged"]) for s in scores.values())
+    if unjudged:
+        print(f"\n{unjudged} text answers unjudged: serve the judge, then run judge.py")
+
+
+def oracle_context(
+    retrieved: list[ChunkRecord],
+    per_source: list[set[str]],
+    primary: list[list[str]],
+    store: Store,
+    k: int,
+) -> list[ChunkRecord]:
+    """V1's top k with every gold source it missed swapped in: the source's own chunk takes
+    the place of the lowest-ranked chunk that is no source's gold. Questions V1 already
+    answers in full get the same context as `retrieved`, so the two differ only where
+    retrieval failed. `per_source`: each source's gold chunks (restatements included);
+    `primary`: the chunks holding the source's own evidence quote."""
+    chunks = list(retrieved[:k])
+    gold = set().union(*per_source) if per_source else set()
+    for ids, own in zip(per_source, primary, strict=True):
+        if not own or any(c.id in ids for c in chunks):
+            continue
+        add = store.get_chunk(own[0])
+        drop = next((i for i in reversed(range(len(chunks))) if chunks[i].id not in gold), None)
+        if len(chunks) < k or drop is None:  # room left, or every place is gold: go over k
+            chunks.append(add)
+        else:
+            chunks[drop] = add
+    return chunks
+
+
+def print_scores(scores: dict) -> None:
+    rows = [
+        ("Correct", "correct"),
+        ("Declined when it should", "declined_when_should"),
+        ("Declined when answerable", "declined_when_answerable"),
+        ("Numbers stated", "numbers_matched"),
+        ("Numbers in claims", "numbers_claimed"),
+        ("Points covered", "points_covered"),
+        ("Numeric claims grounded", "grounded"),
+        ("Gold sources cited", "gold_cited"),
+        ("Correct | all gold shown", "correct_with_all_gold"),
+        ("Correct | gold missing", "correct_with_gold_missing"),
+    ]
+    names = list(scores)
+    print("\n" + f"{'':<26}" + "".join(f"{n:>11}" for n in names))
+    for label, key in rows:
+        cells = [scores[n][key] for n in names]
+        print(f"{label:<26}" + "".join(f"{_pct(v):>11}" for v in cells))
+    print(f"{'Seconds (mean)':<26}" + "".join(f"{scores[n]['seconds_mean']:>11.1f}" for n in names))
+
+
+def _added(contexts: dict) -> int:
+    shown = {c.id for c in contexts["retrieved"]}
+    return sum(c.id not in shown for c in contexts["oracle"])
+
+
+def _verdict(row: dict) -> str:
+    if row["format_error"]:
+        return "format error"
+    mark = {True: "right", False: "wrong", None: "unjudged"}[row["correct"]]
+    n = row["numeric_claims"]
+    grounded = f"grounded {row['grounded']}/{n}" if n else ""
+    return f"{mark:<8} {'declined' if row['abstained'] else 'answered':<8} {grounded}"
+
+
+def _pct(value) -> str:
+    return "–" if value is None else f"{value:.1%}"
+
+
+def _write(path: Path, data) -> None:
+    path.write_text(json.dumps(data, indent=1, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

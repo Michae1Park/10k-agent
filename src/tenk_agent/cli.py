@@ -1,250 +1,293 @@
+"""tenk: the V0–V2 pipeline from the command line. Settings: config.yaml (--config, TENK_CONFIG).
+
+tenk fetch                     download the corpus 10-Ks from EDGAR
+tenk build                     V0 preprocess + chunk every filing, then V1's database + vectors
+tenk search "question"         V1: sub-questions and the top k chunks
+tenk ask "question"            V2: one cited answer
+tenk chat                      V2: type questions, get answers (models loaded once)
+tenk gold [show|render|verify] review a gold question set
+"""
+
 import argparse
 import json
 import logging
 import os
 import sys
-from collections import Counter
 from dataclasses import asdict
 from datetime import date
 from pathlib import Path
 
-from tenk_agent import gold
-from tenk_agent.chunking import ChunkSizes
-from tenk_agent.config import Settings
+from tenk_agent import config as config_file
 from tenk_agent.corpus import COMPANIES, FISCAL_YEARS, company_by_ticker
-from tenk_agent.edgar import EdgarClient, EdgarError, fetch_company
-from tenk_agent.hierarchy import HierarchySizes
-from tenk_agent.ingest import coverage_problems, db_path, ingest
-from tenk_agent.store import Store
+from tenk_agent.store import ChunkRecord, Store
 
-EXPECTED_FILINGS = len(COMPANIES) * len(FISCAL_YEARS)
-V0_GOLD_TARGET = 30
+GOLD = Path("experiments/v2/testdata/generation-gold-fy2025.jsonl")
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="tenk")
-    parser.add_argument("--data-dir", type=Path, help="default: config.yaml data_dir")
+    parser = argparse.ArgumentParser(
+        prog="tenk", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--config", type=Path, help="default: $TENK_CONFIG or config.yaml")
     commands = parser.add_subparsers(dest="command", required=True)
 
     fetch = commands.add_parser("fetch", help="download the corpus 10-Ks from EDGAR")
     fetch.add_argument("--tickers", nargs="*", help="subset of corpus tickers (default: all)")
     fetch.add_argument("--refresh", action="store_true", help="re-download cached files")
 
-    ingest_cmd = commands.add_parser("ingest", help="parse and chunk filings into the database")
-    ingest_cmd.add_argument("--tickers", nargs="*", help="subset of corpus tickers (default: all)")
-
-    gold_cmd = commands.add_parser("gold", help="review gold questions (default: list all)")
-    gold_cmd.add_argument(
-        "--gold",
-        type=Path,
-        default=gold.GOLD_PATH,
-        help="question file, e.g. eval/gold/stress.jsonl",
+    build = commands.add_parser("build", help="V0 chunks of every filing → V1 database")
+    stages = ("chunk", "load", "embed", "pages")  # build.STAGES
+    build.add_argument(
+        "--stage", action="append", choices=stages, help="default: chunk, load, embed"
     )
-    gold_actions = gold_cmd.add_subparsers(dest="gold_action")
+    build.add_argument("--filing", action="append", help="TICKER/FYyear (default: all fetched)")
+    build.add_argument("--method", action="append", help="default: build.methods")
+    build.add_argument("--jobs", type=int, default=8, help="chunk: filings at once")
+    build.add_argument("--out", type=Path, help="default: build.out")
+
+    search = commands.add_parser("search", help="V1: the chunks that answer a question")
+    search.add_argument("question")
+    search.add_argument("-k", type=int, help="default: retrieval.k")
+
+    for name, text in (("ask", "V2: answer one question"), ("chat", "V2: answer typed questions")):
+        mode = commands.add_parser(name, help=text)
+        if name == "ask":
+            mode.add_argument("question")
+            mode.add_argument("--json", action="store_true", help="print the answer's JSON")
+        mode.add_argument("--model", help="default: generation.model")
+
+    gold = commands.add_parser("gold", help="review a gold question set (default: list it)")
+    gold.add_argument("--gold", type=Path, default=GOLD, help="default: %(default)s")
+    gold_actions = gold.add_subparsers(dest="gold_action")
     show = gold_actions.add_parser("show", help="print a question with its source text")
     show.add_argument("id")
-    render = gold_actions.add_parser("render", help="render the question file as a full PDF plus a summary")
-    render.add_argument("--out", type=Path, help="default: output/gold/<file name>.pdf")
+    render = gold_actions.add_parser("render", help="the set as a full PDF plus a summary")
+    render.add_argument("--out", type=Path, help="default: next to the set")
     verify = gold_actions.add_parser("verify", help="record your sign-off on questions")
     verify.add_argument("ids", nargs="+")
     verify.add_argument("--by", required=True, help="reviewer initials")
-    commands.add_parser("check", help="check the V0 exit criteria")
-
-    commands.add_parser("embed", help="embed chunks for dense retrieval (TENK_EMBEDDER)")
-    search = commands.add_parser("search", help="search the filings")
-    search.add_argument("query")
-    search.add_argument("--tickers", nargs="*")
-    search.add_argument("--years", nargs="*", type=int)
-    search.add_argument("--items", nargs="*")
-    search.add_argument("-k", type=int, default=5)
-    search.add_argument("--mode", choices=("keyword", "dense", "hybrid"))
-    search.add_argument("--reranker", help="reranker spec, or 'none'")
-
-    for name, help_text in (
-        ("ask", "answer a question from retrieved passages (Ask mode)"),
-        ("research", "answer with the research agent (Research mode)"),
-    ):
-        mode = commands.add_parser(name, help=help_text)
-        mode.add_argument("question")
-        mode.add_argument("--model", help="model spec, e.g. openai:Qwen/Qwen3.6-27B-FP8")
-        mode.add_argument("--json", action="store_true", help="print the full answer JSON")
-        mode.add_argument("--no-verify", action="store_true", help="skip the verification pass")
-
-    serve = commands.add_parser("serve", help="run the API server")
-    serve.add_argument("--host", default="127.0.0.1")
-    serve.add_argument("--port", type=int, default=8000)
-
-    eval_cmd = commands.add_parser("eval", help="run and report evaluations")
-    eval_actions = eval_cmd.add_subparsers(dest="eval_action", required=True)
-    run = eval_actions.add_parser("run", help="run a system over the gold set")
-    run.add_argument("system", choices=("retrieval", "ask", "research", "closed-book"))
-    run.add_argument("--label", help="run name (default: <system>-<timestamp>)")
-    run.add_argument("--split", default="dev", help="dev, test or all (V6 questions: heldout)")
-    run.add_argument("--gold", type=Path, help="question file (default: the gold set)")
-    run.add_argument("--ids", nargs="*", help="only these question IDs")
-    run.add_argument("--limit", type=int)
-    run.add_argument(
-        "--include-unverified",
-        action="store_true",
-        help="also run draft (unverified) questions; results are marked as such",
-    )
-    run.add_argument(
-        "--judge",
-        action="store_true",
-        help="LLM-judge metrics inline (the judge server must be up; or: tenk eval judge)",
-    )
-    run.add_argument("--no-verify", action="store_true", help="skip the verification pass")
-    run.add_argument(
-        "--no-repair", action="store_true", help="don't let the agent fix failed claims"
-    )
-    run.add_argument("--workers", type=int, default=4)
-    run.add_argument("--resume", action="store_true", help="continue an interrupted run")
-    run.add_argument("--model", help="model spec (default: TENK_MODEL)")
-    run.add_argument("--mode", choices=("keyword", "dense", "hybrid"), help="retrieval mode")
-    run.add_argument("--reranker", help="reranker spec, or 'none'")
-    run.add_argument(
-        "--no-slot-search",
-        action="store_true",
-        help="one search, not one per company and filing named in the question",
-    )
-    run.add_argument("--structured-data", action="store_true", help="ablation: add the XBRL tool")
-    run.add_argument("--max-tool-calls", type=int, help="agent tool budget (default: config)")
-    judge_cmd = eval_actions.add_parser(
-        "judge", help="add LLM-judge metrics to finished runs (only the judge model is served)"
-    )
-    judge_cmd.add_argument("labels", nargs="+")
-    judge_cmd.add_argument("--workers", type=int, default=4)
-    rescore = eval_actions.add_parser("rescore", help="recompute deterministic metrics of a run")
-    rescore.add_argument("label")
-    report = eval_actions.add_parser("report", help="results table from runs")
-    report.add_argument("columns", nargs="+", help="NAME=run-label, e.g. V1=v1-retrieval")
-    report.add_argument("--out", type=Path, help="also write the table to this file")
-    compare = eval_actions.add_parser(
-        "compare", help="baseline vs other runs: intervals, paired tests, error analysis, charts"
-    )
-    compare.add_argument("columns", nargs="+", help="NAME=run-label; the first is the baseline")
-    compare.add_argument("--out", type=Path, help="report path without extension")
-    calibrate = eval_actions.add_parser("calibrate", help="LLM-judge calibration")
-    calibrate.add_argument("action", choices=("export", "score"))
-    calibrate.add_argument("label", help="run label")
-    calibrate.add_argument("--answers", type=int, default=30)
-
-    finetune = commands.add_parser(
-        "finetune", help="V6 fine-tuning data (docs/V6_FINETUNE_ABLATION.md)"
-    )
-    ft_actions = finetune.add_subparsers(dest="ft_action", required=True)
-    questions = ft_actions.add_parser("questions", help="generate questions with XBRL answers")
-    questions.add_argument("--out", type=Path, help="default: <data_dir>/questions.jsonl")
-    questions.add_argument("--heldout", type=float, default=0.2, help="share of companies held out")
-    rollouts = ft_actions.add_parser("rollouts", help="the agent answers them; attempts are scored")
-    rollouts.add_argument("--questions", type=Path, help="default: <data_dir>/questions.jsonl")
-    rollouts.add_argument("--out", type=Path, help="default: <data_dir>/rollouts.jsonl")
-    rollouts.add_argument("--split", default="train")
-    rollouts.add_argument("--samples", type=int, default=2, help="attempts per question")
-    rollouts.add_argument("--temperature", type=float, default=0.7)
-    rollouts.add_argument("--workers", type=int, default=4)
-    rollouts.add_argument("--limit", type=int)
-    dataset = ft_actions.add_parser("dataset", help="passing attempts -> SFT records")
-    dataset.add_argument("--rollouts", type=Path, help="default: <data_dir>/rollouts.jsonl")
-    dataset.add_argument("--out", type=Path, help="default: <data_dir>/sft.jsonl")
-    dataset.add_argument("--split", default="train")
-    dataset.add_argument("--max-per-question", type=int, default=2)
-    dataset.add_argument("--max-tool-errors", type=int, default=0)
 
     args = parser.parse_args(argv)
-    args.data_dir = args.data_dir or Settings.load().data_dir
+    settings = config_file.load(args.config)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     for noisy in ("httpx", "httpx2", "sentence_transformers", "anthropic", "openai"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
-
     handlers = {
         "fetch": _fetch,
-        "ingest": _ingest,
-        "gold": _gold,
-        "check": _check,
-        "embed": _embed,
+        "build": _build,
         "search": _search,
-        "ask": _answer,
-        "research": _answer,
-        "serve": _serve,
-        "eval": _eval,
-        "finetune": _finetune,
+        "ask": _ask,
+        "chat": _chat,
+        "gold": _gold,
     }
-    return handlers[args.command](args)
+    return handlers[args.command](args, settings)
 
 
-def _fetch(args: argparse.Namespace) -> int:
+# --- fetch, build ----------------------------------------------------------------------------
+
+
+def _fetch(args: argparse.Namespace, settings: dict) -> int:
+    from tenk_agent.edgar import EdgarClient, EdgarError, fetch_company
+
     user_agent = os.environ.get("SEC_USER_AGENT")
     if not user_agent:
         print("Set SEC_USER_AGENT, e.g. 'Name you@example.com'", file=sys.stderr)
         return 2
-
+    data_dir = Path(settings["data_dir"])
     companies = [company_by_ticker(t) for t in args.tickers] if args.tickers else list(COMPANIES)
     client = EdgarClient(user_agent)
-    manifest_path = args.data_dir / "raw" / "manifest.json"
+    manifest_path = data_dir / "raw" / "manifest.json"
     manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
-
     failed = False
     for company in companies:
         try:
-            filings = fetch_company(client, company, FISCAL_YEARS, args.data_dir, args.refresh)
+            filings = fetch_company(client, company, FISCAL_YEARS, data_dir, args.refresh)
         except EdgarError as error:
             logging.error("%s", error)
             failed = True
             continue
         manifest[company.ticker] = [asdict(f) for f in filings]
-
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     return 1 if failed else 0
 
 
-def _ingest(args: argparse.Namespace) -> int:
-    tickers = [t.upper() for t in args.tickers] if args.tickers else None
-    s = _settings(args)
-    store = ingest(
-        args.data_dir,
-        tickers,
-        ChunkSizes(s.chunk_chars, s.table_chars, s.overlap_chars),
-        s.layout,
-        HierarchySizes(s.parent_chars, s.child_chars, s.table_chars),
-    )
-    for problem in coverage_problems(store, EXPECTED_FILINGS):
-        logging.warning("%s", problem)
+def _build(args: argparse.Namespace, settings: dict) -> int:
+    from tenk_agent.build import build, filing_dirs
+
+    filings = filing_dirs(Path(settings["data_dir"]), args.filing)
+    out = args.out or Path(settings["build"]["out"])
+    methods = args.method or settings["build"]["methods"]
+    build(filings, out, settings, methods, args.stage or ["chunk", "load", "embed"], args.jobs)
     return 0
 
 
-def _gold(args: argparse.Namespace) -> int:
-    if args.gold_action == "show":
-        return _gold_show(args)
-    if args.gold_action == "verify":
-        return _gold_verify(args)
-    if args.gold_action == "render":
-        return _gold_render(args)
-    return _gold_list(args)
+# --- search, ask, chat -------------------------------------------------------------------------
 
 
-def _gold_list(args: argparse.Namespace) -> int:
+def _retriever(settings: dict):
+    from tenk_agent.retrieval.search import SubQuestionRetriever
+
+    store = Store(Path(settings["db"]))
+    return store, SubQuestionRetriever.from_settings(store, settings["retrieval"])
+
+
+def _search(args: argparse.Namespace, settings: dict) -> int:
+    store, retriever = _retriever(settings)
+    result = retriever.search(args.question, args.k or settings["retrieval"]["k"])
+    for s in result.searches:
+        where = f"{s.ticker or 'all companies'} {s.fiscal_years or 'all years'}"
+        print(f"sub-question ({where}): {s.query}")
+    print()
+    scores = {cid: score for s in result.searches for cid, score in s.reranked}
+    for rank, c in enumerate(result.chunks, 1):
+        preview = " ".join(c.text.split())[:300]
+        print(f"{rank}. {c.id} [{c.kind}] rerank {scores.get(c.id, 0):.2f}\n   {preview}\n")
+    return 0
+
+
+def _ask(args: argparse.Namespace, settings: dict) -> int:
+    answer = _answerer(args, settings)
+    result, chunks = answer(args.question)
+    if args.json:
+        print(json.dumps(result.answer | {"chunks": [c.id for c in chunks]}, indent=2))
+    else:
+        show(result, chunks)
+    return 0
+
+
+def _chat(args: argparse.Namespace, settings: dict) -> int:
+    import readline  # noqa: F401  (line editing and history for input())
+
+    print("loading retrieval and model ...", flush=True)
+    answer = _answerer(args, settings)
+    generation = settings["generation"]
+    print(
+        f"{generation['model']} · k {settings['retrieval']['k']} · empty line or Ctrl-D to quit\n"
+    )
+    while True:
+        try:
+            question = input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return 0
+        if question in ("", "exit", "quit"):
+            return 0
+        try:
+            result, chunks = answer(question)
+        except KeyboardInterrupt:
+            print("\n(interrupted)\n")
+            continue
+        except Exception as e:  # a dropped server shouldn't end the session
+            hint = f" (is {generation['model']} served at {generation['base_url']}?)"
+            hint = hint if "Connection" in type(e).__name__ else ""
+            print(f"\nerror: {type(e).__name__}: {e}{hint}\n")
+            continue
+        show(result, chunks)
+
+
+def _answerer(args: argparse.Namespace, settings: dict):
+    """question → (Generation, chunks shown): V1's top k, then one V2 model call."""
+    from tenk_agent.generation.generate import build_prompt, generate
+    from tenk_agent.models import get_model
+
+    generation = settings["generation"]
+    store, retriever = _retriever(settings)
+    model = get_model(
+        args.model or generation["model"],
+        base_url=generation["base_url"],
+        thinking=generation["thinking"],
+    )
+    prompt = Path(generation["prompt"])
+
+    def answer(question: str):
+        chunks = retriever.search(question, settings["retrieval"]["k"]).chunks
+        system, user = build_prompt(question, chunks, store, prompt)
+        return generate(model, system, user, store, generation["max_tokens"]), chunks
+
+    return answer
+
+
+def show(result, chunks: list[ChunkRecord]) -> None:
+    """The chunks shown, the answer (with its table and scope notice), each claim's status and
+    citations, and the call's time and tokens."""
+    answer = result.answer
+    print(f"\nChunks ({len(chunks)})")
+    for i, c in enumerate(chunks, 1):
+        span = list(dict.fromkeys(map(str, c.printed_pages or c.pages or [])))  # 36-36 → 36
+        pages = f" p.{'-'.join(span)}" if span else ""
+        print(f"  {i:>2}. {c.id}  {c.ticker} FY{c.fiscal_year} item {c.item} {c.kind}{pages}")
+
+    flags = [
+        f
+        for f, on in (("DECLINED", answer["abstained"]), ("FORMAT ERROR", answer["format_error"]))
+        if on
+    ]
+    print(f"\nAnswer{' [' + ', '.join(flags) + ']' if flags else ''}\n")
+    print(answer["answer"])
+    if answer.get("table"):
+        print("\n" + _table(answer["table"]))
+    if answer.get("scope_notice"):
+        print(f"\nScope: {answer['scope_notice']}")
+
+    if answer["claims"]:
+        print(f"\nClaims ({len(answer['claims'])})")
+        for c in answer["claims"]:
+            unit = f" {c['unit']}" if c["unit"] else ""
+            value = f" = {c['value']}{unit}" if c["value"] is not None else ""
+            print(f"  [{c['id']}] {c['status']:<10} {c['text']}{value}")
+            reason = f" · {c['status_reason']}" if c["status_reason"] else ""
+            print(f"       cites {', '.join(c['chunk_ids']) or '–'}{reason}")
+
+    retry = " · JSON retry" if len(result.replies) > 1 else ""
+    tokens = f"{result.input_tokens} in / {result.output_tokens} out"
+    print(f"\n{result.seconds:.1f}s · {tokens}{retry}\n")
+
+
+def _table(table: dict) -> str:
+    """The answer's table ({columns, rows}) as aligned text; anything else as-is."""
+    columns, rows = table.get("columns"), table.get("rows")
+    if not isinstance(columns, list) or not isinstance(rows, list):
+        return str(table)
+    cells = [[str(c) for c in columns]] + [[str(v) for v in r] for r in rows if isinstance(r, list)]
+    widths = [max(len(r[i]) for r in cells if i < len(r)) for i in range(len(columns))]
+    lines = ["  ".join(v.ljust(w) for v, w in zip(r, widths, strict=False)) for r in cells]
+    return "\n".join([lines[0], "  ".join("-" * w for w in widths), *lines[1:]])
+
+
+# --- gold --------------------------------------------------------------------------------------
+
+
+def _gold(args: argparse.Namespace, settings: dict) -> int:
+    handlers = {"show": _gold_show, "render": _gold_render, "verify": _gold_verify}
+    return handlers.get(args.gold_action, _gold_list)(args, settings)
+
+
+def _gold_list(args: argparse.Namespace, settings: dict) -> int:
     """One line per question: verification, evidence resolution and XBRL cross-check."""
-    store = Store(_settings(args).db_path)
+    from tenk_agent.evaluation import gold
+
+    store = Store(Path(settings["db"]))
     for q in gold.load(args.gold):
         resolved = gold.resolve_evidence(store, q)
-        checks = gold.xbrl_checks(q, args.data_dir)
+        checks = gold.xbrl_checks(q, Path(settings["data_dir"]))
         status = "verified  " if gold.is_verified(q) else "UNVERIFIED"
         evidence = f"evidence {sum(map(bool, resolved))}/{len(resolved)}" if resolved else ""
         matched = sum(c.matched_concept is not None for c in checks)
         xbrl = f"xbrl {matched}/{len(checks)}" if checks else ""
-        print(f"{status} {q['split']:4} {q['id']:36} {evidence:14} {xbrl}")
+        print(f"{status} {q['split']:4} {q['id']:40} {evidence:14} {xbrl}")
     return 0
 
 
-def _gold_show(args: argparse.Namespace) -> int:
+def _gold_show(args: argparse.Namespace, settings: dict) -> int:
     """Everything a reviewer needs to verify one question against the filing."""
+    from tenk_agent.evaluation import gold
+
     q = next((q for q in gold.load(args.gold) if q["id"] == args.id), None)
     if q is None:
         print(f"No gold question {args.id!r}", file=sys.stderr)
         return 1
-    store = Store(_settings(args).db_path)
+    store = Store(Path(settings["db"]))
     kind = q["category"] + (f" / {q['failure_mode']}" if q.get("failure_mode") else "")
     print(f"{q['id']}  [{q['split']}, {kind}, {q['origin']}]")
     print(f"Q: {q['question']}")
@@ -269,26 +312,28 @@ def _gold_show(args: argparse.Namespace) -> int:
         print(f"  evidence: {source['evidence']}")
         print(f"  found in: {', '.join(chunk_ids) or 'NOT FOUND'}")
 
-    for check in gold.xbrl_checks(q, args.data_dir):
+    for check in gold.xbrl_checks(q, Path(settings["data_dir"])):
         match = check.matched_concept or "no matching fact"
         print(f"XBRL: {check.value:,} {check.unit} -> {match}")
     print(f"\nVerified: {q.get('verified_by') or 'no'} {q.get('verified_on') or ''}".rstrip())
     return 0
 
 
-def _gold_render(args: argparse.Namespace) -> int:
-    from tenk_agent.gold_render import render_pdf, render_summary_pdf
+def _gold_render(args: argparse.Namespace, settings: dict) -> int:
+    from tenk_agent.evaluation.render import render_pdf, render_summary_pdf
 
-    out = args.out or Path("output/gold") / f"{args.gold.stem}.pdf"
-    store = Store(_settings(args).db_path)
-    count = render_pdf(args.gold, store, args.data_dir, out)
+    out = args.out or args.gold.with_suffix(".pdf")
+    store = Store(Path(settings["db"]))
+    count = render_pdf(args.gold, store, Path(settings["data_dir"]), out)
     summary = out.with_name(f"{out.stem}-summary.pdf")
     render_summary_pdf(args.gold, summary)
     print(f"Wrote {count} questions to {out} and the summary to {summary}")
     return 0
 
 
-def _gold_verify(args: argparse.Namespace) -> int:
+def _gold_verify(args: argparse.Namespace, settings: dict) -> int:
+    from tenk_agent.evaluation import gold
+
     questions = gold.load(args.gold)
     unknown = gold.mark_verified(questions, args.ids, args.by, date.today())
     if unknown:
@@ -296,248 +341,6 @@ def _gold_verify(args: argparse.Namespace) -> int:
         return 1
     gold.save(questions, args.gold)
     print(f"Marked {len(args.ids)} question(s) verified by {args.by}")
-    return 0
-
-
-def _check(args: argparse.Namespace) -> int:
-    """V0 exit criteria: all filings ingested with Items 1A/7/8, and 30 verified gold questions."""
-    store = Store(_settings(args).db_path)
-    questions = gold.load()
-    problems = coverage_problems(store, EXPECTED_FILINGS) + gold.validate(questions)
-
-    for q in questions:
-        # resolve_evidence covers primary then acceptable sources; only primaries must resolve.
-        primary = zip(q.get("sources", []), gold.resolve_evidence(store, q), strict=False)
-        for source, chunk_ids in primary:
-            if not chunk_ids:
-                problems.append(
-                    f"{q['id']}: evidence not found in "
-                    f"{source['company']} FY{source['fiscal_year']}"
-                )
-
-    verified = sum(map(gold.is_verified, questions))
-    if verified < V0_GOLD_TARGET:
-        problems.append(f"{verified}/{V0_GOLD_TARGET} gold questions verified")
-
-    categories = Counter(q["category"] for q in questions)
-    print(f"Filings ingested: {len(store.coverage())}/{EXPECTED_FILINGS}")
-    print(
-        f"Gold questions: {len(questions)} ({verified} verified) — "
-        + ", ".join(f"{name} {count}" for name, count in sorted(categories.items()))
-    )
-    for problem in problems:
-        print(f"  - {problem}")
-    print("V0 complete" if not problems else f"V0 incomplete: {len(problems)} problem(s)")
-    return 0 if not problems else 1
-
-
-def _settings(args: argparse.Namespace) -> Settings:
-    settings = Settings.load()
-    settings.data_dir = args.data_dir
-    return settings
-
-
-def _embed(args: argparse.Namespace) -> int:
-    from tenk_agent.embeddings import get_embedder
-    from tenk_agent.retrieval import embed_corpus
-
-    settings = _settings(args)
-    store = Store(settings.db_path)
-    embedded = embed_corpus(store, get_embedder(settings.embedder, settings.device))
-    total = store.embedding_count()
-    print(f"Embedded {embedded} chunks and children; {total} chunks total ({settings.embedder})")
-    return 0
-
-
-def _search(args: argparse.Namespace) -> int:
-    from tenk_agent.retrieval import Retriever
-
-    settings = _settings(args)
-    overrides = {k: v for k, v in (("mode", args.mode), ("reranker", args.reranker)) if v}
-    retriever = Retriever.from_settings(Store(settings.db_path), settings, **overrides)
-    hits = retriever.search(args.query, args.tickers, args.years, args.items, k=args.k)
-    for rank, chunk in enumerate(hits, 1):
-        preview = " ".join(chunk.text.split())[:300]
-        print(f"{rank}. {chunk.id} [{chunk.kind}]\n   {preview}\n")
-    return 0
-
-
-def _answer(args: argparse.Namespace) -> int:
-    from tenk_agent.agent import research
-    from tenk_agent.ask import ask
-    from tenk_agent.models import load_model
-    from tenk_agent.retrieval import Retriever
-    from tenk_agent.tools import Toolbox
-
-    settings = _settings(args)
-    store = Store(settings.db_path)
-    retriever = Retriever.from_settings(store, settings)
-    model = load_model(settings, args.model)
-    verify = settings.verify and not args.no_verify
-    if args.command == "ask":
-        answer = ask(
-            args.question,
-            store,
-            retriever,
-            model,
-            verify=verify,
-            k=settings.ask_k,
-            context_chars=settings.context_chars,
-        )
-    else:
-        toolbox = Toolbox.from_settings(store, retriever, settings)
-        answer = None
-        for event in research(
-            args.question,
-            store,
-            toolbox,
-            model,
-            settings.max_tool_calls,
-            verify=verify,
-            repair=settings.repair,
-            repair_calls=settings.repair_calls,
-        ):
-            if event["type"] == "step":
-                mark = "✗" if event["is_error"] else "✓"
-                print(f"{mark} {event['label']}\n    {event['summary']}", file=sys.stderr)
-            elif event["type"] == "error":
-                print(f"Error: {event['message']}", file=sys.stderr)
-                return 1
-            elif event["type"] == "answer":
-                answer = event["answer"]
-    if args.json:
-        print(json.dumps(answer, indent=2))
-    else:
-        print_answer(answer)
-    return 0
-
-
-def print_answer(answer: dict) -> None:
-    print(answer["answer"])
-    if answer.get("scope_notice"):
-        print(f"\nScope: {answer['scope_notice']}")
-    for claim in answer["claims"]:
-        cites = ", ".join(claim["chunk_ids"]) or "no citation"
-        print(f"  [{claim['id']}] {claim['status']:10} {claim['text']}  ({cites})")
-    usage = answer["usage"]
-    print(
-        f"\n{answer['model']} · {usage['latency_s']:.1f}s · {usage['input_tokens']:,} in / "
-        f"{usage['output_tokens']:,} out · ${usage['cost_usd']:.4f} · trace {answer['trace_id']}"
-    )
-
-
-def _serve(args: argparse.Namespace) -> int:
-    import uvicorn
-
-    uvicorn.run("tenk_agent.api:app", host=args.host, port=args.port)
-    return 0
-
-
-def _eval(args: argparse.Namespace) -> int:
-    from tenk_agent.evaluation import calibrate, report, runner
-
-    if args.eval_action == "report":
-        columns = [tuple(c.split("=", 1)) if "=" in c else (c, c) for c in args.columns]
-        text = report.write(columns, args.out) if args.out else report.table(columns)
-        print(text)
-        return 0
-    if args.eval_action == "judge":
-        for label in args.labels:
-            summary = runner.judge_run(label, _settings(args), args.workers)
-            print(label, json.dumps(summary.get("answers") or summary["retrieval"], indent=2))
-        return 0
-    if args.eval_action == "rescore":
-        summary = runner.rescore(args.label, _settings(args))
-        print(json.dumps({k: v for k, v in summary.items() if k != "config"}, indent=2))
-        return 0
-    if args.eval_action == "compare":
-        from tenk_agent.evaluation import compare
-
-        columns = [tuple(c.split("=", 1)) if "=" in c else (c, c) for c in args.columns]
-        if len(columns) < 2:
-            raise SystemExit("compare needs a baseline and at least one other run")
-        md, page = compare.write(columns, args.out)
-        print(md.read_text())
-        print(f"Report: {md} · {page}")
-        return 0
-    if args.eval_action == "calibrate":
-        if args.action == "export":
-            print(f"Wrote {calibrate.export(args.label, args.answers)}; fill in 'human'.")
-        else:
-            print(json.dumps(calibrate.score(args.label), indent=2))
-        return 0
-
-    settings = _settings(args)
-    if args.model:
-        settings.model = args.model
-    if args.structured_data:
-        settings.structured_data = True
-    if args.max_tool_calls:
-        settings.max_tool_calls = args.max_tool_calls
-    overrides = {k: v for k, v in (("mode", args.mode), ("reranker", args.reranker)) if v}
-    if args.no_slot_search:
-        overrides["slot_search"] = False
-    label = args.label or f"{args.system}-{date.today().isoformat()}"
-    options = runner.RunOptions(
-        system=args.system,
-        label=label,
-        split=None if args.split == "all" else args.split,
-        ids=args.ids,
-        include_unverified=args.include_unverified,
-        judge=args.judge,
-        verify=settings.verify and not args.no_verify,
-        workers=args.workers,
-        limit=args.limit,
-        retrieval_overrides=overrides,
-        max_tool_calls=settings.max_tool_calls,
-        resume=args.resume,
-        repair=settings.repair and not args.no_repair,
-        repair_calls=settings.repair_calls,
-        ask_k=settings.ask_k,
-        context_chars=settings.context_chars,
-        gold_path=args.gold or gold.GOLD_PATH,
-    )
-    summary = runner.run(options, settings)
-    print(json.dumps({k: v for k, v in summary.items() if k != "config"}, indent=2))
-    print(f"Results: {runner.RUNS_DIR / label}")
-    return 0
-
-
-def _finetune(args: argparse.Namespace) -> int:
-    from tenk_agent.finetune import dataset, questions, rollouts
-
-    data_dir = args.data_dir
-    if args.ft_action == "questions":
-        store = Store(db_path(data_dir))
-        generated = questions.generate(store, data_dir, heldout_fraction=args.heldout)
-        out = args.out or data_dir / "questions.jsonl"
-        questions.write(generated, out)
-        kinds = Counter((q["split"], q["kind"]) for q in generated)
-        print(json.dumps({f"{s}/{k}": n for (s, k), n in sorted(kinds.items())}, indent=2))
-        print(f"Wrote {len(generated)} questions to {out}")
-        return 0
-    if args.ft_action == "rollouts":
-        options = rollouts.RolloutOptions(
-            questions=args.questions or data_dir / "questions.jsonl",
-            out=args.out or data_dir / "rollouts.jsonl",
-            split=args.split,
-            samples=args.samples,
-            temperature=args.temperature,
-            workers=args.workers,
-            limit=args.limit,
-        )
-        print(json.dumps(rollouts.run(options, _settings(args)), indent=2))
-        return 0
-    options = dataset.DatasetOptions(
-        rollouts=args.rollouts or data_dir / "rollouts.jsonl",
-        out=args.out or data_dir / "sft.jsonl",
-        split=args.split,
-        max_per_question=args.max_per_question,
-        max_tool_errors=args.max_tool_errors,
-    )
-    report = dataset.build(options)
-    print(json.dumps(report.to_dict(), indent=2))
-    print(f"Wrote {report.kept} records to {options.out}")
     return 0
 
 

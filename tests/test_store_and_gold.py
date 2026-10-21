@@ -1,42 +1,61 @@
-from tenk_agent import gold
-from tenk_agent.chunking import chunk_sections
-from tenk_agent.edgar import Filing
-from tenk_agent.parse import Block, Section
+from tenk_agent.evaluation import gold
+from tenk_agent.retrieval.index import load
 from tenk_agent.store import Store
 
-FILING = Filing(
-    "AAPL",
-    320193,
-    "0000320193-25-000079",
-    "2025-10-31",
-    "2025-09-27",
-    2025,
-    "aapl.htm",
-    "https://example.com/aapl.htm",
-)
+
+def filing(ticker: str, year: int, period_end: str, chunks: list[dict]) -> tuple:
+    """(metadata.json, document, chunks) for one filing, as tenk_agent.retrieval.index.load
+    takes them."""
+    meta = {
+        "ticker": ticker,
+        "fiscal_year": year,
+        "accession_no": f"{ticker}-{year}",
+        "period_end_date": period_end,
+        "filing_date": "2025-11-01",
+        "source_url": f"https://example.com/{ticker}-{year}.htm",
+    }
+    items = dict.fromkeys(c["item"] for c in chunks)
+    document = {"sections": [{"item": i, "title": f"Item {i}"} for i in items]}
+    return meta, document, chunks
+
+
+def prose(item: str, text: str, **extra) -> dict:
+    return {"item": item, "kind": "prose", "text": text} | extra
+
+
+APPLE = [
+    prose("1A", "Tariffs could affect our supply chain.", pages=[12, 12]),
+    {
+        "item": "8",
+        "kind": "table",
+        "text": "(In millions)\n| 2025 | 2024 |\n| Research and development | $34,550 | $31,370 |",
+        "units": "USD millions",
+        "years_covered": [2024, 2025],
+        "children": [{"kind": "row", "text": "Research and development: 2025 = $34,550"}],
+    },
+]
 
 
 def make_store(tmp_path) -> Store:
-    sections = [
-        Section(
-            "1A", "Risk Factors", [Block("paragraph", "Tariffs could affect our supply chain.")]
-        ),
-        Section(
-            "8",
-            "Financial Statements",
-            [
-                Block("paragraph", "(In millions)"),
-                Block(
-                    "table",
-                    rows=[["2025", "2024"], ["Research and development", "$34,550", "$31,370"]],
-                ),
-            ],
-        ),
-    ]
-    store = Store(tmp_path / "test.db")
-    store.add_filing(FILING, "Apple Inc.", sections, chunk_sections("AAPL-FY2025", sections))
-    store.rebuild_search_index()
-    return store
+    load(tmp_path / "test.db", [filing("AAPL", 2025, "2025-09-27", APPLE)])
+    return Store(tmp_path / "test.db")
+
+
+def test_load_numbers_chunks_per_item_and_keeps_metadata(tmp_path):
+    store = make_store(tmp_path)
+    assert [c.id for c in store.chunks()] == ["AAPL-FY2025-1A-000", "AAPL-FY2025-8-000"]
+    table = store.get_chunk("AAPL-FY2025-8-000")
+    assert (table.units, table.years_covered) == ("USD millions", [2024, 2025])
+    assert store.get_chunk("AAPL-FY2025-1A-000").pages == [12, 12]
+    assert store.filing("AAPL", 2025).company_name == "Apple Inc."
+    assert store.section_titles("AAPL", 2025) == {"1A": "Item 1A", "8": "Item 8"}
+
+
+def test_parent_child_children_are_searched_and_point_to_their_parent(tmp_path):
+    store = make_store(tmp_path)
+    assert store.has_children()
+    [child] = store.child_search("research development")
+    assert child.parent_id == "AAPL-FY2025-8-000"
 
 
 def test_search_filters_by_company_year_and_item(tmp_path):
@@ -46,11 +65,9 @@ def test_search_filters_by_company_year_and_item(tmp_path):
     assert store.search("tariffs", fiscal_years=[2024]) == []
 
 
-def test_reingesting_a_filing_replaces_its_chunks(tmp_path):
-    store = make_store(tmp_path)
-    before = len(store.chunks("AAPL", 2025))
+def test_reloading_rebuilds_the_database(tmp_path):
     make_store(tmp_path)
-    assert len(Store(tmp_path / "test.db").chunks("AAPL", 2025)) == before
+    assert len(make_store(tmp_path).chunks("AAPL", 2025)) == 2
 
 
 def test_evidence_resolves_to_the_table_chunk(tmp_path):

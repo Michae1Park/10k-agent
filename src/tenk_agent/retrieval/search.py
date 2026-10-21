@@ -1,0 +1,167 @@
+"""V1 retrieval pipeline: sub-question retrieval over a fixed hybrid search. Spec:
+experiments/V1_RETRIEVAL.md §3. Guide: docs/V1_RETRIEVAL.md.
+
+  question ─► QueryDecomposer ─► sub-questions (one per company and filing)    decompose.py
+           ─► HybridSearch per sub-question: keyword (BM25) + dense ─► RRF ─► rerank
+           ─► round-robin merge ─► top k
+  (SubQuestionRetriever runs the whole thing; from_settings builds it from the config.)
+
+On a parent-child database (V0 method P) the search runs over the children, and each reranked
+child is swapped for its parent, best child first, each parent once.
+"""
+
+from dataclasses import dataclass, field
+
+from tenk_agent.embeddings import Embedder, Reranker, get_embedder, get_reranker
+from tenk_agent.retrieval.decompose import QueryDecomposer, SubQuestion
+from tenk_agent.retrieval.index import child_embedding_text, embedding_text
+from tenk_agent.store import ChunkRecord, Store
+
+
+@dataclass
+class Search:
+    """One sub-question's search, kept for the report."""
+
+    query: str
+    ticker: str | None
+    fiscal_years: list[int] | None
+    keyword: list[str]  # chunk ids, BM25 order
+    dense: list[str]  # chunk ids, cosine order
+    reranked: list[tuple[str, float]]  # (chunk id, rerank score), best first
+
+
+def fuse(rankings: list[list[ChunkRecord]], rrf_k: int) -> list[ChunkRecord]:
+    """Reciprocal rank fusion: each list contributes 1 / (rrf_k + rank) per chunk."""
+    scores: dict[str, float] = {}
+    chunks: dict[str, ChunkRecord] = {}
+    for ranking in rankings:
+        for rank, chunk in enumerate(ranking, 1):
+            scores[chunk.id] = scores.get(chunk.id, 0.0) + 1 / (rrf_k + rank)
+            chunks[chunk.id] = chunk
+    return [chunks[cid] for cid in sorted(scores, key=scores.get, reverse=True)]
+
+
+@dataclass
+class HybridSearch:
+    """keyword + dense → RRF → rerank, filtered to one sub-question's company and filings."""
+
+    store: Store
+    embedder: Embedder
+    reranker: Reranker
+    candidates: int = 40
+    rrf_k: int = 60
+
+    def search(self, sub: SubQuestion, k: int) -> tuple[list[ChunkRecord], Search]:
+        filters = {
+            "tickers": [sub.ticker] if sub.ticker else None,
+            "fiscal_years": sub.fiscal_years,
+        }
+        size = max(self.candidates, k)
+        children = self.store.has_children()
+        keyword_search = self.store.child_search if children else self.store.search
+        vector_search = self.store.child_vector_search if children else self.store.vector_search
+        text = child_embedding_text if children else embedding_text
+        keyword = keyword_search(sub.text, k=size, **filters)
+        dense = vector_search(self.embedder.embed_query(sub.text), k=size, **filters)
+        candidates = fuse([keyword, dense], self.rrf_k)[:size]
+        scores = self.reranker.scores(sub.text, [text(c) for c in candidates])
+        order = sorted(range(len(candidates)), key=lambda i: scores[i], reverse=True)
+        reranked = [(candidates[i], float(scores[i])) for i in order]
+        if children:
+            reranked = [(self.store.get_chunk(c.parent_id), s) for c, s in _first(reranked)]
+            keyword, dense = [_parents(self.store, ranking) for ranking in (keyword, dense)]
+        log = Search(
+            sub.text,
+            sub.ticker,
+            sub.fiscal_years,
+            [c.id for c in keyword],
+            [c.id for c in dense],
+            [(c.id, s) for c, s in reranked],
+        )
+        return [c for c, _ in reranked[:k]], log
+
+
+def _first(ranked: list[tuple]) -> list[tuple]:
+    """Each parent once, at its best child's place (children already best first)."""
+    seen: set[str] = set()
+    return [(c, s) for c, s in ranked if not (c.parent_id in seen or seen.add(c.parent_id))]
+
+
+def _top_score(search: Search) -> float:
+    return search.reranked[0][1] if search.reranked else float("-inf")
+
+
+def _parents(store: Store, children: list) -> list[ChunkRecord]:
+    return [store.get_chunk(c.parent_id) for c, _ in _first([(c, 0.0) for c in children])]
+
+
+# --- Sub-question retrieval: the whole pipeline -------------------------------------------
+
+
+@dataclass
+class Result:
+    chunks: list[ChunkRecord]
+    searches: list[Search] = field(default_factory=list)
+
+
+@dataclass
+class SubQuestionRetriever:
+    """Decompose, search each sub-question, and merge round-robin: every sub-question's best
+    chunk first, then every sub-question's second, … Each gets ceil(k / sub-questions) places
+    (at least 2), so every company the question needs is represented. Within a round, the
+    sub-question whose best chunk scored highest goes first, so "which company…" questions
+    put the matching company at the top.
+
+    slot_search off: one unfiltered search with the question as asked.
+    """
+
+    decomposer: QueryDecomposer
+    hybrid: HybridSearch
+    slot_search: bool = True
+
+    @classmethod
+    def from_settings(cls, store: Store, settings: dict) -> "SubQuestionRetriever":
+        """The pipeline as the config's `retrieval:` section sets it. The database's vectors
+        must come from the configured embedder."""
+        embedder = get_embedder(settings["embedder"], settings["device"])
+        if store.embedding_model() != embedder.name:
+            raise RuntimeError(
+                f"the database's vectors are {store.embedding_model()!r}, not {embedder.name!r}"
+            )
+        decompose = settings["decompose"]
+        return cls(
+            QueryDecomposer(store, rewrite=decompose["rewrite"], fan_out=decompose["fan_out"]),
+            HybridSearch(
+                store,
+                embedder,
+                get_reranker(settings["reranker"], settings["device"]),
+                candidates=settings["candidates"],
+                rrf_k=settings["rrf_k"],
+            ),
+            slot_search=settings["slot_search"],
+        )
+
+    def search(self, question: str, k: int) -> Result:
+        subs = (
+            self.decomposer.decompose(question)
+            if self.slot_search
+            else [SubQuestion(question, None, None)]
+        )
+        result = Result([])
+        per_sub = k if len(subs) == 1 else max(2, -(-k // len(subs)))
+        searched = []
+        for sub in subs:
+            chunks, log = self.hybrid.search(sub, per_sub)
+            searched.append((chunks, log))
+            result.searches.append(log)
+        # Round-robin, the best-matching sub-question first in every round.
+        searched.sort(key=lambda pair: _top_score(pair[1]), reverse=True)
+        rankings = [chunks for chunks, _ in searched]
+        seen: set[str] = set()
+        for rank in range(per_sub):
+            for ranking in rankings:
+                if rank < len(ranking) and ranking[rank].id not in seen:
+                    seen.add(ranking[rank].id)
+                    result.chunks.append(ranking[rank])
+        result.chunks = result.chunks[:k]
+        return result

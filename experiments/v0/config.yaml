@@ -1,0 +1,28 @@
+# V0 experiment settings, read by run.py (--config to use another file).
+# Spec: experiments/V0_PARSING_CHUNKING.md. Paths are relative to the repo root.
+
+run:
+  label: aapl-fy25-excerpt                              # writes output/chunking/<label>/
+  html: experiments/v0/testdata/aapl-fy25-excerpt.html     # the filing (or excerpt) to preprocess
+  cover: data/raw/filings/AAPL/FY2025/aapl-20250927.htm # full filing for the dei: cover tags (the excerpt has no cover page)
+  gt: experiments/v0/testdata/aapl-fy25-excerpt.gt.json  # ground truth for scoring
+
+llm:                                                    # structure agent and agentic chunker
+  model: Qwen/Qwen3.6-27B-FP8                           # scripts/serve_vllm.sh qwen3.6-27b-fp8
+  base_url: http://localhost:8001/v1
+
+labeling:                                               # structure agent (tenk_agent.preprocess), spec §2.2
+  window: 150                                           # blocks labeled per call (windows don't overlap)
+  context: 10                                           # labeled blocks from the previous window shown as context
+  repair_rounds: 2                                      # validate → repair rounds per window, at most
+
+chunking:                                               # tenk_agent.chunking, spec §3
+  tokenizer: Qwen/Qwen3-Embedding-0.6B                  # counts all token sizes: the embedder's, so sizes are what it sees
+  target: 600                                           # rule-based and agentic chunk size, tokens
+  parent: 1280                                          # parent-child: parent size, tokens (5:1 with child)
+  child: 256                                            # parent-child: child size, tokens (what search matches)
+  child_overlap: 20                                     # parent-child: tokens shared by neighbouring children
+  candidate_size: 128                                   # agentic: candidate pieces over this many tokens split further (paragraph → sentence → word)
+  caption_chars: 300                                    # C3: longest paragraph that counts as a table caption
+  table_chars: 7200                                     # C4: longer tables split into row groups
+  overlap_chars: 600                                    # C7: longest paragraph carried into the next chunk

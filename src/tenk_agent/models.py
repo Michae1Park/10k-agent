@@ -1,14 +1,15 @@
 """The model layer: one `complete(messages, tools)` interface over every provider.
 
-The Ask pipeline, agent loop and eval harness only ever call `Model.complete`. Messages and
-tool schemas use one neutral format, translated here per provider:
+V2 generation and the judge only ever call `Model.complete` (the V0 structure agent and agentic
+chunker call vLLM's OpenAI API directly, for schema-constrained decoding). Messages and tool
+schemas use one neutral format, translated here per provider:
 
     {"role": "user", "content": str}
     {"role": "assistant", "content": str, "tool_calls": [ToolCall], "provider_content": ...}
     {"role": "tool", "tool_call_id": str, "name": str, "content": str, "is_error": bool}
 
-Specs: "openai:<model>" (the default: open models on vLLM, or any
-OpenAI-compatible server at OPENAI_BASE_URL) or "anthropic:<model id>" (Claude, optional).
+Specs: "openai:<model>" (the default: open models on vLLM, or any OpenAI-compatible server at
+`base_url`) or "anthropic:<model id>" (Claude, optional).
 """
 
 import json
@@ -301,13 +302,6 @@ def get_model(
     if provider == "openai":
         return OpenAICompatibleModel(model, gpu_hourly_usd, base_url, thinking, temperature)
     raise ValueError(f"Unknown model spec {spec!r} (use anthropic:<id> or openai:<model>)")
-
-
-def load_model(settings, spec: str | None = None) -> Model:
-    """The configured model (or `spec`), with the settings' server, thinking and GPU rate."""
-    return get_model(
-        spec or settings.model, settings.gpu_hourly_usd, settings.base_url, settings.thinking
-    )
 
 
 def parse_json(text: str) -> dict:

@@ -1,4 +1,4 @@
-"""SQLite storage for filings, sections, chunks, embeddings and traces.
+"""SQLite storage for filings, sections, chunks (and parent-child children) and embeddings.
 
 Keyword search uses the built-in FTS5; vector search uses the sqlite-vec extension.
 All database access goes through Store, so moving to Postgres + pgvector changes this module.
@@ -13,10 +13,6 @@ from pathlib import Path
 
 import numpy as np
 import sqlite_vec
-
-from tenk_agent.chunking import Chunk
-from tenk_agent.edgar import Filing
-from tenk_agent.parse import Section
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS companies (
@@ -61,17 +57,9 @@ CREATE TABLE IF NOT EXISTS meta (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS traces (
-    id TEXT PRIMARY KEY,
-    created_at TEXT NOT NULL,
-    mode TEXT NOT NULL,
-    question TEXT NOT NULL,
-    model TEXT NOT NULL,
-    data TEXT NOT NULL
-);
 """
 
-# V7 parent-child layout only: small children are searched, their parent chunk is returned.
+# Parent-child databases only: small children are searched, their parent chunk is returned.
 CHILD_SCHEMA = """
 CREATE TABLE IF NOT EXISTS children (
     id TEXT PRIMARY KEY,
@@ -81,7 +69,7 @@ CREATE TABLE IF NOT EXISTS children (
     item TEXT NOT NULL,
     kind TEXT NOT NULL,
     text TEXT NOT NULL,
-    row TEXT
+    row TEXT  -- unused (null); older databases have it
 );
 CREATE INDEX IF NOT EXISTS children_filter ON children (ticker, fiscal_year, item);
 CREATE INDEX IF NOT EXISTS children_parent ON children (parent_id);
@@ -120,7 +108,7 @@ class ChildRecord:
     item: str
     kind: str  # "prose", "row" or "table_title"
     text: str
-    row: dict | None  # table rows: {"group", "label", "cells": [[column, fiscal_year, value]]}
+    row: dict | None = None  # unused: always None
 
 
 @dataclass
@@ -137,7 +125,7 @@ class FilingRecord:
 class Store:
     def __init__(self, path: Path):
         path.parent.mkdir(parents=True, exist_ok=True)
-        # The API shares one Store across worker threads; a lock serializes access.
+        # Parallel workers (V2 run.py) share one Store; a lock serializes access.
         self.db = sqlite3.connect(path, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.enable_load_extension(True)
@@ -155,45 +143,33 @@ class Store:
         with self._lock:
             return self.db.execute(sql, params).fetchall()
 
-    # --- Ingestion -----------------------------------------------------------------------
+    # --- Loading -------------------------------------------------------------------------
+
+    def enable_children(self) -> None:
+        """Add the children tables: this becomes a parent-child database."""
+        with self._lock:
+            self.db.executescript(CHILD_SCHEMA)
 
     def add_filing(
         self,
-        filing: Filing,
-        name: str,
-        sections: list[Section],
-        chunks: list[Chunk],
-        aliases: tuple[str, ...] = (),
-        children: list | None = None,
+        filing: FilingRecord,
+        cik: int,
+        aliases: list[str],
+        sections: dict[str, str],
+        chunks: list[tuple[ChunkRecord, int]],
+        children: list[ChildRecord] = (),
     ) -> None:
-        """Insert or replace one filing with its sections and chunks (and V7 children)."""
+        """Insert one filing: its company, sections ({item: title}), chunks (each with its seq
+        within its Item) and children. For a new database: nothing is replaced."""
         prefix = f"{filing.ticker}-FY{filing.fiscal_year}"
-        if children is not None:
-            self.db.executescript(CHILD_SCHEMA)
         with self._lock, self.db:
             db = self.db
-            if self.has_children():
-                if self._has_table("children_vec"):
-                    db.execute(
-                        "DELETE FROM children_vec WHERE rowid IN "
-                        "(SELECT rowid FROM children WHERE id LIKE ?)",
-                        (f"{prefix}-%",),
-                    )
-                db.execute("DELETE FROM children WHERE id LIKE ?", (f"{prefix}-%",))
-            if self._has_vectors():
-                db.execute(
-                    "DELETE FROM chunks_vec WHERE rowid IN "
-                    "(SELECT rowid FROM chunks WHERE section_id LIKE ?)",
-                    (f"{prefix}-%",),
-                )
-            db.execute("DELETE FROM chunks WHERE section_id LIKE ?", (f"{prefix}-%",))
-            db.execute("DELETE FROM sections WHERE accession_no = ?", (filing.accession_no,))
             db.execute(
                 "INSERT OR REPLACE INTO companies VALUES (?, ?, ?, ?)",
-                (filing.ticker, filing.cik, name, json.dumps(list(aliases))),
+                (filing.ticker, cik, filing.company_name, json.dumps(list(aliases))),
             )
             db.execute(
-                "INSERT OR REPLACE INTO filings VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO filings VALUES (?, ?, ?, ?, ?, ?)",
                 (
                     filing.accession_no,
                     filing.ticker,
@@ -205,44 +181,53 @@ class Store:
             )
             db.executemany(
                 "INSERT INTO sections VALUES (?, ?, ?, ?)",
-                [(f"{prefix}-{s.item}", filing.accession_no, s.item, s.title) for s in sections],
-            )
-            db.executemany(
-                "INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)",
                 [
+                    (f"{prefix}-{item}", filing.accession_no, item, t)
+                    for item, t in sections.items()
+                ],
+            )
+            for c, seq in chunks:
+                db.execute(
+                    "INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         c.id,
                         f"{prefix}-{c.item}",
-                        filing.ticker,
-                        filing.fiscal_year,
+                        c.ticker,
+                        c.fiscal_year,
                         c.item,
-                        c.seq,
+                        seq,
                         c.kind,
                         c.text,
                         c.units,
                         json.dumps(c.years_covered),
-                    )
-                    for c in chunks
-                ],
-            )
+                        json.dumps(c.pages) if c.pages else None,
+                        json.dumps(c.printed_pages) if c.printed_pages else None,
+                    ),
+                )
             if children:
-                parents = {c.id: c for c in chunks}
                 db.executemany(
-                    "INSERT INTO children VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO children VALUES (?, ?, ?, ?, ?, ?, ?, NULL)",
                     [
-                        (
-                            child.id,
-                            child.parent_id,
-                            filing.ticker,
-                            filing.fiscal_year,
-                            parents[child.parent_id].item,
-                            child.kind,
-                            child.text,
-                            child.row_json(),
-                        )
-                        for child in children
+                        (k.id, k.parent_id, k.ticker, k.fiscal_year, k.item, k.kind, k.text)
+                        for k in children
                     ],
                 )
+
+    def set_pages(
+        self, chunk_id: str, text: str, pages: list[int] | None, printed: list[str] | None
+    ) -> bool:
+        """Write a chunk's pages and printed pages; False if no chunk has this id and text."""
+        with self._lock, self.db:
+            updated = self.db.execute(
+                "UPDATE chunks SET pages = ?, printed_pages = ? WHERE id = ? AND text = ?",
+                (
+                    json.dumps(pages) if pages else None,
+                    json.dumps(printed) if printed else None,
+                    chunk_id,
+                    text,
+                ),
+            ).rowcount
+        return bool(updated)
 
     def rebuild_search_index(self) -> None:
         with self._lock, self.db:
@@ -261,7 +246,7 @@ class Store:
         )
 
     def has_children(self) -> bool:
-        """True for a V7 parent-child database."""
+        """True for a parent-child database."""
         return self._has_table("children")
 
     def embedding_model(self) -> str | None:
@@ -364,13 +349,6 @@ class Store:
         rows = self._query("SELECT * FROM chunks WHERE id = ?", (chunk_id,))
         return _record(rows[0]) if rows else None
 
-    def get_section(self, ticker: str, fiscal_year: int, item: str) -> list[ChunkRecord]:
-        rows = self._query(
-            "SELECT * FROM chunks WHERE ticker = ? AND fiscal_year = ? AND item = ? ORDER BY seq",
-            (ticker.upper(), fiscal_year, item.upper()),
-        )
-        return [_record(r) for r in rows]
-
     def chunks(
         self, ticker: str | None = None, fiscal_year: int | None = None
     ) -> list[ChunkRecord]:
@@ -456,60 +434,6 @@ class Store:
             [*params, vector.astype(np.float32).tobytes(), k],
         )
         return [_child(r) for r in rows]
-
-    def child_rows(self, parent_id: str) -> list[ChildRecord]:
-        """A table parent's row records (V7 cell-level verification); none for row children
-        built without them (the V0 parent-child corpus)."""
-        if not self.has_children():
-            return []
-        rows = self._query(
-            "SELECT * FROM children WHERE parent_id = ? AND kind = 'row' AND row IS NOT NULL "
-            "ORDER BY id",
-            (parent_id,),
-        )
-        return [_child(r) for r in rows]
-
-    def coverage(self) -> dict[tuple[str, int], dict[str, tuple[int, int]]]:
-        """(ticker, fiscal year) -> {item: (chunk count, table chunk count)}."""
-        rows = self._query(
-            "SELECT ticker, fiscal_year, item, count(*) AS n, sum(kind = 'table') AS tables "
-            "FROM chunks GROUP BY ticker, fiscal_year, item"
-        )
-        result: dict[tuple[str, int], dict[str, tuple[int, int]]] = {}
-        for r in rows:
-            result.setdefault((r["ticker"], r["fiscal_year"]), {})[r["item"]] = (
-                r["n"],
-                r["tables"],
-            )
-        return result
-
-    # --- Traces --------------------------------------------------------------------------
-
-    def save_trace(self, trace: dict) -> None:
-        with self._lock, self.db:
-            self.db.execute(
-                "INSERT OR REPLACE INTO traces VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    trace["id"],
-                    trace["created_at"],
-                    trace["mode"],
-                    trace["question"],
-                    trace["model"],
-                    json.dumps(trace),
-                ),
-            )
-
-    def get_trace(self, trace_id: str) -> dict | None:
-        rows = self._query("SELECT data FROM traces WHERE id = ?", (trace_id,))
-        return json.loads(rows[0]["data"]) if rows else None
-
-    def recent_traces(self, limit: int = 50) -> list[dict]:
-        rows = self._query(
-            "SELECT id, created_at, mode, question, model FROM traces "
-            "ORDER BY created_at DESC LIMIT ?",
-            (limit,),
-        )
-        return [dict(r) for r in rows]
 
 
 # Common question words that only add noise to BM25 OR-queries.

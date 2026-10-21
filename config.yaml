@@ -1,46 +1,48 @@
-# Every tunable parameter, per version. Guides: docs/V*.md (Knobs).
-# Environment variables override the ones marked "env" (e.g. TENK_MODEL=openai:Qwen/Qwen3.5-9B).
+# Settings for the tenk CLI (TENK_CONFIG=<file> to use another). One section per stage; each
+# experiment pins its own copy in experiments/v*/config.yaml. Paths are relative to the repo root.
+# Guides: docs/V0_PARSING_CHUNKING.md, docs/V1_RETRIEVAL.md, docs/V2_GENERATION.md.
 
-data_dir: data                                  # env TENK_DATA_DIR
+data_dir: data                                          # tenk fetch → data/raw/filings/<TICKER>/FY<year>/
+build:                                                  # tenk build
+  out: data/v0-chunking                                 # per-filing work files, and <method>.db
+  methods: [parent_child]                               # rule | parent_child | agentic (V1's best: parent_child)
+db: data/v0-chunking/parent_child.db                    # what search, ask and chat read
 
-ingest:                                         # V0 · docs/V0_DATA.md
-  chunk_chars: 2400                             # prose chunk size (~600 tokens at 4 chars/token)
-  table_chars: 7200                             # longer tables split into row groups (header rows repeated)
-  overlap_chars: 600                            # start a chunk with the previous paragraph if it is this short
-  layout: flat                                  # env TENK_LAYOUT · flat (V0) | parent_child (V7, data/tenk-parent-child.db)
-  parent_chars: 6000                            # V7: prose parents, split at headings (~1,500 tokens)
-  child_chars: 800                              # V7: prose children searched (~200 tokens); tables: one child per row
+llm:                                                    # V0 structure agent and agentic chunker
+  model: Qwen/Qwen3.6-27B-FP8                           # scripts/serve_vllm.sh qwen3.6-27b-fp8
+  base_url: http://localhost:8001/v1
 
-retrieve:                                       # V1 · docs/V1_SEARCH.md
-  embedder: local:Qwen/Qwen3-Embedding-0.6B     # env TENK_EMBEDDER · or voyage:voyage-3.5
-  reranker: local:BAAI/bge-reranker-v2-m3       # env TENK_RERANKER · or cohere:rerank-v3.5, voyage:rerank-2.5, none
-  mode: dense                                   # env TENK_RETRIEVAL · keyword | dense | hybrid
-  candidates: 40                                # chunks per search before reranking
-  slot_search: true                             # one search per (company, filing) named in the question
-  search_children: true                         # env TENK_SEARCH_CHILDREN · V7: search children, return parents (false: parents only)
-  item_filter: false                            # env TENK_ITEM_FILTER · V7: "Item 7A", "risk factors" in the question filter by Item
-  device: null                                  # env TENK_LOCAL_DEVICE · where local models run: null = GPU if any, cpu
+labeling:                                               # V0 structure agent
+  window: 150                                           # blocks labeled per call (windows don't overlap)
+  context: 10                                           # labeled blocks from the previous window shown as context
+  repair_rounds: 2                                      # validate → repair rounds per window, at most
 
-model:                                          # V2-V6
-  name: openai:Qwen/Qwen3.6-27B-FP8             # env TENK_MODEL · scripts/serve_vllm.sh qwen3.6-27b-fp8 · or anthropic:<id>
-  base_url: http://localhost:8001/v1            # env OPENAI_BASE_URL · vLLM / Ollama, for openai:* models
-  thinking: false                               # env TENK_OPENAI_THINKING · hybrid-reasoning models: false = off, null = model default
-  gpu_hourly_usd: 0.86                          # env TENK_GPU_HOURLY_USD · cost of self-hosted models = latency x rate
+chunking:                                               # V0 chunkers
+  tokenizer: Qwen/Qwen3-Embedding-0.6B                  # counts all token sizes: the embedder's, so sizes are what it sees
+  target: 600                                           # rule-based and agentic chunk size, tokens
+  parent: 1280                                          # parent-child: parent size, tokens (5:1 with child)
+  child: 256                                            # parent-child: child size, tokens (what search matches)
+  child_overlap: 20                                     # parent-child: tokens shared by neighbouring children
+  candidate_size: 128                                   # agentic: candidate pieces over this many tokens split further
+  caption_chars: 300                                    # C3: longest paragraph that counts as a table caption
+  table_chars: 7200                                     # C4: longer tables split into row groups
+  overlap_chars: 600                                    # C7: longest paragraph carried into the next chunk
 
-answer:                                         # V2 · docs/V2_RAG.md
-  k: 8                                          # chunks given to the model
-  context_chars: 0                              # env TENK_CONTEXT_CHARS · V7: cap on excerpt text per call (Ask and search_filings); 0 = all k
+retrieval:                                              # V1
+  embedder: local:Qwen/Qwen3-Embedding-0.6B             # must match the vectors in db (tenk build --stage embed)
+  reranker: local:BAAI/bge-reranker-v2-m3               # cross-encoder over (question, header + chunk)
+  candidates: 40                                        # per retriever, per sub-question; and the fused list cut before reranking
+  rrf_k: 60                                             # reciprocal rank fusion constant
+  slot_search: true                                     # one search per (company, filing) the question names
+  decompose:
+    rewrite: true                                       # each company's sub-question names only that company
+    fan_out: true                                       # "which company…" with no company named: one sub-question per company
+  k: 8                                                  # chunks returned, and given to the model
+  device: null                                          # null = GPU if any; cpu when vLLM fills the GPU
 
-agent:                                          # V3 · docs/V3_AGENT.md
-  max_tool_calls: 15                            # env TENK_MAX_TOOL_CALLS
-  section_chars: 24000                          # one page of get_filing_section
-  structured_data: false                        # env TENK_STRUCTURED_DATA · ablation: add the XBRL tool
-
-verify:                                         # V4 · docs/V4_VERIFIED_AGENT.md
-  enabled: true                                 # label every claim verified / calculated / cited / unverified
-  repair: true                                  # research mode: send failed claims back to the agent once
-  repair_calls: 4                               # extra tool calls in the repair round
-
-eval:                                           # docs/EVAL.md
-  judge_model: openai:openai/gpt-oss-20b         # env TENK_JUDGE_MODEL · fixed, whatever model is under test
-  judge_base_url: http://localhost:8002/v1      # env TENK_JUDGE_BASE_URL · scripts/serve_vllm.sh gpt-oss-20b
+generation:                                             # V2
+  model: openai:Qwen/Qwen3.6-27B-FP8                    # scripts/serve_vllm.sh qwen3.6-27b-fp8 · or anthropic:<id>
+  base_url: http://localhost:8001/v1                    # vLLM, for openai:* models
+  thinking: false                                       # Qwen's reasoning mode; null = model default
+  max_tokens: 4000
+  prompt: src/tenk_agent/prompts/answer.md              # rules + answer format; {corpus} = the filings table

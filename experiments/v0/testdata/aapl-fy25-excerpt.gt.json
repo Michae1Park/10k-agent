@@ -1,0 +1,2356 @@
+{
+ "status": "reviewed",
+ "review": {
+  "date": "2026-10-18",
+  "checked": [
+   "Items 1, 1A, 7, 7A: every heading and level checked against the HTML's styling; no fixes.",
+   "Item 8: levels from the standard parts (statements, notes header, auditor reports = 1; Note N = 2; note subheadings 3-4; critical audit matter topics under 'Critical Audit Matter').",
+   "Item 1A: 27 risk factors in 5 categories, no summary, a 180-token preamble ('The following summarizes factors ...').",
+   "Tables: the HTML has 41 <table>s = 38 data + 1 index (T08, 'Index to Consolidated Financial Statements') + 2 that hold the auditor's critical audit matter as prose (read as paragraphs).",
+   "Units: T21 (Note 6) and T37 (continuation of T36) state none of their own; inherited 'in millions'. T31, T32 are share counts 'in thousands'.",
+   "Not headings: 'Apple Inc.' over each statement (a label, 6x); the italic 581-char MD&A intro (body text).",
+   "T04 (gross margin percentages) has no scale: units set to null (2026-10-19; found during the V0 chunking evaluation, the draft had borrowed T03's caption)."
+  ]
+ },
+ "spec": "experiments/V0_PARSING_CHUNKING.md §4",
+ "source": {
+  "file": "experiments/v0/testdata/aapl-fy25-excerpt.html",
+  "ticker": "AAPL",
+  "fiscal_year": 2025
+ },
+ "tokenizer": "Qwen/Qwen3-Embedding-0.6B",
+ "items": [
+  {
+   "item": "1",
+   "title": "Business",
+   "headings": [
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Company Background",
+     "path": [
+      "Company Background"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Products",
+     "path": [
+      "Products"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "iPhone",
+     "path": [
+      "Products",
+      "iPhone"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Mac",
+     "path": [
+      "Products",
+      "Mac"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "iPad",
+     "path": [
+      "Products",
+      "iPad"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Wearables, Home and Accessories",
+     "path": [
+      "Products",
+      "Wearables, Home and Accessories"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Services",
+     "path": [
+      "Services"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Advertising",
+     "path": [
+      "Services",
+      "Advertising"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "AppleCare",
+     "path": [
+      "Services",
+      "AppleCare"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Cloud Services",
+     "path": [
+      "Services",
+      "Cloud Services"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Digital Content",
+     "path": [
+      "Services",
+      "Digital Content"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Payment Services",
+     "path": [
+      "Services",
+      "Payment Services"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Segments",
+     "path": [
+      "Segments"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Markets and Distribution",
+     "path": [
+      "Markets and Distribution"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Competition",
+     "path": [
+      "Competition"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Supply of Components",
+     "path": [
+      "Supply of Components"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Research and Development",
+     "path": [
+      "Research and Development"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Intellectual Property",
+     "path": [
+      "Intellectual Property"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Business Seasonality and Product Introductions",
+     "path": [
+      "Business Seasonality and Product Introductions"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Human Capital",
+     "path": [
+      "Human Capital"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Available Information",
+     "path": [
+      "Available Information"
+     ]
+    }
+   ],
+   "chars": 15850,
+   "tokens": 2813,
+   "ends_with": " references to website URLs are intended to be inactive textual references only."
+  },
+  {
+   "item": "1A",
+   "title": "Risk Factors",
+   "headings": [
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Macroeconomic and Industry Risks",
+     "path": [
+      "Macroeconomic and Industry Risks"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company’s operations and performance depend significantly on global and regional economic conditions and adverse economic conditions can materially adversely affect the Company’s business, results of operations, financial condition and stock price.",
+     "path": [
+      "Macroeconomic and Industry Risks",
+      "The Company’s operations and performance depend significantly on global and regional economic conditions and adverse economic conditions can materially adversely affect the Company’s business, results of operations, financial condition and stock price."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company’s business can be impacted by political events, trade and other international disputes, geopolitical tensions, conflict, terrorism, natural disasters, public health issues, industrial accidents and other business interruptions.",
+     "path": [
+      "Macroeconomic and Industry Risks",
+      "The Company’s business can be impacted by political events, trade and other international disputes, geopolitical tensions, conflict, terrorism, natural disasters, public health issues, industrial accidents and other business interruptions."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "Global markets for the Company’s products and services are highly competitive and subject to rapid technological change, and the Company may be unable to compete effectively in these markets.",
+     "path": [
+      "Macroeconomic and Industry Risks",
+      "Global markets for the Company’s products and services are highly competitive and subject to rapid technological change, and the Company may be unable to compete effectively in these markets."
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Business Risks",
+     "path": [
+      "Business Risks"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "To remain competitive and stimulate customer demand, the Company must successfully manage frequent introductions and transitions of products and services.",
+     "path": [
+      "Business Risks",
+      "To remain competitive and stimulate customer demand, the Company must successfully manage frequent introductions and transitions of products and services."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company depends on component and product manufacturing and logistical services provided by outsourcing partners, many of which are located outside of the U.S.",
+     "path": [
+      "Business Risks",
+      "The Company depends on component and product manufacturing and logistical services provided by outsourcing partners, many of which are located outside of the U.S."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "Future operating results depend upon the Company’s ability to obtain components in sufficient quantities on commercially reasonable terms.",
+     "path": [
+      "Business Risks",
+      "Future operating results depend upon the Company’s ability to obtain components in sufficient quantities on commercially reasonable terms."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company’s products and services may be affected from time to time by design and manufacturing defects that could materially adversely affect the Company’s business and result in harm to the Company’s reputation.",
+     "path": [
+      "Business Risks",
+      "The Company’s products and services may be affected from time to time by design and manufacturing defects that could materially adversely affect the Company’s business and result in harm to the Company’s reputation."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company is exposed to the risk of write-downs on the value of its inventory and other assets, in addition to purchase commitment cancellation risk.",
+     "path": [
+      "Business Risks",
+      "The Company is exposed to the risk of write-downs on the value of its inventory and other assets, in addition to purchase commitment cancellation risk."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company relies on access to third-party intellectual property, which may not be available to the Company on commercially reasonable terms, or at all.",
+     "path": [
+      "Business Risks",
+      "The Company relies on access to third-party intellectual property, which may not be available to the Company on commercially reasonable terms, or at all."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company’s future performance depends in part on support from third-party software developers.",
+     "path": [
+      "Business Risks",
+      "The Company’s future performance depends in part on support from third-party software developers."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "Failure to obtain or create digital content that appeals to the Company’s customers, or to make such content available on commercially reasonable terms, could have a material adverse impact on the Company’s business, results of operations and financial condition.",
+     "path": [
+      "Business Risks",
+      "Failure to obtain or create digital content that appeals to the Company’s customers, or to make such content available on commercially reasonable terms, could have a material adverse impact on the Company’s business, results of operations and financial condition."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company’s success depends largely on the talents and efforts of its team members, the continued service and availability of highly skilled employees, including key personnel, and the Company’s ability to nurture its distinctive and inclusive culture.",
+     "path": [
+      "Business Risks",
+      "The Company’s success depends largely on the talents and efforts of its team members, the continued service and availability of highly skilled employees, including key personnel, and the Company’s ability to nurture its distinctive and inclusive culture."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company depends on the performance of carriers and other resellers.",
+     "path": [
+      "Business Risks",
+      "The Company depends on the performance of carriers and other resellers."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company’s business and reputation are impacted by information technology system failures and network disruptions.",
+     "path": [
+      "Business Risks",
+      "The Company’s business and reputation are impacted by information technology system failures and network disruptions."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "Losses or unauthorized access to or releases of confidential information, including personal information, could subject the Company to significant reputational, financial, legal and operational consequences.",
+     "path": [
+      "Business Risks",
+      "Losses or unauthorized access to or releases of confidential information, including personal information, could subject the Company to significant reputational, financial, legal and operational consequences."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "Investment in new business strategies, commercial relationships and acquisitions could disrupt the Company’s ongoing business, present risks not originally contemplated, and materially adversely affect the Company’s business, reputation, results of operations and financial condition.",
+     "path": [
+      "Business Risks",
+      "Investment in new business strategies, commercial relationships and acquisitions could disrupt the Company’s ongoing business, present risks not originally contemplated, and materially adversely affect the Company’s business, reputation, results of operations and financial condition."
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Legal and Regulatory Compliance Risks",
+     "path": [
+      "Legal and Regulatory Compliance Risks"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company’s business, results of operations and financial condition could be adversely impacted by unfavorable results of legal proceedings or government investigations.",
+     "path": [
+      "Legal and Regulatory Compliance Risks",
+      "The Company’s business, results of operations and financial condition could be adversely impacted by unfavorable results of legal proceedings or government investigations."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company is subject to complex and changing laws and regulations worldwide, which exposes the Company to potential liabilities, increased costs and other adverse effects on the Company’s business.",
+     "path": [
+      "Legal and Regulatory Compliance Risks",
+      "The Company is subject to complex and changing laws and regulations worldwide, which exposes the Company to potential liabilities, increased costs and other adverse effects on the Company’s business."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "Varied stakeholder expectations about social and other issues expose the Company to potential liabilities, increased costs, reputational harm, and other adverse effects on the Company’s business.",
+     "path": [
+      "Legal and Regulatory Compliance Risks",
+      "Varied stakeholder expectations about social and other issues expose the Company to potential liabilities, increased costs, reputational harm, and other adverse effects on the Company’s business."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The technology industry, including, in some instances, the Company, is subject to intense media, political and regulatory scrutiny, which exposes the Company to increasing regulation, government investigations, legal actions and penalties.",
+     "path": [
+      "Legal and Regulatory Compliance Risks",
+      "The technology industry, including, in some instances, the Company, is subject to intense media, political and regulatory scrutiny, which exposes the Company to increasing regulation, government investigations, legal actions and penalties."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company’s business is subject to a variety of U.S. and international laws, rules, policies and other obligations regarding the collection, use, protection and transfer of personal data.",
+     "path": [
+      "Legal and Regulatory Compliance Risks",
+      "The Company’s business is subject to a variety of U.S. and international laws, rules, policies and other obligations regarding the collection, use, protection and transfer of personal data."
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Financial Risks",
+     "path": [
+      "Financial Risks"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company’s net sales and gross margins are subject to volatility and downward pressure due to a variety of factors.",
+     "path": [
+      "Financial Risks",
+      "The Company’s net sales and gross margins are subject to volatility and downward pressure due to a variety of factors."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company’s financial performance is subject to risks associated with changes in the value of the U.S. dollar relative to local currencies.",
+     "path": [
+      "Financial Risks",
+      "The Company’s financial performance is subject to risks associated with changes in the value of the U.S. dollar relative to local currencies."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company is exposed to credit risk and fluctuations in the values of its investment portfolio.",
+     "path": [
+      "Financial Risks",
+      "The Company is exposed to credit risk and fluctuations in the values of its investment portfolio."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company is exposed to credit risk on its trade accounts receivable, vendor non-trade receivables and prepayments related to long-term supply agreements, and this risk is heightened during periods when economic conditions worsen.",
+     "path": [
+      "Financial Risks",
+      "The Company is exposed to credit risk on its trade accounts receivable, vendor non-trade receivables and prepayments related to long-term supply agreements, and this risk is heightened during periods when economic conditions worsen."
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The Company is subject to changes in tax rates, the adoption of new U.S. or international tax legislation and exposure to additional tax liabilities.",
+     "path": [
+      "Financial Risks",
+      "The Company is subject to changes in tax rates, the adoption of new U.S. or international tax legislation and exposure to additional tax liabilities."
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "General Risks",
+     "path": [
+      "General Risks"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "BI",
+     "text": "The price of the Company’s stock is subject to volatility.",
+     "path": [
+      "General Risks",
+      "The price of the Company’s stock is subject to volatility."
+     ]
+    }
+   ],
+   "chars": 67628,
+   "tokens": 11455,
+   "ends_with": "ld have a material adverse impact on investor confidence and employee retention."
+  },
+  {
+   "item": "7",
+   "title": "Management’s Discussion and Analysis of Financial Condition and Results of Operations",
+   "headings": [
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Product, Service and Software Announcements",
+     "path": [
+      "Product, Service and Software Announcements"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Fiscal Period",
+     "path": [
+      "Fiscal Period"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Macroeconomic Conditions",
+     "path": [
+      "Macroeconomic Conditions"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Tariffs and Other Measures",
+     "path": [
+      "Tariffs and Other Measures"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Segment Operating Performance",
+     "path": [
+      "Segment Operating Performance"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Americas",
+     "path": [
+      "Segment Operating Performance",
+      "Americas"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Europe",
+     "path": [
+      "Segment Operating Performance",
+      "Europe"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Greater China",
+     "path": [
+      "Segment Operating Performance",
+      "Greater China"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Japan",
+     "path": [
+      "Segment Operating Performance",
+      "Japan"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Rest of Asia Pacific",
+     "path": [
+      "Segment Operating Performance",
+      "Rest of Asia Pacific"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Products and Services Performance",
+     "path": [
+      "Products and Services Performance"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "iPhone",
+     "path": [
+      "Products and Services Performance",
+      "iPhone"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Mac",
+     "path": [
+      "Products and Services Performance",
+      "Mac"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "iPad",
+     "path": [
+      "Products and Services Performance",
+      "iPad"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Wearables, Home and Accessories",
+     "path": [
+      "Products and Services Performance",
+      "Wearables, Home and Accessories"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Services",
+     "path": [
+      "Products and Services Performance",
+      "Services"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Gross Margin",
+     "path": [
+      "Gross Margin"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Products Gross Margin",
+     "path": [
+      "Gross Margin",
+      "Products Gross Margin"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Services Gross Margin",
+     "path": [
+      "Gross Margin",
+      "Services Gross Margin"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Operating Expenses",
+     "path": [
+      "Operating Expenses"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Research and Development",
+     "path": [
+      "Operating Expenses",
+      "Research and Development"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Selling, General and Administrative",
+     "path": [
+      "Operating Expenses",
+      "Selling, General and Administrative"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Provision for Income Taxes",
+     "path": [
+      "Provision for Income Taxes"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Liquidity and Capital Resources",
+     "path": [
+      "Liquidity and Capital Resources"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Debt",
+     "path": [
+      "Liquidity and Capital Resources",
+      "Debt"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Leases",
+     "path": [
+      "Liquidity and Capital Resources",
+      "Leases"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Manufacturing Purchase Obligations",
+     "path": [
+      "Liquidity and Capital Resources",
+      "Manufacturing Purchase Obligations"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Other Purchase Obligations",
+     "path": [
+      "Liquidity and Capital Resources",
+      "Other Purchase Obligations"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Deemed Repatriation Tax Payable",
+     "path": [
+      "Liquidity and Capital Resources",
+      "Deemed Repatriation Tax Payable"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Capital Return Program",
+     "path": [
+      "Liquidity and Capital Resources",
+      "Capital Return Program"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Recent Accounting Pronouncements",
+     "path": [
+      "Recent Accounting Pronouncements"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Internal-Use Software",
+     "path": [
+      "Recent Accounting Pronouncements",
+      "Internal-Use Software"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Disaggregation of Income Statement Expenses",
+     "path": [
+      "Recent Accounting Pronouncements",
+      "Disaggregation of Income Statement Expenses"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Income Taxes",
+     "path": [
+      "Recent Accounting Pronouncements",
+      "Income Taxes"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Critical Accounting Estimates",
+     "path": [
+      "Critical Accounting Estimates"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Uncertain Tax Positions",
+     "path": [
+      "Critical Accounting Estimates",
+      "Uncertain Tax Positions"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "I",
+     "text": "Legal and Other Contingencies",
+     "path": [
+      "Critical Accounting Estimates",
+      "Legal and Other Contingencies"
+     ]
+    }
+   ],
+   "chars": 18132,
+   "tokens": 4742,
+   "ends_with": "ve a material impact on the Company’s financial condition and operating results."
+  },
+  {
+   "item": "7A",
+   "title": "Quantitative and Qualitative Disclosures About Market Risk",
+   "headings": [
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Interest Rate Risk",
+     "path": [
+      "Interest Rate Risk"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Foreign Exchange Rate Risk",
+     "path": [
+      "Foreign Exchange Rate Risk"
+     ]
+    }
+   ],
+   "chars": 2951,
+   "tokens": 610,
+   "ends_with": "offset changes in the fair values of the Company’s foreign currency derivatives."
+  },
+  {
+   "item": "8",
+   "title": "Financial Statements and Supplementary Data",
+   "headings": [
+    {
+     "level": 1,
+     "style": "B-caps",
+     "text": "CONSOLIDATED STATEMENTS OF OPERATIONS",
+     "path": [
+      "CONSOLIDATED STATEMENTS OF OPERATIONS"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B-caps",
+     "text": "CONSOLIDATED STATEMENTS OF COMPREHENSIVE INCOME",
+     "path": [
+      "CONSOLIDATED STATEMENTS OF COMPREHENSIVE INCOME"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B-caps",
+     "text": "CONSOLIDATED BALANCE SHEETS",
+     "path": [
+      "CONSOLIDATED BALANCE SHEETS"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B-caps",
+     "text": "CONSOLIDATED STATEMENTS OF SHAREHOLDERS’ EQUITY",
+     "path": [
+      "CONSOLIDATED STATEMENTS OF SHAREHOLDERS’ EQUITY"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B-caps",
+     "text": "CONSOLIDATED STATEMENTS OF CASH FLOWS",
+     "path": [
+      "CONSOLIDATED STATEMENTS OF CASH FLOWS"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Notes to Consolidated Financial Statements",
+     "path": [
+      "Notes to Consolidated Financial Statements"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 1 – Summary of Significant Accounting Policies",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Basis of Presentation and Preparation",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Basis of Presentation and Preparation"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Recently Adopted Accounting Pronouncements",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Recently Adopted Accounting Pronouncements"
+     ]
+    },
+    {
+     "level": 4,
+     "style": "I",
+     "text": "Segment Reporting",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Recently Adopted Accounting Pronouncements",
+      "Segment Reporting"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Revenue",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Revenue"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Share-Based Compensation",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Share-Based Compensation"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Cash Equivalents",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Cash Equivalents"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Trade Receivables",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Trade Receivables"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Marketable Securities",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Marketable Securities"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Inventories",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Inventories"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Property, Plant and Equipment",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Property, Plant and Equipment"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Derivative Instruments",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Derivative Instruments"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Income Taxes",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Income Taxes"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Leases",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 1 – Summary of Significant Accounting Policies",
+      "Leases"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 2 – Revenue",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 2 – Revenue"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 3 – Earnings Per Share",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 3 – Earnings Per Share"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 4 – Financial Instruments",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 4 – Financial Instruments"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Cash, Cash Equivalents and Marketable Securities",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 4 – Financial Instruments",
+      "Cash, Cash Equivalents and Marketable Securities"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Derivative Instruments and Hedging",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 4 – Financial Instruments",
+      "Derivative Instruments and Hedging"
+     ]
+    },
+    {
+     "level": 4,
+     "style": "I",
+     "text": "Foreign Exchange Rate Risk",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 4 – Financial Instruments",
+      "Derivative Instruments and Hedging",
+      "Foreign Exchange Rate Risk"
+     ]
+    },
+    {
+     "level": 4,
+     "style": "I",
+     "text": "Interest Rate Risk",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 4 – Financial Instruments",
+      "Derivative Instruments and Hedging",
+      "Interest Rate Risk"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Accounts Receivable",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 4 – Financial Instruments",
+      "Accounts Receivable"
+     ]
+    },
+    {
+     "level": 4,
+     "style": "I",
+     "text": "Trade Receivables",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 4 – Financial Instruments",
+      "Accounts Receivable",
+      "Trade Receivables"
+     ]
+    },
+    {
+     "level": 4,
+     "style": "I",
+     "text": "Vendor Non-Trade Receivables",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 4 – Financial Instruments",
+      "Accounts Receivable",
+      "Vendor Non-Trade Receivables"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 5 – Property, Plant and Equipment",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 5 – Property, Plant and Equipment"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 6 – Consolidated Financial Statement Details",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 6 – Consolidated Financial Statement Details"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Other Non-Current Assets",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 6 – Consolidated Financial Statement Details",
+      "Other Non-Current Assets"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Other Current Liabilities",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 6 – Consolidated Financial Statement Details",
+      "Other Current Liabilities"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 7 – Income Taxes",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 7 – Income Taxes"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "European Commission State Aid Decision",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 7 – Income Taxes",
+      "European Commission State Aid Decision"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Provision for Income Taxes and Effective Tax Rate",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 7 – Income Taxes",
+      "Provision for Income Taxes and Effective Tax Rate"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Deferred Tax Assets and Liabilities",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 7 – Income Taxes",
+      "Deferred Tax Assets and Liabilities"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Uncertain Tax Positions",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 7 – Income Taxes",
+      "Uncertain Tax Positions"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 8 – Leases",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 8 – Leases"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 9 – Debt",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 9 – Debt"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Commercial Paper",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 9 – Debt",
+      "Commercial Paper"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Term Debt",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 9 – Debt",
+      "Term Debt"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 10 – Shareholders’ Equity",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 10 – Shareholders’ Equity"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Share Repurchase Program",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 10 – Shareholders’ Equity",
+      "Share Repurchase Program"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Shares of Common Stock",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 10 – Shareholders’ Equity",
+      "Shares of Common Stock"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 11 – Share-Based Compensation",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 11 – Share-Based Compensation"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "2022 Employee Stock Plan",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 11 – Share-Based Compensation",
+      "2022 Employee Stock Plan"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Restricted Stock Units",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 11 – Share-Based Compensation",
+      "Restricted Stock Units"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Share-Based Compensation",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 11 – Share-Based Compensation",
+      "Share-Based Compensation"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 12 – Commitments, Contingencies and Supply Concentrations",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 12 – Commitments, Contingencies and Supply Concentrations"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Unconditional Purchase Obligations",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 12 – Commitments, Contingencies and Supply Concentrations",
+      "Unconditional Purchase Obligations"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Contingencies",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 12 – Commitments, Contingencies and Supply Concentrations",
+      "Contingencies"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Concentrations in the Available Sources of Supply of Materials and Product",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 12 – Commitments, Contingencies and Supply Concentrations",
+      "Concentrations in the Available Sources of Supply of Materials and Product"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B-note",
+     "text": "Note 13 – Segment Information and Geographic Data",
+     "path": [
+      "Notes to Consolidated Financial Statements",
+      "Note 13 – Segment Information and Geographic Data"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Report of Independent Registered Public Accounting Firm",
+     "path": [
+      "Report of Independent Registered Public Accounting Firm"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B",
+     "text": "Opinion on the Financial Statements",
+     "path": [
+      "Report of Independent Registered Public Accounting Firm",
+      "Opinion on the Financial Statements"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B",
+     "text": "Basis for Opinion",
+     "path": [
+      "Report of Independent Registered Public Accounting Firm",
+      "Basis for Opinion"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B",
+     "text": "Critical Audit Matter",
+     "path": [
+      "Report of Independent Registered Public Accounting Firm",
+      "Critical Audit Matter"
+     ]
+    },
+    {
+     "level": 3,
+     "style": "B",
+     "text": "Uncertain Tax Positions",
+     "path": [
+      "Report of Independent Registered Public Accounting Firm",
+      "Critical Audit Matter",
+      "Uncertain Tax Positions"
+     ]
+    },
+    {
+     "level": 1,
+     "style": "B",
+     "text": "Report of Independent Registered Public Accounting Firm",
+     "path": [
+      "Report of Independent Registered Public Accounting Firm"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B",
+     "text": "Opinion on Internal Control Over Financial Reporting",
+     "path": [
+      "Report of Independent Registered Public Accounting Firm",
+      "Opinion on Internal Control Over Financial Reporting"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B",
+     "text": "Basis for Opinion",
+     "path": [
+      "Report of Independent Registered Public Accounting Firm",
+      "Basis for Opinion"
+     ]
+    },
+    {
+     "level": 2,
+     "style": "B",
+     "text": "Definition and Limitations of Internal Control Over Financial Reporting",
+     "path": [
+      "Report of Independent Registered Public Accounting Firm",
+      "Definition and Limitations of Internal Control Over Financial Reporting"
+     ]
+    }
+   ],
+   "chars": 62779,
+   "tokens": 18849,
+   "ends_with": "res may deteriorate.\n/s/ Ernst & Young LLP\nSan Jose, California\nOctober 31, 2025"
+  }
+ ],
+ "risk_factors": {
+  "preamble": {
+   "starts_with": "The following summarizes factors that could have a material adverse effect on th",
+   "ends_with": "art II, Item 8, “Financial Statements and Supplementary Data” of this Form 10-K.",
+   "chars": 1014,
+   "tokens": 180
+  },
+  "units": [
+   {
+    "kind": "risk_factor",
+    "heading": "The Company’s operations and performance depend significantly on global and regional economic conditions and adverse economic conditions can materially adversely affect the Company’s business, results of operations, financial condition and stock price.",
+    "path": [
+     "Macroeconomic and Industry Risks",
+     "The Company’s operations and performance depend significantly on global and regional economic conditions and adverse economic conditions can materially adversely affect the Company’s business, results of operations, financial condition and stock price."
+    ],
+    "id": "RF01",
+    "category": "Macroeconomic and Industry Risks",
+    "ends_with": " Company’s business, results of operations, financial condition and stock price.",
+    "chars": 2098,
+    "tokens": 349
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company’s business can be impacted by political events, trade and other international disputes, geopolitical tensions, conflict, terrorism, natural disasters, public health issues, industrial accidents and other business interruptions.",
+    "path": [
+     "Macroeconomic and Industry Risks",
+     "The Company’s business can be impacted by political events, trade and other international disputes, geopolitical tensions, conflict, terrorism, natural disasters, public health issues, industrial accidents and other business interruptions."
+    ],
+    "id": "RF02",
+    "category": "Macroeconomic and Industry Risks",
+    "ends_with": " Company’s business, results of operations, financial condition and stock price.",
+    "chars": 7200,
+    "tokens": 1241
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "Global markets for the Company’s products and services are highly competitive and subject to rapid technological change, and the Company may be unable to compete effectively in these markets.",
+    "path": [
+     "Macroeconomic and Industry Risks",
+     "Global markets for the Company’s products and services are highly competitive and subject to rapid technological change, and the Company may be unable to compete effectively in these markets."
+    ],
+    "id": "RF03",
+    "category": "Macroeconomic and Industry Risks",
+    "ends_with": "tions, financial condition and stock price can be materially adversely affected.",
+    "chars": 4180,
+    "tokens": 682
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "To remain competitive and stimulate customer demand, the Company must successfully manage frequent introductions and transitions of products and services.",
+    "path": [
+     "Business Risks",
+     "To remain competitive and stimulate customer demand, the Company must successfully manage frequent introductions and transitions of products and services."
+    ],
+    "id": "RF04",
+    "category": "Business Risks",
+    "ends_with": "usiness, reputation, results of operations, financial condition and stock price.",
+    "chars": 2124,
+    "tokens": 338
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company depends on component and product manufacturing and logistical services provided by outsourcing partners, many of which are located outside of the U.S.",
+    "path": [
+     "Business Risks",
+     "The Company depends on component and product manufacturing and logistical services provided by outsourcing partners, many of which are located outside of the U.S."
+    ],
+    "id": "RF05",
+    "category": "Business Risks",
+    "ends_with": "ncertainties, including exposure to additional regulatory and operational risks.",
+    "chars": 1945,
+    "tokens": 329
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "Future operating results depend upon the Company’s ability to obtain components in sufficient quantities on commercially reasonable terms.",
+    "path": [
+     "Business Risks",
+     "Future operating results depend upon the Company’s ability to obtain components in sufficient quantities on commercially reasonable terms."
+    ],
+    "id": "RF06",
+    "category": "Business Risks",
+    "ends_with": "affect its business, results of operations, financial condition and stock price.",
+    "chars": 2047,
+    "tokens": 331
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company’s products and services may be affected from time to time by design and manufacturing defects that could materially adversely affect the Company’s business and result in harm to the Company’s reputation.",
+    "path": [
+     "Business Risks",
+     "The Company’s products and services may be affected from time to time by design and manufacturing defects that could materially adversely affect the Company’s business and result in harm to the Company’s reputation."
+    ],
+    "id": "RF07",
+    "category": "Business Risks",
+    "ends_with": "cts and services, delay in new product and service introductions and lost sales.",
+    "chars": 2354,
+    "tokens": 405
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company is exposed to the risk of write-downs on the value of its inventory and other assets, in addition to purchase commitment cancellation risk.",
+    "path": [
+     "Business Risks",
+     "The Company is exposed to the risk of write-downs on the value of its inventory and other assets, in addition to purchase commitment cancellation risk."
+    ],
+    "id": "RF08",
+    "category": "Business Risks",
+    "ends_with": "ecessary cancellation fee reserves for orders of excess products and components.",
+    "chars": 1451,
+    "tokens": 250
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company relies on access to third-party intellectual property, which may not be available to the Company on commercially reasonable terms, or at all.",
+    "path": [
+     "Business Risks",
+     "The Company relies on access to third-party intellectual property, which may not be available to the Company on commercially reasonable terms, or at all."
+    ],
+    "id": "RF09",
+    "category": "Business Risks",
+    "ends_with": "usiness, reputation, results of operations, financial condition and stock price.",
+    "chars": 1707,
+    "tokens": 285
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company’s future performance depends in part on support from third-party software developers.",
+    "path": [
+     "Business Risks",
+     "The Company’s future performance depends in part on support from third-party software developers."
+    ],
+    "id": "RF10",
+    "category": "Business Risks",
+    "ends_with": " in dissatisfied customers and lower customer demand for the Company’s products.",
+    "chars": 2281,
+    "tokens": 376
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "Failure to obtain or create digital content that appeals to the Company’s customers, or to make such content available on commercially reasonable terms, could have a material adverse impact on the Company’s business, results of operations and financial condition.",
+    "path": [
+     "Business Risks",
+     "Failure to obtain or create digital content that appeals to the Company’s customers, or to make such content available on commercially reasonable terms, could have a material adverse impact on the Company’s business, results of operations and financial condition."
+    ],
+    "id": "RF11",
+    "category": "Business Risks",
+    "ends_with": "ent, content and subscribers, and may fail to appeal to the Company’s customers.",
+    "chars": 1470,
+    "tokens": 256
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company’s success depends largely on the talents and efforts of its team members, the continued service and availability of highly skilled employees, including key personnel, and the Company’s ability to nurture its distinctive and inclusive culture.",
+    "path": [
+     "Business Risks",
+     "The Company’s success depends largely on the talents and efforts of its team members, the continued service and availability of highly skilled employees, including key personnel, and the Company’s ability to nurture its distinctive and inclusive culture."
+    ],
+    "id": "RF12",
+    "category": "Business Risks",
+    "ends_with": "usiness, reputation, results of operations, financial condition and stock price.",
+    "chars": 2073,
+    "tokens": 342
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company depends on the performance of carriers and other resellers.",
+    "path": [
+     "Business Risks",
+     "The Company depends on the performance of carriers and other resellers."
+    ],
+    "id": "RF13",
+    "category": "Business Risks",
+    "ends_with": " Company’s business, results of operations, financial condition and stock price.",
+    "chars": 1284,
+    "tokens": 216
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company’s business and reputation are impacted by information technology system failures and network disruptions.",
+    "path": [
+     "Business Risks",
+     "The Company’s business and reputation are impacted by information technology system failures and network disruptions."
+    ],
+    "id": "RF14",
+    "category": "Business Risks",
+    "ends_with": "usiness, reputation, results of operations, financial condition and stock price.",
+    "chars": 1160,
+    "tokens": 186
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "Losses or unauthorized access to or releases of confidential information, including personal information, could subject the Company to significant reputational, financial, legal and operational consequences.",
+    "path": [
+     "Business Risks",
+     "Losses or unauthorized access to or releases of confidential information, including personal information, could subject the Company to significant reputational, financial, legal and operational consequences."
+    ],
+    "id": "RF15",
+    "category": "Business Risks",
+    "ends_with": "e may be insufficient to cover all losses or all types of claims that may arise.",
+    "chars": 4114,
+    "tokens": 683
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "Investment in new business strategies, commercial relationships and acquisitions could disrupt the Company’s ongoing business, present risks not originally contemplated, and materially adversely affect the Company’s business, reputation, results of operations and financial condition.",
+    "path": [
+     "Business Risks",
+     "Investment in new business strategies, commercial relationships and acquisitions could disrupt the Company’s ongoing business, present risks not originally contemplated, and materially adversely affect the Company’s business, reputation, results of operations and financial condition."
+    ],
+    "id": "RF16",
+    "category": "Business Risks",
+    "ends_with": "usiness, reputation, results of operations, financial condition and stock price.",
+    "chars": 1565,
+    "tokens": 253
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company’s business, results of operations and financial condition could be adversely impacted by unfavorable results of legal proceedings or government investigations.",
+    "path": [
+     "Legal and Regulatory Compliance Risks",
+     "The Company’s business, results of operations and financial condition could be adversely impacted by unfavorable results of legal proceedings or government investigations."
+    ],
+    "id": "RF17",
+    "category": "Legal and Regulatory Compliance Risks",
+    "ends_with": "e may be insufficient to cover all losses or all types of claims that may arise.",
+    "chars": 3914,
+    "tokens": 657
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company is subject to complex and changing laws and regulations worldwide, which exposes the Company to potential liabilities, increased costs and other adverse effects on the Company’s business.",
+    "path": [
+     "Legal and Regulatory Compliance Risks",
+     "The Company is subject to complex and changing laws and regulations worldwide, which exposes the Company to potential liabilities, increased costs and other adverse effects on the Company’s business."
+    ],
+    "id": "RF18",
+    "category": "Legal and Regulatory Compliance Risks",
+    "ends_with": "usiness, reputation, results of operations, financial condition and stock price.",
+    "chars": 3215,
+    "tokens": 546
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "Varied stakeholder expectations about social and other issues expose the Company to potential liabilities, increased costs, reputational harm, and other adverse effects on the Company’s business.",
+    "path": [
+     "Legal and Regulatory Compliance Risks",
+     "Varied stakeholder expectations about social and other issues expose the Company to potential liabilities, increased costs, reputational harm, and other adverse effects on the Company’s business."
+    ],
+    "id": "RF19",
+    "category": "Legal and Regulatory Compliance Risks",
+    "ends_with": "usiness, reputation, results of operations, financial condition and stock price.",
+    "chars": 1571,
+    "tokens": 270
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The technology industry, including, in some instances, the Company, is subject to intense media, political and regulatory scrutiny, which exposes the Company to increasing regulation, government investigations, legal actions and penalties.",
+    "path": [
+     "Legal and Regulatory Compliance Risks",
+     "The technology industry, including, in some instances, the Company, is subject to intense media, political and regulatory scrutiny, which exposes the Company to increasing regulation, government investigations, legal actions and penalties."
+    ],
+    "id": "RF20",
+    "category": "Legal and Regulatory Compliance Risks",
+    "ends_with": " reduced demand for products and services, lost sales, and lower profit margins.",
+    "chars": 5809,
+    "tokens": 1028
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company’s business is subject to a variety of U.S. and international laws, rules, policies and other obligations regarding the collection, use, protection and transfer of personal data.",
+    "path": [
+     "Legal and Regulatory Compliance Risks",
+     "The Company’s business is subject to a variety of U.S. and international laws, rules, policies and other obligations regarding the collection, use, protection and transfer of personal data."
+    ],
+    "id": "RF21",
+    "category": "Legal and Regulatory Compliance Risks",
+    "ends_with": " Company’s business, financial condition, results of operations and stock price.",
+    "chars": 3373,
+    "tokens": 557
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company’s net sales and gross margins are subject to volatility and downward pressure due to a variety of factors.",
+    "path": [
+     "Financial Risks",
+     "The Company’s net sales and gross margins are subject to volatility and downward pressure due to a variety of factors."
+    ],
+    "id": "RF22",
+    "category": "Financial Risks",
+    "ends_with": " demand for that product could significantly impact net sales and gross margins.",
+    "chars": 1832,
+    "tokens": 309
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company’s financial performance is subject to risks associated with changes in the value of the U.S. dollar relative to local currencies.",
+    "path": [
+     "Financial Risks",
+     "The Company’s financial performance is subject to risks associated with changes in the value of the U.S. dollar relative to local currencies."
+    ],
+    "id": "RF23",
+    "category": "Financial Risks",
+    "ends_with": "vements in foreign exchange rates over the limited time the hedges are in place.",
+    "chars": 2043,
+    "tokens": 359
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company is exposed to credit risk and fluctuations in the values of its investment portfolio.",
+    "path": [
+     "Financial Risks",
+     "The Company is exposed to credit risk and fluctuations in the values of its investment portfolio."
+    ],
+    "id": "RF24",
+    "category": "Financial Risks",
+    "ends_with": "act on the Company’s results of operations, financial condition and stock price.",
+    "chars": 759,
+    "tokens": 129
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company is exposed to credit risk on its trade accounts receivable, vendor non-trade receivables and prepayments related to long-term supply agreements, and this risk is heightened during periods when economic conditions worsen.",
+    "path": [
+     "Financial Risks",
+     "The Company is exposed to credit risk on its trade accounts receivable, vendor non-trade receivables and prepayments related to long-term supply agreements, and this risk is heightened during periods when economic conditions worsen."
+    ],
+    "id": "RF25",
+    "category": "Financial Risks",
+    "ends_with": "ons, financial condition and stock price could be materially adversely affected.",
+    "chars": 1699,
+    "tokens": 306
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The Company is subject to changes in tax rates, the adoption of new U.S. or international tax legislation and exposure to additional tax liabilities.",
+    "path": [
+     "Financial Risks",
+     "The Company is subject to changes in tax rates, the adoption of new U.S. or international tax legislation and exposure to additional tax liabilities."
+    ],
+    "id": "RF26",
+    "category": "Financial Risks",
+    "ends_with": "ons, financial condition and stock price could be materially adversely affected.",
+    "chars": 1780,
+    "tokens": 309
+   },
+   {
+    "kind": "risk_factor",
+    "heading": "The price of the Company’s stock is subject to volatility.",
+    "path": [
+     "General Risks",
+     "The price of the Company’s stock is subject to volatility."
+    ],
+    "id": "RF27",
+    "category": "General Risks",
+    "ends_with": "ld have a material adverse impact on investor confidence and employee retention.",
+    "chars": 1423,
+    "tokens": 256
+   }
+  ]
+ },
+ "tables": [
+  {
+   "id": "T01",
+   "item": "7",
+   "kind": "data",
+   "path": [
+    "Segment Operating Performance"
+   ],
+   "rows": 7,
+   "first_row": "2025 | Change | 2024 | Change | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T02",
+   "item": "7",
+   "kind": "data",
+   "path": [
+    "Products and Services Performance"
+   ],
+   "rows": 7,
+   "first_row": "2025 | Change | 2024 | Change | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T03",
+   "item": "7",
+   "kind": "data",
+   "path": [
+    "Gross Margin"
+   ],
+   "rows": 5,
+   "first_row": "2025 | 2024 | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T04",
+   "item": "7",
+   "kind": "data",
+   "path": [
+    "Gross Margin"
+   ],
+   "rows": 4,
+   "first_row": "Gross margin percentage:",
+   "units": null,
+   "units_from": null
+  },
+  {
+   "id": "T05",
+   "item": "7",
+   "kind": "data",
+   "path": [
+    "Operating Expenses"
+   ],
+   "rows": 7,
+   "first_row": "2025 | Change | 2024 | Change | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T06",
+   "item": "7",
+   "kind": "data",
+   "path": [
+    "Provision for Income Taxes"
+   ],
+   "rows": 4,
+   "first_row": "2025 | 2024 | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T07",
+   "item": "7A",
+   "kind": "data",
+   "path": [
+    "Interest Rate Risk"
+   ],
+   "rows": 3,
+   "first_row": "Interest Rate Sensitive Instrument | Hypothetical Interest Rate Increase | Potential Impact | 2025 | 2024",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T08",
+   "item": "8",
+   "kind": "index",
+   "path": [],
+   "rows": 8,
+   "first_row": "Index to Consolidated Financial Statements | Page",
+   "units": null,
+   "units_from": null
+  },
+  {
+   "id": "T09",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "CONSOLIDATED STATEMENTS OF OPERATIONS"
+   ],
+   "rows": 26,
+   "first_row": "Years ended",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T10",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "CONSOLIDATED STATEMENTS OF COMPREHENSIVE INCOME"
+   ],
+   "rows": 15,
+   "first_row": "Years ended",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T11",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "CONSOLIDATED BALANCE SHEETS"
+   ],
+   "rows": 36,
+   "first_row": "September 27, 2025 | September 28, 2024",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T12",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "CONSOLIDATED STATEMENTS OF SHAREHOLDERS’ EQUITY"
+   ],
+   "rows": 22,
+   "first_row": "Years ended",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T13",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "CONSOLIDATED STATEMENTS OF CASH FLOWS"
+   ],
+   "rows": 37,
+   "first_row": "Years ended",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T14",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 2 – Revenue"
+   ],
+   "rows": 8,
+   "first_row": "2025 | 2024 | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T15",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 3 – Earnings Per Share"
+   ],
+   "rows": 9,
+   "first_row": "2025 | 2024 | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T16",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 4 – Financial Instruments",
+    "Cash, Cash Equivalents and Marketable Securities"
+   ],
+   "rows": 18,
+   "first_row": "2025",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T17",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 4 – Financial Instruments",
+    "Cash, Cash Equivalents and Marketable Securities"
+   ],
+   "rows": 18,
+   "first_row": "2024",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T18",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 4 – Financial Instruments",
+    "Derivative Instruments and Hedging",
+    "Interest Rate Risk"
+   ],
+   "rows": 6,
+   "first_row": "2025 | 2024",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T19",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 5 – Property, Plant and Equipment"
+   ],
+   "rows": 7,
+   "first_row": "2025 | 2024",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T20",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 6 – Consolidated Financial Statement Details",
+    "Other Non-Current Assets"
+   ],
+   "rows": 4,
+   "first_row": "2025 | 2024",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T21",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 6 – Consolidated Financial Statement Details",
+    "Other Current Liabilities"
+   ],
+   "rows": 5,
+   "first_row": "2025 | 2024",
+   "units": "in millions",
+   "units_from": "inherited"
+  },
+  {
+   "id": "T22",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 7 – Income Taxes",
+    "Provision for Income Taxes and Effective Tax Rate"
+   ],
+   "rows": 14,
+   "first_row": "2025 | 2024 | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T23",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 7 – Income Taxes",
+    "Provision for Income Taxes and Effective Tax Rate"
+   ],
+   "rows": 9,
+   "first_row": "2025 | 2024 | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T24",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 7 – Income Taxes",
+    "Deferred Tax Assets and Liabilities"
+   ],
+   "rows": 18,
+   "first_row": "2025 | 2024",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T25",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 7 – Income Taxes",
+    "Uncertain Tax Positions"
+   ],
+   "rows": 8,
+   "first_row": "2025 | 2024 | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T26",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 8 – Leases"
+   ],
+   "rows": 11,
+   "first_row": "Lease-Related Assets and Liabilities | Financial Statement Line Items | 2025 | 2024",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T27",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 8 – Leases"
+   ],
+   "rows": 10,
+   "first_row": "Operating Leases | Finance Leases | Total",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T28",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 9 – Debt",
+    "Commercial Paper"
+   ],
+   "rows": 8,
+   "first_row": "2025 | 2024 | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T29",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 9 – Debt",
+    "Term Debt"
+   ],
+   "rows": 12,
+   "first_row": "Maturities (calendar year) | 2025 | 2024",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T30",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 9 – Debt",
+    "Term Debt"
+   ],
+   "rows": 7,
+   "first_row": "2026 | $ | 12,393",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T31",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 10 – Shareholders’ Equity",
+    "Shares of Common Stock"
+   ],
+   "rows": 5,
+   "first_row": "2025 | 2024 | 2023",
+   "units": "in thousands",
+   "units_from": "caption"
+  },
+  {
+   "id": "T32",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 11 – Share-Based Compensation",
+    "Restricted Stock Units"
+   ],
+   "rows": 6,
+   "first_row": "Number of RSUs (in thousands) | Weighted-Average Grant-Date Fair Value Per RSU",
+   "units": "in thousands",
+   "units_from": "caption"
+  },
+  {
+   "id": "T33",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 11 – Share-Based Compensation",
+    "Share-Based Compensation"
+   ],
+   "rows": 3,
+   "first_row": "2025 | 2024 | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T34",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 12 – Commitments, Contingencies and Supply Concentrations",
+    "Unconditional Purchase Obligations"
+   ],
+   "rows": 7,
+   "first_row": "2026 | $ | 4,752",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T35",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 13 – Segment Information and Geographic Data"
+   ],
+   "rows": 8,
+   "first_row": "2025",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T36",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 13 – Segment Information and Geographic Data"
+   ],
+   "rows": 8,
+   "first_row": "2024",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T37",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 13 – Segment Information and Geographic Data"
+   ],
+   "rows": 8,
+   "first_row": "2023",
+   "units": "in millions",
+   "units_from": "inherited"
+  },
+  {
+   "id": "T38",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 13 – Segment Information and Geographic Data"
+   ],
+   "rows": 6,
+   "first_row": "2025 | 2024 | 2023",
+   "units": "in millions",
+   "units_from": "caption"
+  },
+  {
+   "id": "T39",
+   "item": "8",
+   "kind": "data",
+   "path": [
+    "Notes to Consolidated Financial Statements",
+    "Note 13 – Segment Information and Geographic Data"
+   ],
+   "rows": 6,
+   "first_row": "2025 | 2024",
+   "units": "in millions",
+   "units_from": "caption"
+  }
+ ],
+ "furniture": {
+  "count": 47,
+  "examples": [
+   "Apple Inc. | 2025 Form 10-K | 1",
+   "Apple Inc. | 2025 Form 10-K | 10",
+   "Apple Inc. | 2025 Form 10-K | 11"
+  ]
+ }
+}

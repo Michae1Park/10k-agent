@@ -1,16 +1,7 @@
-"""The fixed corpus (docs/DECISIONS.md D-001): 8 companies × fiscal years 2023–2025.
+"""The fixed corpus (docs/DECISIONS.md D-001): 8 companies × fiscal years 2023–2025."""
 
-TENK_CORPUS=<file.yaml> swaps in another corpus for the whole process: V6 builds its
-fine-tuning data from filings outside the eval corpus (D-022). EVAL_COMPANIES and
-EVAL_FISCAL_YEARS always name the eval corpus, whatever is active.
-"""
-
-import os
 import re
 from dataclasses import dataclass
-from pathlib import Path
-
-import yaml
 
 
 @dataclass(frozen=True)
@@ -21,7 +12,7 @@ class Company:
     aliases: tuple[str, ...] = ()
 
 
-EVAL_COMPANIES: tuple[Company, ...] = (
+COMPANIES: tuple[Company, ...] = (
     Company("AAPL", 320193, "Apple Inc.", ("Apple",)),
     Company("MSFT", 789019, "Microsoft Corporation", ("Microsoft",)),
     Company("AMZN", 1018724, "Amazon.com, Inc.", ("Amazon", "AWS", "Amazon Web Services")),
@@ -31,23 +22,7 @@ EVAL_COMPANIES: tuple[Company, ...] = (
     Company("TSLA", 1318605, "Tesla, Inc.", ("Tesla",)),
     Company("NFLX", 1065280, "Netflix, Inc.", ("Netflix",)),
 )
-EVAL_FISCAL_YEARS: tuple[int, ...] = (2023, 2024, 2025)
-
-
-def load_corpus(path: Path) -> tuple[tuple[Company, ...], tuple[int, ...]]:
-    """A corpus file: {companies: [{ticker, cik, name, aliases}], fiscal_years: [...]}."""
-    data = yaml.safe_load(path.read_text())
-    companies = tuple(
-        Company(c["ticker"], int(c["cik"]), c["name"], tuple(c.get("aliases", ())))
-        for c in data["companies"]
-    )
-    return companies, tuple(data["fiscal_years"])
-
-
-if os.environ.get("TENK_CORPUS"):
-    COMPANIES, FISCAL_YEARS = load_corpus(Path(os.environ["TENK_CORPUS"]))
-else:
-    COMPANIES, FISCAL_YEARS = EVAL_COMPANIES, EVAL_FISCAL_YEARS
+FISCAL_YEARS: tuple[int, ...] = (2023, 2024, 2025)
 
 
 def company_by_ticker(ticker: str) -> Company:

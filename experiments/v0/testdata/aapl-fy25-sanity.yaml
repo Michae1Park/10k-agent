@@ -1,0 +1,262 @@
+# V0 sanity cases: a small answer key a person can check by hand in ~20 minutes.
+# Checker: experiments/v0/sanity.py.
+#
+# Each case quotes a few words of the filing (`find`) and says what the chunk holding them must
+# carry. Text is matched on letters and digits only, so "$1,234" = "1234" and quote styles don't
+# matter.
+#
+# How to review (open the HTML in a browser, Ctrl+F the `find` text; `page` is the printed page in
+# the footer):
+#   - item:    the Item the text is in
+#   - path:    the headings above it, top first, without the Item heading ([] = none: Item-level text)
+#   - units:   a table's scale, from its caption or header ("in millions"); null = the table has none
+#   - with:    text that must be in the same chunk (the rest of the table / risk factor)
+#   - without: text that must NOT be in the same chunk (the neighbouring unit)
+#   - absent:  the text must be in no chunk at all (page furniture, the index table)
+# Fix anything that's wrong, set the case's `checked: true`, and when all are checked fill in
+# `review`. Until then the results are a draft, not ground truth.
+
+source: experiments/v0/testdata/aapl-fy25-excerpt.html
+review:
+  status: draft # → "reviewed" once every case is checked: true
+  by: null
+  date: null
+
+cases:
+  # ---------- prose under headings (criterion 1) ----------
+  - id: S01
+    tests: level-1 heading
+    page: 1
+    find: The Company designs, manufactures and markets smartphones, personal computers
+    item: "1"
+    path: [Company Background]
+    checked: false
+
+  - id: S02
+    tests: level-2 heading (italic under bold)
+    page: 1
+    find: The iPhone line includes iPhone 17 Pro
+    item: "1"
+    path: [Products, iPhone]
+    checked: false
+
+  - id: S03
+    tests: same heading text ("iPhone") under a different parent in another Item
+    page: 23
+    find: iPhone net sales increased during 2025 compared to 2024 due to higher net sales of Pro models
+    item: "7"
+    path: [Products and Services Performance, iPhone]
+    checked: false
+
+  - id: S04
+    tests: 4 levels deep in a note; "Interest Rate Risk" is also a level-1 heading in Item 7A (S19)
+    page: 38
+    find: the Company may use interest rate swaps, options or other instruments
+    item: "8"
+    path:
+      - Notes to Consolidated Financial Statements
+      - Note 4 – Financial Instruments
+      - Derivative Instruments and Hedging
+      - Interest Rate Risk
+    checked: false
+
+  - id: S05
+    tests: level-4 italic heading under a level-3 bold one (the preprocessing's known level error)
+    page: 34
+    find: Beginning with the 2025 annual reporting period, the Company adopted
+    item: "8"
+    path:
+      - Notes to Consolidated Financial Statements
+      - Note 1 – Summary of Significant Accounting Policies
+      - Recently Adopted Accounting Pronouncements
+      - Segment Reporting
+    checked: false
+
+  - id: S06
+    tests: long italic intro paragraph is body text, not a heading
+    page: 21
+    find: This Item generally discusses 2025 and 2024 items and year-to-year comparisons
+    item: "7"
+    path: []
+    checked: false
+
+  - id: S07
+    tests: auditor report; "Uncertain Tax Positions" is also a heading in Item 7 and Note 7
+    page: 50
+    find: We tested controls relating to the evaluation of uncertain tax positions
+    item: "8"
+    path:
+      - Report of Independent Registered Public Accounting Firm
+      - Critical Audit Matter
+      - Uncertain Tax Positions
+    checked: false
+
+  - id: S08
+    tests: Item boundary; the last words of Item 7A don't share a chunk with Item 8
+    page: 27
+    find: The VAR model used a Monte Carlo simulation
+    item: 7A
+    path: [Foreign Exchange Rate Risk]
+    without:
+      - All financial statement schedules have been omitted
+    checked: false
+
+  # ---------- Item 1A risk factors (criterion 2) ----------
+  - id: S09
+    tests: the Item 1A preamble is its own unit
+    page: 5
+    find: The Company may not be able to accurately predict, control or mitigate these risks
+    item: 1A
+    path: []
+    without:
+      - adverse economic conditions can materially adversely affect the Company
+    checked: false
+
+  - id: S10
+    tests: a short risk factor (216 tokens) sits whole in one chunk, apart from its neighbours
+    page: 11
+    find: The Company depends on the performance of carriers and other resellers.
+    item: 1A
+    path:
+      - Business Risks
+      - The Company depends on the performance of carriers and other resellers.
+    with:
+      - Resellers offer financing, installment payment plans or subsidies
+      - could cause resellers to reduce their ordering and marketing of the Company
+    without:
+      - success depends largely on the talents and efforts of its team members
+      - reputation are impacted by information technology system failures and network disruptions
+    checked: false
+
+  - id: S11
+    tests: two adjacent risk factors on the same topic (credit risk) stay apart
+    page: 16
+    find: investments can be negatively affected by changes in liquidity, credit deterioration
+    item: 1A
+    path:
+      - Financial Risks
+      - The Company is exposed to credit risk and fluctuations in the values of its investment portfolio.
+    without:
+      - exposed to credit risk on its trade accounts receivable, vendor non-trade receivables
+    checked: false
+
+  - id: S12
+    tests: a long risk factor (1,241 tokens) across a page break; every piece keeps its heading
+    page: 6–7
+    find:
+      - Political events, trade and other international disputes, geopolitical tensions, conflict, terrorism, natural disasters, public health issues, industrial accidents and other business interruptions can have
+      - Following any interruption to its business, the Company can require substantial recovery time
+    item: 1A
+    path:
+      - Macroeconomic and Industry Risks
+      - The Company’s business can be impacted by political events, trade and other international disputes, geopolitical tensions, conflict, terrorism, natural disasters, public health issues, industrial accidents and other business interruptions.
+    without:
+      - highly competitive and subject to rapid technological change, and the Company may be unable
+    checked: false
+
+  # ---------- tables ----------
+  - id: S13
+    tests: small MD&A table, units in the sentence above it
+    page: 24
+    find: Total gross margin | $195,201 | $180,683 | $169,148
+    item: "7"
+    path: [Gross Margin]
+    kind: table
+    units: in millions
+    with:
+      - Products | $112,887 | $109,633 | $108,803
+    checked: false
+
+  - id: S14
+    tests: percentage table right after S13; it has no scale, so no units
+    page: 24
+    find: Total gross margin percentage | 46.9% | 46.2% | 44.1%
+    item: "7"
+    path: [Gross Margin]
+    kind: table
+    units: null
+    with:
+      - Services | 75.4% | 73.9% | 70.8%
+    checked: false
+
+  - id: S15
+    tests: a whole financial statement (26 rows); "Apple Inc." above it is a label, not a heading
+    page: 29
+    find: Income before provision for income taxes | 132,729 | 123,485 | 113,736
+    item: "8"
+    path: [CONSOLIDATED STATEMENTS OF OPERATIONS]
+    kind: table
+    units: in millions
+    with:
+      - Products | $307,003 | $294,866 | $298,085
+      - Diluted | 15,004,697 | 15,408,095 | 15,812,547
+    checked: false
+
+  - id: S16
+    tests: second of two tables whose units are stated once, in the note's intro sentence
+    page: 40
+    find: Total other current liabilities | $66,387 | $78,304
+    item: "8"
+    path:
+      - Notes to Consolidated Financial Statements
+      - Note 6 – Consolidated Financial Statement Details
+      - Other Current Liabilities
+    kind: table
+    units: in millions
+    with:
+      - Income taxes payable | $13,016 | $26,601
+    checked: false
+
+  - id: S17
+    tests: third of three same-shaped tables (one per year); units inherited from the intro
+    page: 47
+    find: Net sales | $162,560 | $94,294 | $72,559 | $24,257 | $29,615
+    item: "8"
+    path:
+      - Notes to Consolidated Financial Statements
+      - Note 13 – Segment Information and Geographic Data
+    kind: table
+    units: in millions
+    checked: false
+
+  - id: S18
+    tests: a share-count table in thousands, not millions
+    page: 45
+    find: Common stock outstanding, ending balances | 14,773,260 | 15,116,786 | 15,550,061
+    item: "8"
+    path:
+      - Notes to Consolidated Financial Statements
+      - Note 10 – Shareholders’ Equity
+      - Shares of Common Stock
+    kind: table
+    units: in thousands
+    with:
+      - Common stock repurchased | (401,672) | (499,372) | (471,419)
+    checked: false
+
+  - id: S19
+    tests: Item 7A table with text cells; same heading as S04 but level 1 here
+    page: 27
+    find: Investment portfolio | 100 basis points, all tenors | Decline in fair value | $2,416 | $2,755
+    item: 7A
+    path: [Interest Rate Risk]
+    kind: table
+    units: in millions
+    with:
+      - Term debt | 100 basis points, all tenors | Increase in annual interest expense
+    checked: false
+
+  # ---------- dropped text ----------
+  - id: S20
+    tests: a page footer in the middle of a risk factor (S12) is dropped
+    page: 6
+    find: Apple Inc. | 2025 Form 10-K | 6
+    absent: true
+    checked: false
+
+  - id: S21
+    tests: the "Index to Consolidated Financial Statements" table is dropped
+    page: 28
+    find: Consolidated Statements of Operations for the years ended September 27, 2025, September 28, 2024 and September 30, 2023 | 29
+    absent: true
+    checked: false

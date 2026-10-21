@@ -1,43 +1,38 @@
 [project]
 name = "tenk-agent"
 version = "0.1.0"
-description = "Agentic research assistant for grounded, cited answers over SEC 10-K filings"
+description = "Grounded, cited answers over SEC 10-K filings"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=1.9.0",
     "beautifulsoup4>=4.12",
-    "fastapi>=0.142.2",
     "httpx>=0.27",
     "lxml>=5.0",
     "numpy>=2.5.3",
     "openai>=3.22.1",
     "pyyaml>=6.0.3",
     "sqlite-vec>=0.1.9",
-    "uvicorn[standard]>=0.54.0",
 ]
 
 [project.scripts]
 tenk = "tenk_agent.cli:main"
 
 [project.optional-dependencies]
+# Local embedder, reranker and the chunkers' tokenizer.
 local = [
     "sentence-transformers>=6.1.0",
 ]
-finetune = [
-    "accelerate>=1.11",
-    "flash-linear-attention>=0.5.2",
-    "peft>=0.18",
+# V0 parent-child (LlamaIndex) and agentic (Chonkie) chunkers.
+chunking = [
+    "chonkie[openai]==1.7.0",
+    "llama-index-core==0.14.25",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=8",
     "ruff>=0.6",
-]
-experiments = [
-    "chonkie[openai]==1.7.0",
-    "llama-index-core==0.14.25",
 ]
 
 [build-system]
@@ -59,10 +54,5 @@ src = ["src", "tests"]
 select = ["E", "F", "I", "B", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
-# Prompt text reads better unwrapped.
-"src/tenk_agent/{agent,answers,ask}.py" = ["E501"]
-"src/tenk_agent/evaluation/judge.py" = ["E501"]
-# SVG and HTML markup reads better unwrapped.
-"src/tenk_agent/evaluation/compare.py" = ["E501"]
-# Playgrounds: usage examples and report lines read better unwrapped.
-"versions/**/*.py" = ["E501"]
+# HTML markup reads better unwrapped.
+"src/tenk_agent/evaluation/render.py" = ["E501"]
