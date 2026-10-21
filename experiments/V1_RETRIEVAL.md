@@ -23,7 +23,7 @@
 
 ## 1. Test data
 
-**File:** [retrieval-gold-fy2025.jsonl](v1/v1_testdata/retrieval-gold-fy2025.jsonl). To read it: [PDF](v1/v1_testdata/retrieval-gold-fy2025.pdf) (one card per question, evidence highlighted) and [summary](v1/v1_testdata/retrieval-gold-fy2025-summary.pdf).
+**File:** [retrieval-gold-fy2025.jsonl](v1/testdata/retrieval-gold-fy2025.jsonl). To read it: [PDF](v1/testdata/retrieval-gold-fy2025.pdf) (one card per question, evidence highlighted) and [summary](v1/testdata/retrieval-gold-fy2025-summary.pdf).
 
 46 questions on the FY2025 10-Ks of AAPL, AMZN, MSFT and NVDA, with 80 gold sources. All are reviewed by a person.
 
@@ -67,7 +67,7 @@ Each filing was parsed into a structured document (Items, headings, tables) and 
 
 - **One SQLite file per chunking.** Chunk text and metadata (ticker, fiscal year, Item) are ordinary tables. The BM25 index (FTS5) and the vectors (sqlite-vec) are virtual tables on the same rows, so a search filters on the metadata in the same query that ranks.
 - **Parent-child:** search runs over the children, and each child is swapped for its parent. A child's text starts with its heading path, since most children have no heading of their own.
-- **Built by** [build_corpus.py](v1/v1_src/build_corpus.py). Each filing's parsed document and chunks are in `data/v0-chunking/<TICKER>-FY2025/`.
+- **Built by** [build_corpus.py](v1/build_corpus.py). Each filing's parsed document and chunks are in `data/v0-chunking/<TICKER>-FY2025/`.
 
 ---
 
@@ -77,7 +77,7 @@ Each filing was parsed into a structured document (Items, headings, tables) and 
 question ─► QueryDecomposer ─► sub-questions ─► HybridSearch each: keyword + dense ─► RRF ─► rerank ─► merge ─► top 8
 ```
 
-`SubQuestionRetriever` runs the whole pipeline ([retrieve.py](v1/v1_src/retrieve.py)). Settings: [config.yaml](v1/v1_src/config.yaml).
+`SubQuestionRetriever` runs the whole pipeline ([retrieval/](../src/tenk_agent/retrieval/)). Settings: [config.yaml](v1/config.yaml).
 
 **1. Decompose** (`QueryDecomposer`, rule-based, no LLM)
 

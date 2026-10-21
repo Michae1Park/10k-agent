@@ -37,12 +37,13 @@ Why the project looks the way it does: decisions, and the issues found along the
 | [D-025](#d-025) | 2026-10-01 | V7 always runs; tuned vs the same model un-tuned; D-022's data rules kept and enforced in code | Accepted |
 | [D-026](#d-026) | 2026-10-01 | V7 training: HF Trainer + PEFT LoRA in the project env, assistant-only loss, merged for vLLM | Accepted |
 | [D-027](#d-027) | 2026-10-01 | Comparisons report bootstrap intervals and paired tests; "better/worse" needs p < 0.05 | Accepted |
-| [D-028](#d-028) | 2026-10-13 | Versions V0–V6, one folder each under `versions/`; XBRL and closed-book become ablation rows | Accepted |
+| [D-028](#d-028) | 2026-10-13 | Versions V0–V6, one folder each under `versions/`; XBRL and closed-book become ablation rows | Superseded by D-034 |
 | [D-029](#d-029) | 2026-10-13 | Open models by default: Qwen3.6-27B-FP8 under test, gpt-oss-20b as the fixed judge (second pass) | Accepted |
 | [D-030](#d-030) | 2026-10-14 | A separate stress gold set, written to break the pipeline | Accepted |
-| [D-031](#d-031) | 2026-10-14 | V7: a second, parent-child index beside the naive one, not a rewrite of V0–V2 | Accepted |
+| [D-031](#d-031) | 2026-10-14 | V7: a second, parent-child index beside the naive one, not a rewrite of V0–V2 | Superseded by D-034 |
 | [D-032](#d-032) | 2026-10-14 | V7 verification checks the company and the fiscal-year column of a number | Accepted |
 | [D-033](#d-033) | 2026-10-15 | V7 Research caps each search at 12,000 characters | Accepted |
+| [D-034](#d-034) | 2026-10-21 | The renewed V0–V2 replace the old pipeline in `src/`; V3–V6 archived, V7 deleted; experiments run on `src/` | Accepted |
 
 ### D-001
 **8 companies × FY2023–2025, 24 10-Ks.** Fiscal years end in different months, so "revenue in 2024" is a real disambiguation problem. The range is fixed so the corpus doesn't change when a company files a newer 10-K.
@@ -59,7 +60,7 @@ Why the project looks the way it does: decisions, and the issues found along the
 10-K HTML keeps table structure; PDFs lose it. A section is an "Item N. Title" line outside tables (skips tables of contents, cross-references, page headers). Item 8 always holds the financial statements: filers that keep Item 8 as a pointer (NVIDIA under Item 15, Netflix after the signatures) have them moved into Item 8.
 
 ### D-003
-Splitting tables mid-row was the expected #1 cause of wrong numbers. Each table is one chunk with its caption and unit line; tables over `table_chars` split into row groups that repeat the header rows. [the V0 guide](V0_DATA.md).
+Splitting tables mid-row was the expected #1 cause of wrong numbers. Each table is one chunk with its caption and unit line; tables over `table_chars` split into row groups that repeat the header rows. [the V0 guide](V0_PARSING_CHUNKING.md).
 
 ### D-004
 `filings.fiscal_year` comes from each filing's XBRL `EntityPublicFloat` fact (`fy`). The agent maps calendar years through `period_end_date`; it never guesses from text.
@@ -68,7 +69,7 @@ Splitting tables mid-row was the expected #1 cause of wrong numbers. Each table 
 At ~6,300 chunks, brute-force vector search takes milliseconds, so a database server adds nothing. All access goes through `Store`, so moving to Postgres changes one module (D-023).
 
 ### D-006
-The eval drives the design, so it comes first. Each gold source keeps a verbatim `evidence` quote; gold chunk IDs are found at eval time, so re-chunking never invalidates the gold set. [EVAL.md](EVAL.md).
+The eval drives the design, so it comes first. Each gold source keeps a verbatim `evidence` quote; gold chunk IDs are found at eval time, so re-chunking never invalidates the gold set. [EVAL.md](../archive/docs/EVAL.md).
 
 ### D-007
 Every number the agent reports must come from a document, so numeric questions stay a real retrieval test. XBRL company facts only cross-check gold answers (`tenk gold`). V5 measured what happens otherwise (D-021).
@@ -109,7 +110,7 @@ Everything calls `Model.complete(messages, tools)`; providers translate one neut
 Changing the model under test must never change the scoring. Numbers, citations, abstention and tool use are scored deterministically; the judge only scores narrative points, faithfulness and context relevance.
 
 ### D-015
-**Every claim is labeled** verified / calculated / cited / unverified, and unverified claims are shown, not dropped. Labels alone change no metric, so Research mode also sends failed claims back to the agent **once**, with `repair_calls` extra tool calls (`--no-repair` = V3). Unbounded repair loops were rejected for cost and latency. [the V4 guide](V4_VERIFIED_AGENT.md).
+**Every claim is labeled** verified / calculated / cited / unverified, and unverified claims are shown, not dropped. Labels alone change no metric, so Research mode also sends failed claims back to the agent **once**, with `repair_calls` extra tool calls (`--no-repair` = V3). Unbounded repair loops were rejected for cost and latency. [the V4 guide](../archive/docs/V4_VERIFIED_AGENT.md).
 
 ### D-016
 A call refused for exceeding the budget had valid arguments. Counting it as incorrect made tool-call correctness 79.6% instead of 97.7% (V3); it now counts toward unnecessary calls and `over_budget_rate`.
@@ -139,13 +140,13 @@ A public demo needs rate limiting, an API budget and Postgres + pgvector. Decide
 Documentation follows the shape of [prompt-pick-place](https://github.com/Michae1Park/prompt-pick-place): a README with the pipeline table, one guide per stage (Commands · Data · Knobs · Outputs · How it works · Things to try · Gotchas), one playground per stage, and this log. The PRD and project plan were folded in: requirements and roadmap into the README, rationale here, the how into the stage guides.
 
 ### D-025
-Supersedes D-022's condition: V7 no longer waits for a Claude-baseline gap. The question is what fine-tuning does to the same model, so V7 is compared to Qwen3.5-9B un-tuned, with identical settings (thinking off, same prompt, tools, budget and verification), on the eval `test` split and on held-out training companies. D-022's data rules stand and are now code (`finetune/dataset.py`, tested): no Claude outputs, no gold questions, no eval-corpus filings (eval companies' FY2022 and earlier allowed), only attempts that pass the deterministic checks. Questions are generated from XBRL facts, so no model writes them. [V6 guide](V6_FINETUNE_ABLATION.md).
+Supersedes D-022's condition: V7 no longer waits for a Claude-baseline gap. The question is what fine-tuning does to the same model, so V7 is compared to Qwen3.5-9B un-tuned, with identical settings (thinking off, same prompt, tools, budget and verification), on the eval `test` split and on held-out training companies. D-022's data rules stand and are now code (`finetune/dataset.py`, tested): no Claude outputs, no gold questions, no eval-corpus filings (eval companies' FY2022 and earlier allowed), only attempts that pass the deterministic checks. Questions are generated from XBRL facts, so no model writes them. [V6 guide](../archive/docs/V6_FINETUNE_ABLATION.md).
 
 ### D-026
 Considered: hosted no-code tuning (no Qwen3.5 support, data leaves the machine), LLaMA-Factory (not wanted), TRL `SFTTrainer` and a raw PyTorch loop. Chosen: Hugging Face `Trainer` + PEFT LoRA, ~150 lines, because the two hard parts aren't covered by stock tools. (1) Masking: the Qwen3.5 template has no assistant-mask markers, so TRL's `assistant_only_loss` can't work; records are rendered with the model's template exactly as vLLM renders them, cut at user turns, and labeled by character span. (2) Memory: full logits for a 40k-token trajectory are ~40 GB; the loss requests logits only at assistant positions. The adapter is merged into full weights so vLLM serves V7 like the base model. Training deps are the optional `finetune` extra of the project env.
 
 ### D-027
-With 31 test questions, a single percentage hides a ±10-point interval, and V-to-V differences of one or two questions are noise. `tenk eval compare` therefore reports every metric with a 95% bootstrap interval over questions, and each candidate's difference from the baseline on the same questions with a bootstrap interval and a sign-flip permutation p-value, plus exact McNemar counts (fixed vs regressed) for task completion. A difference reads as better or worse only at p < 0.05: the percentile bootstrap is over-confident when few questions change (4 changes all one way give p = 0.125, yet the interval excludes zero). Failures get one cause each, the first pipeline stage that broke. [EVAL.md](EVAL.md#comparing-runs).
+With 31 test questions, a single percentage hides a ±10-point interval, and V-to-V differences of one or two questions are noise. `tenk eval compare` therefore reports every metric with a 95% bootstrap interval over questions, and each candidate's difference from the baseline on the same questions with a bootstrap interval and a sign-flip permutation p-value, plus exact McNemar counts (fixed vs regressed) for task completion. A difference reads as better or worse only at p < 0.05: the percentile bootstrap is over-confident when few questions change (4 changes all one way give p = 0.125, yet the interval excludes zero). Failures get one cause each, the first pipeline stage that broke. [EVAL.md](../archive/docs/EVAL.md#comparing-runs).
 
 ### D-028
 **Versions you can run one at a time.** Each version has a guide in `docs/` (`V0_DATA.md` … `V6_FINETUNE_ABLATION.md`, next to EVAL, SERVING and this log) and a folder `versions/vN_*/` with a `run.sh` that runs and scores that version only and its playground script; shared code stays in `src/`. Each builds on the one before, except V5 and V6, which both start from V4.
@@ -166,16 +167,19 @@ Closed-book (the model with no documents) and XBRL are not steps the others buil
 **Open models by default.** Everything runs on one 46 GB L40S with no API key. Under test: Qwen3.6-27B-FP8 (the best open model that fits, with I-003's workaround; ahead of the 9B on every answer metric so far, 100% vs 95.2% correctness, though no difference is significant on 31 questions: `eval/reports/v4-v5-v6.md`); compared against Gemma 4 31B FP8 (another family, same size and precision), plus Claude when a key is set. The fine-tune base stays Qwen3.5-9B: the 27B's bf16 weights alone (~54 GB) don't fit for training, so V6 asks whether a tuned 9B closes the gap to the untuned 27B. **Judge:** gpt-oss-20b, fixed whatever is under test (D-014's rule) and from another family than every model compared, so no model grades itself. It can't share the GPU with the 27B/31B, so judging is a second pass (`tenk eval judge`) after the answers.
 
 ### D-030
-The main gold set is mostly headline statement figures (129 of 195 sources in Item 8, 143 table rows) and V1 already finds 71% of them, so a better retriever has little room to show. `eval/gold/stress.jsonl` (29 questions, all `test`) targets what naive RAG gets wrong: recast segments, row labels that repeat under group headers, transposed and oldest-first tables, units in thousands vs dollars, footnote and Item 7A prose figures, calculations across companies, near-miss unsupported questions. Kept apart so the main set's history stays comparable; each question's `tags` say what makes it hard ([EVAL.md](EVAL.md#stress-set)). First finding: retrieval isn't where it's hard (V1 Recall@5 88%); reading the table right is.
+The main gold set is mostly headline statement figures (129 of 195 sources in Item 8, 143 table rows) and V1 already finds 71% of them, so a better retriever has little room to show. `eval/gold/stress.jsonl` (29 questions, all `test`) targets what naive RAG gets wrong: recast segments, row labels that repeat under group headers, transposed and oldest-first tables, units in thousands vs dollars, footnote and Item 7A prose figures, calculations across companies, near-miss unsupported questions. Kept apart so the main set's history stays comparable; each question's `tags` say what makes it hard ([EVAL.md](../archive/docs/EVAL.md#stress-set)). First finding: retrieval isn't where it's hard (V1 Recall@5 88%); reading the table right is.
 
 ### D-031
-The 2026 baseline for financial RAG is structure-aware chunks, small-to-large (parent-child) retrieval, hybrid search, and lineage on every chunk. V0 already kept tables whole and V1 already prepended company / year / Item to what it embeds; V1 had hybrid search built (D-010: no clear win). What was missing: searching small units while reading large ones, and knowing which segment and fiscal year a table cell belongs to. V7 adds both as a second index (`data/tenk-parent-child.db`) and switches that default to the naive behavior, so V0–V6 keep running unchanged and each piece is one ablation row ([V7 guide](V7_ADVANCED_RETRIEVAL.md)). Layout-model parsers (LlamaParse, Unstructured) were not adopted: EDGAR filings are HTML, whose tables are already structured.
+The 2026 baseline for financial RAG is structure-aware chunks, small-to-large (parent-child) retrieval, hybrid search, and lineage on every chunk. V0 already kept tables whole and V1 already prepended company / year / Item to what it embeds; V1 had hybrid search built (D-010: no clear win). What was missing: searching small units while reading large ones, and knowing which segment and fiscal year a table cell belongs to. V7 adds both as a second index (`data/tenk-parent-child.db`) and switches that default to the naive behavior, so V0–V6 keep running unchanged and each piece is one ablation row (V7 guide (deleted, D-034)). Layout-model parsers (LlamaParse, Unstructured) were not adopted: EDGAR filings are HTML, whose tables are already structured.
 
 ### D-032
 V4 verified a number if it appeared anywhere in a cited chunk. A 10-K's tables show three years side by side, and a later filing restates earlier ones, so a value can be "found" in the wrong column, or in another company's filing. With V7's row records the check also requires the claimed company and, in a table, a cell under the claimed fiscal year (undated cells and prose keep the old check). It runs automatically on the V7 index; the naive index has no row records.
 
 ### D-033
 Children find a few long parents, so an uncapped V7 search returns more text than a naive one (mean 14.8k vs 12.2k characters, p90 25k vs 16k, max 42k vs 18k, over the test and stress questions). In Research mode those results pile up until the prompt passes Qwen3.6-27B's 32k context: 4 of 60 r4 questions errored (2 test, 2 stress). Row r5 caps each `search_filings` result at 12,000 characters (`TENK_CONTEXT_CHARS`), about a naive search's mean, keeping the best-ranked parents. Ask runs stay uncapped: one search fits.
+
+### D-034
+The V0–V2 experiments (`experiments/`) rebuilt preprocessing (rules + an LLM structure agent), chunking (rule-based, parent-child, agentic), retrieval (sub-question hybrid search) and generation, and tested each against reviewed gold sets. Their core moved into `src/tenk_agent/` (`preprocess/`, `chunking/`, `retrieval/`, `generation/`, `evaluation/`, `prompts/`), replacing the old `parse`/`chunking`/`ingest`, `retrieval.Retriever` and `ask`; outputs are byte-identical to the experiment code. Each `experiments/vN/` keeps only its runner, its scoring, its config and test data. V3–V6 (agent, verification, model comparison, fine-tuning, eval harness, API) moved to `archive/` as references for rebuilding them on the new pipeline. V7 is deleted: its parent-child index and children search became V0's parent-child chunking and V1's search. Guides: `docs/V0_PARSING_CHUNKING.md`, `V1_RETRIEVAL.md`, `V2_GENERATION.md`; experiment results stay in `experiments/V*.md`.
 
 ## Issues
 
@@ -224,4 +228,4 @@ See D-018. Rescoring every run changed nothing reported: no wrong figure had sli
 `/opt/ros/jazzy` on `PYTHONPATH` loads ROS's pytest plugins. **Workaround:** `env -u PYTHONPATH uv run pytest`.
 
 ### I-011
-All 100 questions are `origin: drafted`; every reported result is provisional. **Next:** `tenk gold show <id>`, check against EDGAR, `tenk gold verify <id> --by <initials>`. [EVAL.md](EVAL.md#verifying-a-question).
+All 100 questions are `origin: drafted`; every reported result is provisional. **Next:** `tenk gold show <id>`, check against EDGAR, `tenk gold verify <id> --by <initials>`. [EVAL.md](../archive/docs/EVAL.md#verifying-a-question).

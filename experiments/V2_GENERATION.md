@@ -28,7 +28,7 @@ Text questions: 4 of 16 as judged now, but the scoring doesn't fit them yet ([§
 
 ## 1. Test data
 
-**File:** [generation-gold-fy2025.jsonl](v2/v2_testdata/generation-gold-fy2025.jsonl). To read it: [PDF](v2/v2_testdata/generation-gold-fy2025.pdf) (one card per question, evidence highlighted) and [summary](v2/v2_testdata/generation-gold-fy2025-summary.pdf).
+**File:** [generation-gold-fy2025.jsonl](v2/testdata/generation-gold-fy2025.jsonl). To read it: [PDF](v2/testdata/generation-gold-fy2025.pdf) (one card per question, evidence highlighted) and [summary](v2/testdata/generation-gold-fy2025-summary.pdf).
 
 54 questions on the FY2025 10-Ks of AAPL, AMZN, MSFT and NVDA, in V1's parent-child corpus (`data/v0-chunking/parent_child.db`): [V1's 46](V1_RETRIEVAL.md#1-test-data), unchanged, plus 8 to decline.
 
@@ -55,7 +55,7 @@ Each question is answered three times, all in V2 with the same model. Only the c
 
 | Context | Chunks shown | Measures | In the output files |
 |---|---|---|---|
-| **V1 retrieval** | The 8 chunks V1's pipeline returns, unchanged ([V1 config](v1/v1_src/config.yaml)) | The real system: retrieval and generation together | `retrieved` |
+| **V1 retrieval** | The 8 chunks V1's pipeline returns, unchanged ([V1 config](v1/config.yaml)) | The real system: retrieval and generation together | `retrieved` |
 | **Perfect retrieval** | The same 8, with each gold source V1 missed added in place of the lowest-ranked chunk that isn't gold for any source | Generation alone: with the evidence there, every error is the model's | `oracle` |
 | **No chunks** | None (`Excerpts: (none)`), same prompt | Whether the model answers from memory | `none` |
 
@@ -77,21 +77,21 @@ V1 retrieval ─► 8 chunks + question ─► prompt ─► one model call ─�
 | Setting | Value |
 |---|---|
 | Model | `Qwen/Qwen3.6-27B-FP8` on vLLM, thinking off, temperature 0 |
-| Prompt | [system.md](v2/v2_prompt/system.md): rules, the corpus table (company, fiscal year, period end), the answer format |
+| Prompt | [answer.md](../src/tenk_agent/prompts/answer.md): rules, the corpus table (company, fiscal year, period end), the answer format |
 | User message | Each chunk as `<chunk id="…">` with company, fiscal year, period end, Item, kind and units; then the question |
 | Answer format | `answer` with `[n]` markers; `claims[]`, one per number (`value`, `unit`, `company`, `fiscal_year`, `chunk_ids`, `calculation`); `table`; `scope_notice`; `abstained` |
 
 The claim check is deterministic and runs after the answer is written. It labels each claim (`verified`, `calculated`, `cited`, `unverified`) but doesn't change the answer.
 
-There are no tools: the model does any arithmetic itself and writes the result into the claim's `calculation`. The check reruns it with the agent's calculator ([calculator.py](../src/tenk_agent/calculator.py)) and marks a wrong result `unverified`, so math errors are caught but not corrected.
+There are no tools: the model does any arithmetic itself and writes the result into the claim's `calculation`. The check reruns it with the calculator ([calculator.py](../src/tenk_agent/generation/calculator.py)) and marks a wrong result `unverified`, so math errors are caught but not corrected.
 
-Code: [generate.py](v2/v2_src/generate.py). Settings: [config.yaml](v2/v2_src/config.yaml).
+Code: [generation/](../src/tenk_agent/generation/). Settings: [config.yaml](v2/config.yaml).
 
 ---
 
 ## 4. Metrics
 
-Code: [score.py](v2/v2_src/score.py); judge: [judge.py](v2/v2_src/judge.py).
+Code: [score.py](v2/score.py); judge: [judge.py](v2/judge.py) ([prompt](../src/tenk_agent/prompts/judge.md)).
 
 | Metric | Counts as a hit |
 |---|---|

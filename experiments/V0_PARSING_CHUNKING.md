@@ -16,7 +16,7 @@
 
 ## 1. Test data
 
-**File:** [aapl-fy25-excerpt.html](v0/v0_testdata/aapl-fy25-excerpt.html). It holds two verbatim slices of the AAPL FY2025 10-K, about 38.5k tokens in all.
+**File:** [aapl-fy25-excerpt.html](v0/testdata/aapl-fy25-excerpt.html). It holds two verbatim slices of the AAPL FY2025 10-K, about 38.5k tokens in all.
 
 | Slice | Items | Pages | Headings | Tables |
 |---|---|---|---|---|
@@ -25,7 +25,7 @@
 
 - **Item 1A:** a preamble, 5 categories and 27 risk factors (129–1,241 tokens, median 331).
 - **Items 7–8:** MD&A, the five financial statements, Notes 1–13 and both auditor reports.
-- **Ground truth:** [aapl-fy25-excerpt.gt.json](v0/v0_testdata/aapl-fy25-excerpt.gt.json), reviewed by hand (§4.4).
+- **Ground truth:** [aapl-fy25-excerpt.gt.json](v0/testdata/aapl-fy25-excerpt.gt.json), reviewed by hand (§4.4).
 
 Tokens are counted with the embedder's tokenizer, `Qwen/Qwen3-Embedding-0.6B` (1 token ≈ 4.3 chars).
 
@@ -55,7 +55,7 @@ Code does only what holds for every 10-K. An LLM labels everything that depends 
 ### 2.2 LLM: the structure agent
 
 - **Model:** `Qwen/Qwen3.6-27B-FP8` on vLLM, at temperature 0 with thinking off. Guided decoding forces the output schema.
-- **Files:** the prompt is [system.md](v0/v0_structure/system.md) and the output schema is [labels.schema.json](v0/v0_structure/labels.schema.json).
+- **Files:** the prompt is [structure.md](../src/tenk_agent/prompts/structure.md) and the output schema is [structure.schema.json](../src/tenk_agent/prompts/structure.schema.json).
 - **Input:** about 150 blocks per call, one line each (`id | features | text`). Each call also gets the open Item, the open heading path and the previous window's last labels.
 - **Output:** one label per block, e.g. `{"id": "b0412", "role": "heading", "level": 2, "kind": "risk_factor"}`. The LLM labels; code builds the document from the filing's own text.
 
@@ -117,10 +117,10 @@ Code assembles one JSON document per filing:
 | Parent-child | LlamaIndex `HierarchicalNodeParser` | no | Parents ≤ 1,280, children ≤ 256 |
 | Agentic | Chonkie `SlumberChunker` + `Qwen3.6-27B-FP8` | yes | ≤ 600 tokens |
 
-**Shared by all three** ([chunkers.py](v0/v0_src/chunkers.py)):
+**Shared by all three** ([chunking/common.py](../src/tenk_agent/chunking/common.py)):
 - No chunk crosses an Item.
 - Each data table is one chunk with its caption, as `| cell | cell |` lines.
-- Settings are in [config.yaml](v0/v0_src/config.yaml) under `chunking:`.
+- Settings are in [config.yaml](v0/config.yaml) under `chunking:`.
 
 ### 3.1 Rule-based
 
@@ -177,8 +177,8 @@ Three criteria, each scored against the ground truth.
 
 A hand-checked answer key for the excerpt: its 5 Items, 156 headings with levels and paths, 27 risk factors, 39 tables with units, and 47 page footers.
 
-- **Matching:** chunks are matched by text, not block id ([score.py](v0/v0_src/score.py)), so any method can be scored.
-- **Building:** [v0_ground_truth.py](v0/v0_testdata/v0_ground_truth.py) drafts it from the HTML with styling rules (no code shared with preprocessing), and a person reviews it.
+- **Matching:** chunks are matched by text, not block id ([score.py](v0/score.py)), so any method can be scored.
+- **Building:** [ground_truth.py](v0/testdata/ground_truth.py) drafts it from the HTML with styling rules (no code shared with preprocessing), and a person reviews it.
 
 ---
 
