@@ -1,13 +1,15 @@
-"""The V0 structure prompt, its output schema and the validator list the same values.
+"""V0 preprocessing: the structure prompt, its output schema and the validator list the same
+values; the validator's rules.
 
-The model never sees labels.schema.json (guided decoding only constrains its tokens), so the
+The model never sees structure.schema.json (guided decoding only constrains its tokens), so the
 prompt must name every value the schema allows, and the validator must check the same ones.
 """
 
 import json
 import re
 
-from tenk_agent.preprocess.validation import ITEMS, ROLE_FIELDS
+from tenk_agent.preprocess.blocks import Block
+from tenk_agent.preprocess.validation import ITEMS, ROLE_FIELDS, is_item_table, role_fits_block
 from tenk_agent.prompts import PROMPTS
 
 PROMPT = (PROMPTS / "structure.md").read_text(encoding="utf-8").split("<!-- END SYSTEM PROMPT")[0]
@@ -59,3 +61,25 @@ def test_role_fields_match_schema_and_validator():
         stated[role.strip("`")] = set(re.findall(r"`(\w+)`", fields))
     assert stated == ROLE_FIELDS
     assert set().union(*stated.values()) | {"id", "role", "uncertain"} == set(FIELDS)
+
+
+def table(*rows: list[str]) -> Block:
+    """A table block; an Item heading set in a one-row table (AMZN) is an `item_heading`."""
+    return Block(
+        id="b0053", kind="table", text="\n".join(" | ".join(r) for r in rows), rows=list(rows)
+    )
+
+
+def test_one_row_item_table_can_be_item_heading():
+    b = table(["Item 1A.", "Risk Factors"])
+    assert is_item_table(b)
+    assert role_fits_block(b, {"role": "item_heading", "item": "1A"}, None) is None
+
+
+def test_other_tables_still_cannot_be_item_heading():
+    for b in (
+        table(["Net sales", "416,161"]),
+        table(["Item 1.", "Business"], ["Item 1A.", "Risk"]),
+    ):
+        assert not is_item_table(b)
+        assert role_fits_block(b, {"role": "item_heading", "item": "1"}, None) is not None

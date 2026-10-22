@@ -1,12 +1,11 @@
 import numpy as np
 
 from tenk_agent.corpus import resolve_company
-from tenk_agent.evaluation.retrieval import GoldChunks, recall_at, reciprocal_rank
 from tenk_agent.retrieval.decompose import QueryDecomposer, companies_in, slots, years_in
 from tenk_agent.retrieval.index import embed_corpus, load
 from tenk_agent.retrieval.search import HybridSearch, SubQuestionRetriever, fuse
 from tenk_agent.store import Store
-from test_store_and_gold import filing, prose
+from test_store import filing, prose
 
 
 def make_store(tmp_path) -> Store:
@@ -115,11 +114,3 @@ def test_rrf_fusion_rewards_agreement():
     chunks = {name: type("C", (), {"id": name})() for name in "abc"}
     fused = fuse([[chunks["a"], chunks["b"]], [chunks["b"], chunks["c"]]], rrf_k=60)
     assert [c.id for c in fused][0] == "b"
-
-
-def test_recall_counts_sources_and_mrr_uses_first_relevant_rank():
-    gold = GoldChunks([{"x1", "x2"}, {"y1"}])
-    assert recall_at(["x2", "z", "q"], gold, 5) == 0.5
-    assert recall_at(["z", "y1", "x1"], gold, 5) == 1.0
-    assert reciprocal_rank(["z", "q", "y1"], gold) == 1 / 3
-    assert reciprocal_rank(["z"], gold) == 0.0

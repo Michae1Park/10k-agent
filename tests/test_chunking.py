@@ -1,4 +1,4 @@
-"""The V0 chunkers' sentence cuts (C5), table captions (C3) and table row children."""
+"""V0 chunking: the chunkers' sentence cuts (C5), table captions (C3) and table row children."""
 
 from tenk_agent.chunking import agentic
 from tenk_agent.chunking import common as chunkers
