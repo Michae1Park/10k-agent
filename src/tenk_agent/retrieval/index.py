@@ -14,7 +14,7 @@ import logging
 from pathlib import Path
 
 from tenk_agent.corpus import COMPANIES, company_by_ticker
-from tenk_agent.embeddings import Embedder
+from tenk_agent.retrieval.embeddings import Embedder
 from tenk_agent.store import ChildRecord, ChunkRecord, FilingRecord, Store
 
 log = logging.getLogger(__name__)

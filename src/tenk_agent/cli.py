@@ -13,7 +13,6 @@ import json
 import logging
 import os
 import sys
-from dataclasses import asdict
 from datetime import date
 from pathlib import Path
 
@@ -87,29 +86,15 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _fetch(args: argparse.Namespace, settings: dict) -> int:
-    from tenk_agent.edgar import EdgarClient, EdgarError, fetch_company
+    from tenk_agent.acquisition import fetch
 
     user_agent = os.environ.get("SEC_USER_AGENT")
     if not user_agent:
         print("Set SEC_USER_AGENT, e.g. 'Name you@example.com'", file=sys.stderr)
         return 2
-    data_dir = Path(settings["data_dir"])
     companies = [company_by_ticker(t) for t in args.tickers] if args.tickers else list(COMPANIES)
-    client = EdgarClient(user_agent)
-    manifest_path = data_dir / "raw" / "manifest.json"
-    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
-    failed = False
-    for company in companies:
-        try:
-            filings = fetch_company(client, company, FISCAL_YEARS, data_dir, args.refresh)
-        except EdgarError as error:
-            logging.error("%s", error)
-            failed = True
-            continue
-        manifest[company.ticker] = [asdict(f) for f in filings]
-    manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
-    return 1 if failed else 0
+    ok = fetch(companies, FISCAL_YEARS, Path(settings["data_dir"]), user_agent, args.refresh)
+    return 0 if ok else 1
 
 
 def _build(args: argparse.Namespace, settings: dict) -> int:

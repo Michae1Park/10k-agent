@@ -12,8 +12,8 @@ child is swapped for its parent, best child first, each parent once.
 
 from dataclasses import dataclass, field
 
-from tenk_agent.embeddings import Embedder, Reranker, get_embedder, get_reranker
 from tenk_agent.retrieval.decompose import QueryDecomposer, SubQuestion
+from tenk_agent.retrieval.embeddings import Embedder, Reranker, get_embedder, get_reranker
 from tenk_agent.retrieval.index import child_embedding_text, embedding_text
 from tenk_agent.store import ChunkRecord, Store
 

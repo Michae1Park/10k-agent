@@ -23,8 +23,8 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 from tenk_agent.chunking import chunk, is_current
-from tenk_agent.embeddings import get_embedder
 from tenk_agent.preprocess import preprocess
+from tenk_agent.retrieval.embeddings import get_embedder
 from tenk_agent.retrieval.index import add_pages, embed_corpus, load
 from tenk_agent.store import Store
 

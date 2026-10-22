@@ -1,13 +1,17 @@
+import json
+
 import pytest
 
-from tenk_agent.corpus import Company
-from tenk_agent.edgar import (
+from tenk_agent import acquisition
+from tenk_agent.acquisition.edgar import (
     EdgarClient,
     EdgarError,
+    Filing,
     annual_reports,
     fiscal_years_by_accession,
     resolve_filings,
 )
+from tenk_agent.corpus import Company
 
 COMPANY = Company("TEST", 12345, "Test Corp")
 
@@ -91,3 +95,17 @@ def test_resolve_raises_on_duplicate_filings_for_a_year():
 def test_client_requires_contact_in_user_agent():
     with pytest.raises(EdgarError, match="User-Agent"):
         EdgarClient("anonymous")
+
+
+def test_fetch_records_filings_and_skips_failed_companies(tmp_path, monkeypatch):
+    def fetch_company(client, company, fiscal_years, data_dir, refresh):
+        if company.ticker == "BAD":
+            raise EdgarError("BAD FY2024: expected one 10-K, found []")
+        return [Filing(company.ticker, company.cik, "a-1", "", "", 2024, "d.htm", "")]
+
+    monkeypatch.setattr(acquisition, "fetch_company", fetch_company)
+    companies = [COMPANY, Company("BAD", 1, "Bad Corp")]
+    assert not acquisition.fetch(companies, (2024,), tmp_path, "Name you@example.com")
+    manifest = json.loads((tmp_path / "raw" / "manifest.json").read_text())
+    assert list(manifest) == ["TEST"]
+    assert manifest["TEST"][0]["accession_no"] == "a-1"
