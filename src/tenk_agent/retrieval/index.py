@@ -40,13 +40,9 @@ def chunk_header(chunk: ChunkRecord | ChildRecord, company_name: str) -> str:
     )
 
 
-def embedding_text(chunk: ChunkRecord) -> str:
+def embedding_text(chunk: ChunkRecord | ChildRecord) -> str:
+    """What is embedded and reranked: the header line, then the chunk's (or child's) text."""
     return chunk_header(chunk, COMPANY_NAMES.get(chunk.ticker, chunk.ticker)) + "\n" + chunk.text
-
-
-def child_embedding_text(child: ChildRecord) -> str:
-    header = chunk_header(child, COMPANY_NAMES.get(child.ticker, child.ticker))
-    return header + "\n" + child.text
 
 
 def child_text(child: dict) -> str:
@@ -168,7 +164,7 @@ def embed_corpus(store: Store, embedder: Embedder, batch: int = 256) -> int:
     children = store.children_without_embeddings() if store.has_children() else []
     for start in range(0, len(children), batch):
         group = children[start : start + batch]
-        vectors = embedder.embed_documents([child_embedding_text(c) for c in group])
+        vectors = embedder.embed_documents([embedding_text(c) for c in group])
         store.add_child_embeddings([c.id for c in group], vectors)
         log.info("Embedded %d/%d children", min(start + batch, len(children)), len(children))
     return len(pending) + len(children)

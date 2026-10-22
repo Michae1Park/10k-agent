@@ -68,8 +68,7 @@ CREATE TABLE IF NOT EXISTS children (
     fiscal_year INTEGER NOT NULL,
     item TEXT NOT NULL,
     kind TEXT NOT NULL,
-    text TEXT NOT NULL,
-    row TEXT  -- unused (null); older databases have it
+    text TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS children_filter ON children (ticker, fiscal_year, item);
 CREATE INDEX IF NOT EXISTS children_parent ON children (parent_id);
@@ -108,7 +107,6 @@ class ChildRecord:
     item: str
     kind: str  # "prose", "row" or "table_title"
     text: str
-    row: dict | None = None  # unused: always None
 
 
 @dataclass
@@ -206,7 +204,8 @@ class Store:
                 )
             if children:
                 db.executemany(
-                    "INSERT INTO children VALUES (?, ?, ?, ?, ?, ?, ?, NULL)",
+                    "INSERT INTO children (id, parent_id, ticker, fiscal_year, item, kind, text) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
                     [
                         (k.id, k.parent_id, k.ticker, k.fiscal_year, k.item, k.kind, k.text)
                         for k in children
@@ -237,9 +236,6 @@ class Store:
 
     # --- Embeddings ----------------------------------------------------------------------
 
-    def _has_vectors(self) -> bool:
-        return self._has_table("chunks_vec")
-
     def _has_table(self, name: str) -> bool:
         return bool(
             self.db.execute("SELECT 1 FROM sqlite_master WHERE name = ?", (name,)).fetchone()
@@ -265,56 +261,37 @@ class Store:
             self.db.execute("INSERT OR REPLACE INTO meta VALUES ('embedding_model', ?)", (model,))
 
     def chunks_without_embeddings(self) -> list[ChunkRecord]:
-        rows = self._query(
-            "SELECT * FROM chunks WHERE rowid NOT IN (SELECT rowid FROM chunks_vec) ORDER BY id"
-        )
-        return [_record(r) for r in rows]
-
-    def add_embeddings(self, chunk_ids: list[str], vectors: np.ndarray) -> None:
-        with self._lock, self.db:
-            rowids = {
-                r["id"]: r["rowid"]
-                for r in self.db.execute(
-                    f"SELECT rowid, id FROM chunks WHERE id IN ({', '.join('?' * len(chunk_ids))})",
-                    chunk_ids,
-                )
-            }
-            self.db.executemany(
-                "INSERT INTO chunks_vec(rowid, embedding) VALUES (?, ?)",
-                [
-                    (rowids[cid], vec.astype(np.float32).tobytes())
-                    for cid, vec in zip(chunk_ids, vectors, strict=True)
-                ],
-            )
+        return [_chunk(r) for r in self._without_embeddings("chunks")]
 
     def children_without_embeddings(self) -> list[ChildRecord]:
-        rows = self._query(
-            "SELECT * FROM children WHERE rowid NOT IN (SELECT rowid FROM children_vec) ORDER BY id"
-        )
-        return [_child(r) for r in rows]
+        return [_child(r) for r in self._without_embeddings("children")]
+
+    def add_embeddings(self, chunk_ids: list[str], vectors: np.ndarray) -> None:
+        self._add_embeddings("chunks", chunk_ids, vectors)
 
     def add_child_embeddings(self, child_ids: list[str], vectors: np.ndarray) -> None:
+        self._add_embeddings("children", child_ids, vectors)
+
+    def _without_embeddings(self, table: str) -> list[sqlite3.Row]:
+        return self._query(
+            f"SELECT * FROM {table} WHERE rowid NOT IN (SELECT rowid FROM {table}_vec) ORDER BY id"
+        )
+
+    def _add_embeddings(self, table: str, ids: list[str], vectors: np.ndarray) -> None:
         with self._lock, self.db:
             rowids = {
                 r["id"]: r["rowid"]
                 for r in self.db.execute(
-                    "SELECT rowid, id FROM children "
-                    f"WHERE id IN ({', '.join('?' * len(child_ids))})",
-                    child_ids,
+                    f"SELECT rowid, id FROM {table} WHERE id IN ({', '.join('?' * len(ids))})", ids
                 )
             }
             self.db.executemany(
-                "INSERT INTO children_vec(rowid, embedding) VALUES (?, ?)",
+                f"INSERT INTO {table}_vec(rowid, embedding) VALUES (?, ?)",
                 [
-                    (rowids[cid], vec.astype(np.float32).tobytes())
-                    for cid, vec in zip(child_ids, vectors, strict=True)
+                    (rowids[i], vec.astype(np.float32).tobytes())
+                    for i, vec in zip(ids, vectors, strict=True)
                 ],
             )
-
-    def embedding_count(self) -> int:
-        if not self._has_vectors():
-            return 0
-        return self._query("SELECT count(*) AS n FROM chunks_vec")[0]["n"]
 
     # --- Lookup --------------------------------------------------------------------------
 
@@ -347,7 +324,7 @@ class Store:
 
     def get_chunk(self, chunk_id: str) -> ChunkRecord | None:
         rows = self._query("SELECT * FROM chunks WHERE id = ?", (chunk_id,))
-        return _record(rows[0]) if rows else None
+        return _chunk(rows[0]) if rows else None
 
     def chunks(
         self, ticker: str | None = None, fiscal_year: int | None = None
@@ -356,7 +333,7 @@ class Store:
             [ticker] if ticker else None, [fiscal_year] if fiscal_year else None, None
         )
         rows = self._query(f"SELECT * FROM chunks WHERE {where} ORDER BY id", params)
-        return [_record(r) for r in rows]
+        return [_chunk(r) for r in rows]
 
     # --- Search --------------------------------------------------------------------------
 
@@ -369,17 +346,7 @@ class Store:
         k: int = 10,
     ) -> list[ChunkRecord]:
         """Keyword search (BM25) over chunk text, optionally filtered by company, year and item."""
-        terms = [t for t in re.findall(r"\w+", query.lower()) if t not in STOPWORDS]
-        if not terms:
-            return []
-        match = " OR ".join(f'"{term}"' for term in terms)
-        where, params = _filters(tickers, fiscal_years, items, table="c")
-        rows = self._query(
-            f"SELECT c.* FROM chunks_fts JOIN chunks c ON c.rowid = chunks_fts.rowid "
-            f"WHERE chunks_fts MATCH ? AND {where} ORDER BY bm25(chunks_fts) LIMIT ?",
-            [match, *params, k],
-        )
-        return [_record(r) for r in rows]
+        return [_chunk(r) for r in self._keyword("chunks", query, tickers, fiscal_years, items, k)]
 
     def vector_search(
         self,
@@ -390,13 +357,7 @@ class Store:
         k: int = 10,
     ) -> list[ChunkRecord]:
         """Nearest chunks by cosine distance (brute force; milliseconds at this corpus size)."""
-        where, params = _filters(tickers, fiscal_years, items, table="c")
-        rows = self._query(
-            f"SELECT c.* FROM chunks c JOIN chunks_vec v ON v.rowid = c.rowid WHERE {where} "
-            f"ORDER BY vec_distance_cosine(v.embedding, ?) LIMIT ?",
-            [*params, vector.astype(np.float32).tobytes(), k],
-        )
-        return [_record(r) for r in rows]
+        return [_chunk(r) for r in self._nearest("chunks", vector, tickers, fiscal_years, items, k)]
 
     def child_search(
         self,
@@ -407,16 +368,7 @@ class Store:
         k: int = 10,
     ) -> list[ChildRecord]:
         """Keyword search (BM25) over children, with the same filters as `search`."""
-        terms = [t for t in re.findall(r"\w+", query.lower()) if t not in STOPWORDS]
-        if not terms:
-            return []
-        match = " OR ".join(f'"{term}"' for term in terms)
-        where, params = _filters(tickers, fiscal_years, items, table="c")
-        rows = self._query(
-            f"SELECT c.* FROM children_fts JOIN children c ON c.rowid = children_fts.rowid "
-            f"WHERE children_fts MATCH ? AND {where} ORDER BY bm25(children_fts) LIMIT ?",
-            [match, *params, k],
-        )
+        rows = self._keyword("children", query, tickers, fiscal_years, items, k)
         return [_child(r) for r in rows]
 
     def child_vector_search(
@@ -427,13 +379,29 @@ class Store:
         items: list[str] | None = None,
         k: int = 10,
     ) -> list[ChildRecord]:
+        """Nearest children by cosine distance, with the same filters as `search`."""
+        rows = self._nearest("children", vector, tickers, fiscal_years, items, k)
+        return [_child(r) for r in rows]
+
+    def _keyword(self, table, query, tickers, fiscal_years, items, k) -> list[sqlite3.Row]:
+        terms = [t for t in re.findall(r"\w+", query.lower()) if t not in STOPWORDS]
+        if not terms:
+            return []
+        match = " OR ".join(f'"{term}"' for term in terms)
         where, params = _filters(tickers, fiscal_years, items, table="c")
-        rows = self._query(
-            f"SELECT c.* FROM children c JOIN children_vec v ON v.rowid = c.rowid WHERE {where} "
+        return self._query(
+            f"SELECT c.* FROM {table}_fts JOIN {table} c ON c.rowid = {table}_fts.rowid "
+            f"WHERE {table}_fts MATCH ? AND {where} ORDER BY bm25({table}_fts) LIMIT ?",
+            [match, *params, k],
+        )
+
+    def _nearest(self, table, vector, tickers, fiscal_years, items, k) -> list[sqlite3.Row]:
+        where, params = _filters(tickers, fiscal_years, items, table="c")
+        return self._query(
+            f"SELECT c.* FROM {table} c JOIN {table}_vec v ON v.rowid = c.rowid WHERE {where} "
             f"ORDER BY vec_distance_cosine(v.embedding, ?) LIMIT ?",
             [*params, vector.astype(np.float32).tobytes(), k],
         )
-        return [_child(r) for r in rows]
 
 
 # Common question words that only add noise to BM25 OR-queries.
@@ -453,7 +421,7 @@ def _filters(tickers, fiscal_years, items, table: str = "chunks") -> tuple[str, 
     return " AND ".join(clauses), params
 
 
-def _record(row: sqlite3.Row) -> ChunkRecord:
+def _chunk(row: sqlite3.Row) -> ChunkRecord:
     return ChunkRecord(
         id=row["id"],
         ticker=row["ticker"],
@@ -477,7 +445,6 @@ def _child(row: sqlite3.Row) -> ChildRecord:
         item=row["item"],
         kind=row["kind"],
         text=row["text"],
-        row=json.loads(row["row"]) if row["row"] else None,
     )
 
 

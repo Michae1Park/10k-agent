@@ -14,8 +14,8 @@ from dataclasses import dataclass, field
 
 from tenk_agent.retrieval.decompose import QueryDecomposer, SubQuestion
 from tenk_agent.retrieval.embeddings import Embedder, Reranker, get_embedder, get_reranker
-from tenk_agent.retrieval.index import child_embedding_text, embedding_text
-from tenk_agent.store import ChunkRecord, Store
+from tenk_agent.retrieval.index import embedding_text
+from tenk_agent.store import ChildRecord, ChunkRecord, Store
 
 
 @dataclass
@@ -60,17 +60,19 @@ class HybridSearch:
         children = self.store.has_children()
         keyword_search = self.store.child_search if children else self.store.search
         vector_search = self.store.child_vector_search if children else self.store.vector_search
-        text = child_embedding_text if children else embedding_text
         keyword = keyword_search(sub.text, k=size, **filters)
         dense = vector_search(self.embedder.embed_query(sub.text), k=size, **filters)
         candidates = fuse([keyword, dense], self.rrf_k)[:size]
-        scores = self.reranker.scores(sub.text, [text(c) for c in candidates])
+        scores = self.reranker.scores(sub.text, [embedding_text(c) for c in candidates])
         order = sorted(range(len(candidates)), key=lambda i: scores[i], reverse=True)
         reranked = [(candidates[i], float(scores[i])) for i in order]
         if children:
-            reranked = [(self.store.get_chunk(c.parent_id), s) for c, s in _first(reranked)]
-            keyword, dense = [_parents(self.store, ranking) for ranking in (keyword, dense)]
-        log = Search(
+            best = {}  # parent id → its best child's score (children are best first)
+            for child, score in reranked:
+                best.setdefault(child.parent_id, score)
+            reranked = [(self.store.get_chunk(pid), score) for pid, score in best.items()]
+            keyword, dense = _parents(self.store, keyword), _parents(self.store, dense)
+        record = Search(
             sub.text,
             sub.ticker,
             sub.fiscal_years,
@@ -78,21 +80,16 @@ class HybridSearch:
             [c.id for c in dense],
             [(c.id, s) for c, s in reranked],
         )
-        return [c for c, _ in reranked[:k]], log
+        return [c for c, _ in reranked[:k]], record
 
 
-def _first(ranked: list[tuple]) -> list[tuple]:
-    """Each parent once, at its best child's place (children already best first)."""
-    seen: set[str] = set()
-    return [(c, s) for c, s in ranked if not (c.parent_id in seen or seen.add(c.parent_id))]
+def _parents(store: Store, children: list[ChildRecord]) -> list[ChunkRecord]:
+    """Each child's parent, once, in the order of its first child."""
+    return [store.get_chunk(pid) for pid in dict.fromkeys(c.parent_id for c in children)]
 
 
 def _top_score(search: Search) -> float:
     return search.reranked[0][1] if search.reranked else float("-inf")
-
-
-def _parents(store: Store, children: list) -> list[ChunkRecord]:
-    return [store.get_chunk(c.parent_id) for c, _ in _first([(c, 0.0) for c in children])]
 
 
 # --- Sub-question retrieval: the whole pipeline -------------------------------------------
@@ -147,21 +144,15 @@ class SubQuestionRetriever:
             if self.slot_search
             else [SubQuestion(question, None, None)]
         )
-        result = Result([])
         per_sub = k if len(subs) == 1 else max(2, -(-k // len(subs)))
-        searched = []
-        for sub in subs:
-            chunks, log = self.hybrid.search(sub, per_sub)
-            searched.append((chunks, log))
-            result.searches.append(log)
+        searched = [self.hybrid.search(sub, per_sub) for sub in subs]
         # Round-robin, the best-matching sub-question first in every round.
-        searched.sort(key=lambda pair: _top_score(pair[1]), reverse=True)
-        rankings = [chunks for chunks, _ in searched]
-        seen: set[str] = set()
+        rankings = [
+            chunks for chunks, _ in sorted(searched, key=lambda p: _top_score(p[1]), reverse=True)
+        ]
+        merged: dict[str, ChunkRecord] = {}
         for rank in range(per_sub):
             for ranking in rankings:
-                if rank < len(ranking) and ranking[rank].id not in seen:
-                    seen.add(ranking[rank].id)
-                    result.chunks.append(ranking[rank])
-        result.chunks = result.chunks[:k]
-        return result
+                if rank < len(ranking):
+                    merged.setdefault(ranking[rank].id, ranking[rank])
+        return Result(list(merged.values())[:k], [s for _, s in searched])

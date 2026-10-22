@@ -16,14 +16,8 @@ PROMPT = PROMPTS / "judge.md"
 class Judge:
     model: Model
 
-    def _ask(self, prompt: str, key: str, expected: int) -> list[bool]:
-        response = self.model.complete([{"role": "user", "content": prompt}], max_tokens=2000)
-        values = parse_json(response.text).get(key, [])
-        if len(values) != expected:
-            raise ValueError(f"judge returned {len(values)} verdicts, expected {expected}")
-        return [bool(v) for v in values]
-
     def points_covered(self, question: str, points: list[str], answer: str) -> list[bool]:
+        """Per required point, whether the answer covers it."""
         prompt = (
             PROMPT.read_text()
             .strip()
@@ -31,4 +25,8 @@ class Judge:
             .replace("{points}", "\n".join(f"{i}. {p}" for i, p in enumerate(points, 1)))
             .replace("{answer}", answer)
         )
-        return self._ask(prompt, "covered", len(points))
+        response = self.model.complete([{"role": "user", "content": prompt}], max_tokens=2000)
+        covered = parse_json(response.text).get("covered", [])
+        if len(covered) != len(points):
+            raise ValueError(f"judge returned {len(covered)} verdicts, expected {len(points)}")
+        return [bool(v) for v in covered]

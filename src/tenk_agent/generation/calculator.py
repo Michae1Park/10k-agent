@@ -41,9 +41,6 @@ class Calculation:
     formula: str
     inputs: dict[str, float]
 
-    def to_dict(self) -> dict:
-        return {"result": self.result, "formula": self.formula, "inputs": self.inputs}
-
 
 def calculate(
     op: str | None = None, expression: str | None = None, inputs: dict | None = None

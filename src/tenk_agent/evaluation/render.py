@@ -83,21 +83,11 @@ tr.group td { background: #d5dae8; font-weight: 700; font-size: 8.5pt; border-to
 """
 
 
-CATEGORY_ORDER = (
-    "retrieval",
-    "grounding",
-    "multi_document",
-    "tool_use",
-    "agent_workflow",
-    "failure_case",
-)
-
-
 def build_summary_html(title: str, questions: list[dict]) -> str:
     ordered = sorted(
         questions,
         key=lambda q: (
-            CATEGORY_ORDER.index(q["category"]) if q["category"] in CATEGORY_ORDER else 99,
+            gold.CATEGORIES.index(q["category"]) if q["category"] in gold.CATEGORIES else 99,
             q.get("failure_mode") or "",
         ),
     )

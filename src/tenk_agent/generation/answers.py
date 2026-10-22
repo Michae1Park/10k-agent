@@ -2,29 +2,15 @@
 
 The model returns JSON (format: prompts/answer.md): an answer with [n] markers and a list of
 claims, each with its value, unit and chunk-ID citations. `finalize` normalizes it, checks
-each claim against the chunks it cites (verify.py), attaches citation metadata and lists the
-unverified claims.
+each claim against the chunks it cites (verify.py) and lists the unverified claims.
 """
 
 from tenk_agent.generation.verify import verify_claim
 from tenk_agent.store import Store
 
 
-def corpus_table(store: Store) -> str:
-    """The prompt's {corpus}: every filing's fiscal-year label and period end, per company."""
-    lines = ["Corpus (filer's fiscal-year label: period end date):"]
-    by_company: dict[str, list[str]] = {}
-    names = {}
-    for f in store.filings():
-        names[f.ticker] = f.company_name
-        by_company.setdefault(f.ticker, []).append(f"FY{f.fiscal_year}: {f.period_end_date}")
-    for ticker, years in by_company.items():
-        lines.append(f"- {ticker} {names[ticker]} — " + "; ".join(years))
-    return "\n".join(lines)
-
-
-def finalize(raw: dict, store: Store, verify: bool = True) -> dict:
-    """Normalize the model's JSON, verify each claim and attach citation metadata."""
+def finalize(raw: dict, store: Store) -> dict:
+    """Normalize the model's JSON and verify each claim."""
     claims = []
     for i, claim in enumerate(raw.get("claims") or [], 1):
         if not isinstance(claim, dict):
@@ -39,39 +25,10 @@ def finalize(raw: dict, store: Store, verify: bool = True) -> dict:
             "chunk_ids": _ids(claim.get("chunk_ids")),
             "calculation": claim.get("calculation"),
         }
-        if verify:
-            claim = verify_claim(claim, store)
-        else:
-            claim |= {"status": "unchecked", "status_reason": ""}
-        claims.append(claim)
-
-    citations = {}
-    for claim in claims:
-        for chunk_id in claim["chunk_ids"]:
-            if chunk_id in citations or not (chunk := store.get_chunk(chunk_id)):
-                continue
-            filing = store.filing(chunk.ticker, chunk.fiscal_year)
-            citations[chunk_id] = {
-                "chunk_id": chunk_id,
-                "company": chunk.ticker,
-                "company_name": filing.company_name if filing else chunk.ticker,
-                "fiscal_year": chunk.fiscal_year,
-                "period_end_date": filing.period_end_date if filing else None,
-                "item": chunk.item,
-                "section_title": store.section_titles(chunk.ticker, chunk.fiscal_year).get(
-                    chunk.item
-                ),
-                "url": filing.source_url if filing else None,
-                "pages": chunk.pages,
-                "printed_pages": chunk.printed_pages,
-                "kind": chunk.kind,
-                "text": chunk.text,
-            }
-
+        claims.append(verify_claim(claim, store))
     return {
         "answer": str(raw.get("answer", "")),
         "claims": claims,
-        "citations": citations,
         "table": raw.get("table") if isinstance(raw.get("table"), dict) else None,
         "scope_notice": raw.get("scope_notice"),
         "abstained": bool(raw.get("abstained", False)),

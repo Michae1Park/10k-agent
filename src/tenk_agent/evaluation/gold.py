@@ -14,14 +14,14 @@ from pathlib import Path
 from tenk_agent.corpus import COMPANIES, FISCAL_YEARS
 from tenk_agent.store import Store
 
-CATEGORIES = {
+CATEGORIES = (  # in the order the review PDFs group them
     "retrieval",
     "grounding",
     "multi_document",
     "tool_use",
     "agent_workflow",
     "failure_case",
-}
+)
 FAILURE_MODES = {
     "ambiguous_fiscal_year",
     "shifted_fiscal_year",

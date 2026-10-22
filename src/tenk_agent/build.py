@@ -37,7 +37,7 @@ def filing_dirs(data_dir: Path, names: list[str] | None = None) -> list[Path]:
     return [root / n for n in names] if names else sorted(root.glob("*/FY*"))
 
 
-def label(filing: Path) -> str:
+def filing_name(filing: Path) -> str:
     """AAPL/FY2025 → AAPL-FY2025, the filing's work folder under <out>."""
     return f"{filing.parent.name}-{filing.name}"
 
@@ -54,15 +54,15 @@ def chunk_all(filings: list[Path], out: Path, settings: dict, methods, jobs: int
         work = {f: pool.submit(_chunk_logged, f, out, settings, list(methods)) for f in filings}
         for filing, future in work.items():
             ok, minutes = future.result()
-            status = "ok" if ok else f"FAILED, see {out / label(filing) / 'chunk.log'}"
-            print(f"{label(filing)}: {status} in {minutes:.1f} min", flush=True)
+            status = "ok" if ok else f"FAILED, see {out / filing_name(filing) / 'chunk.log'}"
+            print(f"{filing_name(filing)}: {status} in {minutes:.1f} min", flush=True)
             if not ok:
-                failed.append(label(filing))
+                failed.append(filing_name(filing))
     return failed
 
 
 def _chunk_logged(filing: Path, out: Path, settings: dict, methods: list[str]):
-    target = out / label(filing)
+    target = out / filing_name(filing)
     target.mkdir(parents=True, exist_ok=True)
     t = time.time()
     with open(target / "chunk.log", "a") as log, redirect_stdout(log), redirect_stderr(log):
@@ -94,7 +94,7 @@ def load_db(method: str, filings: list[Path], out: Path) -> Path:
     path = out / f"{method}.db"
     rows = []
     for filing in filings:
-        source = out / label(filing)
+        source = out / filing_name(filing)
         rows.append(
             (
                 json.loads((filing / "metadata.json").read_text()),
@@ -121,7 +121,7 @@ def pages_db(method: str, filings: list[Path], out: Path) -> None:
     rows = [
         (
             json.loads((filing / "metadata.json").read_text()),
-            json.loads((out / label(filing) / f"chunks-{method}.json").read_text()),
+            json.loads((out / filing_name(filing) / f"chunks-{method}.json").read_text()),
         )
         for filing in filings
     ]

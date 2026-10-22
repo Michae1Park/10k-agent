@@ -1,4 +1,4 @@
-"""Deterministic checks that a number or quote appears in a chunk, with unit normalization.
+"""Deterministic checks that a claim's number appears in a chunk it cites, units normalized.
 
 Run over every claim of every answer (answers.finalize):
 - a reported number is *verified* when a cited chunk contains it;
@@ -127,17 +127,11 @@ def _close(target: float, shown: float, shown_rounding: float, claim_rounding: f
     return abs(target - shown) <= slack
 
 
-def find_text(quote: str, chunk: ChunkRecord) -> bool:
-    def normalize(text: str) -> str:
-        return re.sub(r"[\s|$]+", " ", text).strip().lower()
-
-    return normalize(quote) in normalize(chunk.text)
-
-
 def verify_claim(claim: dict, store: Store) -> dict:
     """Set a claim's status (verified / calculated / cited / unverified) and the reason."""
-    chunks = [c for cid in claim.get("chunk_ids") or [] if (c := store.get_chunk(cid))]
-    missing = [cid for cid in claim.get("chunk_ids") or [] if not store.get_chunk(cid)]
+    cited = [(cid, store.get_chunk(cid)) for cid in claim.get("chunk_ids") or []]
+    chunks = [c for _, c in cited if c]
+    missing = [cid for cid, c in cited if not c]
     calculation = claim.get("calculation")
     value = claim.get("value")
 

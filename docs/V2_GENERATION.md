@@ -76,7 +76,7 @@ question ─► V1: top 8 chunks ─► prompt ─► one model call ─► pars
 | 1. Retrieve | `retrieval/search.py` | V1's pipeline, unchanged |
 | 2. Prompt | `generation/generate.py` | System: the rules, the corpus table and the answer format. User: each chunk as `<chunk id="AAPL-FY2025-8-002">` under a line naming company, fiscal year, period end, Item, kind and units; then the question. No chunks: `Excerpts: (none)` |
 | 3. Call | `generate` | One `Model.complete` at temperature 0, thinking off; if the reply isn't JSON, one "Reply again with only the JSON object" retry, else a format error |
-| 4. Finalize | `generation/answers.py` | The JSON normalized; citations get company, fiscal year, section title, pages and EDGAR link |
+| 4. Finalize | `generation/answers.py` | The JSON normalized: claims with their value, unit, company, fiscal year, chunk IDs and calculation; table, scope notice, abstained |
 | 5. Check | `generation/verify.py`, `calculator.py` | Each claim labeled, deterministically; the answer itself is not changed |
 
 **The rules the model gets** ([answer.md](../src/tenk_agent/prompts/answer.md)):

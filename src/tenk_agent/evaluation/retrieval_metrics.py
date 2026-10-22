@@ -39,14 +39,13 @@ def recall_at(retrieved: list[str], gold: GoldChunks, k: int) -> float:
     return sum(bool(top & ids) for ids in gold.per_source) / len(gold.per_source)
 
 
+def first_gold_rank(retrieved: list[str], gold: GoldChunks) -> int | None:
+    """Rank (from 1) of the first gold chunk in the list; None if none is retrieved."""
+    relevant = gold.all
+    return next((rank for rank, cid in enumerate(retrieved, 1) if cid in relevant), None)
+
+
 def reciprocal_rank(retrieved: list[str], gold: GoldChunks) -> float:
     """1 / rank of the first gold chunk in the list; 0 if none is retrieved."""
-    relevant = gold.all
-    for rank, chunk_id in enumerate(retrieved, 1):
-        if chunk_id in relevant:
-            return 1 / rank
-    return 0.0
-
-
-def first_gold_rank(retrieved: list[str], gold: GoldChunks) -> int | None:
-    return next((r for r, cid in enumerate(retrieved, 1) if cid in gold.all), None)
+    rank = first_gold_rank(retrieved, gold)
+    return 1 / rank if rank else 0.0

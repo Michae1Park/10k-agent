@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from tenk_agent.generation.answers import corpus_table, finalize, unparsed
+from tenk_agent.generation.answers import finalize, unparsed
 from tenk_agent.models import Model, parse_json
 from tenk_agent.prompts import PROMPTS
 from tenk_agent.retrieval.index import ITEM_NAMES
@@ -21,6 +21,19 @@ from tenk_agent.store import ChunkRecord, Store
 PROMPT = PROMPTS / "answer.md"
 
 # --- Prompt and call ---------------------------------------------------------------------
+
+
+def corpus_table(store: Store) -> str:
+    """The prompt's {corpus}: every filing's fiscal-year label and period end, per company."""
+    lines = ["Corpus (filer's fiscal-year label: period end date):"]
+    by_company: dict[str, list[str]] = {}
+    names = {}
+    for f in store.filings():
+        names[f.ticker] = f.company_name
+        by_company.setdefault(f.ticker, []).append(f"FY{f.fiscal_year}: {f.period_end_date}")
+    for ticker, years in by_company.items():
+        lines.append(f"- {ticker} {names[ticker]} — " + "; ".join(years))
+    return "\n".join(lines)
 
 
 def format_chunks(chunks: list[ChunkRecord], store: Store) -> str:
@@ -80,5 +93,4 @@ def generate(
                 {"role": "user", "content": "Reply again with only the JSON object."},
             ]
     answer = finalize(raw if raw is not None else unparsed(replies[-1]), store)
-    answer.pop("citations")  # chunk texts, kept in the store
     return Generation(answer, replies, round(seconds, 3), tokens_in, tokens_out)

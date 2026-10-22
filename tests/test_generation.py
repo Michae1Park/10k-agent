@@ -1,7 +1,7 @@
 import pytest
 
 from tenk_agent.generation.calculator import CalculatorError, calculate
-from tenk_agent.generation.verify import find_text, find_value, numbers_in
+from tenk_agent.generation.verify import find_value, numbers_in
 from tenk_agent.store import ChunkRecord
 
 
@@ -73,9 +73,3 @@ def test_find_value_matches_percentages_as_displayed():
     prose = chunk("Services represented 26.2% of total net sales.")
     assert find_value(26.2, "percent", prose) == "26.2%"
     assert find_value(22.2, "percent", prose) is None
-
-
-def test_find_text_ignores_whitespace_case_and_table_pipes():
-    table = chunk("| Total net sales | 391,035 | 383,285 |")
-    assert find_text("total net sales 391,035", table)
-    assert not find_text("total net sales 416,161", table)

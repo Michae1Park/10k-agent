@@ -170,7 +170,7 @@ class QueryDecomposer:
         text = re.sub(r"\s+([,:?.])", r"\1", re.sub(r"\s{2,}", " ", text)).strip()
         text = re.sub(r":\s*\?$", "?", text)
         if not any(m.ticker == ticker for m in found):
-            filing = self.store.filings()
-            name = next((f.company_name for f in filing if f.ticker == ticker), ticker)
+            filings = self.store.filings()
+            name = next((f.company_name for f in filings if f.ticker == ticker), ticker)
             text = f"{name} ({ticker}): {text}"
         return text

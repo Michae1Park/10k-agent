@@ -53,7 +53,7 @@ class Block:
     page: int = 0  # D8: 1 + page breaks before the block; metadata, not shown to the LLM
 
     def features(self) -> str:
-        """The `features` field of the block's line in the LLM input (system.md # Input)."""
+        """The `features` field of the block's line in the LLM input (structure.md # Input)."""
         parts = [
             f"emph=runin:{self.runin}" if self.emph == "runin" else f"emph={self.emph}",
             f"chars={len(self.text)}",
@@ -90,14 +90,14 @@ def cover_metadata(full_filing: Path) -> dict:
         m = re.search(rf'name="dei:{name}"[^>]*>(.*?)</ix:', html, re.S)
         tags[name] = _clean(BeautifulSoup(m.group(1), "lxml").get_text(" ")) if m else None
     assert tags["DocumentType"] == "10-K", tags["DocumentType"]
-    manifest = json.loads((full_filing.parent / "metadata.json").read_text())
+    metadata = json.loads((full_filing.parent / "metadata.json").read_text())
     return {
         "ticker": tags["TradingSymbol"],
         "registrant": tags["EntityRegistrantName"],
         "fiscal_year": int(tags["DocumentFiscalYearFocus"]),
-        "period_end": manifest.get("period_end_date"),
-        "accession": manifest.get("accession_no"),
-        "source_url": manifest.get("source_url"),
+        "period_end": metadata.get("period_end_date"),
+        "accession": metadata.get("accession_no"),
+        "source_url": metadata.get("source_url"),
     }
 
 
