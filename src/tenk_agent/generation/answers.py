@@ -1,4 +1,4 @@
-"""The answer the model returns, made safe to use (docs/V2_GENERATION.md).
+"""The answer the model returns, made safe to use (docs/stages/V2_GENERATION.md).
 
 The model returns JSON (format: prompts/answer.md): an answer with [n] markers and a list of
 claims, each with its value, unit and chunk-ID citations. `finalize` normalizes it, checks

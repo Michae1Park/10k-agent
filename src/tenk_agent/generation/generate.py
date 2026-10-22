@@ -1,5 +1,5 @@
 """V2 generation: one model call over a question's excerpts → a JSON answer with cited claims.
-Spec: experiments/V2_GENERATION.md §3. Guide: docs/V2_GENERATION.md.
+Spec: experiments/V2_GENERATION.md §3. Spec: docs/stages/V2_GENERATION.md.
 
   chunks ─► prompt (prompts/answer.md) ─► one call
   ─► parse JSON (one "only the JSON" retry) ─► each claim checked against its cited chunks

@@ -1,6 +1,6 @@
 # Settings for the tenk CLI (TENK_CONFIG=<file> to use another). One section per stage; each
 # experiment pins its own copy in experiments/v*/config.yaml. Paths are relative to the repo root.
-# Guides: docs/V0_PARSING_CHUNKING.md, docs/V1_RETRIEVAL.md, docs/V2_GENERATION.md.
+# Specs: docs/stages/V0_PARSING_CHUNKING.md, docs/stages/V1_RETRIEVAL.md, docs/stages/V2_GENERATION.md.
 
 data_dir: data                                          # tenk fetch → data/raw/filings/<TICKER>/FY<year>/
 build:                                                  # tenk build

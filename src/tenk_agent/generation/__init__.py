@@ -6,5 +6,5 @@ chunk IDs, each claim checked against the chunks it cites.
   verify.py      each claim's value found in a cited chunk (unit-aware), or its calculation rerun
   calculator.py  safe arithmetic for those reruns
 
-Spec and results: experiments/V2_GENERATION.md. Guide: docs/V2_GENERATION.md.
+Spec and results: experiments/V2_GENERATION.md. Spec: docs/stages/V2_GENERATION.md.
 """

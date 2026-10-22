@@ -1,6 +1,6 @@
 # Experiments
 
-One folder per version, holding only what runs and scores its experiment: `run.py`, the version's own scoring, `config.yaml` (the settings the results were made with) and `testdata/`. The pipeline itself is in [`src/tenk_agent/`](../src/tenk_agent/), shared with the `tenk` CLI; how to use it: [`docs/`](../docs/). Each `V*.md` here is the version's design and results.
+One folder per version, holding only what runs and scores its experiment: `run.py`, the version's own scoring, `config.yaml` (the settings the results were made with) and `testdata/`. The pipeline itself is in [`src/tenk_agent/`](../src/tenk_agent/), shared with the `tenk` CLI; how to run it: [`docs/GETTING_STARTED.md`](../docs/GETTING_STARTED.md), how it works: [`docs/stages/`](../docs/stages/). Each `V*.md` here is the version's design and results.
 
 ```
 v0/  run.py · score.py, sanity.py (vs the ground truth) · config.yaml · testdata/ (excerpt, ground truth + its builder, sanity cases)

@@ -34,7 +34,7 @@ versions/v6_finetune_ablation/ablation.sh          # every ablation row + compar
 | `--judge` | LLM-judge metrics inline; the judge server must be up at `eval.judge_base_url`. Without it they show as n/m until `tenk eval judge <label>` |
 | `--max-tool-calls N` | Agent tool budget for this run (ablation) |
 | `--workers N` | Questions in parallel (vLLM batches them) |
-| `--resume` | Continue an interrupted run ([I-001](DECISIONS.md#i-001)) |
+| `--resume` | Continue an interrupted run ([I-001](../../docs/DECISIONS.md#i-001)) |
 | `--model`, `--mode`, `--reranker`, `--no-slot-search` | Override `config.yaml` for this run |
 
 ## Data
@@ -97,7 +97,7 @@ Same rules as the main set: drafted from the filings, verified by a person befor
 | Unsupported-answer rate | Answered although `should_abstain` (completed questions only, [D-017](DECISIONS.md#d-017)) | no |
 | Latency, tokens, cost | From traces; self-hosted cost = latency × GPU rate ([D-020](DECISIONS.md#d-020)) | no |
 
-The judge is fixed (`eval.judge_model`: `openai/gpt-oss-20b` on port 8002, [D-029](DECISIONS.md#d-029)) whatever model is under test ([D-014](DECISIONS.md#d-014)). It is from another family than every model compared, so no model grades itself. One GPU can't hold it beside the 27B or 31B, so the usual order is: run the answers, stop that model, start the judge (`scripts/serve_vllm.sh gpt-oss-20b`), then `tenk eval judge <labels>`. Calibrate it once: hand-grade ~30 answers, report agreement and Cohen's kappa.
+The judge is fixed (`eval.judge_model`: `openai/gpt-oss-20b` on port 8002, [D-029](../../docs/DECISIONS.md#d-029)) whatever model is under test ([D-014](DECISIONS.md#d-014)). It is from another family than every model compared, so no model grades itself. One GPU can't hold it beside the 27B or 31B, so the usual order is: run the answers, stop that model, start the judge (`scripts/serve_vllm.sh gpt-oss-20b`), then `tenk eval judge <labels>`. Calibrate it once: hand-grade ~30 answers, report agreement and Cohen's kappa.
 
 ## Comparing runs
 

@@ -1,5 +1,5 @@
 """V1 retrieval pipeline: sub-question retrieval over a fixed hybrid search. Spec:
-experiments/V1_RETRIEVAL.md §3. Guide: docs/V1_RETRIEVAL.md.
+experiments/V1_RETRIEVAL.md §3. Spec: docs/stages/V1_RETRIEVAL.md.
 
   question ─► QueryDecomposer ─► sub-questions (one per company and filing)    decompose.py
            ─► HybridSearch per sub-question: keyword (BM25) + dense ─► RRF ─► rerank

@@ -13,6 +13,7 @@ written against the old V0–V2 pipeline (`parse`, `chunking`, `ingest`, `retrie
 | V6 · Fine-tune + ablation | `finetune/`, `xbrl.py`, `scripts/finetune.sh` | [V6_FINETUNE_ABLATION.md](docs/V6_FINETUNE_ABLATION.md) |
 | Evaluation harness | `evaluation/` (runner, report, calibrate), `scripts/eval_all.sh` | [EVAL.md](docs/EVAL.md) |
 | API server | `api.py` (`tenk serve`) | |
+| Decisions and issues of V3–V6 | | [DECISIONS.md](docs/DECISIONS.md) |
 
 `cli.py`, `config.py` (with `config.yaml`), `ask.py`, `answers.py`, `retrieval.py`, `store.py` and
 `verify.py` are the shared modules as V3–V6 used them. They still carry V7 (advanced retrieval)

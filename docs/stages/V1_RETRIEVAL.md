@@ -1,39 +1,6 @@
 # V1 · Retrieval: question → the chunks that answer it
 
-**Builds on** V0: its chunks, loaded into a database. No LLM. **Code:** [`retrieval/`](../src/tenk_agent/retrieval/). **Design and results:** [experiments/V1_RETRIEVAL.md](../experiments/V1_RETRIEVAL.md): with parent-child chunks, Recall@5 87.3% and MRR 0.758 on 46 questions.
-
-## Commands
-
-Workstation terminal, repo root. The embedder and reranker run on the GPU (`retrieval.device: cpu` works, slower).
-
-```bash
-source .venv/bin/activate
-taskset -c 16-31 tenk build --stage load --stage embed                  # once after V0: database + vectors
-tenk search "How much did NVIDIA spend on R&D in fiscal 2025?"          # sub-questions, then the top k with rerank scores
-tenk search "Compare the net income of Apple, Amazon, Microsoft and NVIDIA in fiscal 2025." -k 8
-
-# The V1 experiment: the gold questions, scored (Recall@1/5/8, MRR)
-taskset -c 16-31 python experiments/v1/run.py                                                  # parent-child
-taskset -c 16-31 python experiments/v1/run.py --db data/v0-chunking/rule.db --label v0-rule    # another chunking
-taskset -c 16-31 python experiments/v1/run.py --question aapl-net-sales-fy2025                 # one question
-taskset -c 16-31 python experiments/v1/build_corpus.py --stage load --stage embed              # the three corpora
-```
-
-In Python:
-
-```python
-from pathlib import Path
-from tenk_agent.config import load
-from tenk_agent.retrieval.search import SubQuestionRetriever
-from tenk_agent.store import Store
-
-settings = load()
-store = Store(Path(settings["db"]))
-retriever = SubQuestionRetriever.from_settings(store, settings["retrieval"])
-result = retriever.search("Which company spent the most on R&D in fiscal 2025?", k=8)
-result.chunks      # the top 8 ChunkRecords (parents, on a parent-child database)
-result.searches    # per sub-question: its text, filters, keyword and dense candidates, rerank scores
-```
+**Builds on** V0: its chunks, loaded into a database. No LLM. **Code:** [`retrieval/`](../../src/tenk_agent/retrieval/). **Design and results:** [experiments/V1_RETRIEVAL.md](../../experiments/V1_RETRIEVAL.md): with parent-child chunks, Recall@5 87.3% and MRR 0.758 on 46 questions. **Run it:** [Getting started](../GETTING_STARTED.md#4-ask). Overview: [ARCHITECTURE.md](../ARCHITECTURE.md).
 
 ## Data
 
@@ -43,7 +10,7 @@ result.searches    # per sub-question: its text, filters, keyword and dense cand
 | Chunks (parents), children, filings, sections; FTS5 index | tables in the database, written by `tenk build --stage load` |
 | Vectors (1,024-d, cosine) | `chunks_vec`, `children_vec`, written by `--stage embed`; the model in `meta` |
 | Embedding model, reranker | Hugging Face cache, downloaded on first use |
-| Gold questions | [experiments/v1/testdata/retrieval-gold-fy2025.jsonl](../experiments/v1/testdata/retrieval-gold-fy2025.jsonl) ([format](#gold-questions)) |
+| Gold questions | [experiments/v1/testdata/retrieval-gold-fy2025.jsonl](../../experiments/v1/testdata/retrieval-gold-fy2025.jsonl) ([format](#gold-questions)) |
 
 | Table | Key fields |
 |---|---|
@@ -55,7 +22,7 @@ result.searches    # per sub-question: its text, filters, keyword and dense cand
 
 ## Knobs
 
-`config.yaml` → `retrieval:`; the V1 experiment pins its own copy in [experiments/v1/config.yaml](../experiments/v1/config.yaml).
+`config.yaml` → `retrieval:`; the V1 experiment pins its own copy in [experiments/v1/config.yaml](../../experiments/v1/config.yaml).
 
 | Knob | What it does | Default |
 |---|---|---|
@@ -94,7 +61,7 @@ Each chunk and child is embedded and reranked under a header line naming its com
 
 ## Gold questions
 
-One JSON object per line ([`evaluation/gold.py`](../src/tenk_agent/evaluation/gold.py)); the V2 set adds 8 declines to V1's 46. `tenk gold --gold <file>` lists a set with its evidence resolved; `tenk gold show <id>` prints one with its source text; `tenk gold render` writes the review PDFs; `tenk gold verify <id> --by <initials>` records a reviewer's sign-off.
+One JSON object per line ([`evaluation/gold.py`](../../src/tenk_agent/evaluation/gold.py)); the V2 set adds 8 declines to V1's 46. `tenk gold --gold <file>` lists a set with its evidence resolved; `tenk gold show <id>` prints one with its source text; `tenk gold render` writes the review PDFs; `tenk gold verify <id> --by <initials>` records a reviewer's sign-off.
 
 | Field | Meaning |
 |---|---|
@@ -108,16 +75,6 @@ One JSON object per line ([`evaluation/gold.py`](../src/tenk_agent/evaluation/go
 | `category`, `failure_mode`, `notes`, `origin`, `verified_by`, `verified_on` | Bookkeeping and review |
 
 Gold chunks are resolved from the evidence quotes at scoring time, so re-chunking never invalidates a set; a question whose quote no chunk contains is unscorable on that database.
-
-## Things to try
-
-| Try | Question |
-|---|---|
-| `tenk search "Which company spent the most on property and equipment in fiscal 2025?"` | What does each company's sub-question look like? Which lines come back? (No filer calls it "capital expenditures") |
-| `slot_search: false` in a copy of the V1 config | Which question kinds lose recall? ([§6](../experiments/V1_RETRIEVAL.md#6-without-slot-search)) |
-| `--db data/v0-chunking/rule.db` | Where does rule-based beat parent-child? (Risk factors) |
-| `reranker: none` | How far do the gold chunks fall? |
-| `"NVIDIA revenue in 2024"` vs `"… in fiscal 2024"` | Which filings does each search? |
 
 ## Gotchas
 

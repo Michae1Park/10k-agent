@@ -10,7 +10,7 @@
 
 Filings are read from <data_dir>/raw/filings/<TICKER>/FY<year>/ (tenk fetch); each one's work
 files (blocks, labels, document, chunks-<method>.json, chunk.log) go to <out>/<TICKER>-FY<year>/.
-Used by `tenk build` and experiments/v1/build_corpus.py. Guide: docs/V0_PARSING_CHUNKING.md.
+Used by `tenk build` and experiments/v1/build_corpus.py. Spec: docs/stages/V0_PARSING_CHUNKING.md.
 """
 
 import json

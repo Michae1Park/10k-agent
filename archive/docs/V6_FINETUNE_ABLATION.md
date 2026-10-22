@@ -4,7 +4,7 @@
 
 | Experiment | Question | Script |
 |---|---|---|
-| **Fine-tune** | Does a LoRA-tuned Qwen3.5-9B, trained on its own passing trajectories, close the gap to the untuned 27B ([D-025](DECISIONS.md#d-025), [D-029](DECISIONS.md#d-029))? | `run.sh finetune …`, `run.sh tuned`, `run.sh compare` |
+| **Fine-tune** | Does a LoRA-tuned Qwen3.5-9B, trained on its own passing trajectories, close the gap to the untuned 27B ([D-025](DECISIONS.md#d-025), [D-029](../../docs/DECISIONS.md#d-029))? | `run.sh finetune …`, `run.sh tuned`, `run.sh compare` |
 | **Ablation** | What does each part contribute? Remove or add one thing at a time | `run.sh ablation` ([`ablation.sh`](../versions/v6_finetune_ablation/ablation.sh)) |
 
 ## Commands
@@ -60,7 +60,7 @@ ROWS="full closed-book no-verify" versions/v6_finetune_ablation/run.sh ablation 
 | `rag-only` | one call over retrieved chunks (V2) | What does the agent loop add? |
 | `no-rerank` | dense candidates, no cross-encoder | What does the reranker add? |
 | `keyword` | BM25 only, no embeddings | What do embeddings add? |
-| `no-slots` | one search, not one per company and filing | What does slot search add ([D-011](DECISIONS.md#d-011))? |
+| `no-slots` | one search, not one per company and filing | What does slot search add ([D-011](../../docs/DECISIONS.md#d-011))? |
 | `no-verify` | no verification, no repair (V3) | What do verification and repair add? |
 | `budget-8` | 8 tool calls instead of 15 | How much budget does the agent need ([I-007](DECISIONS.md#i-007))? |
 | `xbrl` | + the XBRL tool | More right numbers, fewer traceable ones? ([D-021](DECISIONS.md#d-021); earlier run: `v5-research-xbrl-qwen3.5-9b`) |
@@ -148,5 +148,5 @@ Any `D-022: …` count above zero means something upstream is wrong (a mixed-up 
 - **Small test set.** 31 test questions give ±10-point intervals; a real but small gain may read "no clear difference". The held-out training companies add hundreds of in-distribution questions.
 - **Speed.** About 35 s per step for a 25k-token trajectory on the L40S (the first step is slower: kernel compilation). Budget roughly samples × epochs × 30 s; check the sample count `train.py` prints before committing to a full run.
 - **No MTP head.** Transformers doesn't load Qwen's multi-token-prediction weights, so the merged model lacks them. vLLM serves it normally (tested); only speculative decoding needs them.
-- **Slow kernels.** `causal_conv1d` isn't installed (it needs `nvcc`, [I-003](DECISIONS.md#i-003)); the PyTorch fallback is correct but slower.
+- **Slow kernels.** `causal_conv1d` isn't installed (it needs `nvcc`, [I-003](../../docs/DECISIONS.md#i-003)); the PyTorch fallback is correct but slower.
 - **CIKs** in `corpus.yaml` were written by hand. After the first fetch, check each filer's name: `jq -r .name data/train/raw/edgar/*/submissions.json`.

@@ -4,7 +4,7 @@
   step 2  LLM structure agent: labels, validated and
           repaired; assembled into the document         structure.py, validation.py
 
-Spec and results: experiments/V0_PARSING_CHUNKING.md §2. Guide: docs/V0_PARSING_CHUNKING.md.
+Spec and results: experiments/V0_PARSING_CHUNKING.md §2. Spec: docs/stages/V0_PARSING_CHUNKING.md.
 """
 
 import json

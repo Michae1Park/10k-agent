@@ -25,29 +25,29 @@ cd web && npm install && npm run dev
 
 ## The model layer
 
-Every model call goes through `Model.complete(messages, tools)` (`src/tenk_agent/models.py`); providers translate one neutral message format ([D-013](DECISIONS.md#d-013)).
+Every model call goes through `Model.complete(messages, tools)` (`src/tenk_agent/models.py`); providers translate one neutral message format ([D-013](../../docs/DECISIONS.md#d-013)).
 
 | `model.name` | Provider | Notes |
 |---|---|---|
-| `openai:<model>` | OpenAI-compatible server at `model.base_url` | **Default** (`openai:Qwen/Qwen3.6-27B-FP8`, [D-029](DECISIONS.md#d-029)). vLLM or Ollama; `temperature 0`; `<think>` blocks stripped; thinking off (`model.thinking: false`) |
+| `openai:<model>` | OpenAI-compatible server at `model.base_url` | **Default** (`openai:Qwen/Qwen3.6-27B-FP8`, [D-029](../../docs/DECISIONS.md#d-029)). vLLM or Ollama; `temperature 0`; `<think>` blocks stripped; thinking off (`model.thinking: false`) |
 | `anthropic:<model id>` | Anthropic SDK | Optional comparison column (V5). Needs `ANTHROPIC_API_KEY`. Thinking blocks are replayed unchanged between turns |
 
 ## vLLM presets
 
-`scripts/serve_vllm.sh <preset>`, pinned to the E-cores ([I-001](DECISIONS.md#i-001)), port 8001 (the judge: 8002). vLLM lives in its own conda env; the script finds `~/miniconda3/envs/vllm_py311/bin/vllm` when `vllm` isn't on `PATH` (tested with vLLM 0.20.0).
+`scripts/serve_vllm.sh <preset>`, pinned to the E-cores ([I-001](../../docs/DECISIONS.md#i-001)), port 8001 (the judge: 8002). vLLM lives in its own conda env; the script finds `~/miniconda3/envs/vllm_py311/bin/vllm` when `vllm` isn't on `PATH` (tested with vLLM 0.20.0).
 
 | Preset | Model | Weights | Context | KV cache | Notes |
 |---|---|---|---|---|---|
 | `qwen3.5-9b` | Qwen/Qwen3.5-9B | 18 GB BF16 | 64k | 124k tokens at `GPU_UTIL=0.80` | V2–V4 runs, V6 fine-tune base |
 | `qwen3.5-9b-v6` | `data/finetune/v6/merged` (`TUNED_MODEL`), served as `tenk/qwen3.5-9b-v6` | 18 GB BF16 | 64k | | V6 ([V6 guide](V6_FINETUNE_ABLATION.md)); no MTP head, so no speculative decoding |
-| `qwen3.6-27b-fp8` | Qwen/Qwen3.6-27B-FP8 | 28.5 GB FP8 | 32k | 27k tokens at `GPU_UTIL=0.80` | eager mode, no vision, bf16 KV ([I-003](DECISIONS.md#i-003)); use `--workers 2` |
+| `qwen3.6-27b-fp8` | Qwen/Qwen3.6-27B-FP8 | 28.5 GB FP8 | 32k | 27k tokens at `GPU_UTIL=0.80` | eager mode, no vision, bf16 KV ([I-003](../../docs/DECISIONS.md#i-003)); use `--workers 2` |
 | `gemma-4-31b-fp8` | RedHatAI/gemma-4-31B-it-FP8-block | 30.4 GiB FP8 | 32k | 6.6 GiB at `GPU_UTIL=0.86` (its default; 0.72 leaves 0.4 GiB and vLLM refuses to start) | V5 comparison. bf16 (62 GB) doesn't fit; same limits as the 27B; `gemma4` tool and reasoning parsers |
-| `gpt-oss-20b` | openai/gpt-oss-20b | ~13 GB MXFP4 | 32k | | **The LLM judge** ([D-029](DECISIONS.md#d-029)), port 8002, `GPU_UTIL=0.45`. Fits beside the 9B, not beside the 27B/31B: judge those runs afterwards with `tenk eval judge` |
+| `gpt-oss-20b` | openai/gpt-oss-20b | ~13 GB MXFP4 | 32k | | **The LLM judge** ([D-029](../../docs/DECISIONS.md#d-029)), port 8002, `GPU_UTIL=0.45`. Fits beside the 9B, not beside the 27B/31B: judge those runs afterwards with `tenk eval judge` |
 | `qwen3-1.7b` | Qwen/Qwen3-1.7B | 3.4 GB | 64k | | smoke tests |
 
 | Variable | Default | What it does |
 |---|---|---|
-| `GPU_UTIL` | 0.72 | GPU memory share; leaves room for the embedder and reranker ([I-002](DECISIONS.md#i-002)) |
+| `GPU_UTIL` | 0.72 | GPU memory share; leaves room for the embedder and reranker ([I-002](../../docs/DECISIONS.md#i-002)) |
 | `MAX_LEN` / `MAX_LEN_27B` / `MAX_LEN_31B` / `MAX_LEN_JUDGE` | 65536 / 32768 / 32768 / 32768 | Context length; trajectories reach 20–40k tokens per request |
 | `PORT`, `CPUS`, `VLLM_BIN` | 8001, 16-31, `vllm` (else the conda env above) | |
 | `JUDGE_PORT`, `JUDGE_GPU_UTIL` | 8002, 0.45 | the `gpt-oss-20b` preset |
@@ -100,6 +100,6 @@ The UI calls the API from the browser, so port 8000 must be forwarded too.
 
 ## Gotchas
 
-- **GPU memory.** vLLM + an eval + the API don't all fit: `TENK_LOCAL_DEVICE=cpu` for the API, or stop one ([I-002](DECISIONS.md#i-002)).
+- **GPU memory.** vLLM + an eval + the API don't all fit: `TENK_LOCAL_DEVICE=cpu` for the API, or stop one ([I-002](../../docs/DECISIONS.md#i-002)).
 - **After `tenk embed` with another model**, restart the API: it checks the embedding model at startup.
 - **Thinking mode.** Qwen models think by default; `TENK_OPENAI_THINKING=0` for interactive use (7 s instead of minutes).

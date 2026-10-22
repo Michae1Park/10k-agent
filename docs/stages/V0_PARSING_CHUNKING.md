@@ -1,40 +1,6 @@
 # V0 · Parsing and chunking: 10-K HTML → structured document → chunks
 
-**Builds on** nothing: start here. **Code:** [`preprocess/`](../src/tenk_agent/preprocess/), [`chunking/`](../src/tenk_agent/chunking/), run over the corpus by [`build.py`](../src/tenk_agent/build.py). **Design and results:** [experiments/V0_PARSING_CHUNKING.md](../experiments/V0_PARSING_CHUNKING.md) (it names the rules D1–D8, V1–V7, A1–A5, C1–C10 and T1–T3 used below).
-
-## Commands
-
-Workstation terminal, repo root. Preprocessing and the agentic chunker need the model served (`scripts/serve_vllm.sh qwen3.6-27b-fp8`, [SERVING.md](SERVING.md)); rule-based and parent-child chunking don't. Pin heavy jobs to the E-cores ([I-001](DECISIONS.md#i-001)).
-
-```bash
-source .venv/bin/activate
-export SEC_USER_AGENT="Your Name you@example.com"        # SEC requires a contact
-tenk fetch                                               # download the 24 10-Ks (cached)
-
-# The corpus: every filing preprocessed and chunked, then loaded into V1's database
-taskset -c 16-31 tenk build --stage chunk --jobs 8                       # LLM: ~35–60 min a filing, 8 at once
-taskset -c 16-31 tenk build --stage load --stage embed                   # stop vLLM first (embedder on the GPU)
-taskset -c 16-31 tenk build --stage chunk --filing NVDA/FY2025           # one filing
-taskset -c 16-31 tenk build --method rule --method parent_child          # other chunkings, side by side
-
-# The V0 experiment: one excerpt, all three chunkers, scored against the ground truth
-taskset -c 16-31 python experiments/v0/run.py                            # preprocess → chunk → score
-python experiments/v0/sanity.py                                          # the 21 hand-checkable cases
-```
-
-In Python, one filing by hand:
-
-```python
-from pathlib import Path
-from tenk_agent.preprocess import preprocess
-from tenk_agent.chunking import run_all
-from tenk_agent.config import load
-
-settings = load()
-html = next(Path("data/raw/filings/AAPL/FY2025").glob("*.htm"))
-document = preprocess(html, html, Path("output/aapl"), settings["llm"], settings["labeling"])  # labels cached in output/aapl/
-chunks = run_all(document, settings["chunking"], **settings["llm"], methods=["parent_child"])["parent_child"]
-```
+**Builds on** nothing: start here. **Code:** [`preprocess/`](../../src/tenk_agent/preprocess/), [`chunking/`](../../src/tenk_agent/chunking/), run over the corpus by [`build.py`](../../src/tenk_agent/build.py). **Design and results:** [experiments/V0_PARSING_CHUNKING.md](../../experiments/V0_PARSING_CHUNKING.md) (it names the rules D1–D8, V1–V7, A1–A5, C1–C10 and T1–T3 used below). **Run it:** [Getting started](../GETTING_STARTED.md#3-build-the-corpus). Overview: [ARCHITECTURE.md](../ARCHITECTURE.md).
 
 ## Data
 
@@ -57,7 +23,7 @@ Built so far: the FY2025 filings of AAPL, AMZN, MSFT and NVDA (the V1 and V2 gol
 
 ## Knobs
 
-`config.yaml`; the V0 experiment pins its own copy in [experiments/v0/config.yaml](../experiments/v0/config.yaml).
+`config.yaml`; the V0 experiment pins its own copy in [experiments/v0/config.yaml](../../experiments/v0/config.yaml).
 
 | Knob | What it does | Default |
 |---|---|---|
@@ -90,7 +56,7 @@ HTML ─► blocks + features (code) ─► labels per window (LLM) ─► valid
 | Step | Code | What happens | AAPL FY2025 |
 |---|---|---|---|
 | 1. Blocks | `preprocess/blocks.py` | Rules true of every 10-K (D1–D8): hidden elements dropped, inline XBRL unwrapped (text blocks kept as hints), `dei:` cover tags read, split cells joined (`$` + `1,234`), paragraphs and tables in reading order with features (emphasis, Item label, XBRL start, page break, link) and pages | 698 blocks |
-| 2. Label | `preprocess/structure.py`, [prompts/structure.md](../src/tenk_agent/prompts/structure.md) | The LLM labels ~150 blocks a call (temperature 0, thinking off, output forced to [structure.schema.json](../src/tenk_agent/prompts/structure.schema.json)): `item_heading`, `heading` (level, kind, run-in), `data_table` (units), `layout_table`, `body`, or noise (`cover`, `toc`, `furniture`, …) | 10 calls, 34 min |
+| 2. Label | `preprocess/structure.py`, [prompts/structure.md](../../src/tenk_agent/prompts/structure.md) | The LLM labels ~150 blocks a call (temperature 0, thinking off, output forced to [structure.schema.json](../../src/tenk_agent/prompts/structure.schema.json)): `item_heading`, `heading` (level, kind, run-in), `data_table` (units), `layout_table`, `body`, or noise (`cover`, `toc`, `furniture`, …) | 10 calls, 34 min |
 | 3. Validate, repair | `preprocess/validation.py` | Code checks each window (V1–V7: one label per block, Items in Form 10-K order, levels step down, risk kinds only in 1A, …); violations go back to the LLM, 2 rounds at most | 2 blocks left to review |
 | 4. Assemble | `preprocess/structure.py` | Labels applied to the filing's own text (A1–A5): one section per Item, noise dropped, run-in headings split, statements filed under Item 15 moved into Item 8, heading paths, printed page numbers | 23 sections; 110 blocks dropped |
 | 5. Chunk | `chunking/` | One of three methods (below), all within one Item, each data table its own chunk with its caption | parent-child: 216 parents |
@@ -102,7 +68,7 @@ HTML ─► blocks + features (code) ─► labels per window (LLM) ─► valid
 | `parent_child` | `chunking/parent_child.py` (LlamaIndex) | Parents ≤ 1,280 tokens that never cross a heading, each with children ≤ 256 tokens; a table's children are its title and one per row, naming the columns | no |
 | `agentic` | `chunking/agentic.py` (Chonkie) | The LLM picks each chunk's end; code keeps each risk factor on its own and never ends a chunk on a heading | one call per cut |
 
-**Parent-child is the default** (`build.methods`): V1 retrieves best with it ([V1 results](../experiments/V1_RETRIEVAL.md)).
+**Parent-child is the default** (`build.methods`): V1 retrieves best with it ([V1 results](../../experiments/V1_RETRIEVAL.md)).
 
 **A table chunk** (`AAPL-FY2025-8-002`, first lines), with two of its row children:
 
@@ -121,16 +87,6 @@ row: Net sales › Total net sales: September 27, 2025 = 416,161; September 28, 
 ```
 
 Metadata: `item 8`, heading path `CONSOLIDATED STATEMENTS OF OPERATIONS`, pages 31 (printed 29), units `in millions, except per-share amounts`, years 2023–2025.
-
-## Things to try
-
-| Try | Question |
-|---|---|
-| `experiments/v0/run.py --stage chunk --stage score` after changing `chunking.target` | What happens to path exactness and one-risk-factor-per-chunk? |
-| Read `review` in a `document.json` | Which blocks did the agent leave uncertain, and why? |
-| `--relabel` with `labeling.window: 50` | More calls; fewer violations? |
-| Compare `chunks-rule.json` and `chunks-parent_child.json` for one table | What do the row children add for search? |
-| NVDA FY2025's `document.json` | Where did Item 8's statements come from? (Item 15, moved by A3) |
 
 ## Gotchas
 

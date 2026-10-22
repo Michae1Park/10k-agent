@@ -28,7 +28,7 @@ scripts/serve_vllm.sh gpt-oss-20b && versions/v5_models/run.sh judge && versions
 
 | Preset | Model | Size on the GPU | Why it's here |
 |---|---|---|---|
-| `qwen3.6-27b-fp8` | Qwen/Qwen3.6-27B-FP8 | ~29 GB, 32k context | **The default** ([D-029](DECISIONS.md#d-029)); the baseline column |
+| `qwen3.6-27b-fp8` | Qwen/Qwen3.6-27B-FP8 | ~29 GB, 32k context | **The default** ([D-029](../../docs/DECISIONS.md#d-029)); the baseline column |
 | `gemma-4-31b-fp8` | RedHatAI/gemma-4-31B-it-FP8-block | ~32 GB, 32k context | Another family at the same size and precision |
 | `qwen3.5-9b` | Qwen/Qwen3.5-9B | 18 GB, 64k context | Smaller and faster; the base V6 fine-tunes |
 | `claude` | `anthropic:claude-sonnet-5-5` | API | Reference point, if a key is set; never used for training ([D-022](DECISIONS.md#d-022)) |
@@ -77,6 +77,6 @@ None of these differences is significant at p < 0.05 with 31 questions; read the
 
 - **Run each preset against its own server.** `run.sh` sets `TENK_MODEL` from the preset, and vLLM rejects requests for a model it isn't serving, so a mismatch fails on the first question.
 - **Gemma needs `WORKERS=2`.** Its weights leave ~6 GB of GPU memory beside vLLM; with 4 questions in flight the eval's embedder and reranker ran out of it (CUDA OOM). vLLM fits ~1.4 full-length requests at once anyway, so 2 workers cost little.
-- **32k context for the 27B and 31B** ([I-003](DECISIONS.md#i-003)). Long agent runs can hit it; those show as errors, reported apart from the rates ([D-017](DECISIONS.md#d-017)).
-- **GPU memory.** The eval process keeps the embedder and reranker on the GPU too ([I-002](DECISIONS.md#i-002)); `serve_vllm.sh` leaves room for them.
+- **32k context for the 27B and 31B** ([I-003](../../docs/DECISIONS.md#i-003)). Long agent runs can hit it; those show as errors, reported apart from the rates ([D-017](DECISIONS.md#d-017)).
+- **GPU memory.** The eval process keeps the embedder and reranker on the GPU too ([I-002](../../docs/DECISIONS.md#i-002)); `serve_vllm.sh` leaves room for them.
 - **Cost** for open models is latency × `gpu_hourly_usd` ([D-020](DECISIONS.md#d-020)); for Claude it's the API price. Comparable, not identical.
