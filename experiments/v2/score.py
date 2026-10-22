@@ -4,14 +4,14 @@ Spec: experiments/V2_GENERATION.md §4.
 Numbers are scored by code, two ways. `numbers`: each expected value stated in the answer
 text or table, within the tolerance; this decides correctness, since it is what a reader sees.
 `claimed`: each expected value listed as a claim for the right company and fiscal year
-(tenk_agent.evaluation.scoring.score_numbers); only claims can be verified. Text answers
+(tenk_agent.evaluation.answer_metrics.score_numbers); only claims can be verified. Text answers
 are scored by the LLM judge (judge.py) against the question's required points; until then
 they are unjudged. Citations are checked by code: a numeric claim is grounded when its value
 is in a chunk it cites (or its calculation reruns from them).
 """
 
 from tenk_agent.evaluation import gold
-from tenk_agent.evaluation.scoring import matches, score_numbers, text_unit
+from tenk_agent.evaluation.answer_metrics import matches, score_numbers, text_unit
 from tenk_agent.generation.verify import numbers_in
 
 

@@ -28,7 +28,7 @@ import yaml
 from score import grade, summarize
 
 from tenk_agent.evaluation import gold as gold_set
-from tenk_agent.evaluation.retrieval import gold_chunks
+from tenk_agent.evaluation.retrieval_metrics import gold_chunks
 from tenk_agent.generation.generate import build_prompt, generate
 from tenk_agent.models import get_model
 from tenk_agent.retrieval.search import SubQuestionRetriever

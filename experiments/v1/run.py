@@ -27,7 +27,7 @@ from pathlib import Path
 
 import yaml
 
-from tenk_agent.evaluation.retrieval import (
+from tenk_agent.evaluation.retrieval_metrics import (
     first_gold_rank,
     gold_chunks,
     recall_at,
