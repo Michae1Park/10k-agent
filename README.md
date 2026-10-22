@@ -102,10 +102,11 @@ taskset -c 16-31 python experiments/v2/run.py       # V2: 54 questions × three 
 
 | Path | Contents |
 |---|---|
-| `src/tenk_agent/` | `config`, `corpus`, `edgar` (fetch), `store` (SQLite), `embeddings`, `models`, `build` (the corpus build), `cli` |
+| `src/tenk_agent/` | Shared: `config`, `corpus` (the companies and years), `store` (SQLite), `models`, `build` (the corpus build), `cli` |
+| `src/tenk_agent/acquisition/` | `tenk fetch`: the corpus 10-Ks from SEC EDGAR (`edgar`), with `raw/manifest.json` |
 | `src/tenk_agent/preprocess/` | V0 step 1 `blocks` (rules), step 2 `structure` (the LLM agent, assembly) and its `validation` rules |
 | `src/tenk_agent/chunking/` | V0 `rule_based`, `parent_child`, `agentic`, and what they share (`common`) |
-| `src/tenk_agent/retrieval/` | V1 `index` (database, vectors), `decompose`, `search` |
+| `src/tenk_agent/retrieval/` | V1 `index` (database, vectors), `decompose`, `search`, `embeddings` (embedder, reranker) |
 | `src/tenk_agent/generation/` | V2 `generate`, `answers`, `verify`, `calculator` |
 | `src/tenk_agent/evaluation/` | Gold sets (`gold`, `render`), retrieval metrics, number scoring, the LLM judge |
 | `src/tenk_agent/prompts/` | Every LLM prompt, one Markdown file per task, its output schema beside it: `structure.md` + `structure.schema.json`, `answer.md`, `judge.md` |
