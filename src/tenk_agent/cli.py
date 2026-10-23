@@ -6,6 +6,7 @@ tenk search "question"         V1: sub-questions and the top k chunks
 tenk ask "question"            V2: one cited answer
 tenk chat                      V2: type questions, get answers (models loaded once)
 tenk gold [show|render|verify] review a gold question set
+tenk report LABEL              write a finished V2 run's end-to-end report to evaluation/results
 """
 
 import argparse
@@ -20,7 +21,9 @@ from tenk_agent import config as config_file
 from tenk_agent.corpus import COMPANIES, FISCAL_YEARS, company_by_ticker
 from tenk_agent.store import ChunkRecord, Store
 
-GOLD = Path("experiments/v2/testdata/generation-gold-fy2025.jsonl")
+GOLD = Path("evaluation/gold/generation-gold-fy2025.jsonl")
+RUNS = Path("output/generation")  # where experiments/v2/run.py writes a run
+RESULTS = Path("evaluation/results")  # the reports kept with the gold sets
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -66,6 +69,12 @@ def main(argv: list[str] | None = None) -> int:
     verify.add_argument("ids", nargs="+")
     verify.add_argument("--by", required=True, help="reviewer initials")
 
+    report = commands.add_parser("report", help="a V2 run's end-to-end report")
+    report.add_argument("label", help=f"a run in {RUNS}/")
+    report.add_argument("--gold", type=Path, default=GOLD, help="default: %(default)s")
+    report.add_argument("--context", default="retrieved", help="default: %(default)s")
+    report.add_argument("--out", type=Path, help=f"default: {RESULTS}/<label>")
+
     args = parser.parse_args(argv)
     settings = config_file.load(args.config)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -78,6 +87,7 @@ def main(argv: list[str] | None = None) -> int:
         "ask": _ask,
         "chat": _chat,
         "gold": _gold,
+        "report": _report,
     }
     return handlers[args.command](args, settings)
 
@@ -326,6 +336,36 @@ def _gold_verify(args: argparse.Namespace, settings: dict) -> int:
         return 1
     gold.save(questions, args.gold)
     print(f"Marked {len(args.ids)} question(s) verified by {args.by}")
+    return 0
+
+
+# --- report ------------------------------------------------------------------------------------
+
+
+def _report(args: argparse.Namespace, settings: dict) -> int:
+    import shutil
+
+    import yaml
+
+    from tenk_agent.evaluation import gold
+    from tenk_agent.evaluation.report import build_report
+
+    run_dir = RUNS / args.label
+    if not (run_dir / "results.json").exists():
+        print(f"No run {args.label!r} in {RUNS}/", file=sys.stderr)
+        return 1
+    used = yaml.safe_load((run_dir / "config.yaml").read_text())  # the settings the run used
+    questions = gold.load(args.gold)
+    if not used["score"]["restatements"]:
+        questions = [q | {"acceptable_sources": []} for q in questions]
+    rows = json.loads((run_dir / "results.json").read_text())
+    text = build_report(args.label, rows, questions, Store(Path(used["run"]["db"])), args.context)
+    out = args.out or RESULTS / args.label
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "report.md").write_text(text)
+    shutil.copy(run_dir / "scores.json", out / "scores.json")
+    shutil.copy(run_dir / "config.yaml", out / "config.yaml")
+    print(f"Wrote {out / 'report.md'}")
     return 0
 
 

@@ -17,9 +17,9 @@ from pathlib import Path
 
 import yaml
 from run import CONFIG, ROOT, _write, print_scores
-from score import correct, summarize
 
 from tenk_agent.evaluation.judge import Judge
+from tenk_agent.evaluation.scoring import correct, summarize
 from tenk_agent.models import get_model
 
 

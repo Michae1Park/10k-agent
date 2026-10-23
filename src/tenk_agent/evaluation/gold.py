@@ -1,6 +1,6 @@
 """Gold question sets: loading and review, evidence-to-chunk resolution, XBRL cross-checks.
 
-The sets are JSONL, one question per line (experiments/v1/testdata, experiments/v2/testdata);
+The sets are JSONL, one question per line (evaluation/gold);
 format and rules: docs/stages/V1_RETRIEVAL.md (Gold questions).
 """
 

@@ -23,7 +23,7 @@
 
 ## 1. Test data
 
-**File:** [retrieval-gold-fy2025.jsonl](v1/testdata/retrieval-gold-fy2025.jsonl). To read it: [PDF](v1/testdata/retrieval-gold-fy2025.pdf) (one card per question, evidence highlighted) and [summary](v1/testdata/retrieval-gold-fy2025-summary.pdf).
+**File:** [retrieval-gold-fy2025.jsonl](../evaluation/gold/retrieval-gold-fy2025.jsonl). To read it, run `tenk gold --gold <file> render`: a PDF with one card per question (evidence highlighted) and a summary, written next to the file and not committed.
 
 46 questions on the FY2025 10-Ks of AAPL, AMZN, MSFT and NVDA, with 80 gold sources. All are reviewed by a person.
 

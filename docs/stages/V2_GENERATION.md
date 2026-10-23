@@ -9,7 +9,7 @@
 | Chunks | V1 (`retrieval.k` of them) from `db` |
 | Corpus table (company, fiscal year, period end) | the `filings` table, written into the prompt's `{corpus}` |
 | Rules + answer format | [prompts/answer.md](../../src/tenk_agent/prompts/answer.md) (`generation.prompt`) |
-| Gold questions | [experiments/v2/testdata/generation-gold-fy2025.jsonl](../../experiments/v2/testdata/generation-gold-fy2025.jsonl) ([format](V1_RETRIEVAL.md#gold-questions)) |
+| Gold questions | [evaluation/gold/generation-gold-fy2025.jsonl](../../evaluation/gold/generation-gold-fy2025.jsonl) ([format](V1_RETRIEVAL.md#gold-questions)) |
 
 ## Knobs
 

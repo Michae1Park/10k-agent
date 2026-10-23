@@ -1,4 +1,4 @@
-"""V2 metrics: is the answer right, is it grounded, and does it decline when it should.
+"""V2 scoring: is the answer right, is it grounded, and does it decline when it should.
 Spec: experiments/V2_GENERATION.md §4.
 
 Numbers are scored by code, two ways. `numbers`: each expected value stated in the answer

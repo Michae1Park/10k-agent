@@ -10,7 +10,7 @@
 | Chunks (parents), children, filings, sections; FTS5 index | tables in the database, written by `tenk build --stage load` |
 | Vectors (1,024-d, cosine) | `chunks_vec`, `children_vec`, written by `--stage embed`; the model in `meta` |
 | Embedding model, reranker | Hugging Face cache, downloaded on first use |
-| Gold questions | [experiments/v1/testdata/retrieval-gold-fy2025.jsonl](../../experiments/v1/testdata/retrieval-gold-fy2025.jsonl) ([format](#gold-questions)) |
+| Gold questions | [evaluation/gold/retrieval-gold-fy2025.jsonl](../../evaluation/gold/retrieval-gold-fy2025.jsonl) ([format](#gold-questions)) |
 
 | Table | Key fields |
 |---|---|

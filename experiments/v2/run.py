@@ -3,7 +3,7 @@
 score the answers. Spec and results: experiments/V2_GENERATION.md.
 
   V1 pipeline (unchanged) ─► context: retrieved · oracle · none ─► one model call ─► claims
-  correct, declined, grounded, gold cited   (score.py; text answers after judge.py)
+  correct, declined, grounded, gold cited   (evaluation/scoring.py; text answers after judge.py)
 
   taskset -c 16-31 python experiments/v2/run.py
   taskset -c 16-31 python experiments/v2/run.py --question aapl-tariffs-fy2025
@@ -25,10 +25,10 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import yaml
-from score import grade, summarize
 
 from tenk_agent.evaluation import gold as gold_set
 from tenk_agent.evaluation.retrieval_metrics import gold_chunks
+from tenk_agent.evaluation.scoring import grade, summarize
 from tenk_agent.generation.generate import build_prompt, generate
 from tenk_agent.models import get_model
 from tenk_agent.retrieval.search import SubQuestionRetriever

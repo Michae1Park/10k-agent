@@ -63,6 +63,7 @@ tenk ask "How did Amazon's net income change from 2023 to 2025?" --json
 tenk chat                                                               # type questions; models loaded once
 tenk chat --model openai:Qwen/Qwen3.5-9B                                # another served model
 tenk gold show aapl-net-sales-fy2025                                    # a gold question with its source text
+tenk gold --gold evaluation/gold/retrieval-gold-fy2025.jsonl render   # review PDFs (card per question + summary) next to the set; git-ignored
 ```
 
 ## 5. Run the experiments
@@ -75,6 +76,7 @@ python experiments/v0/sanity.py                      # V0: the 21 hand-checkable
 taskset -c 16-31 python experiments/v1/run.py        # V1: Recall@k and MRR on 46 gold questions
 taskset -c 16-31 python experiments/v2/run.py        # V2: 54 questions × three contexts (V1's chunks · perfect retrieval · none)
 taskset -c 16-31 python experiments/v2/judge.py      # V2: judge the text answers, with the judge served instead
+tenk report qwen3.6-27b-fp8                          # a finished V2 run → evaluation/results/<run>/report.md (per-question tables)
 ```
 
 | Option | Does |

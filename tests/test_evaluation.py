@@ -3,6 +3,7 @@
 from datetime import date
 
 from tenk_agent.evaluation import gold
+from tenk_agent.evaluation.report import build_report
 from tenk_agent.evaluation.retrieval_metrics import GoldChunks, recall_at, reciprocal_rank
 from test_store import make_store
 
@@ -72,3 +73,43 @@ def test_recall_counts_sources_and_mrr_uses_first_relevant_rank():
     assert recall_at(["z", "y1", "x1"], gold, 5) == 1.0
     assert reciprocal_rank(["z", "q", "y1"], gold) == 1 / 3
     assert reciprocal_rank(["z"], gold) == 0.0
+
+
+def test_report_scores_retrieval_and_the_verdict_per_number_question(tmp_path):
+    store = make_store(tmp_path)
+    question = {
+        "id": "rd",
+        "question": "What was Apple's R&D?",
+        "answer_type": "number",
+        "expected_answer": {"value": 34550, "unit": "USD millions"},
+        "sources": [
+            {
+                "company": "AAPL",
+                "fiscal_year": 2025,
+                "evidence": "Research and development | 34,550 | 31,370",
+            }
+        ],
+    }
+    [[gold_id]] = gold.resolve_evidence(store, question)
+    row = {
+        "id": "rd",
+        "context": "retrieved",
+        "chunks": ["other", gold_id],
+        "numbers": {"expected": 1, "matched": 1, "all": True},
+        "correct": True,
+        "points": None,
+        "abstained": False,
+        "should_abstain": False,
+        "kind": "figure",
+        "claimed": None,
+        "numeric_claims": 0,
+        "grounded": 0,
+        "cited_unseen": [],
+        "gold_in_context": 1,
+        "gold_cited": 1,
+        "seconds": 1,
+        "output_tokens": 1,
+        "format_error": False,
+    }
+    report = build_report("run", [row], [question], store)
+    assert "| 34,550 USD millions | 0.00 | 1.00 | 1.00 | 0.50 | 1/1 | correct |" in report

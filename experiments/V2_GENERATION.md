@@ -28,7 +28,7 @@ Text questions: 4 of 16 as judged now, but the scoring doesn't fit them yet ([§
 
 ## 1. Test data
 
-**File:** [generation-gold-fy2025.jsonl](v2/testdata/generation-gold-fy2025.jsonl). To read it: [PDF](v2/testdata/generation-gold-fy2025.pdf) (one card per question, evidence highlighted) and [summary](v2/testdata/generation-gold-fy2025-summary.pdf).
+**File:** [generation-gold-fy2025.jsonl](../evaluation/gold/generation-gold-fy2025.jsonl). To read it, run `tenk gold --gold <file> render`: a PDF with one card per question (evidence highlighted) and a summary, written next to the file and not committed.
 
 54 questions on the FY2025 10-Ks of AAPL, AMZN, MSFT and NVDA, in V1's parent-child corpus (`data/v0-chunking/parent_child.db`): [V1's 46](V1_RETRIEVAL.md#1-test-data), unchanged, plus 8 to decline.
 
@@ -91,7 +91,7 @@ Code: [generation/](../src/tenk_agent/generation/). Settings: [config.yaml](v2/c
 
 ## 4. Metrics
 
-Code: [score.py](v2/score.py); judge: [judge.py](v2/judge.py) ([prompt](../src/tenk_agent/prompts/judge.md)).
+Code: [scoring.py](../src/tenk_agent/evaluation/scoring.py); judge: [judge.py](v2/judge.py) ([prompt](../src/tenk_agent/prompts/judge.md)).
 
 | Metric | Counts as a hit |
 |---|---|

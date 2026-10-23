@@ -222,3 +222,6 @@ __marimo__/
 
 # Playground reports
 output/
+
+# Gold set review PDFs: regenerate with `tenk gold render`
+evaluation/gold/*.pdf

@@ -1,0 +1,159 @@
+{
+ "retrieved": {
+  "questions": 54,
+  "correct": 0.6111111111111112,
+  "scored": 54,
+  "unjudged": [],
+  "by_kind": {
+   "figure": {
+    "questions": 11,
+    "correct": 1.0
+   },
+   "risk": {
+    "questions": 4,
+    "correct": 0.25
+   },
+   "drivers": {
+    "questions": 4,
+    "correct": 0.75
+   },
+   "compare_company": {
+    "questions": 10,
+    "correct": 0.5
+   },
+   "compare_year": {
+    "questions": 9,
+    "correct": 0.5555555555555556
+   },
+   "open": {
+    "questions": 8,
+    "correct": 0.0
+   },
+   "decline": {
+    "questions": 8,
+    "correct": 1.0
+   }
+  },
+  "declined_when_should": 1.0,
+  "declined_when_answerable": 0.021739130434782608,
+  "numbers_matched": 0.75,
+  "numbers_claimed": 0.4852941176470588,
+  "points_covered": 0.4230769230769231,
+  "numeric_claims": 52,
+  "grounded": 1.0,
+  "cited_unseen": [],
+  "gold_cited": 0.937037037037037,
+  "correct_with_all_gold": 0.6410256410256411,
+  "correct_with_gold_missing": 0.0,
+  "with_all_gold": 39,
+  "with_gold_missing": 7,
+  "format_errors": [],
+  "seconds_mean": 28.485814814814812,
+  "output_tokens_mean": 351.2037037037037
+ },
+ "oracle": {
+  "questions": 54,
+  "correct": 0.6851851851851852,
+  "scored": 54,
+  "unjudged": [],
+  "by_kind": {
+   "figure": {
+    "questions": 11,
+    "correct": 1.0
+   },
+   "risk": {
+    "questions": 4,
+    "correct": 0.25
+   },
+   "drivers": {
+    "questions": 4,
+    "correct": 0.75
+   },
+   "compare_company": {
+    "questions": 10,
+    "correct": 0.6
+   },
+   "compare_year": {
+    "questions": 9,
+    "correct": 0.5555555555555556
+   },
+   "open": {
+    "questions": 8,
+    "correct": 0.375
+   },
+   "decline": {
+    "questions": 8,
+    "correct": 1.0
+   }
+  },
+  "declined_when_should": 1.0,
+  "declined_when_answerable": 0.0,
+  "numbers_matched": 0.8970588235294118,
+  "numbers_claimed": 0.6323529411764706,
+  "points_covered": 0.46153846153846156,
+  "numeric_claims": 56,
+  "grounded": 1.0,
+  "cited_unseen": [],
+  "gold_cited": 0.9818840579710144,
+  "correct_with_all_gold": 0.6304347826086957,
+  "correct_with_gold_missing": null,
+  "with_all_gold": 46,
+  "with_gold_missing": 0,
+  "format_errors": [],
+  "seconds_mean": 27.73288888888889,
+  "output_tokens_mean": 344.74074074074076
+ },
+ "none": {
+  "questions": 54,
+  "correct": 0.14814814814814814,
+  "scored": 54,
+  "unjudged": [],
+  "by_kind": {
+   "figure": {
+    "questions": 11,
+    "correct": 0.0
+   },
+   "risk": {
+    "questions": 4,
+    "correct": 0.0
+   },
+   "drivers": {
+    "questions": 4,
+    "correct": 0.0
+   },
+   "compare_company": {
+    "questions": 10,
+    "correct": 0.0
+   },
+   "compare_year": {
+    "questions": 9,
+    "correct": 0.0
+   },
+   "open": {
+    "questions": 8,
+    "correct": 0.0
+   },
+   "decline": {
+    "questions": 8,
+    "correct": 1.0
+   }
+  },
+  "declined_when_should": 1.0,
+  "declined_when_answerable": 1.0,
+  "numbers_matched": 0.0,
+  "numbers_claimed": 0.0,
+  "points_covered": null,
+  "numeric_claims": 0,
+  "grounded": null,
+  "cited_unseen": [],
+  "gold_cited": null,
+  "correct_with_all_gold": null,
+  "correct_with_gold_missing": 0.0,
+  "with_all_gold": 0,
+  "with_gold_missing": 46,
+  "format_errors": [],
+  "seconds_mean": 7.671648148148148,
+  "output_tokens_mean": 95.74074074074075
+ },
+ "judge_model": "openai:openai/gpt-oss-20b"
+}

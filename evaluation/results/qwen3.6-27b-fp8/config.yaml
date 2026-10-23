@@ -1,0 +1,37 @@
+run:
+  label: qwen3.6-27b-fp8
+  db: data/v0-chunking/parent_child.db
+  gold: experiments/v2/v2_testdata/generation-gold-fy2025.jsonl
+  contexts:
+  - retrieved
+  - oracle
+  - none
+  workers: 4
+retrieval:
+  from: experiments/v1/v1_src/config.yaml
+  embedder: local:Qwen/Qwen3-Embedding-0.6B
+  reranker: local:BAAI/bge-reranker-v2-m3
+  candidates: 40
+  rrf_k: 60
+  slot_search: true
+  decompose:
+    rewrite: true
+    fan_out: true
+  k: 8
+  device: null
+generation:
+  model: openai:Qwen/Qwen3.6-27B-FP8
+  base_url: http://localhost:8001/v1
+  thinking: false
+  max_tokens: 4000
+  prompt: experiments/v2/v2_prompt/system.md
+  serve:
+    gpu_memory_utilization: 0.8
+    max_model_len: 32768
+    max_num_seqs: 4
+    enforce_eager: false
+    prefix_caching: true
+score:
+  restatements: true
+  judge_model: openai:openai/gpt-oss-20b
+  judge_base_url: http://localhost:8002/v1

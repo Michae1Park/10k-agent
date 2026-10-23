@@ -4,7 +4,7 @@
 run:
   label: qwen3.6-27b-fp8                                # writes output/generation/<label>/
   db: data/v0-chunking/parent_child.db                  # V1's best chunking (build_corpus.py)
-  gold: experiments/v2/testdata/generation-gold-fy2025.jsonl # V1's 46 answerable + 8 to decline
+  gold: evaluation/gold/generation-gold-fy2025.jsonl # V1's 46 answerable + 8 to decline
   contexts: [retrieved, oracle, none]                   # spec §2: V1's top k · missing gold swapped in · no excerpts
   workers: 4                                            # model calls in parallel
 
@@ -23,7 +23,7 @@ generation:                                             # tenk_agent.generation,
     enforce_eager: false                                # CUDA graphs: ~17 tok/s vs ~11.5 eager
     prefix_caching: true
 
-score:                                                  # score.py, spec §4
+score:                                                  # tenk_agent.evaluation.scoring, spec §4
   restatements: true                                    # acceptable sources (MD&A tables, notes) count for the source they restate
   judge_model: openai:openai/gpt-oss-20b                # judge.py · scripts/serve_vllm.sh gpt-oss-20b (stop the 27B first)
   judge_base_url: http://localhost:8002/v1

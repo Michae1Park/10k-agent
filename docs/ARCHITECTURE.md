@@ -62,7 +62,8 @@ Each stage spec covers: data, knobs, outputs, how it works, gotchas.
 | `src/tenk_agent/generation/` | V2 `generate`, `answers`, `verify`, `calculator` |
 | `src/tenk_agent/evaluation/` | Gold sets (`gold`, `render`), retrieval metrics, number scoring, the LLM judge |
 | `src/tenk_agent/prompts/` | Every LLM prompt, one Markdown file per task, its output schema beside it: `structure.md` + `structure.schema.json`, `answer.md`, `judge.md` |
-| `experiments/` | One folder per version: its runner, scoring, config and test data; `V*.md` design and results |
+| `experiments/` | One folder per version: its runner and config; `V*.md` design and results |
+| `evaluation/` | `gold/`: the reviewed gold question sets (JSONL, plus review PDFs); `results/<run>/`: each run's end-to-end report (`tenk report`). The code that loads, scores and reports is `src/tenk_agent/evaluation/` |
 | `archive/` | V3–V6, for reference only |
 | `docs/` | This documentation |
 | `scripts/` | `serve_vllm.sh` (open models) |

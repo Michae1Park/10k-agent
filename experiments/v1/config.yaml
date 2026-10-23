@@ -4,7 +4,7 @@
 run:
   label: v0-parent_child                                # writes output/retrieval/<label>/
   db: data/v0-chunking/parent_child.db                  # build_corpus.py; also rule.db, agentic.db
-  gold: experiments/v1/testdata/retrieval-gold-fy2025.jsonl # 46 questions: FY2025, AAPL/AMZN/NVDA/MSFT
+  gold: evaluation/gold/retrieval-gold-fy2025.jsonl # 46 questions: FY2025, AAPL/AMZN/NVDA/MSFT
 
 retrieval:                                              # tenk_agent.retrieval, spec §3
   embedder: local:Qwen/Qwen3-Embedding-0.6B             # must match the vectors in db (build_corpus.py --stage embed)

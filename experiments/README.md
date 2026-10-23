@@ -4,8 +4,8 @@ One folder per version, holding only what runs and scores its experiment: `run.p
 
 ```
 v0/  run.py · score.py, sanity.py (vs the ground truth) · config.yaml · testdata/ (excerpt, ground truth + its builder, sanity cases)
-v1/  run.py · build_corpus.py (the three corpora) · config.yaml · testdata/ (retrieval gold set)
-v2/  run.py · score.py · judge.py · config.yaml · testdata/ (generation gold set)
+v1/  run.py · build_corpus.py (the three corpora) · config.yaml
+v2/  run.py · judge.py (runs the LLM judge) · config.yaml
 ```
 
 ## V0 · Parsing and chunking
@@ -48,7 +48,7 @@ Pipeline: [retrieval/](../src/tenk_agent/retrieval/); experiment: [v1/](v1/). Ru
 - **Pipeline:** query decomposition (one sub-question per company) → keyword (BM25) + dense (`Qwen3-Embedding-0.6B`) → RRF → rerank (`bge-reranker-v2-m3`) → round-robin → top 8
 - **Corpora:** V0's rule-based, parent-child and agentic chunks of the four FY2025 filings ([build_corpus.py](v1/build_corpus.py) → `data/v0-chunking/<method>.db`)
 - **Result:** parent-child is best (Recall@5 87.3%, Recall@8 91.7%, MRR 0.758 on 46 questions). Questions spanning several filings are the weak spot for every chunking
-- **Test data:** 46 FY2025 questions on AAPL, AMZN, MSFT, NVDA, reviewed, including cross-company, cross-year and no-company questions ([retrieval-gold-fy2025.jsonl](v1/testdata/retrieval-gold-fy2025.jsonl); readable: [PDF](v1/testdata/retrieval-gold-fy2025.pdf), [summary](v1/testdata/retrieval-gold-fy2025-summary.pdf))
+- **Test data:** 46 FY2025 questions on AAPL, AMZN, MSFT, NVDA, reviewed, including cross-company, cross-year and no-company questions ([retrieval-gold-fy2025.jsonl](../evaluation/gold/retrieval-gold-fy2025.jsonl); readable: `tenk gold render`)
 - **Metrics:** Recall@1, Recall@5, Recall@8, MRR, per question kind
 
 ## V2 · Generation
@@ -63,5 +63,5 @@ Pipeline: [generation/](../src/tenk_agent/generation/), prompt [answer.md](../sr
   - **Oracle**: V1's top 8 with every gold source it missed swapped in (differs from Retrieved only where V1 failed)
   - **None**: no excerpts; the model should decline everything
 - **Result:** with V1's retrieval, 21 of 30 number questions right (25 of 30 with every gold source shown); all 8 declines declined; nothing answered from memory. Text questions await required points rewritten for answers
-- **Test data:** 54 questions: V1's 46 answerable ones, unchanged, plus 8 to decline (companies, years and figures outside the filings, investment advice) ([generation-gold-fy2025.jsonl](v2/testdata/generation-gold-fy2025.jsonl); readable: [PDF](v2/testdata/generation-gold-fy2025.pdf), [summary](v2/testdata/generation-gold-fy2025-summary.pdf))
+- **Test data:** 54 questions: V1's 46 answerable ones, unchanged, plus 8 to decline (companies, years and figures outside the filings, investment advice) ([generation-gold-fy2025.jsonl](../evaluation/gold/generation-gold-fy2025.jsonl); readable: `tenk gold render`)
 - **Metrics:** correct (numbers by code, text by an LLM judge against required points), declined when it should / when it shouldn't, numeric claims grounded in a cited chunk, gold sources cited
