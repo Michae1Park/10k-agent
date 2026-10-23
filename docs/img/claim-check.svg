@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="900" viewBox="0 0 1180 900" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">Claim check</title>
+  <desc id="svgdesc">Each claim is checked with code only. A claim with a calculation reruns the calculation, compares it to the claimed value and looks for every input in a cited chunk, giving calculated. A claim with a number but no calculation must have a numeric value found in a cited chunk, and on a parent-child database from the right company, giving verified. A claim with no number needs valid chunk IDs, giving cited. Every failed check gives unverified.</desc>
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .panel { fill: #151c24; stroke: #3a4753; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .llm   { fill: #3a1a2c; stroke: #d487b0; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .ops   { fill: #331a1a; stroke: #c88080; }
+      .route { fill: #33280f; stroke: #d3a751; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .fail  { fill: #e49a9a; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      .edge-d{ stroke: #c88080; }
+      #arrow > path   { fill: #8496a6; }
+      #arrow-d > path { fill: #c88080; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+    <marker id="arrow-d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a85f5f"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1179" height="899" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+  <rect class="ext" x="380" y="30" width="420" height="84" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="57" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">A claim from the model</text>
+  <text class="sub" x="590.0" y="83" text-anchor="middle" font-size="14" fill="#4a5a68">value · unit · company · cited chunk IDs</text>
+  <text class="sub" x="590.0" y="103" text-anchor="middle" font-size="14" fill="#4a5a68">optional calculation</text>
+  <rect class="panel" x="20" y="150" width="1140" height="730" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="403" y="178" text-anchor="middle" font-size="14.5" font-weight="600" fill="#46586a">generation/verify.py: code only, no LLM</text>
+  <rect class="route" x="40" y="190" width="350" height="56" rx="7" fill="#fbf1de" stroke="#bf8f33" stroke-width="1.5"/>
+  <text class="name" x="215.0" y="223" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Has a calculation</text>
+  <rect class="route" x="415" y="190" width="350" height="56" rx="7" fill="#fbf1de" stroke="#bf8f33" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="223" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Has a number, no calculation</text>
+  <rect class="route" x="790" y="190" width="350" height="56" rx="7" fill="#fbf1de" stroke="#bf8f33" stroke-width="1.5"/>
+  <text class="name" x="965.0" y="223" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Has no number</text>
+  <path class="edge" d="M 590 114 V 140" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
+  <path class="edge" d="M 215 140 H 965" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
+  <path class="edge" d="M 215 140 V 184" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 590 140 V 184" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 965 140 V 184" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="40" y="290" width="350" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="215.0" y="317" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Rerun the calculation</text>
+  <text class="sub" x="215.0" y="343" text-anchor="middle" font-size="14" fill="#4a5a68">calculator.py · named operation</text>
+  <text class="sub" x="215.0" y="363" text-anchor="middle" font-size="14" fill="#4a5a68">or arithmetic expression</text>
+  <text class="fail" x="215.0" y="383" text-anchor="middle" font-size="14" font-weight="600" fill="#a24b4b">does not run → unverified</text>
+  <path class="edge" d="M 215.0 246 V 286" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="40" y="422" width="350" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="215.0" y="459" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Result equals the claimed value?</text>
+  <text class="sub" x="215.0" y="485" text-anchor="middle" font-size="14" fill="#4a5a68">compared to the precision written</text>
+  <text class="fail" x="215.0" y="505" text-anchor="middle" font-size="14" font-weight="600" fill="#a24b4b">differs → unverified</text>
+  <path class="edge" d="M 215.0 394 V 418" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="40" y="554" width="350" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="215.0" y="591" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Every input is in a cited chunk?</text>
+  <text class="sub" x="215.0" y="617" text-anchor="middle" font-size="14" fill="#4a5a68">find_value, once per input</text>
+  <text class="fail" x="215.0" y="637" text-anchor="middle" font-size="14" font-weight="600" fill="#a24b4b">input missing → unverified</text>
+  <path class="edge" d="M 215.0 526 V 550" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="415" y="290" width="350" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="327" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Value is a number?</text>
+  <text class="sub" x="590.0" y="353" text-anchor="middle" font-size="14" fill="#4a5a68">parsed from the claim</text>
+  <text class="fail" x="590.0" y="373" text-anchor="middle" font-size="14" font-weight="600" fill="#a24b4b">not a number → unverified</text>
+  <path class="edge" d="M 590.0 246 V 286" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="415" y="422" width="350" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="449" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Value is in a cited chunk?</text>
+  <text class="sub" x="590.0" y="475" text-anchor="middle" font-size="14" fill="#4a5a68">find_value: units normalized,</text>
+  <text class="sub" x="590.0" y="495" text-anchor="middle" font-size="14" fill="#4a5a68">match to the written precision</text>
+  <text class="fail" x="590.0" y="515" text-anchor="middle" font-size="14" font-weight="600" fill="#a24b4b">not found → unverified</text>
+  <path class="edge" d="M 590.0 394 V 418" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="415" y="554" width="350" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="591" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Chunk is from the claim&#x27;s company?</text>
+  <text class="sub" x="590.0" y="617" text-anchor="middle" font-size="14" fill="#4a5a68">checked on a parent-child database</text>
+  <text class="fail" x="590.0" y="637" text-anchor="middle" font-size="14" font-weight="600" fill="#a24b4b">only another company → unverified</text>
+  <path class="edge" d="M 590.0 526 V 550" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="790" y="290" width="350" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="965.0" y="327" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Cited chunk IDs exist?</text>
+  <text class="sub" x="965.0" y="353" text-anchor="middle" font-size="14" fill="#4a5a68">every claim without a number</text>
+  <text class="fail" x="965.0" y="373" text-anchor="middle" font-size="14" font-weight="600" fill="#a24b4b">none → unverified</text>
+  <path class="edge" d="M 965.0 246 V 286" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="40" y="698" width="350" height="70" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="215.0" y="728" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">calculated</text>
+  <text class="sub" x="215.0" y="754" text-anchor="middle" font-size="14" fill="#4a5a68">the result is reproduced from sourced inputs</text>
+  <rect class="sink" x="415" y="698" width="350" height="70" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="728" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">verified</text>
+  <text class="sub" x="590.0" y="754" text-anchor="middle" font-size="14" fill="#4a5a68">the value is shown in a cited chunk</text>
+  <rect class="sink" x="790" y="698" width="350" height="70" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="965.0" y="728" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">cited</text>
+  <text class="sub" x="965.0" y="754" text-anchor="middle" font-size="14" fill="#4a5a68">the citation exists; no number to check</text>
+  <path class="edge" d="M 215 658 V 694" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 590 658 V 694" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 965 394 V 694" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="ops" x="40" y="804" width="1100" height="56" rx="7" fill="#f7eaea" stroke="#a85f5f" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="827" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Any failed check gives unverified</text>
+  <text class="sub" x="590.0" y="853" text-anchor="middle" font-size="14" fill="#4a5a68">the claim is kept and shown with the reason; unknown chunk IDs are added to the reason</text>
+</svg>

@@ -39,6 +39,34 @@ Each version adds one stage and was tested on its own before the next was built.
 
 Each stage spec covers: data, knobs, outputs, how it works, gotchas.
 
+## Evaluation
+
+Evaluation never runs the pipeline. It takes the pipeline's output, the generated answer and the chunks the model was shown, and grades it against the gold set. The only LLM in it is the judge, and only for text answers.
+
+<p align="center">
+  <img src="img/evaluation.svg" alt="Evaluation flow: gold JSONL gives gold chunks; the generated answer goes through a code-only claim check; grade() picks the check by answer type: decline questions are correct if the model declined, number questions if every expected value is stated within tolerance, text questions are unjudged until the LLM judge scores them against required points; summarize() aggregates per context, results are stored and report.py recomputes Recall@k and MRR to write the report" width="100%">
+</p>
+
+| Step | Code | LLM? |
+|---|---|---|
+| Claim check | `generation/verify.py`, run inside `generate()` | No |
+| Gold chunks | `gold.resolve_evidence`, `retrieval_metrics.gold_chunks` | No |
+| Number questions, declines | `scoring.grade`, `answer_metrics` | No |
+| Text questions | `judge.py`, then `scoring.correct` again (`experiments/v2/judge.py`) | **Yes** |
+| Aggregate and report | `scoring.summarize`, `report.build_report` | No |
+
+`correct` does not depend on the claim check. A number that is in the answer text counts even if its claim is `unverified`; the claim statuses are reported as the grounded count.
+
+### Claim check
+
+Each claim the model returns is checked on its own, with code only:
+
+<p align="center">
+  <img src="img/claim-check.svg" alt="Claim check: a claim with a calculation reruns it and finds every input in a cited chunk (calculated); a claim with a number must be found in a cited chunk of the right company (verified); a claim without a number needs valid chunk IDs (cited); any failed check is unverified" width="100%">
+</p>
+
+An unknown chunk ID is added to the reason whatever the status. Unverified claims are shown to the user with the reason, not hidden.
+
 ## Design principles
 
 | Area | Principle |
@@ -60,7 +88,7 @@ Each stage spec covers: data, knobs, outputs, how it works, gotchas.
 | `src/tenk_agent/chunking/` | V0 `rule_based`, `parent_child`, `agentic`, and what they share (`common`) |
 | `src/tenk_agent/retrieval/` | V1 `index` (database, vectors), `decompose`, `search`, `embeddings` (embedder, reranker) |
 | `src/tenk_agent/generation/` | V2 `generate`, `answers`, `verify`, `calculator` |
-| `src/tenk_agent/evaluation/` | Gold sets (`gold`, `render`), retrieval metrics, number scoring, the LLM judge |
+| `src/tenk_agent/evaluation/` | Gold sets (`gold`, `render`), retrieval metrics, number matching, the LLM judge, `scoring`, `report` |
 | `src/tenk_agent/prompts/` | Every LLM prompt, one Markdown file per task, its output schema beside it: `structure.md` + `structure.schema.json`, `answer.md`, `judge.md` |
 | `experiments/` | One folder per version: its runner and config; `V*.md` design and results |
 | `evaluation/` | `gold/`: the reviewed gold question sets (JSONL, plus review PDFs); `results/<run>/`: each run's end-to-end report (`tenk report`). The code that loads, scores and reports is `src/tenk_agent/evaluation/` |

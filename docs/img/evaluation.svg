@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="1110" viewBox="0 0 1180 1110" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">Evaluation flow</title>
+  <desc id="svgdesc">A generated answer goes through a code-only claim check, then grade() picks the check by answer type: decline questions are correct if the model declined, number questions if every expected value is stated within tolerance, and text questions are first unjudged and then scored by an LLM judge against required points. summarize() aggregates per context, results are stored, and report.py recomputes Recall@k and MRR to write the per-question report.</desc>
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .panel { fill: #151c24; stroke: #3a4753; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .llm   { fill: #3a1a2c; stroke: #d487b0; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .ops   { fill: #331a1a; stroke: #c88080; }
+      .route { fill: #33280f; stroke: #d3a751; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .fail  { fill: #e49a9a; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      .edge-d{ stroke: #c88080; }
+      #arrow > path   { fill: #8496a6; }
+      #arrow-d > path { fill: #c88080; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+    <marker id="arrow-d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a85f5f"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1179" height="1109" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+  <rect class="ext" x="40" y="30" width="340" height="84" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="210.0" y="57" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Gold JSONL</text>
+  <text class="sub" x="210.0" y="83" text-anchor="middle" font-size="14" fill="#4a5a68">evaluation/gold/*.jsonl</text>
+  <text class="sub" x="210.0" y="103" text-anchor="middle" font-size="14" fill="#4a5a68">question · evidence quote · expected answer</text>
+  <rect class="ext" x="800" y="30" width="340" height="84" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="970.0" y="57" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Generated answer</text>
+  <text class="sub" x="970.0" y="83" text-anchor="middle" font-size="14" fill="#4a5a68">from the V2 run (results.json)</text>
+  <text class="sub" x="970.0" y="103" text-anchor="middle" font-size="14" fill="#4a5a68">text · table · claims · abstained</text>
+  <rect class="panel" x="20" y="150" width="1140" height="940" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="590.0" y="178" text-anchor="middle" font-size="14.5" font-weight="600" fill="#46586a">src/tenk_agent/evaluation: grading one answer</text>
+  <rect class="work" x="40" y="200" width="340" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="210.0" y="227" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">gold_chunks</text>
+  <text class="sub" x="210.0" y="253" text-anchor="middle" font-size="14" fill="#4a5a68">retrieval_metrics.py · gold.py</text>
+  <text class="sub" x="210.0" y="273" text-anchor="middle" font-size="14" fill="#4a5a68">evidence quote → gold chunk IDs</text>
+  <text class="sub" x="210.0" y="293" text-anchor="middle" font-size="14" fill="#4a5a68">per source, restatements included</text>
+  <rect class="work" x="800" y="200" width="340" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="970.0" y="227" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Claim check</text>
+  <text class="sub" x="970.0" y="253" text-anchor="middle" font-size="14" fill="#4a5a68">generation/verify.py · code only</text>
+  <text class="sub" x="970.0" y="273" text-anchor="middle" font-size="14" fill="#4a5a68">runs inside generate(); each claim is</text>
+  <text class="sub" x="970.0" y="293" text-anchor="middle" font-size="14" fill="#4a5a68">verified, calculated, cited or unverified</text>
+  <path class="edge" d="M 210 114 V 194" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 970 114 V 194" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="ext" x="48" y="346" width="30" height="18" rx="4" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="sub" x="90" y="360" font-size="14" fill="#4a5a68">input</text>
+  <rect class="work" x="48" y="372" width="30" height="18" rx="4" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="sub" x="90" y="386" font-size="14" fill="#4a5a68">code, no LLM</text>
+  <rect class="llm" x="48" y="398" width="30" height="18" rx="4" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="sub" x="90" y="412" font-size="14" fill="#4a5a68">LLM</text>
+  <rect class="sink" x="48" y="424" width="30" height="18" rx="4" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="sub" x="90" y="438" font-size="14" fill="#4a5a68">stored output</text>
+  <rect class="ops" x="48" y="450" width="30" height="18" rx="4" fill="#f7eaea" stroke="#a85f5f" stroke-width="1.5"/>
+  <text class="sub" x="90" y="464" font-size="14" fill="#4a5a68">reported only</text>
+  <rect class="work" x="400" y="350" width="380" height="96" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="373" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">grade()</text>
+  <text class="sub" x="590.0" y="399" text-anchor="middle" font-size="14" fill="#4a5a68">scoring.py · one answer → one result row</text>
+  <text class="sub" x="590.0" y="419" text-anchor="middle" font-size="14" fill="#4a5a68">reads the gold question, the claim check</text>
+  <text class="sub" x="590.0" y="439" text-anchor="middle" font-size="14" fill="#4a5a68">and the gold chunks</text>
+  <rect class="ops" x="820" y="350" width="320" height="96" rx="7" fill="#f7eaea" stroke="#a85f5f" stroke-width="1.5"/>
+  <text class="name" x="980.0" y="373" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Reported, not part of correct</text>
+  <text class="sub" x="980.0" y="399" text-anchor="middle" font-size="14" fill="#4a5a68">claimed numbers · grounded claims</text>
+  <text class="sub" x="980.0" y="419" text-anchor="middle" font-size="14" fill="#4a5a68">cited_unseen · gold_in_context</text>
+  <text class="sub" x="980.0" y="439" text-anchor="middle" font-size="14" fill="#4a5a68">gold_cited</text>
+  <path class="edge" d="M 210 304 V 327 H 500 V 344" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 970 304 V 327 H 680 V 344" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge-d" d="M 780 398 H 814" fill="none" stroke="#a85f5f" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-d)"/>
+  <path class="edge" d="M 590 446 V 490" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
+  <path class="edge" d="M 210 490 H 970" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
+  <path class="edge" d="M 210 490 V 524" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 590 490 V 524" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 970 490 V 524" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="204" y="480" text-anchor="start" font-size="13.5" fill="#46586a">answer_type = abstain</text>
+  <text class="elabel" x="976" y="480" text-anchor="end" font-size="13.5" fill="#46586a">answer_type = text</text>
+  <text class="elabel" x="600" y="514" text-anchor="start" font-size="13.5" fill="#46586a">number / number_set</text>
+  <rect class="work" x="40" y="530" width="340" height="136" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="210.0" y="563" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Decline question</text>
+  <text class="sub" x="210.0" y="589" text-anchor="middle" font-size="14" fill="#4a5a68">correct = the model declined</text>
+  <text class="sub" x="210.0" y="609" text-anchor="middle" font-size="14" fill="#4a5a68">an answerable question that was</text>
+  <text class="sub" x="210.0" y="629" text-anchor="middle" font-size="14" fill="#4a5a68">declined is always wrong</text>
+  <text class="sub" x="210.0" y="649" text-anchor="middle" font-size="14" fill="#4a5a68">code only</text>
+  <rect class="work" x="420" y="530" width="340" height="136" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="563" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Number question</text>
+  <text class="sub" x="590.0" y="589" text-anchor="middle" font-size="14" fill="#4a5a68">code only: matches() in answer_metrics</text>
+  <text class="sub" x="590.0" y="609" text-anchor="middle" font-size="14" fill="#4a5a68">every expected value is in the answer</text>
+  <text class="sub" x="590.0" y="629" text-anchor="middle" font-size="14" fill="#4a5a68">text or table, within the tolerance,</text>
+  <text class="sub" x="590.0" y="649" text-anchor="middle" font-size="14" fill="#4a5a68">units normalized (billions → millions)</text>
+  <rect class="work" x="800" y="530" width="340" height="136" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="970.0" y="573" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Text question</text>
+  <text class="sub" x="970.0" y="599" text-anchor="middle" font-size="14" fill="#4a5a68">first pass: correct = None (unjudged)</text>
+  <text class="sub" x="970.0" y="619" text-anchor="middle" font-size="14" fill="#4a5a68">it stays out of the accuracy until</text>
+  <text class="sub" x="970.0" y="639" text-anchor="middle" font-size="14" fill="#4a5a68">the judge has run</text>
+  <path class="edge" d="M 970 666 V 714" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="962" y="696" text-anchor="end" font-size="13.5" fill="#46586a">later: experiments/v2/judge.py</text>
+  <rect class="llm" x="800" y="720" width="340" height="118" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="970.0" y="754" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">LLM judge</text>
+  <text class="sub" x="970.0" y="780" text-anchor="middle" font-size="14" fill="#4a5a68">judge.py · one fixed judge model</text>
+  <text class="sub" x="970.0" y="800" text-anchor="middle" font-size="14" fill="#4a5a68">is each required point covered?</text>
+  <text class="sub" x="970.0" y="820" text-anchor="middle" font-size="14" fill="#4a5a68">correct = every point covered</text>
+  <rect class="work" x="400" y="780" width="380" height="96" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="813" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">summarize()</text>
+  <text class="sub" x="590.0" y="839" text-anchor="middle" font-size="14" fill="#4a5a68">scoring.py · one score set per context</text>
+  <text class="sub" x="590.0" y="859" text-anchor="middle" font-size="14" fill="#4a5a68">correct · declined · numbers · grounded</text>
+  <path class="edge" d="M 210 666 V 828 H 394" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 590 666 V 774" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 970 838 V 858 H 786" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="40" y="940" width="340" height="104" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="210.0" y="967" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">results.json, scores.json</text>
+  <text class="sub" x="210.0" y="993" text-anchor="middle" font-size="14" fill="#4a5a68">one row per question and context</text>
+  <text class="sub" x="210.0" y="1013" text-anchor="middle" font-size="14" fill="#4a5a68">written by experiments/v2/run.py</text>
+  <text class="sub" x="210.0" y="1033" text-anchor="middle" font-size="14" fill="#4a5a68">and updated by judge.py</text>
+  <rect class="work" x="410" y="940" width="360" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="967" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">report.py (tenk report)</text>
+  <text class="sub" x="590.0" y="993" text-anchor="middle" font-size="14" fill="#4a5a68">recomputes Recall@k and MRR from the</text>
+  <text class="sub" x="590.0" y="1013" text-anchor="middle" font-size="14" fill="#4a5a68">stored chunk IDs using gold_chunks,</text>
+  <text class="sub" x="590.0" y="1033" text-anchor="middle" font-size="14" fill="#4a5a68">then builds the per-question tables</text>
+  <rect class="sink" x="820" y="940" width="320" height="104" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="980.0" y="977" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">report.md</text>
+  <text class="sub" x="980.0" y="1003" text-anchor="middle" font-size="14" fill="#4a5a68">evaluation/results/&lt;run&gt;/</text>
+  <text class="sub" x="980.0" y="1023" text-anchor="middle" font-size="14" fill="#4a5a68">number, text and decline tables</text>
+  <path class="edge" d="M 590 876 V 910 H 210 V 934" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 380 992 H 404" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 770 992 H 814" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+</svg>
