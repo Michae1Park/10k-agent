@@ -86,6 +86,7 @@ def test_report_scores_retrieval_and_the_verdict_per_number_question(tmp_path):
             {
                 "company": "AAPL",
                 "fiscal_year": 2025,
+                "item": "8",
                 "evidence": "Research and development | 34,550 | 31,370",
             }
         ],
@@ -112,4 +113,6 @@ def test_report_scores_retrieval_and_the_verdict_per_number_question(tmp_path):
         "format_error": False,
     }
     report = build_report("run", [row], [question], store)
-    assert "| 34,550 USD millions | 0.00 | 1.00 | 1.00 | 0.50 | 1/1 | correct |" in report
+    cells = "| 34,550 USD millions | [AAPL FY2025](https://example.com/AAPL-2025.htm) · Item 8 |"
+    assert cells in report
+    assert "| 0.00 | 1.00 | 1.00 | 0.50 | 1/1 | correct |" in report

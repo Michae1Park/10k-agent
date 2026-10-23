@@ -104,12 +104,12 @@ store = Store(Path(settings["db"]))
 retriever = SubQuestionRetriever.from_settings(store, settings["retrieval"])
 
 result = retriever.search("Which company spent the most on R&D in fiscal 2025?", k=8)
-result.chunks      # the top 8 ChunkRecords (parents, on a parent-child database)
-result.searches    # per sub-question: its text, filters, keyword and dense candidates, rerank scores
+result.chunks  # the top 8 ChunkRecords (parents, on a parent-child database)
+result.searches  # per sub-question: its text, filters, keyword and dense candidates, rerank scores
 
-system, user = build_prompt(question, result.chunks, store)     # prompts/answer.md + the excerpts
+system, user = build_prompt(question, result.chunks, store)  # prompts/answer.md + the excerpts
 answer = generate(get_model("openai:Qwen/Qwen3.6-27B-FP8"), system, user, store)
-answer.answer["claims"]                                         # each with status and status_reason
+answer.answer["claims"]  # each with status and status_reason
 ```
 
 V0 on one filing by hand:
@@ -122,8 +122,12 @@ from tenk_agent.config import load
 
 settings = load()
 html = next(Path("data/raw/filings/AAPL/FY2025").glob("*.htm"))
-document = preprocess(html, html, Path("output/aapl"), settings["llm"], settings["labeling"])  # labels cached in output/aapl/
-chunks = run_all(document, settings["chunking"], **settings["llm"], methods=["parent_child"])["parent_child"]
+document = preprocess(
+    html, html, Path("output/aapl"), settings["llm"], settings["labeling"]
+)  # labels cached in output/aapl/
+chunks = run_all(document, settings["chunking"], **settings["llm"], methods=["parent_child"])[
+    "parent_child"
+]
 ```
 
 ## 7. Things to try
