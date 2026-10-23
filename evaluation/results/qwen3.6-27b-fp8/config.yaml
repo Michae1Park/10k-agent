@@ -1,14 +1,14 @@
 run:
   label: qwen3.6-27b-fp8
   db: data/v0-chunking/parent_child.db
-  gold: experiments/v2/v2_testdata/generation-gold-fy2025.jsonl
+  gold: evaluation/gold/generation-gold-fy2025.jsonl
   contexts:
   - retrieved
   - oracle
   - none
   workers: 4
 retrieval:
-  from: experiments/v1/v1_src/config.yaml
+  from: experiments/v1/config.yaml
   embedder: local:Qwen/Qwen3-Embedding-0.6B
   reranker: local:BAAI/bge-reranker-v2-m3
   candidates: 40
@@ -24,7 +24,7 @@ generation:
   base_url: http://localhost:8001/v1
   thinking: false
   max_tokens: 4000
-  prompt: experiments/v2/v2_prompt/system.md
+  prompt: src/tenk_agent/prompts/answer.md
   serve:
     gpu_memory_utilization: 0.8
     max_model_len: 32768
