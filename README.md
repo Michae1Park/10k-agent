@@ -39,8 +39,9 @@ Each version adds one stage and was tested on its own before the next was built.
 | **V0 · Parsing and chunking** | 10-K HTML → blocks (rules) → labels (LLM structure agent, validated and repaired) → one structured document → chunks, three ways | [Rule-based and parent-child level](experiments/V0_PARSING_CHUNKING.md): ~93% exact heading paths, every risk factor on its own |
 | **V1 · Retrieval** | Sub-questions per company and filing → keyword + dense → RRF → rerank → round-robin. No LLM | [Parent-child best](experiments/V1_RETRIEVAL.md): Recall@5 87.3%, MRR 0.758 |
 | **V2 · Generation** | One model call over V1's top 8 → JSON answer with claims citing chunk IDs → each claim checked | [21 / 30 number questions right](experiments/V2_GENERATION.md), 8 / 8 declines, every numeric claim grounded |
+| **V3 · Agent** | The model drives: search, read sections, calculate, XBRL facts and EDGAR metadata (LangGraph) → V2's JSON answer and claim check | [91.7% of number and decline questions right vs V2's 70.5%](experiments/V3_AGENT.md) on 78 questions; the gain is tool use, not the SEC data |
 
-V3–V6 (agent, verified agent, model comparison, fine-tuning) were built on an earlier V0–V2 and are kept in [`archive/`](archive/README.md) as references for rebuilding them on this pipeline.
+V4–V6 (verified agent, model comparison, fine-tuning) and the first V3 were built on an earlier V0–V2 and are kept in [`archive/`](archive/README.md) as references for rebuilding them on this pipeline.
 
 **Corpus:** Apple, Microsoft, Amazon, Alphabet, Meta, NVIDIA, Tesla, Netflix × fiscal years 2023–2025 (24 10-Ks); built and tested so far: the FY2025 filings of AAPL, AMZN, MSFT and NVDA. **Rules:** every number comes from a cited passage, never from the model's memory; unverifiable claims are shown as unverified, not hidden; no stock prices, forecasts or investment advice ([guarantees](docs/ARCHITECTURE.md#scope-and-guarantees)).
 
@@ -68,7 +69,7 @@ Full steps, the experiments, and troubleshooting: [Getting started](docs/GETTING
 | [Getting started](docs/GETTING_STARTED.md) | Install, build the corpus, ask, run the experiments |
 | [Serving](docs/SERVING.md) | The model layer and vLLM presets |
 | [Architecture](docs/ARCHITECTURE.md) | Scope and guarantees, the pipeline, the repository layout |
-| [Stage specs](docs/stages/) | V0, V1, V2: data, knobs, outputs, how each works |
+| [Stage specs](docs/stages/) | V0–V3: data, knobs, outputs, how each works |
 | [Decisions & issues](docs/DECISIONS.md) | Why things are the way they are, known issues |
 | [Experiments](experiments/README.md) | Each version's design, metrics and results |
 | [Contributing](CONTRIBUTING.md) | Checks, rules, commit style |

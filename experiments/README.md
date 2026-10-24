@@ -65,3 +65,16 @@ Pipeline: [generation/](../src/tenk_agent/generation/), prompt [answer.md](../sr
 - **Result:** with V1's retrieval, 21 of 30 number questions right (25 of 30 with every gold source shown); all 8 declines declined; nothing answered from memory. Text questions await required points rewritten for answers
 - **Test data:** 54 questions: V1's 46 answerable ones, unchanged, plus 8 to decline (companies, years and figures outside the filings, investment advice) ([generation-gold-fy2025.jsonl](../evaluation/gold/generation-gold-fy2025.jsonl); readable: `tenk gold render`)
 - **Metrics:** correct (numbers by code, text by an LLM judge against required points), declined when it should / when it shouldn't, numeric claims grounded in a cited chunk, gold sources cited
+
+## V3 · Agent
+
+Full design, metrics and results: [here](V3_AGENT.md).
+
+Agent: [agent/](../src/tenk_agent/agent/), prompt [agent.md](../src/tenk_agent/prompts/agent.md); experiment: [v3/](v3/). Run: `taskset -c 16-31 .venv/bin/python experiments/v3/run.py` (needs the vLLM server), then `v2/judge.py --config experiments/v3/config.yaml` with the judge served.
+
+- **Agent:** LangGraph loop over `Qwen3.6-27B`; tools `search_filings` (V1's search), `get_section`, `calculator`, and with SEC data `xbrl_facts`, `edgar_filings` (cached, offline). Answer and claim check as in V2, claims may cite XBRL facts
+- **Variants:** V2 rerun as the baseline; the agent with 10-K tools (`text`); with SEC tools too (`full`), to separate what tool use adds from what the data adds
+- **Result:** 91.7% (`text`) and 91.5% (`full`) of number and decline questions right against V2's 70.5%; held-out test split 17 and 15 of 24 against 12. Year ranges, multi-step and "which company" questions are where it gains
+- **Test data:** V2's 54 plus 24 new, reviewed: calculation, multi-step, SEC data, tool-selection negatives ([agent-gold-fy2025.jsonl](../evaluation/gold/agent-gold-fy2025.jsonl))
+- **Metrics:** V2's, plus calls per question, tool errors, repeats, budget stops, expected-tools recall and precision
+
