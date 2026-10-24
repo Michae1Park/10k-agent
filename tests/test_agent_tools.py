@@ -245,3 +245,18 @@ def test_bare_dollar_amounts_match_gold_values_in_millions():
     assert matches(expected, "97,690,000,000", None, 0.005)
     assert matches(expected, "97690", None, 0.005)
     assert not matches(expected, "97,690,000", None, 0.005)
+
+
+def test_a_calculation_with_op_expression_is_rerun_as_an_expression(tools):
+    calculation = {
+        "op": "expression",
+        "expression": "(new - old) / old * 100",
+        "inputs": {"old": 31370, "new": 34550},
+        "input_unit": "USD millions",
+    }
+    checked = verify_claim(
+        claim(value=10.14, unit="percent", calculation=calculation, chunk_ids=[FACT, PRIOR]),
+        tools.store,
+        tools.sec,
+    )
+    assert checked["status"] == "calculated"

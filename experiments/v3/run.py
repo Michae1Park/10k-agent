@@ -17,7 +17,8 @@ Writes output/generation/<label>/: config.yaml, results.json (per question and v
 answer, claims, scores, every step), scores.json (per variant), tools.json (tool use).
 
 Questions with `text_tools: abstain` need SEC data: under variant text (and v2) they count
-as decline questions, since declining is then the right answer.
+as decline questions, since declining is then the right answer. Questions with `with_sec_data`
+are the reverse: declines that SEC data answers, so under full they count as answerable.
 """
 
 import argparse
@@ -184,9 +185,13 @@ def main() -> None:
 
 
 def scored_as(q: dict, variant: str) -> dict:
-    """A question needing SEC data is a decline question for the variants without it."""
+    """A question needing SEC data is a decline question for the variants without it
+    (`text_tools: abstain`); a decline question SEC data can answer is answerable under full
+    (`with_sec_data`: the fields that change)."""
     if variant != "full" and q.get("text_tools") == "abstain":
         return q | {"should_abstain": True}
+    if variant == "full" and q.get("with_sec_data"):
+        return q | q["with_sec_data"]
     return q
 
 

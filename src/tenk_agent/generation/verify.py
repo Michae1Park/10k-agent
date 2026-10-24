@@ -199,10 +199,10 @@ def _lineage_conflict(claim: dict, chunks: list[ChunkRecord], store: Store) -> s
 def _check_calculation(
     claim: dict, calculation: dict, chunks: list[ChunkRecord], facts: list[tuple[str, dict]] = ()
 ):
+    op = calculation.get("op")
+    op = None if op == "expression" else op  # the mode's name written as the op (the agent's)
     try:
-        result = calculate(
-            calculation.get("op"), calculation.get("expression"), calculation.get("inputs")
-        )
+        result = calculate(op, calculation.get("expression"), calculation.get("inputs"))
     except (CalculatorError, AttributeError, TypeError) as e:  # model-written, may be malformed
         return "unverified", f"calculation does not run: {e}"
     value = claim.get("value")
