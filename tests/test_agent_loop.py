@@ -96,3 +96,18 @@ def test_a_long_conversation_must_answer_with_tools_off(tmp_path):
     run_agent, model = agent(tmp_path, [call, json.dumps(ANSWER)], max_context=10)
     run = run_agent.run("q")  # the scripted model reports 10 input tokens per turn
     assert model.seen[1][1] == "none" and run.stop == "budget"
+
+
+def test_tool_markup_or_a_bare_claims_list_is_not_an_answer(tmp_path):
+    markup = '<tool_call>\n<function=calculator>\n<parameter=inputs>\n{"a": 1}\n</parameter>'
+    for bad in (markup, json.dumps(ANSWER["claims"])):
+        run_agent, model = agent(tmp_path / str(len(bad)), [bad, json.dumps(ANSWER)])
+        assert run_agent.run("q").answer["claims"], bad
+        assert model.seen[1][0][-1]["content"] == "Reply again with only the JSON object."
+
+
+def test_the_answer_turn_after_the_budget_says_why(tmp_path):
+    calls = [("calculator", {"op": "sum", "inputs": {"a": i}}) for i in range(2)]
+    run_agent, model = agent(tmp_path, [calls, json.dumps(ANSWER)], max_calls=2)
+    run_agent.run("q")
+    assert model.seen[-1][0][-1] == {"role": "user", "content": ANSWER_NOW}

@@ -122,10 +122,7 @@ class Agent:
             },
             {"recursion_limit": 2 * self.max_turns + 5},
         )
-        try:
-            raw = parse_json(state["reply"])
-        except ValueError:
-            raw = unparsed(state["reply"])
+        raw = parse_answer(state["reply"])
         answer = finalize(raw, self.toolbox.store, self.toolbox.sec)
         return Run(answer, state["steps"], round(time.perf_counter() - start, 3), state["stop"])
 
@@ -140,9 +137,12 @@ class Agent:
             or state["turns"] >= self.max_turns - 1
             or last_input >= self.max_context
         )
+        messages = state["messages"]
+        if over and messages[-1]["role"] != "user":  # say why the tools are gone
+            messages = messages + [{"role": "user", "content": ANSWER_NOW}]
         started = time.perf_counter()
         response = self.model.complete(
-            state["messages"],
+            messages,
             tools=self.toolbox.specs,
             system=self.system,
             max_tokens=self.max_tokens,
@@ -155,7 +155,7 @@ class Agent:
             input_tokens=response.input_tokens,
             output_tokens=response.output_tokens,
         )
-        messages = state["messages"] + [response.message()]
+        messages = messages + [response.message()]
         update = {
             "messages": messages,
             "steps": state["steps"] + [step],
@@ -165,10 +165,8 @@ class Agent:
         }
         if response.tool_calls and not over:
             return update
-        # An answer turn: if it isn't JSON, ask once more for only the JSON.
-        try:
-            parse_json(response.text)
-        except ValueError:
+        # An answer turn: if it isn't the answer object, ask once more for only the JSON.
+        if parse_answer(response.text).get("format_error"):
             if not state["retried"]:
                 retry = {"role": "user", "content": JSON_ONLY}
                 return update | {"messages": messages + [retry], "retried": True, "stop": "retry"}
@@ -209,6 +207,20 @@ class Agent:
                 content = content[: self.result_chars] + " …(cut; narrow the call)"
             messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
         return {"messages": messages, "steps": steps, "calls": calls}
+
+
+def parse_answer(text: str) -> dict:
+    """The answer object in a reply, or unparsed() when there is none: no JSON, a JSON value
+    without an "answer" (a bare claims list), or tool-call markup written as text (which
+    holds JSON arguments)."""
+    if "<tool_call>" not in text:
+        try:
+            raw = parse_json(text)
+            if isinstance(raw, dict) and "answer" in raw:
+                return raw
+        except ValueError:
+            pass
+    return unparsed(text)
 
 
 def _key(name: str, arguments: dict | None) -> str:
