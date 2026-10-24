@@ -260,3 +260,64 @@ def test_a_calculation_with_op_expression_is_rerun_as_an_expression(tools):
         tools.sec,
     )
     assert checked["status"] == "calculated"
+
+
+def test_a_value_the_facts_show_verifies_despite_a_unit_conversion_calculation(tools):
+    calculation = {
+        "op": "ratio",
+        "inputs": {"numerator": 34550000000, "denominator": 1000000000},
+        "input_unit": "USD",
+    }
+    checked = verify_claim(
+        claim(value=34550000000, unit="USD", calculation=calculation, chunk_ids=[FACT]),
+        tools.store,
+        tools.sec,
+    )
+    assert checked["status"] == "verified"
+
+
+def test_a_sum_in_millions_may_be_claimed_in_dollars(tools):
+    calculation = {"op": "sum", "inputs": {"a": 31370, "b": 34550}, "input_unit": "USD millions"}
+    checked = verify_claim(
+        claim(value=65920000000, unit="USD", calculation=calculation, chunk_ids=[FACT, PRIOR]),
+        tools.store,
+        tools.sec,
+    )
+    assert checked["status"] == "calculated"
+
+
+def test_calculation_inputs_may_be_facts_of_another_company(tools):
+    calculation = {
+        "op": "difference",
+        "inputs": {"a": 34550, "b": 31370},
+        "input_unit": "USD millions",
+    }
+    checked = verify_claim(
+        claim(
+            company="MSFT",
+            value=3180,
+            unit="USD millions",
+            calculation=calculation,
+            chunk_ids=[FACT, PRIOR],
+        ),
+        tools.store,
+        tools.sec,
+    )
+    assert checked["status"] == "calculated"
+
+
+def test_a_filing_claim_may_cite_its_accession_number(tools):
+    cited = verify_claim(
+        claim(value=None, unit=None, chunk_ids=[ACCESSION]), tools.store, tools.sec
+    )
+    assert cited["status"] == "cited"
+    unknown = verify_claim(
+        claim(value=None, unit=None, chunk_ids=["0000000000-25-000000"]), tools.store, tools.sec
+    )
+    assert unknown["status"] == "unverified" and "unknown chunk IDs" in unknown["status_reason"]
+
+
+def test_per_share_units_are_dollars():
+    from tenk_agent.generation.verify import unit_scale
+
+    assert unit_scale("USD/shares") == unit_scale("USD per share") == 1.0

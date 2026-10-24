@@ -134,6 +134,17 @@ class SecData:
 
     # --- EDGAR metadata ------------------------------------------------------------------
 
+    def filing(self, accession: str) -> dict | None:
+        """The filing an accession number names, from the cached submissions (claim check)."""
+        for path in sorted(self.cache.glob("*/submissions.json")):
+            recent = json.loads(path.read_text())["filings"]["recent"]
+            if accession in recent["accessionNumber"]:
+                i = recent["accessionNumber"].index(accession)
+                return {key: recent[key][i] for key in ("form", "filingDate", "reportDate")} | {
+                    "ticker": path.parent.name
+                }
+        return None
+
     def filings(self, company: str, form: str = "10-K", fiscal_year: int | None = None) -> dict:
         """Which filings of a form a company made: dates, accession numbers, links."""
         ticker, cik, name = self.resolve(company)

@@ -80,7 +80,7 @@ def build_system(toolbox: Toolbox, max_calls: int, prompt=PROMPT) -> str:
         prompt.read_text()
         .replace("{tool_guidance}", SEC_GUIDANCE if full else "")
         .replace("{max_calls}", str(max_calls))
-        .replace("{xbrl_ids}", " or xbrl_id values" if full else "")
+        .replace("{xbrl_ids}", " or xbrl_id values, or a filing's accession_no" if full else "")
         .replace("{corpus}", corpus_table(toolbox.store))
     )
 
