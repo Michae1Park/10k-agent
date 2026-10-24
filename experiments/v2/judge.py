@@ -18,6 +18,7 @@ from pathlib import Path
 import yaml
 from run import CONFIG, ROOT, _write, print_scores
 
+from tenk_agent.evaluation import gold
 from tenk_agent.evaluation.judge import Judge
 from tenk_agent.evaluation.scoring import correct, summarize
 from tenk_agent.models import get_model
@@ -36,6 +37,16 @@ def main() -> None:
     rows = json.loads((out / "results.json").read_text())
     score = config["score"]
     judge = Judge(get_model(score["judge_model"], base_url=score["judge_base_url"]))
+    if args.rejudge:  # judge against the gold's current points, not those copied into the run
+        paths = config["run"]["gold"]
+        points = {
+            q["id"]: q["required_points"]
+            for path in ([paths] if isinstance(paths, str) else paths)
+            for q in gold.load(ROOT / path)
+            if q.get("required_points")
+        }
+        for r in rows:
+            r["required_points"] = points.get(r["id"], r["required_points"])
 
     # Declined answers are wrong whatever they say, so they aren't judged.
     todo = [
