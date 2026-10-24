@@ -5,6 +5,7 @@ tenk build                     V0 preprocess + chunk every filing, then V1's dat
 tenk search "question"         V1: sub-questions and the top k chunks
 tenk ask "question"            V2: one cited answer
 tenk chat                      V2: type questions, get answers (models loaded once)
+tenk tool NAME key=value ...   V3: run one agent tool by hand (--list: the schemas)
 tenk gold [show|render|verify] review a gold question set
 tenk report LABEL              write a finished V2 run's end-to-end report to evaluation/results
 """
@@ -58,6 +59,13 @@ def main(argv: list[str] | None = None) -> int:
             mode.add_argument("--json", action="store_true", help="print the answer's JSON")
         mode.add_argument("--model", help="default: generation.model")
 
+    tool = commands.add_parser("tool", help="V3: run one agent tool, as the agent would")
+    tool.add_argument("name", nargs="?", help="a tool name; omit with --list")
+    tool.add_argument("arguments", nargs="*", help="key=value (JSON values; lists: a,b)")
+    tool.add_argument("--list", action="store_true", help="print the tool schemas")
+    tool.add_argument("--live", action="store_true", help="allow SEC requests not in the cache")
+    tool.add_argument("--tools", choices=("text", "full"), default="full")
+
     gold = commands.add_parser("gold", help="review a gold question set (default: list it)")
     gold.add_argument("--gold", type=Path, default=GOLD, help="default: %(default)s")
     gold_actions = gold.add_subparsers(dest="gold_action")
@@ -86,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
         "search": _search,
         "ask": _ask,
         "chat": _chat,
+        "tool": _tool,
         "gold": _gold,
         "report": _report,
     }
@@ -248,6 +257,39 @@ def _table(table: dict) -> str:
     widths = [max(len(r[i]) for r in cells if i < len(r)) for i in range(len(columns))]
     lines = ["  ".join(v.ljust(w) for v, w in zip(r, widths, strict=False)) for r in cells]
     return "\n".join([lines[0], "  ".join("-" * w for w in widths), *lines[1:]])
+
+
+# --- tool ------------------------------------------------------------------------------------
+
+
+def _tool(args: argparse.Namespace, settings: dict) -> int:
+    from tenk_agent.agent.tools import SPECS, TOOL_SETS, toolbox_from_settings
+
+    if args.list or not args.name:
+        for name in TOOL_SETS[args.tools]:
+            spec = SPECS[name]
+            print(f"{spec.name}: {spec.description}")
+            print(json.dumps(spec.parameters["properties"], indent=2), "\n")
+        return 0
+    if args.name not in SPECS:
+        print(f"unknown tool {args.name!r}; tools: {list(SPECS)}", file=sys.stderr)
+        return 2
+    properties = SPECS[args.name].parameters["properties"]
+    arguments = {}
+    for pair in args.arguments:
+        key, _, value = pair.partition("=")
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            pass
+        if properties.get(key, {}).get("type") == "array" and not isinstance(value, list):
+            value = [json.loads(v) if v.isdigit() else v for v in str(value).split(",")]
+        arguments[key] = value
+    toolbox = toolbox_from_settings(
+        settings, args.tools, live=args.live, search=args.name == "search_filings"
+    )
+    print(json.dumps(toolbox.call(args.name, arguments), indent=2))
+    return 0
 
 
 # --- gold --------------------------------------------------------------------------------------

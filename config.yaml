@@ -46,3 +46,7 @@ generation:                                             # V2
   thinking: false                                       # Qwen's reasoning mode; null = model default
   max_tokens: 4000
   prompt: src/tenk_agent/prompts/answer.md              # rules + answer format; {corpus} = the filings table
+
+agent:                                                  # V3
+  tools: full                                           # full | text (no xbrl_facts, edgar_filings): the ablation
+  section_chunks: 4                                     # chunks per get_section page

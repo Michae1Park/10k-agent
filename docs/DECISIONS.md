@@ -17,7 +17,7 @@ Why the project looks the way it does: decisions, and the issues found along the
 | [D-004](#d-004) | 2026-09-26 | Fiscal years come from filing metadata (XBRL cover page), never from text | Accepted |
 | [D-005](#d-005) | 2026-09-26 | One SQLite file: tables, FTS5, sqlite-vec, traces | Accepted |
 | [D-006](#d-006) | 2026-09-26 | Gold set before retriever; evidence stored as verbatim quotes | Accepted |
-| [D-007](#d-007) | 2026-09-26 | XBRL data only checks gold answers; no pipeline stage sees it | Accepted |
+| [D-007](#d-007) | 2026-09-26 | XBRL data only checks gold answers; no pipeline stage sees it | Superseded by D-036 |
 | [D-010](#d-010) | 2026-09-30 | Retrieval: local Qwen3-Embedding-0.6B + bge-reranker-v2-m3; one search per company and filing named in the question | Accepted |
 | [D-013](#d-013) | 2026-09-30 | One model interface; Claude is the baseline, open models via vLLM; answer is JSON as text | Accepted |
 | [D-019](#d-019) | 2026-10-01 | `config.yaml` holds every knob; experiments pin their own copy | Accepted |
@@ -25,6 +25,7 @@ Why the project looks the way it does: decisions, and the issues found along the
 | [D-029](#d-029) | 2026-10-13 | Open models by default: Qwen3.6-27B-FP8 generates, gpt-oss-20b is the fixed judge (second pass) | Accepted |
 | [D-034](#d-034) | 2026-10-21 | The renewed V0–V2 replace the old pipeline in `src/`; V3–V6 archived, V7 deleted; experiments run on `src/` | Accepted |
 | [D-035](#d-035) | 2026-10-22 | Docs by type: README, getting started, architecture + stage specs, decisions, contributing | Accepted |
+| [D-036](#d-036) | 2026-10-24 | V3 agent tools: 10-K search and sections, calculator, XBRL facts (cited directly), live EDGAR metadata only; cached, offline in evals | Accepted |
 
 ## Issues
 
@@ -102,6 +103,9 @@ The V0–V2 experiments (`experiments/`) rebuilt preprocessing (rules + an LLM s
 
 ### D-035
 Each doc has one job, so none mixes how-to with design. README: what it is, a demo, a quickstart. [GETTING_STARTED.md](GETTING_STARTED.md) and [SERVING.md](SERVING.md): install, build, run (how-to). [ARCHITECTURE.md](ARCHITECTURE.md) and `stages/V*.md`: scope, guarantees and each stage's data, knobs and design (reference). This log: why. [CONTRIBUTING.md](../CONTRIBUTING.md): checks and rules. Experiments keep their own `experiments/V*.md`. Supersedes D-024 (the earlier shape, modelled on [prompt-pick-place](https://github.com/Michae1Park/prompt-pick-place): README + one guide per stage + this log, with the PRD and plan folded in): the Commands and Things-to-try sections of the stage guides moved to GETTING_STARTED, and decisions and issues belonging only to the archived V3–V6 moved to [archive/docs/DECISIONS.md](../archive/docs/DECISIONS.md).
+
+### D-036
+V3 makes the model drive the work with tools, built on LangGraph: `search_filings` (V1's hybrid search), `get_section`, `calculator`, `xbrl_facts` and `edgar_filings` ([tools.py](../src/tenk_agent/agent/tools.py)). **XBRL is now a source** (supersedes D-007): a value is cited by its fact, `xbrl:<TICKER>:<taxonomy>:<concept>:<accession>:<period end>`, and the claim check compares it with the cached fact. XBRL then no longer independently cross-checks the gold answers; gold answers stay checked against the 10-K text. **Live EDGAR returns metadata only** (filings, dates, accessions, links), never financial text, so the corpus scope of D-001 holds for text answers. Every SEC response is cached under `data/raw/edgar/`; evals run offline from the cache so runs are reproducible. Ablation: tool set `text` (no SEC tools) vs `full` separates the gain from tool use from the gain from XBRL.
 
 ## Issue details
 
