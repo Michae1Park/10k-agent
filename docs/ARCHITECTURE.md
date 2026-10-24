@@ -12,22 +12,17 @@ Questions about the annual reports (10-Ks) of a fixed corpus, answered from the 
 | Fiscal years come from filing metadata, never from text | `filings.fiscal_year` from the XBRL cover page ([D-004](DECISIONS.md#d-004)) |
 | Unverifiable claims are shown as unverified, not hidden | Claim status `unverified`, with the reason ([D-015 in the archive](../archive/docs/DECISIONS.md#d-015)) |
 | Questions outside the corpus are declined | `abstained: true` and a scope notice |
-| No stock prices, forecasts or investment advice | Declined by the prompt ([D-009](DECISIONS.md#d-009)) |
+| No stock prices, forecasts or investment advice | Declined by the prompt ([D-001](DECISIONS.md#d-001)) |
 
 **Corpus.** Apple, Microsoft, Amazon, Alphabet, Meta, NVIDIA, Tesla, Netflix × fiscal years 2023–2025 (24 10-Ks), chosen because their fiscal years end in different months: "NVIDIA's revenue in 2024" is mostly its fiscal 2025 ([D-001](DECISIONS.md#d-001)). Built and tested so far: the FY2025 filings of AAPL, AMZN, MSFT and NVDA.
 
-**Out of scope.** Prices, forecasts, advice ([D-009](DECISIONS.md#d-009)); a public deployment ([D-023](DECISIONS.md#d-023)); the agent, verification-by-tools, model comparison and fine-tuning of V3–V6, kept in [`archive/`](../archive/README.md).
+**Out of scope.** Prices, forecasts, advice ([D-001](DECISIONS.md#d-001)); a public deployment ([D-023](DECISIONS.md#d-023)); the agent, verification-by-tools, model comparison and fine-tuning of V3–V6, kept in [`archive/`](../archive/README.md).
 
 ## Pipeline
 
-```mermaid
-flowchart LR
-  E[EDGAR 10-K HTML] --> P[V0 preprocess: rules + LLM structure agent] --> C[V0 chunk: parent-child]
-  C --> DB[(SQLite: chunks, children, FTS5, vectors)]
-  Q[Question] --> R[V1 retrieve: sub-questions → hybrid search → rerank]
-  R --> DB
-  R --> G[V2 generate: one model call → JSON claims] --> V[claims checked against cited chunks] --> A[Cited answer]
-```
+<p align="center">
+  <img src="img/pipeline.svg" alt="Pipeline. Build, once per corpus: EDGAR 10-K HTML, V0 preprocess (rules and an LLM structure agent), V0 parent-child chunking, one SQLite file with chunks, FTS5 and vectors. Ask, per question: the question goes to V1 retrieve (sub-questions per filing, keyword and dense search, RRF, rerank, top 8 chunks), which searches the index; V2 generate (one model call, JSON claims citing chunk IDs); claim check (code only); cited answer" width="100%">
+</p>
 
 Each version adds one stage and was tested on its own before the next was built.
 
@@ -39,33 +34,32 @@ Each version adds one stage and was tested on its own before the next was built.
 
 Each stage spec covers: data, knobs, outputs, how it works, gotchas.
 
-## Evaluation
-
-Evaluation never runs the pipeline. It takes the pipeline's output, the generated answer and the chunks the model was shown, and grades it against the gold set. The only LLM in it is the judge, and only for text answers.
-
-<p align="center">
-  <img src="img/evaluation.svg" alt="Evaluation flow: gold JSONL gives gold chunks; the generated answer goes through a code-only claim check; grade() picks the check by answer type: decline questions are correct if the model declined, number questions if every expected value is stated within tolerance, text questions are unjudged until the LLM judge scores them against required points; summarize() aggregates per context, results are stored and report.py recomputes Recall@k and MRR to write the report" width="100%">
-</p>
-
-| Step | Code | LLM? |
-|---|---|---|
-| Claim check | `generation/verify.py`, run inside `generate()` | No |
-| Gold chunks | `gold.resolve_evidence`, `retrieval_metrics.gold_chunks` | No |
-| Number questions, declines | `scoring.grade`, `answer_metrics` | No |
-| Text questions | `judge.py`, then `scoring.correct` again (`experiments/v2/judge.py`) | **Yes** |
-| Aggregate and report | `scoring.summarize`, `report.build_report` | No |
-
-`correct` does not depend on the claim check. A number that is in the answer text counts even if its claim is `unverified`; the claim statuses are reported as the grounded count.
-
 ### Claim check
 
-Each claim the model returns is checked on its own, with code only:
+V2 checks each claim the model returns on its own, with code only (`generation/verify.py`, run inside `generate()`):
 
 <p align="center">
   <img src="img/claim-check.svg" alt="Claim check: a claim with a calculation reruns it and finds every input in a cited chunk (calculated); a claim with a number must be found in a cited chunk of the right company (verified); a claim without a number needs valid chunk IDs (cited); any failed check is unverified" width="100%">
 </p>
 
-An unknown chunk ID is added to the reason whatever the status. Unverified claims are shown to the user with the reason, not hidden.
+Evaluation does not run this check; it reads the statuses (below). An unknown chunk ID is added to the reason whatever the status. Unverified claims are shown to the user with the reason, not hidden.
+
+## Evaluation
+
+Evaluation never runs the pipeline, including the claim check. It takes the pipeline's output, the generated answer with its claim statuses and the chunks the model was shown, and grades it against the gold set. The only LLM in it is the judge, and only for text answers.
+
+<p align="center">
+  <img src="img/evaluation.svg" alt="Evaluation flow: gold JSONL gives gold chunks; the generated answer arrives with the claim statuses V2 already gave it; grade() picks the check by answer type: decline questions are correct if the model declined, number questions if every expected value is stated within tolerance, text questions are unjudged until the LLM judge scores them against required points; summarize() aggregates per context, results are stored and report.py recomputes Recall@k and MRR to write the report" width="100%">
+</p>
+
+| Step | Code | LLM? |
+|---|---|---|
+| Gold chunks | `gold.resolve_evidence`, `retrieval_metrics.gold_chunks` | No |
+| Number questions, declines | `scoring.grade`, `answer_metrics` | No |
+| Text questions | `judge.py`, then `scoring.correct` again (`experiments/v2/judge.py`) | **Yes** |
+| Aggregate and report | `scoring.summarize`, `report.build_report` | No |
+
+`correct` does not depend on the claim statuses. A number that is in the answer text counts even if its claim is `unverified`; the claim statuses are reported as the grounded count.
 
 ## Design principles
 

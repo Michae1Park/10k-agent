@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="1110" viewBox="0 0 1180 1110" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
   <title id="svgtitle">Evaluation flow</title>
-  <desc id="svgdesc">A generated answer goes through a code-only claim check, then grade() picks the check by answer type: decline questions are correct if the model declined, number questions if every expected value is stated within tolerance, and text questions are first unjudged and then scored by an LLM judge against required points. summarize() aggregates per context, results are stored, and report.py recomputes Recall@k and MRR to write the per-question report.</desc>
+  <desc id="svgdesc">A generated answer arrives with the claim statuses V2 already gave it, then grade() picks the check by answer type: decline questions are correct if the model declined, number questions if every expected value is stated within tolerance, and text questions are first unjudged and then scored by an LLM judge against required points. summarize() aggregates per context, results are stored, and report.py recomputes Recall@k and MRR to write the per-question report.</desc>
   <style>
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
@@ -35,10 +35,11 @@
   <text class="name" x="210.0" y="57" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Gold JSONL</text>
   <text class="sub" x="210.0" y="83" text-anchor="middle" font-size="14" fill="#4a5a68">evaluation/gold/*.jsonl</text>
   <text class="sub" x="210.0" y="103" text-anchor="middle" font-size="14" fill="#4a5a68">question · evidence quote · expected answer</text>
-  <rect class="ext" x="800" y="30" width="340" height="84" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <rect class="ext" x="800" y="30" width="340" height="104" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
   <text class="name" x="970.0" y="57" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Generated answer</text>
   <text class="sub" x="970.0" y="83" text-anchor="middle" font-size="14" fill="#4a5a68">from the V2 run (results.json)</text>
   <text class="sub" x="970.0" y="103" text-anchor="middle" font-size="14" fill="#4a5a68">text · table · claims · abstained</text>
+  <text class="sub" x="970.0" y="123" text-anchor="middle" font-size="14" fill="#4a5a68">each claim already has a status from V2</text>
   <rect class="panel" x="20" y="150" width="1140" height="940" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
   <text class="ptitle" x="590.0" y="178" text-anchor="middle" font-size="14.5" font-weight="600" fill="#46586a">src/tenk_agent/evaluation: grading one answer</text>
   <rect class="work" x="40" y="200" width="340" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
@@ -46,13 +47,7 @@
   <text class="sub" x="210.0" y="253" text-anchor="middle" font-size="14" fill="#4a5a68">retrieval_metrics.py · gold.py</text>
   <text class="sub" x="210.0" y="273" text-anchor="middle" font-size="14" fill="#4a5a68">evidence quote → gold chunk IDs</text>
   <text class="sub" x="210.0" y="293" text-anchor="middle" font-size="14" fill="#4a5a68">per source, restatements included</text>
-  <rect class="work" x="800" y="200" width="340" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
-  <text class="name" x="970.0" y="227" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Claim check</text>
-  <text class="sub" x="970.0" y="253" text-anchor="middle" font-size="14" fill="#4a5a68">generation/verify.py · code only</text>
-  <text class="sub" x="970.0" y="273" text-anchor="middle" font-size="14" fill="#4a5a68">runs inside generate(); each claim is</text>
-  <text class="sub" x="970.0" y="293" text-anchor="middle" font-size="14" fill="#4a5a68">verified, calculated, cited or unverified</text>
   <path class="edge" d="M 210 114 V 194" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <path class="edge" d="M 970 114 V 194" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <rect class="ext" x="48" y="346" width="30" height="18" rx="4" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
   <text class="sub" x="90" y="360" font-size="14" fill="#4a5a68">input</text>
   <rect class="work" x="48" y="372" width="30" height="18" rx="4" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
@@ -66,7 +61,7 @@
   <rect class="work" x="400" y="350" width="380" height="96" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="590.0" y="373" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">grade()</text>
   <text class="sub" x="590.0" y="399" text-anchor="middle" font-size="14" fill="#4a5a68">scoring.py · one answer → one result row</text>
-  <text class="sub" x="590.0" y="419" text-anchor="middle" font-size="14" fill="#4a5a68">reads the gold question, the claim check</text>
+  <text class="sub" x="590.0" y="419" text-anchor="middle" font-size="14" fill="#4a5a68">reads the gold question, the claim statuses</text>
   <text class="sub" x="590.0" y="439" text-anchor="middle" font-size="14" fill="#4a5a68">and the gold chunks</text>
   <rect class="ops" x="820" y="350" width="320" height="96" rx="7" fill="#f7eaea" stroke="#a85f5f" stroke-width="1.5"/>
   <text class="name" x="980.0" y="373" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Reported, not part of correct</text>
@@ -74,7 +69,7 @@
   <text class="sub" x="980.0" y="419" text-anchor="middle" font-size="14" fill="#4a5a68">cited_unseen · gold_in_context</text>
   <text class="sub" x="980.0" y="439" text-anchor="middle" font-size="14" fill="#4a5a68">gold_cited</text>
   <path class="edge" d="M 210 304 V 327 H 500 V 344" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <path class="edge" d="M 970 304 V 327 H 680 V 344" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 970 134 V 327 H 680 V 344" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <path class="edge-d" d="M 780 398 H 814" fill="none" stroke="#a85f5f" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-d)"/>
   <path class="edge" d="M 590 446 V 490" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
   <path class="edge" d="M 210 490 H 970" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
