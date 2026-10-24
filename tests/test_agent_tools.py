@@ -6,6 +6,7 @@ import pytest
 
 from tenk_agent.agent.sec import SecData
 from tenk_agent.agent.tools import Toolbox
+from tenk_agent.generation.verify import verify_claim
 from tenk_agent.retrieval.index import load
 from tenk_agent.store import Store
 
@@ -163,3 +164,58 @@ def test_text_tool_set_hides_sec_tools(tools):
     tools.tool_set = "text"
     assert [s.name for s in tools.specs] == ["search_filings", "get_section", "calculator"]
     assert "unknown tool" in tools.call("xbrl_facts", {})["error"]
+
+
+# --- Claim check with XBRL citations (verify.py, D-036) ------------------------------------
+
+FACT = f"xbrl:AAPL:us-gaap:ResearchAndDevelopmentExpense:{ACCESSION}:2025-09-27"
+PRIOR = f"xbrl:AAPL:us-gaap:ResearchAndDevelopmentExpense:{ACCESSION}:2024-09-28"
+
+
+def claim(**fields) -> dict:
+    return {"company": "AAPL", "fiscal_year": 2025, "calculation": None} | fields
+
+
+def test_a_value_matching_a_cited_fact_is_verified_in_any_unit(tools):
+    for value, unit in ((34550, "USD millions"), (34.55, "USD billions"), (34.6, "USD billions")):
+        checked = verify_claim(
+            claim(value=value, unit=unit, chunk_ids=[FACT]), tools.store, tools.sec
+        )
+        assert checked["status"] == "verified", (value, unit)
+    wrong = verify_claim(
+        claim(value=34000, unit="USD millions", chunk_ids=[FACT]), tools.store, tools.sec
+    )
+    assert wrong["status"] == "unverified"
+
+
+def test_a_fact_of_another_company_or_an_unknown_fact_does_not_verify(tools):
+    other = verify_claim(
+        claim(company="MSFT", value=34550, unit="USD millions", chunk_ids=[FACT]),
+        tools.store,
+        tools.sec,
+    )
+    assert other["status"] == "unverified"
+    unknown = verify_claim(
+        claim(value=1, unit="USD", chunk_ids=[FACT[:-1] + "8"]), tools.store, tools.sec
+    )
+    assert "unknown chunk IDs" in unknown["status_reason"]
+
+
+def test_calculation_inputs_may_come_from_cited_facts(tools):
+    calculation = {
+        "op": "pct_change",
+        "inputs": {"old": 31370, "new": 34550},
+        "input_unit": "USD millions",
+    }
+    checked = verify_claim(
+        claim(value=10.14, unit="percent", calculation=calculation, chunk_ids=[FACT, PRIOR]),
+        tools.store,
+        tools.sec,
+    )
+    assert checked["status"] == "calculated"
+    one_fact = verify_claim(
+        claim(value=10.14, unit="percent", calculation=calculation, chunk_ids=[FACT]),
+        tools.store,
+        tools.sec,
+    )
+    assert one_fact["status"] == "unverified" and "old" in one_fact["status_reason"]

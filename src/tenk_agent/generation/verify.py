@@ -9,10 +9,15 @@ Run over every claim of every answer (answers.finalize):
 
 On a parent-child database a number is also checked against the company: a claim about MSFT
 citing only AAPL chunks that show its value is unverified.
+
+V3 (D-036): a claim may also cite XBRL facts by their `xbrl:` id; a value equal to a cited
+fact of the claim's company is verified too, and calculation inputs may come from them. The
+facts are read from the SEC cache (`sec`), never fetched.
 """
 
 import re
 from dataclasses import dataclass
+from typing import Protocol
 
 from tenk_agent.corpus import resolve_company
 from tenk_agent.generation.calculator import CalculatorError, calculate
@@ -35,6 +40,10 @@ NUMBER = re.compile(
     re.IGNORECASE,
 )
 CHUNK_UNITS = re.compile(r"in (thousands|millions|billions)", re.IGNORECASE)
+
+
+class FactSource(Protocol):
+    def xbrl_fact(self, xbrl_id: str) -> dict | None: ...
 
 
 @dataclass
@@ -127,28 +136,35 @@ def _close(target: float, shown: float, shown_rounding: float, claim_rounding: f
     return abs(target - shown) <= slack
 
 
-def verify_claim(claim: dict, store: Store) -> dict:
+def verify_claim(claim: dict, store: Store, sec: FactSource | None = None) -> dict:
     """Set a claim's status (verified / calculated / cited / unverified) and the reason."""
-    cited = [(cid, store.get_chunk(cid)) for cid in claim.get("chunk_ids") or []]
+    ids = claim.get("chunk_ids") or []
+    facts = [(i, sec.xbrl_fact(i) if sec else None) for i in ids if i.startswith("xbrl:")]
+    cited = [(cid, store.get_chunk(cid)) for cid in ids if not cid.startswith("xbrl:")]
     chunks = [c for _, c in cited if c]
-    missing = [cid for cid, c in cited if not c]
+    company = resolve_company(str(claim.get("company") or ""))
+    found_facts = [(i, f) for i, f in facts if f and (not company or f["ticker"] == company.ticker)]
+    missing = [cid for cid, c in cited if not c] + [i for i, f in facts if not f]
     calculation = claim.get("calculation")
     value = claim.get("value")
 
     if calculation:
-        status, reason = _check_calculation(claim, calculation, chunks)
+        status, reason = _check_calculation(claim, calculation, chunks, found_facts)
     elif value is not None and _as_float(value) is None:
         status, reason = "unverified", f"value {value!r} is not a number"
     elif value is not None:
         spans = [(c.id, span) for c in chunks if (span := find_value(value, claim.get("unit"), c))]
         conflict = _lineage_conflict(claim, [c for c in chunks if c.id in dict(spans)], store)
-        if spans and conflict:
+        fact = next((i for i, f in found_facts if fact_matches(value, claim.get("unit"), f)), None)
+        if fact:
+            status, reason = "verified", f"matches XBRL fact {fact}"
+        elif spans and conflict:
             status, reason = "unverified", conflict
         elif spans:
             status, reason = "verified", f"found '{spans[0][1]}' in {spans[0][0]}"
         else:
             status, reason = "unverified", "value not found in the cited chunks"
-    elif chunks:
+    elif chunks or found_facts:
         status, reason = "cited", ""
     else:
         status, reason = "unverified", "no valid citation"
@@ -156,6 +172,17 @@ def verify_claim(claim: dict, store: Store) -> dict:
     if missing:
         reason = (reason + "; " if reason else "") + f"unknown chunk IDs {missing}"
     return claim | {"status": status, "status_reason": reason}
+
+
+def fact_matches(value, unit: str | None, fact: dict) -> bool:
+    """A claimed value equals an XBRL fact, to the precision the claim is written with
+    (facts are in whole units: USD, shares)."""
+    claimed = _as_float(value)
+    scale = unit_scale(unit)
+    if claimed is None or scale is None:
+        return False
+    target = abs(claimed) * scale
+    return _close(target, abs(float(fact["value"])), 0.0, _rounding(_decimals(value), scale))
 
 
 def _lineage_conflict(claim: dict, chunks: list[ChunkRecord], store: Store) -> str | None:
@@ -169,7 +196,9 @@ def _lineage_conflict(claim: dict, chunks: list[ChunkRecord], store: Store) -> s
     return None
 
 
-def _check_calculation(claim: dict, calculation: dict, chunks: list[ChunkRecord]):
+def _check_calculation(
+    claim: dict, calculation: dict, chunks: list[ChunkRecord], facts: list[tuple[str, dict]] = ()
+):
     try:
         result = calculate(
             calculation.get("op"), calculation.get("expression"), calculation.get("inputs")
@@ -187,10 +216,12 @@ def _check_calculation(claim: dict, calculation: dict, chunks: list[ChunkRecord]
     unsourced = [
         name
         for name, number in result.inputs.items()
-        if name not in ("years",) and not any(find_value(number, input_unit, c) for c in chunks)
+        if name not in ("years",)
+        and not any(find_value(number, input_unit, c) for c in chunks)
+        and not any(fact_matches(number, input_unit, f) for _, f in facts)
     ]
     if unsourced:
-        return "unverified", f"inputs not found in cited chunks: {unsourced}"
+        return "unverified", f"inputs not found in cited chunks or facts: {unsourced}"
     return "calculated", f"{result.formula} = {result.result}"
 
 
