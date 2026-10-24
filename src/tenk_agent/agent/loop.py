@@ -6,7 +6,8 @@
 The model decides every step: which tool, with what arguments, and when to answer. The graph
 only makes the first turn a tool call (so no answer comes from memory), turns a repeated call
 into an error, and enforces the budget: calls past `max_calls` return an error, and after the
-budget the model gets one turn with tools off to answer. The answer goes through V2's
+budget (or once the conversation reaches `max_context` tokens) the model gets one turn with
+tools off to answer. The answer goes through V2's
 finalize, so the claim check is the same, now also over XBRL facts (verify.py).
 """
 
@@ -92,6 +93,7 @@ class Agent:
     max_turns: int = 20  # model turns, a guard against loops of failed calls
     max_tokens: int = 4000
     result_chars: int = 16000  # a tool result is cut to this many characters
+    max_context: int = 20000  # input tokens past which the next turn must answer (tools off)
     prompt: Path = PROMPT
 
     def __post_init__(self):
@@ -130,7 +132,14 @@ class Agent:
     # --- Nodes ---------------------------------------------------------------------------
 
     def _model(self, state: State) -> dict:
-        over = state["calls"] >= self.max_calls or state["turns"] >= self.max_turns - 1
+        last_input = next(
+            (s.input_tokens for s in reversed(state["steps"]) if s.kind == "model"), 0
+        )
+        over = (
+            state["calls"] >= self.max_calls
+            or state["turns"] >= self.max_turns - 1
+            or last_input >= self.max_context
+        )
         started = time.perf_counter()
         response = self.model.complete(
             state["messages"],
@@ -230,4 +239,5 @@ def agent_from_settings(
         max_turns=config["max_turns"],
         max_tokens=generation["max_tokens"],
         result_chars=config["result_chars"],
+        max_context=config["max_context"],
     )

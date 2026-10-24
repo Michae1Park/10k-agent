@@ -89,3 +89,10 @@ def test_a_repeated_call_returns_an_error_and_still_counts(tmp_path):
     run = run_agent.run("q")
     assert run.tool_calls[0].result["result"] == 1
     assert "already made" in run.tool_calls[1].result["error"]
+
+
+def test_a_long_conversation_must_answer_with_tools_off(tmp_path):
+    call = [("calculator", {"op": "sum", "inputs": {"a": 1}})]
+    run_agent, model = agent(tmp_path, [call, json.dumps(ANSWER)], max_context=10)
+    run = run_agent.run("q")  # the scripted model reports 10 input tokens per turn
+    assert model.seen[1][1] == "none" and run.stop == "budget"

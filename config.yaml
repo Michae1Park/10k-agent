@@ -52,4 +52,5 @@ agent:                                                  # V3
   section_chunks: 4                                     # chunks per get_section page
   max_calls: 20                                         # tool-call budget; calls past it return an error
   max_turns: 20                                         # model turns, a guard against loops
+  max_context: 20000                                    # input tokens past which the agent must answer (server: 32k)
   result_chars: 16000                                   # a tool result is cut to this many characters

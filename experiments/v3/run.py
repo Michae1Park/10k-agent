@@ -92,6 +92,7 @@ def main() -> None:
             max_turns=agent_config["max_turns"],
             max_tokens=generation["max_tokens"],
             result_chars=agent_config["result_chars"],
+            max_context=agent_config["max_context"],
             prompt=ROOT / agent_config["prompt"],
         )
         for name in ("text", "full")
@@ -160,8 +161,14 @@ def main() -> None:
         print(f"{q['id']:<42} {variant:<5} {_verdict(row)} {calls:>2} calls {seconds:.0f}s")
         return row
 
+    def attempt(task):
+        try:
+            return answer(task)
+        except Exception as e:  # one failed question shouldn't end the run; --resume retries it
+            print(f"{task[0]['id']:<42} {task[1]:<5} FAILED {type(e).__name__}: {e}"[:300])
+
     with ThreadPoolExecutor(max_workers=run["workers"]) as pool:
-        list(pool.map(answer, tasks))
+        list(pool.map(attempt, tasks))
 
     variants = [v for v in VARIANTS if any(r["context"] == v for r in done)]
     scores = {v: summarize([r for r in done if r["context"] == v]) for v in variants}
