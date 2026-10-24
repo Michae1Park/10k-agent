@@ -35,7 +35,7 @@ Defaults: `config.yaml` → `verify:`.
 | `repair` | Research mode: send failed claims back to the agent once |
 | `repair_calls` | Extra tool calls in that round (default 4) |
 
-Matching has no tolerance knob on purpose: numbers match to the precision they're written with ([D-018](../../docs/DECISIONS.md#d-018)).
+Matching has no tolerance knob on purpose: numbers match to the precision they're written with ([D-018](DECISIONS.md#d-018)).
 
 ## Outputs
 
@@ -67,7 +67,7 @@ Matching has no tolerance knob on purpose: numbers match to the precision they'r
 | 31.37 USD billions | 31,370 (in millions) | ✓ | same number, other unit |
 | 31.4 USD billions | 31,370 (in millions) | ✓ | the claim is written to ±0.05 billion |
 | 1,234 USD millions | "$1.2 billion" | ✓ | the source is written to ±0.05 billion |
-| 31,500 USD millions | 31,370 (in millions) | ✗ | a different figure (accepted before [D-018](../../docs/DECISIONS.md#d-018)) |
+| 31,500 USD millions | 31,370 (in millions) | ✗ | a different figure (accepted before [D-018](DECISIONS.md#d-018)) |
 
 **Repair** (Research mode, `verify.repair`): failed claims and their reasons go back to the agent once: "find the chunk that actually contains the value and cite it, correct the value, fix the inputs, or drop the number". The new answer is verified again; whatever still fails stays labeled unverified, never hidden ([D-015](DECISIONS.md#d-015)).
 

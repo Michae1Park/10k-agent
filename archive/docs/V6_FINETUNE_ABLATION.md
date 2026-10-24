@@ -60,7 +60,7 @@ ROWS="full closed-book no-verify" versions/v6_finetune_ablation/run.sh ablation 
 | `rag-only` | one call over retrieved chunks (V2) | What does the agent loop add? |
 | `no-rerank` | dense candidates, no cross-encoder | What does the reranker add? |
 | `keyword` | BM25 only, no embeddings | What do embeddings add? |
-| `no-slots` | one search, not one per company and filing | What does slot search add ([D-011](../../docs/DECISIONS.md#d-011))? |
+| `no-slots` | one search, not one per company and filing | What does slot search add ([D-011](../../docs/DECISIONS.md#d-010))? |
 | `no-verify` | no verification, no repair (V3) | What do verification and repair add? |
 | `budget-8` | 8 tool calls instead of 15 | How much budget does the agent need ([I-007](DECISIONS.md#i-007))? |
 | `xbrl` | + the XBRL tool | More right numbers, fewer traceable ones? ([D-021](DECISIONS.md#d-021); earlier run: `v5-research-xbrl-qwen3.5-9b`) |

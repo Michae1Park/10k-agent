@@ -12,6 +12,7 @@ Decisions and issues of the archived V3–V6 (agent, verification, model compari
 | [D-015](#d-015) | 2026-09-30 | Verification labels every claim; Research mode gets one repair round | Accepted |
 | [D-016](#d-016) | 2026-09-30 | Over-budget tool calls count as unnecessary, not incorrect | Accepted |
 | [D-017](#d-017) | 2026-10-01 | Rates are over completed questions; errors are reported separately | Accepted |
+| [D-018](#d-018) | 2026-10-01 | Numbers match to the precision they're written with, not within a % | Accepted |
 | [D-020](#d-020) | 2026-10-01 | Self-hosted cost = latency × GPU hourly rate ($0.86/h, L40S) | Accepted |
 | [D-021](#d-021) | 2026-10-01 | V5: structured XBRL data stays out of the product | Accepted |
 | [D-022](#d-022) | 2026-09-26 | V7 fine-tuning: data from open models only, outside the eval corpus | Superseded by D-025 |
@@ -54,6 +55,9 @@ A call refused for exceeding the budget had valid arguments. Counting it as inco
 
 ### D-017
 A run where every question errored reported a 0% unsupported-answer rate, because errors counted as "declined". Rates now use completed questions only; errors are listed and count as failed task completion.
+
+### D-018
+Verification accepted any number within 0.5%, so 31,500 "matched" a table showing 31,370. Now two numbers match when they agree to the precision either is written with: "$31.4 billion" matches 31,370 million, 31,500 doesn't. Rescoring every run changed no reported number ([I-009](#i-009)).
 
 ### D-020
 Self-hosted models have no token price. Cost per question = wall-clock latency × $0.86/h (`model.gpu_hourly_usd`, an L40S cloud rate). It's an estimate of GPU time, not a measured bill; latency itself is measured.
