@@ -71,7 +71,8 @@ def main() -> None:
     questions = []
     for path in run["gold"]:
         for line in (ROOT / path).read_text().splitlines():
-            questions.append(json.loads(line) | {"gold_set": Path(path).stem})
+            q = json.loads(line)
+            questions.append(q | {"gold_set": q.get("gold_set", Path(path).stem)})
     if args.question:
         questions = [q for q in questions if q["id"] in args.question]
     if not config["score"]["restatements"]:

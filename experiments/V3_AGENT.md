@@ -24,14 +24,14 @@ Same model (`Qwen3.6-27B-FP8`, thinking off, temperature 0) and claim check in a
 
 ## 1. Test data
 
-Two sets, every question in each, all reviewed (MP):
+One self-contained set, [agent-gold-fy2025.jsonl](../evaluation/gold/agent-gold-fy2025.jsonl): 78 questions, all reviewed (MP). Each question's `gold_set` names where it comes from:
 
-| Set | Questions | Dev / test | What it tests |
+| `gold_set` | Questions | Dev / test | What it tests |
 |---|---|---|---|
-| [generation-gold-fy2025.jsonl](../evaluation/gold/generation-gold-fy2025.jsonl) | 54 | 38 / 16 | V2's set, unchanged (one question gained a `with_sec_data` override, below) |
-| [agent-gold-fy2025.jsonl](../evaluation/gold/agent-gold-fy2025.jsonl) (new) | 24 | 16 / 8 | What V2 couldn't do: calculation, several steps, SEC data, knowing when not to use a tool |
+| `generation-gold-fy2025` | 54 | 38 / 16 | V2's set, copied in (one question gained a `with_sec_data` override, below). V2's own file stays as V2's gold |
+| `agent-gold-fy2025` (new) | 24 | 16 / 8 | What V2 couldn't do: calculation, several steps, SEC data, knowing when not to use a tool |
 
-The new set (`tenk gold --gold evaluation/gold/agent-gold-fy2025.jsonl render` for the review PDF):
+The 24 new questions (`tenk gold --gold evaluation/gold/agent-gold-fy2025.jsonl render` for the review PDF of all 78):
 
 | Kind | Questions | Example | Scored on |
 |---|---|---|---|

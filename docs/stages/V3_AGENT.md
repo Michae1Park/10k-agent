@@ -24,7 +24,7 @@ tenk agent "..." --tools text --max-calls 8 --json
 | XBRL company facts, EDGAR submissions | `data/raw/edgar/<TICKER>/` (`tenk fetch` writes the corpus companies'; `--live` adds others) |
 | How to work, rules, answer format | [prompts/agent.md](../../src/tenk_agent/prompts/agent.md) |
 | Tool schemas | [agent/tools.py](../../src/tenk_agent/agent/tools.py) (`SPECS`) |
-| Gold questions | V2's set, plus [agent-gold-fy2025.jsonl](../../evaluation/gold/agent-gold-fy2025.jsonl) |
+| Gold questions | [agent-gold-fy2025.jsonl](../../evaluation/gold/agent-gold-fy2025.jsonl): all 78, V2's 54 copied in plus 24 new (`gold_set` says which) |
 
 ## Knobs
 

@@ -4,9 +4,8 @@
 run:
   label: v3-qwen3.6-27b-fp8                             # writes output/generation/<label>/ (where v2/judge.py looks)
   db: data/v0-chunking/parent_child.db                  # V1's best chunking, as in V2
-  gold:                                                 # both sets, every question in each
-    - evaluation/gold/generation-gold-fy2025.jsonl      # V2's 54, unchanged
-    - evaluation/gold/agent-gold-fy2025.jsonl           # V3's 24: calculate, multi-step, SEC data, negatives
+  gold:                                                 # self-contained: V2's 54 copied in (gold_set says which) + V3's 24
+    - evaluation/gold/agent-gold-fy2025.jsonl
   variants: [v2, text, full]                            # V2 (one call over V1's top 8) · agent, tool set text · agent, tool set full
   workers: 4                                            # questions in parallel (= the server's max_num_seqs)
 
