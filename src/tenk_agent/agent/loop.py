@@ -4,14 +4,16 @@
                  └── no tool calls: parse the JSON answer (one "only the JSON" retry)
 
 The model decides every step: which tool, with what arguments, and when to answer. The graph
-only enforces the budget: calls past `max_calls` return an error, and after the budget the
-model gets one turn with tools off to answer. The answer goes through V2's finalize, so the
-claim check is the same, now also over XBRL facts (verify.py).
+only makes the first turn a tool call (so no answer comes from memory), turns a repeated call
+into an error, and enforces the budget: calls past `max_calls` return an error, and after the
+budget the model gets one turn with tools off to answer. The answer goes through V2's
+finalize, so the claim check is the same, now also over XBRL facts (verify.py).
 """
 
 import json
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -32,6 +34,7 @@ SEC_GUIDANCE = (
 )
 ANSWER_NOW = "Tool budget used up. Answer now with the JSON object from what you have."
 JSON_ONLY = "Reply again with only the JSON object."
+REPEATED = "You already made this exact call; its result is above. Use it, or answer."
 
 
 @dataclass
@@ -89,9 +92,10 @@ class Agent:
     max_turns: int = 20  # model turns, a guard against loops of failed calls
     max_tokens: int = 4000
     result_chars: int = 16000  # a tool result is cut to this many characters
+    prompt: Path = PROMPT
 
     def __post_init__(self):
-        self.system = build_system(self.toolbox, self.max_calls)
+        self.system = build_system(self.toolbox, self.max_calls, self.prompt)
         graph = StateGraph(State)
         graph.add_node("model", self._model)
         graph.add_node("tools", self._tools)
@@ -133,7 +137,7 @@ class Agent:
             tools=self.toolbox.specs,
             system=self.system,
             max_tokens=self.max_tokens,
-            tool_choice="none" if over else None,
+            tool_choice="none" if over else ("required" if state["turns"] == 0 else None),
         )
         step = Step(
             "model",
@@ -169,15 +173,19 @@ class Agent:
 
     def _tools(self, state: State) -> dict:
         messages, steps, calls = list(state["messages"]), list(state["steps"]), state["calls"]
+        made = {_key(s.name, s.arguments) for s in steps if s.kind == "tool"}
         for call in messages[-1]["tool_calls"]:
             started = time.perf_counter()
             if call.error:
                 result = {"error": call.error}
             elif calls >= self.max_calls:
                 result = {"error": ANSWER_NOW}
+            elif _key(call.name, call.arguments) in made:
+                result = {"error": REPEATED}
             else:
                 result = self.toolbox.call(call.name, call.arguments)
             calls += 1
+            made.add(_key(call.name, call.arguments))
             steps.append(
                 Step(
                     "tool",
@@ -192,6 +200,10 @@ class Agent:
                 content = content[: self.result_chars] + " …(cut; narrow the call)"
             messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
         return {"messages": messages, "steps": steps, "calls": calls}
+
+
+def _key(name: str, arguments: dict | None) -> str:
+    return json.dumps([name, arguments], sort_keys=True)
 
 
 def agent_from_settings(

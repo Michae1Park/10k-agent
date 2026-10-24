@@ -10,6 +10,7 @@ Tools never raise: a bad call returns {"error": ...} for the model to read and r
 The tool set ("text" or "full") is the V3 ablation (experiments/V3_AGENT.md).
 """
 
+import json
 from dataclasses import dataclass
 
 from tenk_agent.agent.sec import SecData, SecError
@@ -59,7 +60,8 @@ SPECS = {
         "calculator",
         "Do arithmetic exactly. Give a named op (pct_change: old, new; cagr: start, end, "
         "years; ratio: numerator, denominator; percent_of: part, total; difference: a, b; "
-        "sum: any inputs) or an expression over named inputs, e.g. '(a - b) / b * 100'.",
+        "sum: any inputs) or an expression over named inputs, e.g. '(a - b) / b * 100'. "
+        "For reported figures only: not for projections or forecasts.",
         {
             "type": "object",
             "properties": {
@@ -123,9 +125,10 @@ class Toolbox:
     def call(self, name: str, arguments: dict) -> dict:
         if name not in TOOL_SETS[self.tool_set]:
             return {"error": f"unknown tool {name!r}; tools: {list(TOOL_SETS[self.tool_set])}"}
+        arguments = _coerce(arguments, SPECS[name].parameters["properties"])
         try:
             return getattr(self, name)(**arguments)
-        except TypeError as e:
+        except (TypeError, AttributeError) as e:
             return {"error": f"bad arguments for {name}: {e}"}
         except (CalculatorError, SecError, ValueError) as e:
             return {"error": str(e)}
@@ -193,6 +196,8 @@ class Toolbox:
     def calculator(
         self, inputs: dict, op: str | None = None, expression: str | None = None
     ) -> dict:
+        if op == "expression":  # models write the mode's name as the op
+            op = None
         result = calculate(op, expression, inputs)
         return {"result": result.result, "formula": result.formula, "inputs": result.inputs}
 
@@ -207,6 +212,18 @@ class Toolbox:
         if self.sec is None:
             return {"error": "SEC data is not available"}
         return self.sec.filings(company, form, int(fiscal_year) if fiscal_year else None)
+
+
+def _coerce(arguments: dict, properties: dict) -> dict:
+    """Object and array arguments the model wrote as JSON strings, parsed."""
+    out = dict(arguments)
+    for key, value in arguments.items():
+        if properties.get(key, {}).get("type") in ("object", "array") and isinstance(value, str):
+            try:
+                out[key] = json.loads(value)
+            except json.JSONDecodeError:
+                pass
+    return out
 
 
 def chunk_view(chunk: ChunkRecord) -> dict:

@@ -56,6 +56,7 @@ def test_tool_results_feed_the_next_turn_and_the_answer_is_verified(tmp_path):
     tool_message = model.seen[1][0][-1]
     assert tool_message["role"] == "tool" and FACT in tool_message["content"]
     assert run.answer["claims"][0]["status"] == "verified"
+    assert model.seen[0][1] == "required"  # the first turn must call a tool
 
 
 def test_calls_past_the_budget_error_and_the_model_must_answer(tmp_path):
@@ -80,3 +81,11 @@ def test_text_tool_set_prompt_does_not_mention_sec_tools(tmp_path):
     run_agent.toolbox.tool_set = "text"
     run_agent.__post_init__()
     assert "xbrl" not in run_agent.system
+
+
+def test_a_repeated_call_returns_an_error_and_still_counts(tmp_path):
+    call = ("calculator", {"op": "sum", "inputs": {"a": 1}})
+    run_agent, _ = agent(tmp_path, [[call], [call], json.dumps(ANSWER)])
+    run = run_agent.run("q")
+    assert run.tool_calls[0].result["result"] == 1
+    assert "already made" in run.tool_calls[1].result["error"]

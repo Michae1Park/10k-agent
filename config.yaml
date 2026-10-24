@@ -50,6 +50,6 @@ generation:                                             # V2
 agent:                                                  # V3
   tools: full                                           # full | text (no xbrl_facts, edgar_filings): the ablation
   section_chunks: 4                                     # chunks per get_section page
-  max_calls: 12                                         # tool-call budget; calls past it return an error
+  max_calls: 20                                         # tool-call budget; calls past it return an error
   max_turns: 20                                         # model turns, a guard against loops
   result_chars: 16000                                   # a tool result is cut to this many characters

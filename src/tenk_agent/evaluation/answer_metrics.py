@@ -19,12 +19,15 @@ def matches(expected: dict, claim_value, claim_unit, tolerance: float) -> bool:
         return False
     target, _ = _absolute(float(expected["value"]), expected["unit"])
     got, understood = _absolute(value, claim_unit)
-    if not understood:  # unknown claim unit: compare as displayed, in the gold unit
-        got = value * (unit_scale(expected["unit"]) or 1)
+    # Unknown claim unit: compare as displayed in the gold unit, or as plain dollars
+    # ("$97,690,000,000" for 97,690 USD millions).
+    candidates = [value * (unit_scale(expected["unit"]) or 1), value] if not understood else [got]
     if expected["unit"] == "percent":
         # Percentages: relative tolerance, or 0.05 points for small values.
-        return abs(abs(got) - abs(target)) <= max(abs(target) * tolerance, 0.05)
-    return abs(abs(got) - abs(target)) <= abs(target) * tolerance
+        slack = max(abs(target) * tolerance, 0.05)
+    else:
+        slack = abs(target) * tolerance
+    return any(abs(abs(g) - abs(target)) <= slack for g in candidates)
 
 
 def score_numbers(q: dict, answer: dict) -> dict | None:

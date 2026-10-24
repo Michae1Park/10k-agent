@@ -208,8 +208,12 @@ def _check_calculation(
     value = claim.get("value")
     if value is not None and _as_float(value) is None:
         return "unverified", f"value {value!r} is not a number"
-    if value is not None and not _close(
-        abs(_as_float(value)), abs(result.result), 0.0, _rounding(_decimals(value), 1.0)
+    # A percentage may come from a ratio: 8.3 percent from numerator / denominator = 0.083.
+    percent = (claim.get("unit") or "").lower() in ("percent", "%")
+    results = [result.result, result.result * 100] if percent else [result.result]
+    if value is not None and not any(
+        _close(abs(_as_float(value)), abs(r), 0.0, _rounding(_decimals(value), 1.0))
+        for r in results
     ):
         return "unverified", f"calculation gives {result.result}, claim says {value}"
     input_unit = calculation.get("input_unit")

@@ -120,6 +120,9 @@ def test_calculator_tool_returns_formula_and_errors_as_results(tools):
         in tools.call("calculator", {"expression": "a / 0", "inputs": {"a": 1}})["error"]
     )
     assert "bad arguments" in tools.call("calculator", {"expression": "1 + 1"})["error"]
+    as_string = tools.call("calculator", {"op": "sum", "inputs": '{"a": 1, "b": 2}'})
+    assert as_string["result"] == 3
+    assert "bad arguments" in tools.call("calculator", {"op": "sum", "inputs": "a=1"})["error"]
 
 
 def test_xbrl_facts_returns_the_filings_values_newest_first_with_citable_ids(tools):
@@ -219,3 +222,26 @@ def test_calculation_inputs_may_come_from_cited_facts(tools):
         tools.sec,
     )
     assert one_fact["status"] == "unverified" and "old" in one_fact["status_reason"]
+
+
+def test_a_percent_claim_may_come_from_a_ratio(tools):
+    calculation = {
+        "op": "ratio",
+        "inputs": {"numerator": 31370, "denominator": 34550},
+        "input_unit": "USD millions",
+    }
+    checked = verify_claim(
+        claim(value=90.8, unit="percent", calculation=calculation, chunk_ids=[FACT, PRIOR]),
+        tools.store,
+        tools.sec,
+    )
+    assert checked["status"] == "calculated"
+
+
+def test_bare_dollar_amounts_match_gold_values_in_millions():
+    from tenk_agent.evaluation.answer_metrics import matches
+
+    expected = {"value": 97690, "unit": "USD millions"}
+    assert matches(expected, "97,690,000,000", None, 0.005)
+    assert matches(expected, "97690", None, 0.005)
+    assert not matches(expected, "97,690,000", None, 0.005)
