@@ -20,7 +20,7 @@ The last two columns are checked by code, not by the LLM judge (the judge only s
 - **Numeric claims grounded:** of all the claims with a number, the share whose value really is in a chunk it cites (or whose calculation reruns from those chunks). This tests that the model didn't invent or misattribute a number.
   - Question it answers: are the numbers the model claims actually in the chunks it cites?
 
-Text questions: 4 of 16 as judged now, but the scoring doesn't fit them yet ([§5, Text questions](#text-questions-the-required-points-dont-fit-generation)).
+Text questions: 9 of 16 with either context, judged against short facts since 2026-10-25 (4 of 16 against the original whole-quote points; [§5, Text questions](#text-questions-the-required-points-dont-fit-generation)).
 
 **Contents:** [1 Test data](#1-test-data) · [2 Contexts](#2-contexts) · [3 Generation](#3-generation) · [4 Metrics](#4-metrics) · [5 Results](#5-results) · [6 Open issues](#6-open-issues)
 
@@ -145,7 +145,9 @@ V1's required points are its evidence quotes, kept whole. The judge (correctly) 
 | Whose cloud services revenue grew 34% in fiscal 2025? | Microsoft's Azure and other cloud services revenue grew 34% | Azure and other cloud services revenue grew 34% **driven by demand for our portfolio of services** | not covered |
 | Which company repurchased 310 million shares? | NVIDIA Corporation | In fiscal year 2025, we repurchased 310 million shares **for $34.0 billion** | not covered |
 
-As judged now, 4 of 16 text questions are right with both V1 and perfect retrieval, and 7 of the 12 misses are right answers like these.
+Judged that way, 4 of 16 text questions were right with both V1 and perfect retrieval, and 7 of the 12 misses were right answers like these.
+
+**Rewritten (2026-10-25).** The points are now the short facts an answer must state: "The company is Microsoft (Azure and other cloud services).", or one point per company or driver. The verbatim quotes stay in `sources`, where retrieval uses them. Re-judged, 9 of 16 are right with either context. The 7 misses leave out a required risk, driver or company.
 
 ### Takeaways
 
@@ -160,6 +162,6 @@ As judged now, 4 of 16 text questions are right with both V1 and perfect retriev
 
 | Issue | Fix |
 |---|---|
-| Text questions' required points are whole evidence quotes (§5) | Rewrite them as the facts an answer must state ("Microsoft", "Azure and other cloud services", "34%"), reviewed like the rest of the gold set |
+| ~~Text questions' required points are whole evidence quotes (§5)~~ | Done 2026-10-25: rewritten as short facts (§5); not yet reviewed by MP |
 | Amazon's capex as "$128.3 billion" (MD&A cash capex, net of incentives) is scored wrong against the gold `Purchases of property and equipment` (131,819) | Consider adding it as an acceptable answer |
 | The 8 decline questions haven't been reviewed | Review them |

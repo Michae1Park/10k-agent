@@ -21,7 +21,7 @@ Questions about the annual reports (10-Ks) of a fixed corpus, answered from the 
 ## Pipeline
 
 <p align="center">
-  <img src="img/pipeline.svg" alt="Pipeline. Build, once per corpus: EDGAR 10-K HTML, V0 preprocess (rules and an LLM structure agent), V0 parent-child chunking, one SQLite file with chunks, FTS5 and vectors. Ask, per question: the question goes to V1 retrieve (sub-questions per filing, keyword and dense search, RRF, rerank, top 8 chunks), which searches the index; V2 generate (one model call, JSON claims citing chunk IDs); claim check (code only); cited answer" width="100%">
+  <img src="img/pipeline.svg" alt="Pipeline. Build, once per corpus: EDGAR 10-K HTML, V0 preprocess (rules and an LLM structure agent), V0 parent-child chunking, one SQLite file with chunks, FTS5 and vectors. SEC XBRL facts and EDGAR submissions cached as JSON. Ask, per question: the V3 agent, a LangGraph loop, calls tools until it can answer: search_filings (V1 retrieval) and get_section read the index, calculator, and xbrl_facts and edgar_filings read the SEC cache; it answers with V2's JSON claims citing IDs; claim check (code only); cited answer" width="100%">
 </p>
 
 Each version adds one stage and was tested on its own before the next was built.

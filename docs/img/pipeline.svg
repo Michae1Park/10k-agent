@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="510" viewBox="0 0 1180 510" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="640" viewBox="0 0 1180 640" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
   <title id="svgtitle">Pipeline</title>
-  <desc id="svgdesc">Build, once per corpus: EDGAR 10-K HTML is preprocessed by V0 with rules and an LLM structure agent, chunked parent-child, and stored in one SQLite file with chunks, FTS5 and vectors. Ask, per question: the question goes to V1, which splits it into sub-questions per filing, runs keyword and dense search over the index, fuses with RRF, reranks and keeps the top 8 chunks. V2 makes one model call that returns JSON claims citing chunk IDs, code checks each claim against its cited chunks, and the result is a cited answer.</desc>
+  <desc id="svgdesc">Build, once per corpus: EDGAR 10-K HTML is preprocessed by V0 with rules and an LLM structure agent, chunked parent-child, and stored in one SQLite file with chunks, FTS5 and vectors; SEC XBRL company facts and EDGAR submissions are cached as JSON. Ask, per question: the V3 agent, a LangGraph loop, has the model call tools until it can answer: search_filings (V1's retrieval) and get_section read the index, calculator does arithmetic, xbrl_facts and edgar_filings read the SEC cache. The model answers with V2's JSON claims citing chunk IDs, XBRL facts or accession numbers; code checks each claim against what it cites, and the result is a cited answer.</desc>
   <style>
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
@@ -22,58 +22,81 @@
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
     </marker>
   </defs>
-  <rect class="bg" x="0.5" y="0.5" width="1179" height="509" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+    <rect class="bg" x="0.5" y="0.5" width="1179" height="639" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
   <rect class="panel" x="20" y="20" width="1140" height="180" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
   <text class="ptitle" x="40" y="48" font-size="14.5" font-weight="600" fill="#46586a">Build: once per corpus</text>
-  <rect class="ext" x="60" y="70" width="220" height="100" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
-  <text class="name" x="170.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">EDGAR 10-K HTML</text>
-  <text class="sub" x="170.0" y="126" text-anchor="middle" font-size="14" fill="#4a5a68">24 filings</text>
-  <text class="sub" x="170.0" y="146" text-anchor="middle" font-size="14" fill="#4a5a68">8 companies × FY2023–2025</text>
-  <rect class="work" x="340" y="70" width="220" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
-  <text class="name" x="450.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">V0 · Preprocess</text>
-  <text class="sub" x="450.0" y="126" text-anchor="middle" font-size="14" fill="#4a5a68">rules → blocks</text>
-  <text class="sub" x="450.0" y="146" text-anchor="middle" font-size="14" fill="#4a5a68">LLM structure agent</text>
-  <text class="sub" x="450.0" y="166" text-anchor="middle" font-size="14" fill="#4a5a68">validated and repaired</text>
-  <rect class="work" x="620" y="70" width="220" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
-  <text class="name" x="730.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">V0 · Chunk</text>
-  <text class="sub" x="730.0" y="126" text-anchor="middle" font-size="14" fill="#4a5a68">parent-child</text>
-  <text class="sub" x="730.0" y="146" text-anchor="middle" font-size="14" fill="#4a5a68">tables kept whole</text>
-  <rect class="sink" x="900" y="70" width="220" height="100" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
-  <text class="name" x="1010.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">SQLite</text>
-  <text class="sub" x="1010.0" y="126" text-anchor="middle" font-size="14" fill="#4a5a68">chunks · children</text>
-  <text class="sub" x="1010.0" y="146" text-anchor="middle" font-size="14" fill="#4a5a68">FTS5 · vectors</text>
-  <path class="edge" d="M 280 120 H 334" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <path class="edge" d="M 560 120 H 614" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <path class="edge" d="M 840 120 H 894" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <rect class="panel" x="20" y="290" width="1140" height="200" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <rect class="ext" x="40" y="70" width="190" height="100" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="135.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">EDGAR 10-K HTML</text>
+  <text class="sub" x="135.0" y="126" text-anchor="middle" font-size="14" fill="#4a5a68">24 filings</text>
+  <text class="sub" x="135.0" y="146" text-anchor="middle" font-size="14" fill="#4a5a68">8 companies × 3 years</text>
+  <rect class="work" x="266" y="70" width="190" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="361.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">V0 · Preprocess</text>
+  <text class="sub" x="361.0" y="126" text-anchor="middle" font-size="14" fill="#4a5a68">rules → blocks</text>
+  <text class="sub" x="361.0" y="146" text-anchor="middle" font-size="14" fill="#4a5a68">LLM structure agent</text>
+  <text class="sub" x="361.0" y="166" text-anchor="middle" font-size="14" fill="#4a5a68">validated and repaired</text>
+  <rect class="work" x="492" y="70" width="190" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="587.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">V0 · Chunk</text>
+  <text class="sub" x="587.0" y="126" text-anchor="middle" font-size="14" fill="#4a5a68">parent-child</text>
+  <text class="sub" x="587.0" y="146" text-anchor="middle" font-size="14" fill="#4a5a68">tables kept whole</text>
+  <rect class="sink" x="718" y="70" width="190" height="100" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="813.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">SQLite</text>
+  <text class="sub" x="813.0" y="126" text-anchor="middle" font-size="14" fill="#4a5a68">chunks · children</text>
+  <text class="sub" x="813.0" y="146" text-anchor="middle" font-size="14" fill="#4a5a68">FTS5 · vectors</text>
+  <rect class="sink" x="944" y="70" width="190" height="100" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="1039.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">SEC JSON cache</text>
+  <text class="sub" x="1039.0" y="126" text-anchor="middle" font-size="14" fill="#4a5a68">XBRL company facts</text>
+  <text class="sub" x="1039.0" y="146" text-anchor="middle" font-size="14" fill="#4a5a68">EDGAR submissions</text>
+  <path class="edge" d="M 230 120 H 260" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 456 120 H 486" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 682 120 H 712" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="panel" x="20" y="290" width="1140" height="330" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
   <text class="ptitle" x="40" y="318" font-size="14.5" font-weight="600" fill="#46586a">Ask: per question</text>
   <rect class="ext" x="30" y="340" width="200" height="110" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
   <text class="name" x="130.0" y="370" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Question</text>
   <text class="sub" x="130.0" y="396" text-anchor="middle" font-size="14" fill="#4a5a68">plain text</text>
   <text class="sub" x="130.0" y="416" text-anchor="middle" font-size="14" fill="#4a5a68">about the corpus</text>
-  <rect class="work" x="260" y="340" width="200" height="110" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
-  <text class="name" x="360.0" y="370" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">V1 · Retrieve</text>
-  <text class="sub" x="360.0" y="396" text-anchor="middle" font-size="14" fill="#4a5a68">sub-questions per filing</text>
-  <text class="sub" x="360.0" y="416" text-anchor="middle" font-size="14" fill="#4a5a68">keyword + dense → RRF</text>
-  <text class="sub" x="360.0" y="436" text-anchor="middle" font-size="14" fill="#4a5a68">rerank → top 8 chunks</text>
-  <rect class="llm" x="490" y="340" width="200" height="110" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
-  <text class="name" x="590.0" y="370" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">V2 · Generate</text>
-  <text class="sub" x="590.0" y="396" text-anchor="middle" font-size="14" fill="#4a5a68">one model call</text>
-  <text class="sub" x="590.0" y="416" text-anchor="middle" font-size="14" fill="#4a5a68">JSON claims citing</text>
-  <text class="sub" x="590.0" y="436" text-anchor="middle" font-size="14" fill="#4a5a68">chunk IDs</text>
+  <rect class="llm" x="260" y="340" width="430" height="110" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="475.0" y="370" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">V3 · Agent</text>
+  <text class="sub" x="475.0" y="396" text-anchor="middle" font-size="14" fill="#4a5a68">LangGraph loop: model ⇄ tools, ≤ 20 calls</text>
+  <text class="sub" x="475.0" y="416" text-anchor="middle" font-size="14" fill="#4a5a68">the model picks the tools and their order</text>
+  <text class="sub" x="475.0" y="436" text-anchor="middle" font-size="14" fill="#4a5a68">answers with V2's JSON claims citing IDs</text>
   <rect class="work" x="720" y="340" width="200" height="110" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="820.0" y="370" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Claim check</text>
   <text class="sub" x="820.0" y="396" text-anchor="middle" font-size="14" fill="#4a5a68">code only, no LLM</text>
-  <text class="sub" x="820.0" y="416" text-anchor="middle" font-size="14" fill="#4a5a68">each claim against</text>
-  <text class="sub" x="820.0" y="436" text-anchor="middle" font-size="14" fill="#4a5a68">its cited chunks</text>
+  <text class="sub" x="820.0" y="416" text-anchor="middle" font-size="14" fill="#4a5a68">against cited chunks,</text>
+  <text class="sub" x="820.0" y="436" text-anchor="middle" font-size="14" fill="#4a5a68">XBRL facts or filings</text>
   <rect class="ext" x="950" y="340" width="200" height="110" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
   <text class="name" x="1050.0" y="370" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Cited answer</text>
   <text class="sub" x="1050.0" y="396" text-anchor="middle" font-size="14" fill="#4a5a68">verified · calculated · cited</text>
   <text class="sub" x="1050.0" y="416" text-anchor="middle" font-size="14" fill="#4a5a68">or shown as unverified</text>
   <path class="edge" d="M 230 395 H 254" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <path class="edge" d="M 460 395 H 484" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <path class="edge" d="M 690 395 H 714" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <path class="edge" d="M 920 395 H 944" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <path class="edge" d="M 1010 170 V 245 H 360 V 334" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <text class="elabel" x="685" y="237" text-anchor="middle" font-size="13.5" fill="#46586a">V1 searches the index</text>
+  <rect class="work" x="266" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="326.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">search_filings</text>
+  <text class="sub" x="326.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">V1 retrieve</text>
+  <rect class="work" x="398" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="458.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">get_section</text>
+  <text class="sub" x="458.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">read an Item</text>
+  <rect class="work" x="530" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">calculator</text>
+  <text class="sub" x="590.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">arithmetic</text>
+  <rect class="work" x="662" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="722.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">xbrl_facts</text>
+  <text class="sub" x="722.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">tagged figures</text>
+  <rect class="work" x="794" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="854.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">edgar_filings</text>
+  <text class="sub" x="854.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">filing metadata</text>
+  <path class="edge" d="M 475 450 V 500" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-start="url(#arrow)"/>
+  <path class="edge" d="M 326 500 H 854" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
+  <path class="edge" d="M 326 500 V 519" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 458 500 V 519" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 590 500 V 519" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 722 500 V 519" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 854 500 V 519" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="485" y="482" text-anchor="start" font-size="13.5" fill="#46586a">tool calls and results</text>
+  <path class="edge" d="M 813 170 V 235 H 245 V 555 H 260" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="500" y="227" text-anchor="middle" font-size="13.5" fill="#46586a">search_filings and get_section read the index</text>
+  <path class="edge" d="M 1039 170 V 255 H 935 V 555 H 915" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="925" y="275" text-anchor="end" font-size="13.5" fill="#46586a">xbrl_facts and edgar_filings read the cache</text>
 </svg>

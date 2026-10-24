@@ -2,13 +2,13 @@
 
 **Goal:** whether letting the model drive the work with tools (search again, read a section, calculate, look up SEC data) fixes V2's failures, and how much of any gain comes from the SEC data rather than from the tool use itself.
 
-**Result:** the agent gets **91.7%** of number and decline questions right with 10-K tools only, against V2's **70.5%** on the same 78 questions, model and server. Adding XBRL and EDGAR tools gives **91.5%**: the same score, reached differently. On the held-out test split: V2 9 of 17, agent 13 (text tools) and 12 (with SEC data). With the text questions judged, overall: V2 61.5%, agent 85.9% / 83.3%.
+**Result:** the agent gets **91.7%** of number and decline questions right with 10-K tools only, against V2's **70.5%** on the same 78 questions, model and server. Adding XBRL and EDGAR tools gives **91.5%**: the same score, reached differently. On the held-out test split: V2 9 of 17, agent 13 (text tools) and 12 (with SEC data). With the text questions judged, overall: V2 67.9%, agent 88.5% / 88.5%.
 
 | Variant | Correct (all 78) | Number and decline (59) | Text, judged (19) | Test split (24) | Declined right | Wrong declines | Numeric claims grounded | Numbers in claims | Seconds |
 |---|---|---|---|---|---|---|---|---|---|
-| **v2**: V1's top 8, one call | 61.5% | 42 (71.2%) | 6 | 12 | 13 / 13 | 3 / 65 | 100% | 35.3% | 35 |
-| **text**: agent, 10-K tools | **85.9%** | **55** (93.2%) | **12** | **17** | 12 / 13 | 0 / 65 | 100% | 63.2% | 83 |
-| **full**: agent, + XBRL, EDGAR | 83.3% | 54 (91.5%) | 11 | 15 | 8 / 8 | 0 / 70 | 93.1% | **72.3%** | 88 |
+| **v2**: V1's top 8, one call | 67.9% | 42 (71.2%) | 11 | 15 | 13 / 13 | 3 / 65 | 100% | 35.3% | 35 |
+| **text**: agent, 10-K tools | **88.5%** | **55** (93.2%) | 14 | **18** | 12 / 13 | 0 / 65 | 100% | 63.2% | 83 |
+| **full**: agent, + XBRL, EDGAR | **88.5%** | 54 (91.5%) | **15** | 17 | 8 / 8 | 0 / 70 | 100% | **72.3%** | 88 |
 
 Same model (`Qwen3.6-27B-FP8`, thinking off, temperature 0) and claim check in all three; only what the model can do changes. Each variant has its own decline set (§1): 5 questions need SEC data, so they are declines for `v2` and `text` only, and one V2 decline is answerable with SEC data, so `full` has 8 declines and 70 answerable questions.
 
@@ -16,7 +16,7 @@ Same model (`Qwen3.6-27B-FP8`, thinking off, temperature 0) and claim check in a
 - **The agent's gain is the tool use, not the SEC data.** `v2` → `text` is +22 points on number and decline questions; `text` → `full` adds nothing overall. XBRL changes *how* questions are answered (fewer searches, more claims checkable), not how many are right.
 - **V2's multi-value failures are gone.** Year ranges 5 → 9 of 9, multi-step 0 → 4 of 5, "which company…" (`open`) 0 → 6 of 8. The agent searches again for a missing company instead of ranking without it.
 - **SEC data rescues retrieval misses.** With a gold source missing from what the agent saw, `full` is right 82.5% of the time, `text` 33.3%: XBRL gives the figure the search didn't find.
-- **SEC data costs verifiability.** 93.1% of `full`'s numeric claims are grounded, against 100% for `text`: the misses are calculated claims citing the result's source but not every input's.
+- **SEC data doesn't cost verifiability.** Every numeric claim of every variant is grounded. The first count gave `full` 93.1%, but its 11 misses were gaps in the claim check, not in the citations: a comparison's inputs cited as another company's XBRL facts, per-share units, a unit conversion done with the calculator, and filing dates citing an accession number. All are now checked (2026-10-25).
 
 **Contents:** [1 Test data](#1-test-data) · [2 Variants](#2-variants) · [3 Agent](#3-agent) · [4 Metrics](#4-metrics) · [5 Results](#5-results) · [6 Iterations](#6-iterations) · [7 Open issues](#7-open-issues)
 
@@ -157,7 +157,7 @@ The prompt was changed on dev questions only (§6); the test split was run but n
 | **Answers the "decline" with partial context** | text | `decline-msft-azure-dollars-q4`: gives Azure's growth rate and Intelligent Cloud's revenue, without declining the dollar figure the 10-K doesn't report |
 | **Amazon's capex as $128.3 billion** | full | V2's open issue: the MD&A's cash capex, net of incentives, against the gold `Purchases of property and equipment` ($131,819M) |
 | **Calculated claims without every input's source** | full | The claim cites the chunk of one input or none; the number is right but `unverified` |
-| **Text questions' required points** | all | V2's open issue, unchanged: the points are whole evidence quotes, so a right, short answer is judged as missing them |
+| **Text questions' required points** | all | Rewritten as short facts on 2026-10-25 and re-judged; the counts above use them (with the whole-quote points: v2 6, text 12, full 11 of 19) |
 
 ---
 
@@ -182,8 +182,8 @@ Round 1 (before the grounding fix): `text` 85.2%, `full` 91.5% of number and dec
 
 | Issue | Fix |
 |---|---|
-| Text questions' required points are whole evidence quotes ([V2 §5](V2_GENERATION.md#text-questions-the-required-points-dont-fit-generation)) | Rewrite them as atomic facts (still open from V2) |
-| `full` grounds 93% of numeric claims, `text` 100% | Have the claim check accept an input found in any source a tool returned in the run, or prompt for per-input citations |
+| ~~Text questions' required points are whole evidence quotes~~ | Done 2026-10-25 ([V2 §5](V2_GENERATION.md#text-questions-the-required-points-dont-fit-generation)); review pending |
+| ~~`full` grounds 93% of numeric claims~~ | Done 2026-10-25: claim-check gaps fixed, 100% |
 | Variance between runs (up to 7 points) | Repeat each variant 3× and report the spread |
 | Amazon's $128.3B capex scored wrong | Add it as an acceptable answer (still open from V2) |
 | A derived number's inputs left out of the answer | Prompt: state the inputs of every calculated number |
