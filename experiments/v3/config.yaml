@@ -1,0 +1,33 @@
+# V3 experiment settings, read by run.py (and experiments/v2/judge.py --config this file).
+# Spec: experiments/V3_AGENT.md. Paths are relative to the repo root.
+
+run:
+  label: v3-qwen3.6-27b-fp8                             # writes output/generation/<label>/ (where v2/judge.py looks)
+  db: data/v0-chunking/parent_child.db                  # V1's best chunking, as in V2
+  gold:                                                 # both sets, every question in each
+    - evaluation/gold/generation-gold-fy2025.jsonl      # V2's 54, unchanged
+    - evaluation/gold/agent-gold-fy2025.jsonl           # V3's 24: calculate, multi-step, SEC data, negatives
+  variants: [v2, text, full]                            # V2 (one call over V1's top 8) · agent, tool set text · agent, tool set full
+  workers: 4                                            # questions in parallel (= the server's max_num_seqs)
+
+retrieval: experiments/v1/config.yaml                   # V1's settings, unchanged: V2's context and the agent's search_filings
+
+generation:                                             # the model, for all three variants
+  model: openai:Qwen/Qwen3.6-27B-FP8                    # scripts/serve_vllm.sh qwen3.6-27b-fp8
+  base_url: http://localhost:8001/v1
+  thinking: false
+  max_tokens: 4000
+  prompt: src/tenk_agent/prompts/answer.md              # variant v2
+
+agent:                                                  # variants text and full (tenk_agent.agent)
+  prompt: src/tenk_agent/prompts/agent.md
+  max_calls: 20                                         # tool-call budget
+  max_turns: 20
+  result_chars: 16000
+  section_chunks: 4
+  sec_cache: data/raw/edgar                             # offline: cached SEC responses only (D-036)
+
+score:
+  restatements: true
+  judge_model: openai:openai/gpt-oss-20b                # experiments/v2/judge.py --config experiments/v3/config.yaml
+  judge_base_url: http://localhost:8002/v1
