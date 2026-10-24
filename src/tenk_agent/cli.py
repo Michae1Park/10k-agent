@@ -6,6 +6,7 @@ tenk search "question"         V1: sub-questions and the top k chunks
 tenk ask "question"            V2: one cited answer
 tenk chat                      V2: type questions, get answers (models loaded once)
 tenk tool NAME key=value ...   V3: run one agent tool by hand (--list: the schemas)
+tenk agent "question"          V3: the agent picks and calls tools, then answers
 tenk gold [show|render|verify] review a gold question set
 tenk report LABEL              write a finished V2 run's end-to-end report to evaluation/results
 """
@@ -66,6 +67,14 @@ def main(argv: list[str] | None = None) -> int:
     tool.add_argument("--live", action="store_true", help="allow SEC requests not in the cache")
     tool.add_argument("--tools", choices=("text", "full"), default="full")
 
+    agent = commands.add_parser("agent", help="V3: answer one question with tools")
+    agent.add_argument("question")
+    agent.add_argument("--tools", choices=("text", "full"), help="default: agent.tools")
+    agent.add_argument("--max-calls", type=int, help="default: agent.max_calls")
+    agent.add_argument("--live", action="store_true", help="allow SEC requests not in the cache")
+    agent.add_argument("--model", help="default: generation.model")
+    agent.add_argument("--json", action="store_true", help="print the answer and steps as JSON")
+
     gold = commands.add_parser("gold", help="review a gold question set (default: list it)")
     gold.add_argument("--gold", type=Path, default=GOLD, help="default: %(default)s")
     gold_actions = gold.add_subparsers(dest="gold_action")
@@ -95,6 +104,7 @@ def main(argv: list[str] | None = None) -> int:
         "ask": _ask,
         "chat": _chat,
         "tool": _tool,
+        "agent": _agent,
         "gold": _gold,
         "report": _report,
     }
@@ -221,7 +231,14 @@ def show(result, chunks: list[ChunkRecord]) -> None:
         span = list(dict.fromkeys(map(str, c.printed_pages or c.pages or [])))  # 36-36 → 36
         pages = f" p.{'-'.join(span)}" if span else ""
         print(f"  {i:>2}. {c.id}  {c.ticker} FY{c.fiscal_year} item {c.item} {c.kind}{pages}")
+    show_answer(answer)
+    retry = " · JSON retry" if len(result.replies) > 1 else ""
+    tokens = f"{result.input_tokens} in / {result.output_tokens} out"
+    print(f"\n{result.seconds:.1f}s · {tokens}{retry}\n")
 
+
+def show_answer(answer: dict) -> None:
+    """The answer (with its table and scope notice), and each claim's status and citations."""
     flags = [
         f
         for f, on in (("DECLINED", answer["abstained"]), ("FORMAT ERROR", answer["format_error"]))
@@ -242,10 +259,6 @@ def show(result, chunks: list[ChunkRecord]) -> None:
             print(f"  [{c['id']}] {c['status']:<10} {c['text']}{value}")
             reason = f" · {c['status_reason']}" if c["status_reason"] else ""
             print(f"       cites {', '.join(c['chunk_ids']) or '–'}{reason}")
-
-    retry = " · JSON retry" if len(result.replies) > 1 else ""
-    tokens = f"{result.input_tokens} in / {result.output_tokens} out"
-    print(f"\n{result.seconds:.1f}s · {tokens}{retry}\n")
 
 
 def _table(table: dict) -> str:
@@ -289,6 +302,31 @@ def _tool(args: argparse.Namespace, settings: dict) -> int:
         settings, args.tools, live=args.live, search=args.name == "search_filings"
     )
     print(json.dumps(toolbox.call(args.name, arguments), indent=2))
+    return 0
+
+
+def _agent(args: argparse.Namespace, settings: dict) -> int:
+    from dataclasses import asdict
+
+    from tenk_agent.agent.loop import agent_from_settings
+
+    agent = agent_from_settings(settings, args.tools, args.max_calls, args.live, args.model)
+    run = agent.run(args.question)
+    if args.json:
+        print(json.dumps({"answer": run.answer, "steps": [asdict(s) for s in run.steps]}, indent=2))
+        return 0
+    print(f"\nSteps ({len(run.tool_calls)} tool calls)")
+    for step in run.steps:
+        if step.kind == "tool":
+            ok = "✗" if "error" in (step.result or {}) else "✓"
+            arguments = json.dumps(step.arguments, ensure_ascii=False)
+            print(f"  {ok} {step.name} {arguments}  ({step.seconds:.1f}s)")
+            if ok == "✗":
+                print(f"      {step.result['error']}")
+    show_answer(run.answer)
+    tokens_in = sum(s.input_tokens for s in run.steps)
+    tokens_out = sum(s.output_tokens for s in run.steps)
+    print(f"\n{run.seconds:.1f}s · {tokens_in} in / {tokens_out} out · stop: {run.stop}\n")
     return 0
 
 
