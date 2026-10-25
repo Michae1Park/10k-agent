@@ -2,21 +2,21 @@
 
 **Goal:** whether letting the model drive the work with tools (search again, read a section, calculate, look up SEC data) fixes V2's failures, and how much of any gain comes from the SEC data rather than from the tool use itself.
 
-**Result:** the agent gets **91.7%** of number and decline questions right with 10-K tools only, against V2's **70.5%** on the same 78 questions, model and server. Adding XBRL and EDGAR tools gives **91.5%**: the same score, reached differently. On the held-out test split: V2 9 of 17, agent 13 (text tools) and 12 (with SEC data). With the text questions judged, overall: V2 67.9%, agent 88.5% / 88.5%.
+**Result:** the agent gets **90.0%** of number and decline questions right with 10-K tools only, against V2's **71.7%** on the same 78 questions, model and server. Adding XBRL and EDGAR tools gives **91.5%**: about the same score, reached differently. On the held-out test split (24): V2 14, agent 19 (text tools) and 18 (with SEC data). With the text questions judged, overall: V2 66.7%, agent 85.9% / 88.5%. Run 2026-10-25 with `search_filings` as V1's full retrieval (round 3, §6).
 
-| Variant | Correct (all 78) | Number and decline (59) | Text, judged (19) | Test split (24) | Declined right | Wrong declines | Numeric claims grounded | Numbers in claims | Seconds |
+| Variant | Correct (all 78) | Number and decline | Text, judged | Test split (24) | Declined right | Wrong declines | Numeric claims grounded | Numbers in claims | Seconds |
 |---|---|---|---|---|---|---|---|---|---|
-| **v2**: V1's top 8, one call | 67.9% | 42 (71.2%) | 11 | 15 | 13 / 13 | 3 / 65 | 100% | 35.3% | 35 |
-| **text**: agent, 10-K tools | **88.5%** | **55** (93.2%) | 14 | **18** | 12 / 13 | 0 / 65 | 100% | 63.2% | 83 |
-| **full**: agent, + XBRL, EDGAR | **88.5%** | 54 (91.5%) | **15** | 17 | 8 / 8 | 0 / 70 | 100% | **72.3%** | 88 |
+| **v2**: V1's top 8, one call | 66.7% | 43 / 60 (71.7%) | 9 / 18 | 14 | 13 / 13 | 3 / 65 | 100% | 37.5% | 34 |
+| **text**: agent, 10-K tools | 85.9% | **54 / 60 (90.0%)** | 13 / 18 | **19** | 12 / 13 | 1 / 65 | 97.9% | 55.1% | 86 |
+| **full**: agent, + XBRL, EDGAR | **88.5%** | **54 / 59 (91.5%)** | **15 / 19** | 18 | 8 / 8 | 0 / 70 | 99.4% | **77.4%** | 91 |
 
 Same model (`Qwen3.6-27B-FP8`, thinking off, temperature 0) and claim check in all three; only what the model can do changes. Each variant has its own decline set (§1): 5 questions need SEC data, so they are declines for `v2` and `text` only, and one V2 decline is answerable with SEC data, so `full` has 8 declines and 70 answerable questions.
 
 **Takeaways:**
-- **The agent's gain is the tool use, not the SEC data.** `v2` → `text` is +22 points on number and decline questions; `text` → `full` adds nothing overall. XBRL changes *how* questions are answered (fewer searches, more claims checkable), not how many are right.
-- **V2's multi-value failures are gone.** Year ranges 5 → 9 of 9, multi-step 0 → 4 of 5, "which company…" (`open`) 0 → 6 of 8. The agent searches again for a missing company instead of ranking without it.
-- **SEC data rescues retrieval misses.** With a gold source missing from what the agent saw, `full` is right 82.5% of the time, `text` 33.3%: XBRL gives the figure the search didn't find.
-- **SEC data doesn't cost verifiability.** Every numeric claim of every variant is grounded. The first count gave `full` 93.1%, but its 11 misses were gaps in the claim check, not in the citations: a comparison's inputs cited as another company's XBRL facts, per-share units, a unit conversion done with the calculator, and filing dates citing an accession number. All are now checked (2026-10-25).
+- **The agent's gain is the tool use, not the SEC data.** `v2` → `text` is +18 points on number and decline questions; `text` → `full` adds 1.5, within run-to-run variation. XBRL changes *how* questions are answered (fewer searches, more claims checkable), not how many are right.
+- **V2's multi-value failures are gone.** Year ranges 5 → 9 of 9, multi-step 1 → 3–4 of 5, "which company…" (`open`) 4 → 7 of 8. The agent searches again for a missing company instead of ranking without it.
+- **SEC data rescues retrieval misses.** With a gold source missing from what the agent saw, `full` is right 89.5% of the time, `text` 14.3%: XBRL gives the figure the search didn't find.
+- **SEC data doesn't cost verifiability.** `full` grounds 99.4% of numeric claims, `text` 97.9%. The 4 unverified claims (3 answers) are wrong numbers the claim check caught, not citation gaps: Microsoft's capex given as $47.4B and, in `full`, as the change in gross PP&E ($86.6B), and NVIDIA's FY2024 revenue labelled FY2025 in a decline. An earlier count gave `full` 93.1% because of gaps in the claim check (another company's XBRL facts as inputs, per-share units, unit conversions, accession citations); those are checked since 2026-10-25.
 
 **Contents:** [1 Test data](#1-test-data) · [2 Variants](#2-variants) · [3 Agent](#3-agent) · [4 Metrics](#4-metrics) · [5 Results](#5-results) · [6 Iterations](#6-iterations) · [7 Open issues](#7-open-issues)
 
@@ -74,6 +74,7 @@ question ─► model ──tool calls──► tools ─► model ─► … �
 | First turn | Must be a tool call (`tool_choice: required`) |
 | Budget | 20 tool calls; a repeated call returns an error; then one answer turn with tools off. The same once the conversation reaches 20k input tokens (the server holds 32k) |
 | Answer | A message (not a tool call) holding a JSON object with `answer`; anything else gets one "only the JSON" retry |
+| Search | `search_filings` is V1's retrieval ([V1](V1_RETRIEVAL.md)): sub-questions per company and filing, hybrid search, round-robin merge; the companies and fiscal years the model passes replace those in the query, and a search naming no company is an error |
 | Claim check | V2's, plus `xbrl:` citations verified against the cached fact, and a percent claim may come from a ratio (8.3 percent from 0.083) |
 
 Every route the model takes is its own: nothing in the loop picks a tool or a query.
@@ -106,14 +107,14 @@ Correct, all 78 questions, text questions judged
 | Kind | v2 | text | full |
 |---|---|---|---|
 | figure (11) | **11** | **11** | **11** |
-| compare_year (9) | 5 | **9** | **9** |
-| compare_company (10) | 5 | 6 | 6 |
-| open (8) | 0 | **6** | 4 |
-| risk (4) | 1 | **3** | 2 |
+| compare_year (9) | 5 | **9** | 8 |
+| compare_company (10) | 5 | **6** | **6** |
+| open (8) | 4 | **7** | **7** |
+| risk (4) | 1 | **3** | **3** |
 | drivers (4) | 3 | **4** | **4** |
 | decline (9) | **9** | **9** | **9** |
-| calculate (12) | 9 | **11** | 10 |
-| multi_step (5) | 0 | **4** | **4** |
+| calculate (12) | 8 | **11** | **11** |
+| multi_step (5) | 1 | 3 | **4** |
 | sec_data (5) | 4 | 3 | **5** |
 | lookup (1) | 1 | 1 | 1 |
 
@@ -123,30 +124,32 @@ Correct, all 78 questions, text questions judged
 
 | Split | v2 | text | full |
 |---|---|---|---|
-| V2's set, dev (38) | 26 | **36** | 34 |
-| V2's set, test (16) | 7 | **11** | 10 |
-| Agent set, dev (16) | 10 | 14 | **16** |
-| Agent set, test (8) | 5 | **6** | 5 |
+| V2's set, dev (38) | 28 | **35** | **35** |
+| V2's set, test (16) | 9 | **13** | 12 |
+| Agent set, dev (16) | 10 | 13 | **16** |
+| Agent set, test (8) | 5 | **6** | **6** |
 
-The prompt was changed on dev questions only (§6); the test split was run but not looked at until the end. Test is where the agent's lead over V2 is measured: 17 and 15 of 24 against 12.
+The prompt was changed on dev questions only (§6); the test split was run but not looked at until the end. Test is where the agent's lead over V2 is measured: 19 and 18 of 24 against 14.
 
 ### Tool use
 
 | | text | full |
 |---|---|---|
-| Calls per question (max) | 3.9 (17) | 4.3 (20) |
-| `search_filings` | 135 | 77 |
-| `get_section` | 32 | 16 |
-| `calculator` | 137 | 94 |
-| `xbrl_facts` | – | 137 |
-| `edgar_filings` | – | 8 |
-| Calls that returned an error | 60 | 65 |
-| Repeated calls | 8 | 7 |
-| Budget stops | 4 | 3 |
-| Input tokens per question | 30,200 | 22,400 |
+| Calls per question (max) | 3.9 (20) | 4.7 (19) |
+| `search_filings` | 124 | 66 |
+| `get_section` | 29 | 20 |
+| `calculator` | 147 | 129 |
+| `xbrl_facts` | – | 138 |
+| `edgar_filings` | – | 11 |
+| Calls that returned an error | 63 | 89 |
+| Repeated calls | 20 | 25 |
+| Budget stops | 6 | 5 |
+| Input tokens per question | 33,000 | 26,200 |
 
-- **Given XBRL, the agent prefers it:** `full` searches 43% less and reads 50% fewer sections, with 26% fewer input tokens. This is also why `full`'s "gold sources cited" (47.5%) and expected-tools recall (68%) are low: the gold sets name 10-K chunks and `search_filings`, and it cited the XBRL fact instead.
-- **Errors are mostly recovered from.** The common ones: the calculator's input names (`a`, `b` for `pct_change`'s `old`, `new`: 18 in `text`), XBRL concept guesses (28 in `full`, each answered with the closest concept names), and companies outside the corpus. The model reads the error and calls again.
+- **Given XBRL, the agent prefers it:** `full` searches 47% less and reads 31% fewer sections, with 21% fewer input tokens. This is also why `full`'s "gold sources cited" (48.6%) and expected-tools recall (65%) are low: the gold sets name 10-K chunks and `search_filings`, and it cited the XBRL fact instead.
+- **Errors are mostly recovered from.** The common ones: the calculator's input names (`a`, `b` for `pct_change`'s `old`, `new`), XBRL concept guesses (24 in `full`, each answered with the closest concept names), and companies outside the corpus. The model reads the error and calls again.
+- **Repeats are two runaway loops.** 27 of the 45 repeated calls come from two questions (`msft-ai-risks-fy2025` in `full`: 17; `cmp-cyber-risk-all4-fy2025` in `text`: 10), almost all calculator calls; round 2 had 8 and 7.
+- **The no-company error never fired.** With the prompt line asking for companies, every `search_filings` call named them (or named them in the query); its 7 errors were companies outside the corpus.
 - **2 calls in `text` were to an `answer` tool** that doesn't exist (the model "calling" its answer); each got an unknown-tool error and the model then answered as text.
 
 ### Where the agent still fails
@@ -173,8 +176,9 @@ The prompt and loop were fixed on dev questions, each fix for a failure seen in 
 | Round 1 → 2 | Rule: cite every calculation input, in its unit; advice and forecasts set `abstained` | `full` 84.1% grounded; advice answered with a summary |
 | | Stop at 20k input tokens | One run exceeded the server's 32k context |
 | Round 2 rerun | Only a JSON object with `answer` is an answer (20 affected runs rerun) | On the answer turn the model sometimes wrote a tool call as text, whose JSON arguments were taken for the answer: 9 empty answers |
+| Round 3 (2026-10-25) | `search_filings` is V1's whole retrieval: sub-questions per company and filing, round-robin merge, `k` 8 in all (was 4 per company). `companies` / `fiscal_years` given replace those in the query; no company → an error. Prompt: pass the companies | The agent builds on V1 exactly; round 2 ran only V1's hybrid search, one search per company |
 
-Round 1 (before the grounding fix): `text` 85.2%, `full` 91.5% of number and decline questions, `full` 84.1% grounded; kept in `output/generation/v3-qwen3.6-27b-fp8-round1/`. Between rounds the two agent variants move by up to 7 points, so a difference of a few points between `text` and `full` is within run-to-run variation; V2's gap is not.
+Round 1 (before the grounding fix): `text` 85.2%, `full` 91.5% of number and decline questions, `full` 84.1% grounded; kept in `output/generation/v3-qwen3.6-27b-fp8-round1/`. Round 2 (search per company): `text` 55 / 60 (91.7%), `full` 54 / 59 (91.5%), overall 88.5% / 88.5%, test 18 / 17, every claim grounded; kept in `output/generation/v3-qwen3.6-27b-fp8-round2/`. Round 3 is within a question of round 2 on every headline number. Between rounds the two agent variants move by up to 7 points, so a difference of a few points between `text` and `full`, or between rounds, is within run-to-run variation; V2's gap is not.
 
 ---
 

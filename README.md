@@ -39,7 +39,7 @@ Each version adds one stage and was tested on its own before the next was built.
 | **V0 · Parsing and chunking** | 10-K HTML → blocks (rules) → labels (LLM structure agent, validated and repaired) → one structured document → chunks, three ways | [Rule-based and parent-child level](experiments/V0_PARSING_CHUNKING.md): ~93% exact heading paths, every risk factor on its own |
 | **V1 · Retrieval** | Sub-questions per company and filing → keyword + dense → RRF → rerank → round-robin. No LLM | [Parent-child best](experiments/V1_RETRIEVAL.md): Recall@5 87.3%, MRR 0.758 |
 | **V2 · Generation** | One model call over V1's top 8 → JSON answer with claims citing chunk IDs → each claim checked | [21 / 30 number questions right](experiments/V2_GENERATION.md), 8 / 8 declines, every numeric claim grounded |
-| **V3 · Agent** | The model drives: search, read sections, calculate, XBRL facts and EDGAR metadata (LangGraph) → V2's JSON answer and claim check | [91.7% of number and decline questions right vs V2's 70.5%](experiments/V3_AGENT.md) on 78 questions; the gain is tool use, not the SEC data |
+| **V3 · Agent** | The model drives: search, read sections, calculate, XBRL facts and EDGAR metadata (LangGraph) → V2's JSON answer and claim check | [90.0–91.5% of number and decline questions right vs V2's 71.7%](experiments/V3_AGENT.md) on 78 questions; the gain is tool use, not the SEC data |
 
 V4–V6 (verified agent, model comparison, fine-tuning) and the first V3 were built on an earlier V0–V2 and are kept in [`archive/`](archive/README.md) as references for rebuilding them on this pipeline.
 
