@@ -17,6 +17,12 @@ generation:                                             # the model, for all thr
   thinking: false
   max_tokens: 4000
   prompt: src/tenk_agent/prompts/answer.md              # variant v2
+  serve:                                                # the vLLM server: scripts/serve_vllm.sh qwen3.6-27b-fp8 (keep in step)
+    gpu_memory_utilization: 0.80                        # 0.72 leaves too little KV cache once compiled
+    max_model_len: 32768
+    max_num_seqs: 4                                     # = run.workers; 256 (default) OOMs at startup
+    enforce_eager: false                                # CUDA graphs: ~17 tok/s vs ~11.5 eager
+    prefix_caching: true
 
 agent:                                                  # variants text and full (tenk_agent.agent)
   prompt: src/tenk_agent/prompts/agent.md
