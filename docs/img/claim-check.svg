@@ -36,7 +36,7 @@
   <text class="sub" x="590.0" y="83" text-anchor="middle" font-size="14" fill="#4a5a68">value · unit · company · cited chunk IDs</text>
   <text class="sub" x="590.0" y="103" text-anchor="middle" font-size="14" fill="#4a5a68">optional calculation</text>
   <rect class="panel" x="20" y="150" width="1140" height="730" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
-  <text class="ptitle" x="403" y="178" text-anchor="middle" font-size="14.5" font-weight="600" fill="#46586a">generation/verify.py: code only, no LLM</text>
+  <text class="ptitle" x="403" y="178" text-anchor="middle" font-size="14.5" font-weight="600" fill="#46586a">Claim check: code only, no LLM (generation/verify.py)</text>
   <rect class="route" x="40" y="190" width="350" height="56" rx="7" fill="#fbf1de" stroke="#bf8f33" stroke-width="1.5"/>
   <text class="name" x="215.0" y="223" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Has a calculation</text>
   <rect class="route" x="415" y="190" width="350" height="56" rx="7" fill="#fbf1de" stroke="#bf8f33" stroke-width="1.5"/>

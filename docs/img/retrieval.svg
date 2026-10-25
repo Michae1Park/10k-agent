@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="1490" viewBox="0 0 1180 1490" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">Retrieval</title>
+  <desc id="svgdesc">Build, once per corpus: the 10-K HTML becomes blocks by rules, a structure agent labels them and code validates and repairs the labels, the labels are assembled into one section per Item, parent-child chunking splits each section, and the chunks are loaded and embedded into one SQLite database with an FTS5 keyword index and vectors. The search_filings tool, per call and with no LLM: the companies and fiscal years come from the tool arguments or, if not given, from the query (no company at all returns an error asking for one); the query is decomposed into one sub-question per company and filing; for each, a keyword search and a dense search run over the database filtered to that filing, the two lists are fused by reciprocal rank fusion, children are swapped for their parents, and a cross-encoder reranks them. A round-robin merge interleaves the sub-questions' results, and the agent gets k chunks as the tool result.</desc>
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .panel { fill: #151c24; stroke: #3a4753; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .llm   { fill: #3a1a2c; stroke: #d487b0; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      #arrow > path { fill: #8496a6; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1179" height="1489" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+  <rect class="panel" x="20" y="20" width="1140" height="410" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="590.0" y="48" text-anchor="middle" font-size="14.5" font-weight="600" fill="#46586a">Build: once per corpus</text>
+  <rect class="edge" x="257" y="58" width="666" height="176" rx="9" fill="none" stroke="#5a6b7a" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text class="ptitle" x="269" y="80" text-anchor="start" font-size="14" font-weight="600" fill="#46586a">Preprocess</text>
+  <rect class="edge" x="938" y="58" width="212" height="176" rx="9" fill="none" stroke="#5a6b7a" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text class="ptitle" x="950" y="80" text-anchor="start" font-size="14" font-weight="600" fill="#46586a">Chunk</text>
+  <rect class="edge" x="30" y="244" width="1120" height="176" rx="9" fill="none" stroke="#5a6b7a" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text class="ptitle" x="590" y="266" text-anchor="middle" font-size="14" font-weight="600" fill="#46586a">SQLite</text>
+  <rect class="ext" x="40" y="96" width="192" height="128" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="136.0" y="126" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">10-K HTML</text>
+  <text class="sub" x="136.0" y="152" text-anchor="middle" font-size="14" fill="#4a5a68">EDGAR primary document</text>
+  <text class="sub" x="136.0" y="172" text-anchor="middle" font-size="14" fill="#4a5a68">and filing metadata</text>
+  <text class="sub" x="136.0" y="192" text-anchor="middle" font-size="14" fill="#4a5a68">data/raw/filings</text>
+  <rect class="work" x="267" y="96" width="192" height="128" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="363.0" y="126" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">1 · Blocks</text>
+  <text class="sub" x="363.0" y="152" text-anchor="middle" font-size="14" fill="#4a5a68">preprocess/blocks.py</text>
+  <text class="sub" x="363.0" y="172" text-anchor="middle" font-size="14" fill="#4a5a68">rules D1–D8, no LLM</text>
+  <text class="sub" x="363.0" y="192" text-anchor="middle" font-size="14" fill="#4a5a68">698 blocks (AAPL FY2025)</text>
+  <rect class="llm" x="494" y="96" width="192" height="128" rx="7" fill="#f8e6ef" stroke="#b0558a" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="126" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">2–3 · Label, repair</text>
+  <text class="sub" x="590.0" y="152" text-anchor="middle" font-size="14" fill="#4a5a68">~150 blocks a call;</text>
+  <text class="sub" x="590.0" y="172" text-anchor="middle" font-size="14" fill="#4a5a68">code validates its rules,</text>
+  <text class="sub" x="590.0" y="192" text-anchor="middle" font-size="14" fill="#4a5a68">the LLM repairs, 2 rounds</text>
+  <rect class="work" x="721" y="96" width="192" height="128" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="817.0" y="126" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">4 · Assemble</text>
+  <text class="sub" x="817.0" y="152" text-anchor="middle" font-size="14" fill="#4a5a68">labels applied to the</text>
+  <text class="sub" x="817.0" y="172" text-anchor="middle" font-size="14" fill="#4a5a68">filing's own text:</text>
+  <text class="sub" x="817.0" y="192" text-anchor="middle" font-size="14" fill="#4a5a68">23 sections, 110 dropped</text>
+  <rect class="work" x="948" y="96" width="192" height="128" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="1044.0" y="126" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">5 · Chunk</text>
+  <text class="sub" x="1044.0" y="152" text-anchor="middle" font-size="14" fill="#4a5a68">parent_child, no LLM</text>
+  <text class="sub" x="1044.0" y="172" text-anchor="middle" font-size="14" fill="#4a5a68">parents ≤ 1,280 tokens</text>
+  <text class="sub" x="1044.0" y="192" text-anchor="middle" font-size="14" fill="#4a5a68">children ≤ 256 tokens</text>
+  <text class="sub" x="1044.0" y="212" text-anchor="middle" font-size="14" fill="#4a5a68">AAPL: 216 parents</text>
+  <path class="edge" d="M 232 160.0 H 263" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 459 160.0 H 490" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 686 160.0 H 717" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 913 160.0 H 944" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="40" y="276" width="350" height="120" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="215.0" y="306" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">6 · Load</text>
+  <text class="sub" x="215.0" y="332" text-anchor="middle" font-size="14" fill="#4a5a68">tenk build --stage load</text>
+  <text class="sub" x="215.0" y="352" text-anchor="middle" font-size="14" fill="#4a5a68">chunks, children, filings, sections;</text>
+  <text class="sub" x="215.0" y="372" text-anchor="middle" font-size="14" fill="#4a5a68">FTS5 keyword index</text>
+  <rect class="work" x="415" y="276" width="350" height="120" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="306" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">7 · Embed</text>
+  <text class="sub" x="590.0" y="332" text-anchor="middle" font-size="14" fill="#4a5a68">tenk build --stage embed</text>
+  <text class="sub" x="590.0" y="352" text-anchor="middle" font-size="14" fill="#4a5a68">Qwen3-Embedding-0.6B, 1,024-d, sqlite-vec</text>
+  <text class="sub" x="590.0" y="372" text-anchor="middle" font-size="14" fill="#4a5a68">under a header: company, year, Item</text>
+  <rect class="sink" x="790" y="276" width="350" height="120" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="965.0" y="306" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">parent_child.db</text>
+  <text class="sub" x="965.0" y="332" text-anchor="middle" font-size="14" fill="#4a5a68">SQLite: chunks, children, FTS5,</text>
+  <text class="sub" x="965.0" y="352" text-anchor="middle" font-size="14" fill="#4a5a68">vectors, filings, sections</text>
+  <text class="sub" x="965.0" y="372" text-anchor="middle" font-size="14" fill="#4a5a68">also rule.db and agentic.db</text>
+  <path class="edge" d="M 1044 224 V 239 H 215 V 272" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 390 336 H 411" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 765 336 H 786" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <g transform="translate(0,30)">
+  <rect class="panel" x="20" y="430" width="1140" height="1010" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="590.0" y="458" text-anchor="middle" font-size="14.5" font-weight="600" fill="#46586a">search_filings tool: per call, no LLM</text>
+  <rect class="ext" x="340" y="475" width="500" height="76" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="505" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Tool call from the agent</text>
+  <text class="sub" x="590.0" y="531" text-anchor="middle" font-size="14" fill="#4a5a68">query · companies · fiscal_years · k</text>
+  <path class="edge" d="M 590 551 V 576" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="340" y="580" width="500" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="610" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">1 · Companies and years</text>
+  <text class="sub" x="590.0" y="636" text-anchor="middle" font-size="14" fill="#4a5a68">the arguments given, else named in the query ("Google" → GOOGL)</text>
+  <text class="sub" x="590.0" y="656" text-anchor="middle" font-size="14" fill="#4a5a68">"which company…": every company · ["all"]: every company</text>
+  <text class="sub" x="590.0" y="676" text-anchor="middle" font-size="14" fill="#4a5a68">none → error: name the companies (lists the corpus)</text>
+  <path class="edge" d="M 590 688 V 716" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="340" y="720" width="500" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="750" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">2 · Decompose</text>
+  <text class="sub" x="590.0" y="776" text-anchor="middle" font-size="14" fill="#4a5a68">one sub-question per (company, filing),</text>
+  <text class="sub" x="590.0" y="796" text-anchor="middle" font-size="14" fill="#4a5a68">rewritten to name only its company</text>
+  <text class="sub" x="590.0" y="816" text-anchor="middle" font-size="14" fill="#4a5a68">fiscal_years given: used exactly</text>
+  <path class="edge" d="M 590 828 V 862" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="604" y="850" text-anchor="start" font-size="13" fill="#46586a">one search per sub-question</text>
+  <rect class="panel" x="40" y="866" width="1100" height="296" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="590.0" y="894" text-anchor="middle" font-size="14.5" font-weight="600" fill="#46586a">3 · Hybrid search, once per sub-question (retrieval/search.py)</text>
+  <rect class="work" x="70" y="912" width="250" height="84" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="195.0" y="942" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Keyword</text>
+  <text class="sub" x="195.0" y="968" text-anchor="middle" font-size="14" fill="#4a5a68">BM25 over FTS5</text>
+  <text class="sub" x="195.0" y="988" text-anchor="middle" font-size="14" fill="#4a5a68">40 candidates, this filing</text>
+  <rect class="work" x="70" y="1016" width="250" height="84" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="195.0" y="1046" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Dense</text>
+  <text class="sub" x="195.0" y="1072" text-anchor="middle" font-size="14" fill="#4a5a68">cosine over sqlite-vec</text>
+  <text class="sub" x="195.0" y="1092" text-anchor="middle" font-size="14" fill="#4a5a68">40 candidates, this filing</text>
+  <rect class="work" x="370" y="950" width="220" height="110" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="480.0" y="980" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">RRF</text>
+  <text class="sub" x="480.0" y="1006" text-anchor="middle" font-size="14" fill="#4a5a68">reciprocal rank fusion,</text>
+  <text class="sub" x="480.0" y="1026" text-anchor="middle" font-size="14" fill="#4a5a68">k = 60; the list is cut</text>
+  <text class="sub" x="480.0" y="1046" text-anchor="middle" font-size="14" fill="#4a5a68">to 40 before reranking</text>
+  <rect class="work" x="640" y="950" width="220" height="110" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="750.0" y="980" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Children → parents</text>
+  <text class="sub" x="750.0" y="1006" text-anchor="middle" font-size="14" fill="#4a5a68">children are searched,</text>
+  <text class="sub" x="750.0" y="1026" text-anchor="middle" font-size="14" fill="#4a5a68">each swapped for its parent,</text>
+  <text class="sub" x="750.0" y="1046" text-anchor="middle" font-size="14" fill="#4a5a68">best child first</text>
+  <rect class="work" x="910" y="950" width="200" height="110" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="1010.0" y="980" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Rerank</text>
+  <text class="sub" x="1010.0" y="1006" text-anchor="middle" font-size="14" fill="#4a5a68">cross-encoder</text>
+  <text class="sub" x="1010.0" y="1026" text-anchor="middle" font-size="14" fill="#4a5a68">bge-reranker-v2-m3</text>
+  <text class="sub" x="1010.0" y="1046" text-anchor="middle" font-size="14" fill="#4a5a68">question vs. chunk</text>
+  <path class="edge" d="M 320 954 H 345 V 990 H 366" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 320 1058 H 345 V 1020 H 366" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 590 1005 H 636" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 860 1005 H 906" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="sub" x="590" y="1140" text-anchor="middle" font-size="14" fill="#4a5a68">every chunk and child is embedded and reranked under a header line: company, fiscal year, Item</text>
+  <path class="edge" d="M 965 366 V 862" fill="none" stroke="#5a6b7a" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+  <text class="elabel" x="975" y="640" text-anchor="start" font-size="13" fill="#46586a">the index it searches</text>
+  <path class="edge" d="M 590 1162 V 1192" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="340" y="1196" width="500" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="1226" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">4 · Round-robin merge</text>
+  <text class="sub" x="590.0" y="1252" text-anchor="middle" font-size="14" fill="#4a5a68">every sub-question's best chunk, then every one's second…</text>
+  <text class="sub" x="590.0" y="1272" text-anchor="middle" font-size="14" fill="#4a5a68">each gets ⌈k / sub-questions⌉ places, at least 2</text>
+  <text class="sub" x="590.0" y="1292" text-anchor="middle" font-size="14" fill="#4a5a68">the best-scoring sub-question goes first in each round</text>
+  <path class="edge" d="M 590 1304 V 1328" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="340" y="1332" width="500" height="90" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="1362" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">k chunks (default 8, at most 16)</text>
+  <text class="sub" x="590.0" y="1388" text-anchor="middle" font-size="14" fill="#4a5a68">chunk_id, company, year, Item, kind, units, pages, text</text>
+  <text class="sub" x="590.0" y="1408" text-anchor="middle" font-size="14" fill="#4a5a68">the agent reads them as the tool result and cites the IDs</text>
+  </g>
+</svg>

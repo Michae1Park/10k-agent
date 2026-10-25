@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="640" viewBox="0 0 1180 640" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
   <title id="svgtitle">Pipeline</title>
-  <desc id="svgdesc">Build, once per corpus: EDGAR 10-K HTML is preprocessed by V0 with rules and an LLM structure agent, chunked parent-child, and stored in one SQLite file with chunks, FTS5 and vectors; SEC XBRL company facts and EDGAR submissions are cached as JSON. Ask, per question: the V3 agent, a LangGraph loop, has the model call tools until it can answer: search_filings (V1's retrieval) and get_section read the index, calculator does arithmetic, xbrl_facts and edgar_filings read the SEC cache. The model answers with V2's JSON claims citing chunk IDs, XBRL facts or accession numbers; code checks each claim against what it cites, and the result is a cited answer.</desc>
+  <desc id="svgdesc">Build, once per corpus: EDGAR 10-K HTML is preprocessed with rules and an LLM structure agent, chunked parent-child, and stored in one SQLite file with chunks, FTS5 and vectors; SEC XBRL company facts and EDGAR submissions are cached as JSON. Ask, per question: the agent, a LangGraph loop, has the model call tools until it can answer: search_filings (hybrid search) and get_section read the index, calculator does arithmetic, xbrl_facts and edgar_filings read the SEC cache. The model answers with JSON claims citing chunk IDs, XBRL facts or accession numbers; code checks each claim against what it cites, and the result is a cited answer.</desc>
   <style>
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
@@ -30,12 +30,12 @@
   <text class="sub" x="135.0" y="126" text-anchor="middle" font-size="14" fill="#4a5a68">24 filings</text>
   <text class="sub" x="135.0" y="146" text-anchor="middle" font-size="14" fill="#4a5a68">8 companies × 3 years</text>
   <rect class="work" x="266" y="70" width="190" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
-  <text class="name" x="361.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">V0 · Preprocess</text>
+  <text class="name" x="361.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Preprocess</text>
   <text class="sub" x="361.0" y="126" text-anchor="middle" font-size="14" fill="#4a5a68">rules → blocks</text>
   <text class="sub" x="361.0" y="146" text-anchor="middle" font-size="14" fill="#4a5a68">LLM structure agent</text>
   <text class="sub" x="361.0" y="166" text-anchor="middle" font-size="14" fill="#4a5a68">validated and repaired</text>
   <rect class="work" x="492" y="70" width="190" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
-  <text class="name" x="587.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">V0 · Chunk</text>
+  <text class="name" x="587.0" y="100" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Chunk</text>
   <text class="sub" x="587.0" y="126" text-anchor="middle" font-size="14" fill="#4a5a68">parent-child</text>
   <text class="sub" x="587.0" y="146" text-anchor="middle" font-size="14" fill="#4a5a68">tables kept whole</text>
   <rect class="sink" x="718" y="70" width="190" height="100" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
@@ -56,10 +56,10 @@
   <text class="sub" x="130.0" y="396" text-anchor="middle" font-size="14" fill="#4a5a68">plain text</text>
   <text class="sub" x="130.0" y="416" text-anchor="middle" font-size="14" fill="#4a5a68">about the corpus</text>
   <rect class="llm" x="260" y="340" width="430" height="110" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
-  <text class="name" x="475.0" y="370" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">V3 · Agent</text>
+  <text class="name" x="475.0" y="370" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Agent</text>
   <text class="sub" x="475.0" y="396" text-anchor="middle" font-size="14" fill="#4a5a68">LangGraph loop: model ⇄ tools, ≤ 20 calls</text>
   <text class="sub" x="475.0" y="416" text-anchor="middle" font-size="14" fill="#4a5a68">the model picks the tools and their order</text>
-  <text class="sub" x="475.0" y="436" text-anchor="middle" font-size="14" fill="#4a5a68">answers with V2's JSON claims citing IDs</text>
+  <text class="sub" x="475.0" y="436" text-anchor="middle" font-size="14" fill="#4a5a68">answers with JSON claims citing IDs</text>
   <rect class="work" x="720" y="340" width="200" height="110" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="820.0" y="370" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Claim check</text>
   <text class="sub" x="820.0" y="396" text-anchor="middle" font-size="14" fill="#4a5a68">code only, no LLM</text>
@@ -74,7 +74,7 @@
   <path class="edge" d="M 920 395 H 944" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <rect class="work" x="266" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="326.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">search_filings</text>
-  <text class="sub" x="326.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">V1 retrieve</text>
+  <text class="sub" x="326.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">hybrid search</text>
   <rect class="work" x="398" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="458.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">get_section</text>
   <text class="sub" x="458.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">read an Item</text>

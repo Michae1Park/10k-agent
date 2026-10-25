@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="1110" viewBox="0 0 1180 1110" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
   <title id="svgtitle">Evaluation flow</title>
-  <desc id="svgdesc">A generated answer arrives with the claim statuses V2 already gave it, then grade() picks the check by answer type: decline questions are correct if the model declined, number questions if every expected value is stated within tolerance, and text questions are first unjudged and then scored by an LLM judge against required points. summarize() aggregates per context, results are stored, and report.py recomputes Recall@k and MRR to write the per-question report.</desc>
+  <desc id="svgdesc">A generated answer arrives with the claim statuses the pipeline already gave it, then grade() picks the check by answer type: decline questions are correct if the model declined, number questions if every expected value is stated within tolerance, and text questions are first unjudged and then scored by an LLM judge against required points. summarize() aggregates per context, results are stored, and report.py recomputes Recall@k and MRR to write the per-question report.</desc>
   <style>
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
@@ -37,9 +37,9 @@
   <text class="sub" x="210.0" y="103" text-anchor="middle" font-size="14" fill="#4a5a68">question · evidence quote · expected answer</text>
   <rect class="ext" x="800" y="30" width="340" height="104" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
   <text class="name" x="970.0" y="57" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Generated answer</text>
-  <text class="sub" x="970.0" y="83" text-anchor="middle" font-size="14" fill="#4a5a68">from the V2 run (results.json)</text>
+  <text class="sub" x="970.0" y="83" text-anchor="middle" font-size="14" fill="#4a5a68">from the run (results.json)</text>
   <text class="sub" x="970.0" y="103" text-anchor="middle" font-size="14" fill="#4a5a68">text · table · claims · abstained</text>
-  <text class="sub" x="970.0" y="123" text-anchor="middle" font-size="14" fill="#4a5a68">each claim already has a status from V2</text>
+  <text class="sub" x="970.0" y="123" text-anchor="middle" font-size="14" fill="#4a5a68">each claim already has a status from the run</text>
   <rect class="panel" x="20" y="150" width="1140" height="940" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
   <text class="ptitle" x="590.0" y="178" text-anchor="middle" font-size="14.5" font-weight="600" fill="#46586a">src/tenk_agent/evaluation: grading one answer</text>
   <rect class="work" x="40" y="200" width="340" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>

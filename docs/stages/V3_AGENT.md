@@ -1,12 +1,12 @@
 # V3 · Agent: the model picks the tools, then answers with cited claims
 
-**Builds on** V1 (its search is now a tool) and V2 (the same answer format and claim check). **Code:** [`agent/`](../../src/tenk_agent/agent/), prompt [prompts/agent.md](../../src/tenk_agent/prompts/agent.md). **Design and results:** [experiments/V3_AGENT.md](../../experiments/V3_AGENT.md): 88.5% of 78 questions right with either tool set, against V2's 67.9% on the same model; every numeric claim grounded. **Why these tools:** [D-036](../DECISIONS.md#d-036). Overview: [ARCHITECTURE.md](../ARCHITECTURE.md).
+**Builds on** V1 (its search is now a tool) and V2 (the same answer format and claim check). **Code:** [`agent/`](../../src/tenk_agent/agent/), prompt [prompts/agent.md](../../src/tenk_agent/prompts/agent.md). **Design and results:** [experiments/V3_AGENT.md](../../experiments/V3_AGENT.md): 85.9% (10-K tools) and 88.5% (+ SEC data) of 78 questions right, against V2's 66.7% on the same model; 97.9% and 99.4% of numeric claims grounded (the misses are wrong numbers the claim check caught). **Why these tools:** [D-036](../DECISIONS.md#d-036). Overview: [ARCHITECTURE.md](../ARCHITECTURE.md).
 
 ## Commands
 
 ```bash
 tenk tool --list                                                         # the schemas the model gets
-tenk tool search_filings query="research and development" companies=AAPL,NVDA fiscal_years=2025 k=2
+tenk tool search_filings query="research and development" companies=AAPL,NVDA fiscal_years=2025 k=4
 tenk tool get_section company=Amazon fiscal_year=2025 item=8 page=2
 tenk tool calculator op=cagr inputs='{"start": 574785, "end": 716924, "years": 2}'
 tenk tool xbrl_facts company=Tesla concept=us-gaap:Revenues fiscal_year=2024
@@ -42,7 +42,7 @@ tenk agent "..." --tools text --max-calls 8 --json
 
 | Tool | Does | Returns |
 |---|---|---|
-| `search_filings` | V1's hybrid search (keyword + dense → RRF → rerank), one search per company named, filtered to the fiscal years given | Chunks with `chunk_id`, company, year, Item, kind, units, pages, text |
+| `search_filings` | V1's retrieval (sub-questions per company and filing → hybrid search → round-robin merge). `companies` and `fiscal_years`, when given, replace those named in the query; `["all"]` searches every company; no company at all is an error. `k` in all: default 8, at most 16 | The sub-questions searched; chunks with `chunk_id`, company, year, Item, kind, units, pages, text |
 | `get_section` | One Item of one 10-K in order, `section_chunks` at a time | The page's chunks, the Item's title, `page` of `pages` |
 | `calculator` | [calculator.py](../../src/tenk_agent/generation/calculator.py): `pct_change`, `cagr`, `ratio`, `percent_of`, `difference`, `sum`, or an expression over named inputs | Result, formula, inputs |
 | `xbrl_facts` | One concept of one 10-K from SEC company facts, any registrant; an unknown concept returns the closest names | Values for the filing's year and the prior years it shows, each with an `xbrl_id` to cite |
