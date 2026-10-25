@@ -138,9 +138,16 @@ class SubQuestionRetriever:
             slot_search=settings["slot_search"],
         )
 
-    def search(self, question: str, k: int) -> Result:
+    def search(
+        self,
+        question: str,
+        k: int,
+        tickers: list[str] | None = None,
+        fiscal_years: list[int] | None = None,
+    ) -> Result:
+        """tickers, fiscal_years: replace what the question names (QueryDecomposer.decompose)."""
         subs = (
-            self.decomposer.decompose(question)
+            self.decomposer.decompose(question, tickers, fiscal_years)
             if self.slot_search
             else [SubQuestion(question, None, None)]
         )

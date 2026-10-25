@@ -1,6 +1,6 @@
 """The V3 agent's tools: what each does, its schema, and the code that runs it.
 
-  search_filings   V1's hybrid search (keyword + dense → RRF → rerank), one search per company
+  search_filings   V1's retrieval: sub-questions per company and filing, hybrid search, round-robin
   get_section      one 10-K Item, in order, a page of chunks at a time
   calculator       generation/calculator.py: named operations or an expression over inputs
   xbrl_facts       SEC XBRL company facts for one concept and 10-K            (tool set "full")
@@ -17,8 +17,7 @@ from tenk_agent.agent.sec import SecData, SecError
 from tenk_agent.corpus import resolve_company
 from tenk_agent.generation.calculator import CalculatorError, calculate
 from tenk_agent.models import ToolSpec
-from tenk_agent.retrieval.decompose import SubQuestion
-from tenk_agent.retrieval.search import HybridSearch
+from tenk_agent.retrieval.search import SubQuestionRetriever
 from tenk_agent.store import ChunkRecord, Store
 
 COMPANY = {"type": "string", "description": "Ticker or name, e.g. AAPL or Apple"}
@@ -27,15 +26,21 @@ YEARS = {"type": "array", "items": {"type": "integer"}, "description": "Fiscal y
 SPECS = {
     "search_filings": ToolSpec(
         "search_filings",
-        "Search the 10-K excerpts in the corpus. Runs one search per company given, so a "
-        "comparison gets results for every company. Returns chunks with their IDs to cite.",
+        "Search the 10-K excerpts in the corpus. Name the companies (companies, or in the "
+        'query; ["all"] for every company) and, if you know them, the fiscal years. Runs one '
+        "search per company and filing and interleaves the results, so a comparison gets "
+        "chunks from every company. Returns chunks with their IDs to cite.",
         {
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "What to find, e.g. 'total net sales'"},
-                "companies": {"type": "array", "items": COMPANY},
+                "companies": {
+                    "type": "array",
+                    "items": COMPANY,
+                    "description": 'Companies to search; ["all"] for every company',
+                },
                 "fiscal_years": YEARS,
-                "k": {"type": "integer", "description": "Chunks per company (default 4, max 8)"},
+                "k": {"type": "integer", "description": "Chunks in all (default 8, max 16)"},
             },
             "required": ["query"],
         },
@@ -113,7 +118,7 @@ TOOL_SETS = {
 @dataclass
 class Toolbox:
     store: Store
-    search: HybridSearch | None  # None: search_filings unavailable (tests)
+    search: SubQuestionRetriever | None  # None: search_filings unavailable (tests)
     sec: SecData | None
     tool_set: str = "full"
     section_chunks: int = 4  # chunks per get_section page
@@ -140,19 +145,36 @@ class Toolbox:
         query: str,
         companies: list[str] | None = None,
         fiscal_years: list[int] | None = None,
-        k: int = 4,
+        k: int = 8,
     ) -> dict:
+        """V1's retrieval, with the companies and years the model gives in place of those it
+        would find in the query. No company given or named: an error, not an unfiltered search."""
         if self.search is None:
             return {"error": "search is not available"}
-        k = max(1, min(int(k), 8))
-        tickers, unknown = self._tickers(companies or [])
+        k = max(1, min(int(k), 16))
+        if [c.lower() for c in companies or []] == ["all"]:
+            tickers, unknown = sorted({f.ticker for f in self.store.filings()}), []
+        else:
+            tickers, unknown = self._tickers(companies or [])
         if unknown:
             return {"error": f"not in the corpus: {unknown}", "corpus": self._corpus()}
-        results = []
-        for ticker in tickers or [None]:
-            chunks, _ = self.search.search(SubQuestion(query, ticker, fiscal_years or None), k)
-            results.extend(chunk_view(c) for c in chunks)
-        return {"query": query, "chunks": results}
+        years = [int(y) for y in fiscal_years] if fiscal_years else None
+        subs = self.search.decomposer.decompose(query, tickers, years)
+        if any(sub.ticker is None for sub in subs):
+            return {
+                "error": 'name the companies to search: pass companies (or ["all"]), '
+                "or name them in the query",
+                "corpus": self._corpus(),
+            }
+        result = self.search.search(query, k, tickers, years)
+        return {
+            "query": query,
+            "searches": [
+                {"query": s.query, "company": s.ticker, "fiscal_years": s.fiscal_years}
+                for s in result.searches
+            ],
+            "chunks": [chunk_view(c) for c in result.chunks],
+        }
 
     def get_section(self, company: str, fiscal_year: int, item: str, page: int = 1) -> dict:
         tickers, unknown = self._tickers([company])
@@ -249,12 +271,9 @@ def toolbox_from_settings(
     from pathlib import Path
 
     from tenk_agent.acquisition.edgar import EdgarClient
-    from tenk_agent.retrieval.search import SubQuestionRetriever
 
     store = Store(Path(settings["db"]))
-    hybrid = (
-        SubQuestionRetriever.from_settings(store, settings["retrieval"]).hybrid if search else None
-    )
+    retriever = SubQuestionRetriever.from_settings(store, settings["retrieval"]) if search else None
     client = None
     if live:
         user_agent = os.environ.get("SEC_USER_AGENT")
@@ -262,4 +281,4 @@ def toolbox_from_settings(
             raise SecError("live SEC requests need SEC_USER_AGENT, e.g. 'Name you@example.com'")
         client = EdgarClient(user_agent)
     sec = SecData(Path(settings["data_dir"]) / "raw" / "edgar", client)
-    return Toolbox(store, hybrid, sec, tool_set, settings["agent"]["section_chunks"])
+    return Toolbox(store, retriever, sec, tool_set, settings["agent"]["section_chunks"])

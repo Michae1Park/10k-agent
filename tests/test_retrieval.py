@@ -114,3 +114,15 @@ def test_rrf_fusion_rewards_agreement():
     chunks = {name: type("C", (), {"id": name})() for name in "abc"}
     fused = fuse([[chunks["a"], chunks["b"]], [chunks["b"], chunks["c"]]], rrf_k=60)
     assert [c.id for c in fused][0] == "b"
+
+
+def test_given_companies_and_years_replace_those_the_question_names(tmp_path):
+    decomposer = QueryDecomposer(make_store(tmp_path))
+    subs = decomposer.decompose("total net sales", ["AAPL", "NVDA"], [2025])
+    assert [(s.text, s.ticker, s.fiscal_years) for s in subs] == [
+        ("Apple Inc. (AAPL): total net sales", "AAPL", [2025]),
+        ("NVIDIA Corporation (NVDA): total net sales", "NVDA", [2025]),
+    ]
+    assert [(s.ticker, s.fiscal_years) for s in decomposer.decompose("total net sales")] == [
+        (None, None)
+    ]

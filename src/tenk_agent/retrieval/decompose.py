@@ -132,12 +132,22 @@ class QueryDecomposer:
     rewrite: bool = True
     fan_out: bool = True
 
-    def decompose(self, question: str) -> list[SubQuestion]:
-        named = companies_in(question)
-        tickers = None
-        if not named and self.fan_out and ASKS_WHICH_COMPANY.search(question):
-            tickers = sorted({f.ticker for f in self.store.filings()})
+    def decompose(
+        self,
+        question: str,
+        tickers: list[str] | None = None,
+        fiscal_years: list[int] | None = None,
+    ) -> list[SubQuestion]:
+        """tickers, fiscal_years: given by the caller (the agent's search_filings), they replace
+        the companies and years found in the question; years are then taken as fiscal years,
+        exactly. Neither given: V1 as is."""
+        tickers = tickers or None
+        if tickers is None and not companies_in(question):
+            if self.fan_out and ASKS_WHICH_COMPANY.search(question):
+                tickers = sorted({f.ticker for f in self.store.filings()})
         pairs = slots(self.store, question, tickers)
+        if fiscal_years:
+            pairs = [(t, list(fiscal_years)) for t in dict.fromkeys(t for t, _ in pairs)]
         several = len({t for t, _ in pairs}) > 1
         return [
             SubQuestion(

@@ -321,3 +321,25 @@ def test_per_share_units_are_dollars():
     from tenk_agent.generation.verify import unit_scale
 
     assert unit_scale("USD/shares") == unit_scale("USD per share") == 1.0
+
+
+def test_search_filings_runs_v1_retrieval_and_asks_for_companies(tmp_path):
+    from tenk_agent.retrieval.decompose import QueryDecomposer
+    from tenk_agent.retrieval.index import embed_corpus
+    from tenk_agent.retrieval.search import HybridSearch, SubQuestionRetriever
+    from test_retrieval import FakeEmbedder, FakeReranker
+    from test_retrieval import make_store as two_company_store
+
+    store = two_company_store(tmp_path)
+    embed_corpus(store, FakeEmbedder())
+    retriever = SubQuestionRetriever(
+        QueryDecomposer(store), HybridSearch(store, FakeEmbedder(), FakeReranker())
+    )
+    tools = Toolbox(store, retriever, None)
+    result = tools.call("search_filings", {"query": "revenue", "companies": ["all"], "k": 2})
+    assert [s["company"] for s in result["searches"]] == ["AAPL", "NVDA"]
+    assert sorted(c["company"] for c in result["chunks"]) == ["AAPL", "NVDA"]
+    result = tools.call("search_filings", {"query": "revenue", "fiscal_years": [2025]})
+    assert result["error"].startswith("name the companies")
+    named = tools.call("search_filings", {"query": "Apple revenue in fiscal 2025"})
+    assert [c["chunk_id"] for c in named["chunks"]] == ["AAPL-FY2025-7-000"]

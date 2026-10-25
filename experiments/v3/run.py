@@ -89,7 +89,7 @@ def main() -> None:
     agents = {
         name: Agent(
             model,
-            Toolbox(store, pipeline.hybrid, sec, name, agent_config["section_chunks"]),
+            Toolbox(store, pipeline, sec, name, agent_config["section_chunks"]),
             max_calls=agent_config["max_calls"],
             max_turns=agent_config["max_turns"],
             max_tokens=generation["max_tokens"],
