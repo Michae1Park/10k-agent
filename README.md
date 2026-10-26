@@ -41,8 +41,6 @@ Each version adds one stage and was tested on its own before the next was built.
 | **V2 · Generation** | One model call over V1's top 8 → JSON answer with claims citing chunk IDs → each claim checked | [21 / 30 number questions right](experiments/V2_GENERATION.md), 8 / 8 declines, every numeric claim grounded |
 | **V3 · Agent** | The model drives: search, read sections, calculate, XBRL facts and EDGAR metadata (LangGraph) → V2's JSON answer and claim check | [90.0–91.5% of number and decline questions right vs V2's 71.7%](experiments/V3_AGENT.md) on 78 questions; the gain is tool use, not the SEC data |
 
-V4–V6 (verified agent, model comparison, fine-tuning) and the first V3 were built on an earlier V0–V2 and are kept in [`archive/`](archive/README.md) as references for rebuilding them on this pipeline.
-
 **Corpus:** Apple, Microsoft, Amazon, Alphabet, Meta, NVIDIA, Tesla, Netflix × fiscal years 2023–2025 (24 10-Ks); built and tested so far: the FY2025 filings of AAPL, AMZN, MSFT and NVDA. **Rules:** every number comes from a cited passage, never from the model's memory; unverifiable claims are shown as unverified, not hidden; no stock prices, forecasts or investment advice ([guarantees](docs/ARCHITECTURE.md#scope-and-guarantees)).
 
 ## Quickstart

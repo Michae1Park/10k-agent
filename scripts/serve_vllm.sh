@@ -4,7 +4,6 @@
 #   scripts/serve_vllm.sh qwen3.6-27b-fp8       # the default model (config.yaml llm, generation)
 #   scripts/serve_vllm.sh gemma-4-31b-fp8       # another model: --model openai:RedHatAI/gemma-4-31B-it-FP8-block
 #   scripts/serve_vllm.sh qwen3.5-9b            # a smaller one: --model openai:Qwen/Qwen3.5-9B
-#   scripts/serve_vllm.sh qwen3.5-9b-v6         # V6 fine-tune (archive/): --model openai:tenk/qwen3.5-9b-v6
 #   scripts/serve_vllm.sh gpt-oss-20b           # the V2 judge, on port 8002 (experiments/v2/judge.py)
 #
 # Everything must fit on one L40S (48 GB). The tenk process also keeps the embedder and
@@ -24,12 +23,6 @@ CPUS=${CPUS:-16-31}
 case "$preset" in
   qwen3.5-9b)
     model=Qwen/Qwen3.5-9B
-    args=(--dtype bfloat16 --tool-call-parser qwen3_coder --reasoning-parser qwen3)
-    ;;
-  qwen3.5-9b-v6)
-    # The merged V6 fine-tune (archive/scripts/finetune.sh merge); same settings as its base.
-    model=${TUNED_MODEL:-data/finetune/v6/merged}
-    name=${TUNED_NAME:-tenk/qwen3.5-9b-v6}  # variants: TUNED_MODEL=data/finetune/v6-r64/merged TUNED_NAME=tenk/qwen3.5-9b-v6-r64
     args=(--dtype bfloat16 --tool-call-parser qwen3_coder --reasoning-parser qwen3)
     ;;
   qwen3.6-27b-fp8)
@@ -69,7 +62,7 @@ case "$preset" in
     args=(--dtype bfloat16 --tool-call-parser hermes --reasoning-parser qwen3)
     ;;
   *)
-    echo "unknown preset $preset (qwen3.6-27b-fp8, gemma-4-31b-fp8, qwen3.5-9b, qwen3.5-9b-v6, gpt-oss-20b, qwen3-1.7b)" >&2
+    echo "unknown preset $preset (qwen3.6-27b-fp8, gemma-4-31b-fp8, qwen3.5-9b, gpt-oss-20b, qwen3-1.7b)" >&2
     exit 2
     ;;
 esac

@@ -10,13 +10,13 @@ Questions about the annual reports (10-Ks) of a fixed corpus, answered from the 
 |---|---|
 | Every number comes from a cited passage, never from the model's memory | The prompt requires it; each claim is then checked against the chunks (or the XBRL facts) it cites ([generation spec](stages/V2_GENERATION.md#how-it-works), [D-036](DECISIONS.md#d-036)) |
 | Fiscal years come from filing metadata, never from text | `filings.fiscal_year` from the XBRL cover page ([D-004](DECISIONS.md#d-004)) |
-| Unverifiable claims are shown as unverified, not hidden | Claim status `unverified`, with the reason ([D-015 in the archive](../archive/docs/DECISIONS.md#d-015)) |
+| Unverifiable claims are shown as unverified, not hidden | Claim status `unverified`, with the reason |
 | Questions outside the corpus are declined | `abstained: true` and a scope notice |
 | No stock prices, forecasts or investment advice | Declined by the prompt ([D-001](DECISIONS.md#d-001)) |
 
 **Corpus.** Apple, Microsoft, Amazon, Alphabet, Meta, NVIDIA, Tesla, Netflix × fiscal years 2023–2025 (24 10-Ks), chosen because their fiscal years end in different months: "NVIDIA's revenue in 2024" is mostly its fiscal 2025 ([D-001](DECISIONS.md#d-001)). Built and tested so far: the FY2025 filings of AAPL, AMZN, MSFT and NVDA.
 
-**Out of scope.** Prices, forecasts, advice ([D-001](DECISIONS.md#d-001)); a public deployment ([D-023](DECISIONS.md#d-023)); verification-by-tools, model comparison and fine-tuning, kept in [`archive/`](../archive/README.md).
+**Out of scope.** Prices, forecasts, advice ([D-001](DECISIONS.md#d-001)); a public deployment ([D-023](DECISIONS.md#d-023)); verification-by-tools, model comparison and fine-tuning.
 
 ## Pipeline
 
@@ -96,7 +96,6 @@ Evaluation never runs the pipeline, including the claim check. It takes the pipe
 | `src/tenk_agent/prompts/` | Every LLM prompt, one Markdown file per task, its output schema beside it: `structure.md` + `structure.schema.json`, `answer.md`, `agent.md`, `judge.md` |
 | `experiments/` | One folder per experiment (V0–V3): its runner and config; `V*.md` design and results |
 | `evaluation/` | `gold/`: the reviewed gold question sets (JSONL, plus review PDFs); `results/<run>/`: each run's end-to-end report (`tenk report`). The code that loads, scores and reports is `src/tenk_agent/evaluation/` |
-| `archive/` | The first V3, V4–V6, for reference only |
 | `docs/` | This documentation |
 | `scripts/` | `serve_vllm.sh` (open models) |
 | `config.yaml` | Every setting for the CLI, per stage |
