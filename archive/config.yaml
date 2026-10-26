@@ -31,7 +31,7 @@ answer:                                         # V2 · docs/V2_RAG.md
   k: 8                                          # chunks given to the model
   context_chars: 0                              # env TENK_CONTEXT_CHARS · V7: cap on excerpt text per call (Ask and search_filings); 0 = all k
 
-agent:                                          # V3 · docs/V3_AGENT.md
+agent:                                          # V3
   max_tool_calls: 15                            # env TENK_MAX_TOOL_CALLS
   section_chars: 24000                          # one page of get_filing_section
   structured_data: false                        # env TENK_STRUCTURED_DATA · ablation: add the XBRL tool
