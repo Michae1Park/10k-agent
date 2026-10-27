@@ -114,6 +114,13 @@ CREATE TABLE IF NOT EXISTS facts (
     source TEXT NOT NULL          -- companyfacts | ixbrl
 );
 CREATE INDEX IF NOT EXISTS facts_lookup ON facts (ticker, concept, filed);
+CREATE TABLE IF NOT EXISTS market (  -- prices, macro, ERP (acquisition/market.py)
+    series TEXT NOT NULL,         -- px:<T>:close|adj_close|volume · macro:<SERIES> · erp:damodaran
+    date TEXT NOT NULL,           -- the observation's date
+    value REAL NOT NULL,
+    published TEXT NOT NULL,      -- when this value became public (a vintage, for revised series)
+    PRIMARY KEY (series, date, published)
+);
 """
 
 # Older databases lack these columns; add them in place. V3 databases (all 10-Ks) gain the V4
@@ -369,6 +376,26 @@ class Store:
         sql = f"SELECT * FROM facts f WHERE f.id = ? AND {visible}"
         rows = self._query(sql, [fact_id, *params])
         return dict(rows[0]) | {"dims": json.loads(rows[0]["dims"])} if rows else None
+
+    def add_market(self, rows: list[tuple[str, str, float, str]]) -> None:
+        """(series, date, value, published) rows; replaces the table's contents for their series."""
+        with self._lock, self.db:
+            for series in {r[0] for r in rows}:
+                self.db.execute("DELETE FROM market WHERE series = ?", (series,))
+            self.db.executemany("INSERT OR REPLACE INTO market VALUES (?, ?, ?, ?)", rows)
+
+    def series(self, name: str, start: str | None = None) -> list[tuple[str, float]]:
+        """(date, value) of a market series as known at the store's AsOf: observations dated and
+        published before it, each at its latest visible vintage, oldest first."""
+        dated, p1 = self.asof.sql("m", "date")
+        published, p2 = self.asof.sql("m", "published")
+        rows = self._query(
+            f"SELECT m.date, m.value FROM market m WHERE m.series = ? AND {dated} AND {published} "
+            "AND m.date >= ? AND m.published = (SELECT MAX(n.published) FROM market n WHERE "
+            f"n.series = m.series AND n.date = m.date AND n.published < ?) ORDER BY m.date",
+            [name, *p1, *p2, start or "0000", *p2],
+        )
+        return [(r["date"], r["value"]) for r in rows]
 
     def rebuild_search_index(self) -> None:
         with self._lock, self.db:

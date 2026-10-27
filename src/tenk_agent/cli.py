@@ -41,9 +41,11 @@ def main(argv: list[str] | None = None) -> int:
     fetch.add_argument("--refresh", action="store_true", help="re-download cached files")
     fetch.add_argument("--forms", nargs="*", choices=("10-K", "10-Q", "ER"),
                        help="V4 corpus: forms to fetch (default: all three)")
+    fetch.add_argument("--market", action="store_true",
+                       help="V4 corpus: prices (TIINGO_API_KEY), macro (FRED_API_KEY) and ERP only")
 
     build = commands.add_parser("build", help="V0 chunks of every filing → V1 database")
-    stages = ("chunk", "load", "embed", "pages", "facts")  # build.STAGES
+    stages = ("chunk", "load", "embed", "pages", "facts", "market")  # build.STAGES
     build.add_argument(
         "--stage", action="append", choices=stages, help="default: chunk, load, embed"
     )
@@ -133,6 +135,17 @@ def _fetch(args: argparse.Namespace, settings: dict) -> int:
         print("Set SEC_USER_AGENT, e.g. 'Name you@example.com'", file=sys.stderr)
         return 2
     companies = [company_by_ticker(t) for t in args.tickers] if args.tickers else list(COMPANIES)
+    if FISCAL_YEARS is None and args.market:  # V4: prices, macro, ERP
+        from tenk_agent.acquisition import market
+
+        raw = Path(DATA_DIR) / "raw"
+        problems = market.fetch_prices([c.ticker for c in companies], raw,
+                                       os.environ["TIINGO_API_KEY"], args.refresh)
+        problems += market.fetch_macro(raw, os.environ["FRED_API_KEY"], args.refresh)
+        problems += market.fetch_erp(raw, args.refresh)
+        for problem in problems:
+            print(problem, file=sys.stderr)
+        return 1 if problems else 0
     if FISCAL_YEARS is None:  # V4: every filing in the window (acquisition/filings.py)
         from tenk_agent.acquisition import filings
 
