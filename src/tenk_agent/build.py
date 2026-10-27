@@ -8,6 +8,7 @@
   embed  vectors for every chunk (and child). Stop vLLM first, or set retrieval.device: cpu
   pages  each chunk's pages, written into an already built <method>.db in place
   facts  V4: XBRL company facts and inline facts of every 10-K and 10-Q into <method>.db
+  market V4: prices, macro and ERP from the fetch caches into <method>.db
 
 Filings are read from <data_dir>/raw/filings/<TICKER>/FY<year>/ (tenk fetch); each one's work
 files (blocks, labels, document, chunks-<method>.json, chunk.log) go to <out>/<TICKER>-FY<year>/.
@@ -29,7 +30,7 @@ from tenk_agent.retrieval.embeddings import get_embedder
 from tenk_agent.retrieval.index import add_pages, embed_corpus, load
 from tenk_agent.store import Store
 
-STAGES = ("chunk", "load", "embed", "pages", "facts")
+STAGES = ("chunk", "load", "embed", "pages", "facts", "market")
 
 
 def filing_dirs(
@@ -172,6 +173,16 @@ def build(filings: list[Path], out: Path, settings: dict, methods, stages, jobs:
     if "pages" in stages:
         for method in methods:
             pages_db(method, filings, out)
+    if "market" in stages:
+        from tenk_agent.acquisition.market import market_rows
+        from tenk_agent.asof import AsOf
+
+        for method in methods:
+            store = Store(out / f"{method}.db", AsOf.today())  # loading only
+            store.enable_facts()
+            rows = market_rows(filings[0].parents[2])
+            store.add_market(rows)
+            print(f"{method}: market {len(rows)} rows → {out / f'{method}.db'}")
     if "facts" in stages:
         from tenk_agent.corpus import WINDOW_START
 
