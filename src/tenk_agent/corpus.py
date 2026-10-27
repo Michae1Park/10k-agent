@@ -42,6 +42,9 @@ def load(path: Path) -> tuple[tuple[Company, ...], tuple[int, ...] | None]:
 
 
 COMPANIES, FISCAL_YEARS = load(companies_path())
+_FILE = yaml.safe_load(companies_path().read_text())
+DATA_DIR: str | None = _FILE.get("data_dir")  # None: config.yaml's data_dir (V3)
+WINDOW_START: str = str(_FILE.get("window", {}).get("since", "2023-01-01"))
 
 
 def company_by_ticker(ticker: str) -> Company:

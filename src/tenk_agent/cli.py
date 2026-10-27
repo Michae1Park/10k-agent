@@ -1,6 +1,6 @@
 """tenk: the V0–V2 pipeline from the command line. Settings: config.yaml (--config, TENK_CONFIG).
 
-tenk fetch                     download the corpus 10-Ks from EDGAR
+tenk fetch                     download the corpus filings from EDGAR (V4: 10-K, 10-Q, releases)
 tenk build                     V0 preprocess + chunk every filing, then V1's database + vectors
 tenk search "question"         V1: sub-questions and the top k chunks
 tenk ask "question"            V2: one cited answer
@@ -21,7 +21,7 @@ from datetime import date
 from pathlib import Path
 
 from tenk_agent import config as config_file
-from tenk_agent.corpus import COMPANIES, FISCAL_YEARS, company_by_ticker
+from tenk_agent.corpus import COMPANIES, DATA_DIR, FISCAL_YEARS, WINDOW_START, company_by_ticker
 from tenk_agent.store import ChunkRecord, Store
 
 GOLD = Path("evaluation/gold/generation-gold-fy2025.jsonl")
@@ -39,6 +39,8 @@ def main(argv: list[str] | None = None) -> int:
     fetch = commands.add_parser("fetch", help="download the corpus 10-Ks from EDGAR")
     fetch.add_argument("--tickers", nargs="*", help="subset of corpus tickers (default: all)")
     fetch.add_argument("--refresh", action="store_true", help="re-download cached files")
+    fetch.add_argument("--forms", nargs="*", choices=("10-K", "10-Q", "ER"),
+                       help="V4 corpus: forms to fetch (default: all three)")
 
     build = commands.add_parser("build", help="V0 chunks of every filing → V1 database")
     stages = ("chunk", "load", "embed", "pages")  # build.STAGES
@@ -131,6 +133,16 @@ def _fetch(args: argparse.Namespace, settings: dict) -> int:
         print("Set SEC_USER_AGENT, e.g. 'Name you@example.com'", file=sys.stderr)
         return 2
     companies = [company_by_ticker(t) for t in args.tickers] if args.tickers else list(COMPANIES)
+    if FISCAL_YEARS is None:  # V4: every filing in the window (acquisition/filings.py)
+        from tenk_agent.acquisition import filings
+
+        forms = tuple(args.forms or filings.FORMS)
+        problems = filings.fetch(
+            companies, Path(DATA_DIR), user_agent, WINDOW_START, forms, args.refresh
+        )
+        for problem in problems:
+            print(problem, file=sys.stderr)
+        return 1 if problems else 0
     ok = fetch(companies, FISCAL_YEARS, Path(settings["data_dir"]), user_agent, args.refresh)
     return 0 if ok else 1
 
