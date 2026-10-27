@@ -97,22 +97,39 @@ def _number(value) -> float | None:
 
 
 def growth_pair(quote: str) -> tuple[float, float] | None:
-    """(earlier, later) when a table row shows two values and the growth between them
-    ("| Trips | 3,268 | 3,867 | 18% |"), else None: the later one is the reported quarter."""
+    """(earlier, later) when a table row shows two values and the growth between them, else
+    None: the later one is the reported quarter. Either column order occurs: UBER prints prior
+    then current ("| Trips | 3,268 | 3,867 | 18% |"), TRIP and EXPE current then prior
+    ("| Viator | $294 | $270 | 9% |"), so the sign of the growth decides. Losses (parenthesized
+    values) have no reliable sign convention; for them the order is taken as prior, current."""
     cells = [c.strip() for c in quote.strip("| ").split("|")]
     values = [v for c in cells if (v := _cell_number(c)) is not None]
-    growth = [float(m.group(1)) for c in cells if (m := re.fullmatch(r"\(?(-?[\d.]+)\)?\s?%", c))]
+    growth = [_growth(m.group(1)) for c in cells if (m := re.fullmatch(r"(\(?-?[\d.]+\)?)\s?%", c))]
     for i in range(len(values) - 1):
-        a, b = values[i], values[i + 1]
-        if a and any(abs((b / a - 1) * 100 - abs(g)) <= 1.0 for g in growth):
+        (a, loss_a), (b, loss_b) = values[i], values[i + 1]
+        if not a or not b:
+            continue
+        if loss_a or loss_b:
+            if any(abs(abs(b / a - 1) * 100 - abs(g)) <= 1.0 for g in growth):
+                return a, b
+            continue
+        if any(abs((b / a - 1) * 100 - g) <= 1.0 for g in growth):
             return a, b
+        if any(abs((a / b - 1) * 100 - g) <= 1.0 for g in growth):
+            return b, a
     return None
 
 
-def _cell_number(cell: str) -> float | None:
+def _growth(cell: str) -> float:
+    number = float(cell.strip("()"))
+    return -abs(number) if cell.startswith("(") else number
+
+
+def _cell_number(cell: str) -> tuple[float, bool] | None:
+    """(magnitude, is a loss) of a numeric cell."""
     if "%" in cell or not re.fullmatch(r"\(?\$?\s?[\d,]+(\.\d+)?\)?", cell):
         return None
-    return float(re.sub(r"[^\d.]", "", cell))
+    return float(re.sub(r"[^\d.]", "", cell)), cell.startswith("(")
 
 
 def _user(ticker: str, period: str, entry: dict, chunks: list[ChunkRecord]) -> str:
