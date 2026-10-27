@@ -25,7 +25,8 @@ Why the project looks the way it does: decisions, and the issues found along the
 | [D-029](#d-029) | 2026-10-13 | Open models by default: Qwen3.6-27B-FP8 generates, gpt-oss-20b is the fixed judge (second pass) | Accepted |
 | [D-034](#d-034) | 2026-10-21 | The renewed V0–V2 replace the old pipeline in `src/`; V3–V6 retired, V7 deleted; experiments run on `src/` | Accepted |
 | [D-035](#d-035) | 2026-10-22 | Docs by type: README, getting started, architecture + stage specs, decisions, contributing | Accepted |
-| [D-036](#d-036) | 2026-10-24 | V3 agent tools: 10-K search and sections, calculator, XBRL facts (cited directly), live EDGAR metadata only; cached, offline in evals | Accepted |
+| [D-036](#d-036) | 2026-10-24 | V3 agent tools: 10-K search and sections, calculator, XBRL facts (cited directly), live EDGAR metadata only; cached, offline in evals | Accepted; the section tool dropped by D-037 |
+| [D-037](#d-037) | 2026-10-26 | Drop the `get_section` tool: removing it changed no score beyond run-to-run variation and cut input tokens 6–14% | Accepted |
 
 ## Issues
 
@@ -106,6 +107,9 @@ Each doc has one job, so none mixes how-to with design. README: what it is, a de
 
 ### D-036
 V3 makes the model drive the work with tools, built on LangGraph: `search_filings` (V1's retrieval), `get_section`, `calculator`, `xbrl_facts` and `edgar_filings` ([tools.py](../src/tenk_agent/agent/tools.py)). **XBRL is now a source** (supersedes D-007): a value is cited by its fact, `xbrl:<TICKER>:<taxonomy>:<concept>:<accession>:<period end>`, and the claim check compares it with the cached fact. XBRL then no longer independently cross-checks the gold answers; gold answers stay checked against the 10-K text. **Live EDGAR returns metadata only** (filings, dates, accessions, links), never financial text, so the corpus scope of D-001 holds for text answers. Every SEC response is cached under `data/raw/edgar/`; evals run offline from the cache so runs are reproducible. Ablation: tool set `text` (no SEC tools) vs `full` separates the gain from tool use from the gain from XBRL.
+
+### D-037
+The agent had a `get_section` tool (one 10-K Item in order, a page of chunks at a time) as a fallback for a search that came back incomplete. It is removed. Ablation on the 78 questions, same model, server and claim check ([V3 §6, round 4](../experiments/V3_AGENT.md#6-iterations)): without it, `text` is right on 88.5% of questions (69 / 78) against 85.9% with it (67 / 78, and 67 / 78 in round 3); `full` 87.2% (68) against 85.9% (67; 69 in round 3). The baseline's own spread between two runs is as large (`full` 88.5% → 85.9%), so the difference is noise, and nothing got worse: input tokens per question fell 6% (`text`) and 14% (`full`), budget stops stayed at 4–5. The model used it in 7 (`text`) and 6 (`full`) of 78 questions, and was right on 3 of 7 with it and 4 of 7 without. Parent-child chunking already returns a hit with its whole subsection or table ([V0](stages/V0_PARSING_CHUNKING.md), [V1](stages/V1_RETRIEVAL.md)), and `search_filings` with the companies and years the agent names reaches the rest. The tool, its page-size knob (`section_chunks`), `Store.section_titles` and the prompt's mention of it are deleted. Amends D-036; one run per variant, so a small gain from the tool, under about three questions, cannot be excluded.
 
 ## Issue details
 

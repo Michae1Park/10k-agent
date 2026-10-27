@@ -72,9 +72,9 @@ Full design, metrics and results: [here](V3_AGENT.md).
 
 Agent: [agent/](../src/tenk_agent/agent/), prompt [agent.md](../src/tenk_agent/prompts/agent.md); experiment: [v3/](v3/). Run: `taskset -c 16-31 .venv/bin/python experiments/v3/run.py` (needs the vLLM server), then `v2/judge.py --config experiments/v3/config.yaml` with the judge served.
 
-- **Agent:** LangGraph loop over `Qwen3.6-27B`; tools `search_filings` (V1's search), `get_section`, `calculator`, and with SEC data `xbrl_facts`, `edgar_filings` (cached, offline). Answer and claim check as in V2, claims may cite XBRL facts
+- **Agent:** LangGraph loop over `Qwen3.6-27B`; tools `search_filings` (V1's search), `calculator`, and with SEC data `xbrl_facts`, `edgar_filings` (cached, offline). Answer and claim check as in V2, claims may cite XBRL facts
 - **Variants:** V2 rerun as the baseline; the agent with 10-K tools (`text`); with SEC tools too (`full`), to separate what tool use adds from what the data adds
-- **Result:** 90.0% (`text`) and 91.5% (`full`) of number and decline questions right against V2's 71.7%; held-out test split 19 and 18 of 24 against 14. Year ranges, multi-step and "which company" questions are where it gains
+- **Result:** 88.5% (`text`) and 87.2% (`full`) of 78 questions right against V2's 66.7%; held-out test split 18 and 19 of 24 against 14. The `get_section` tool was removed after an ablation showed it added nothing (§6 round 4). Year ranges, multi-step and "which company" questions are where it gains
 - **Test data:** 78 questions in one self-contained set: V2's 54, copied in, plus 24 new, reviewed: calculation, multi-step, SEC data, tool-selection negatives ([agent-gold-fy2025.jsonl](../evaluation/gold/agent-gold-fy2025.jsonl))
 - **Metrics:** V2's, plus calls per question, tool errors, repeats, budget stops, expected-tools recall and precision
 

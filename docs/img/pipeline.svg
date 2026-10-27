@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="640" viewBox="0 0 1180 640" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
   <title id="svgtitle">Pipeline</title>
-  <desc id="svgdesc">Build, once per corpus: EDGAR 10-K HTML is preprocessed with rules and an LLM structure agent, chunked parent-child, and stored in one SQLite file with chunks, FTS5 and vectors; SEC XBRL company facts and EDGAR submissions are cached as JSON. Ask, per question: the agent, a LangGraph loop, has the model call tools until it can answer: search_filings (hybrid search) and get_section read the index, calculator does arithmetic, xbrl_facts and edgar_filings read the SEC cache. The model answers with JSON claims citing chunk IDs, XBRL facts or accession numbers; code checks each claim against what it cites, and the result is a cited answer.</desc>
+  <desc id="svgdesc">Build, once per corpus: EDGAR 10-K HTML is preprocessed with rules and an LLM structure agent, chunked parent-child, and stored in one SQLite file with chunks, FTS5 and vectors; SEC XBRL company facts and EDGAR submissions are cached as JSON. Ask, per question: the agent, a LangGraph loop, has the model call tools until it can answer: search_filings (hybrid search) reads the index, calculator does arithmetic, xbrl_facts and edgar_filings read the SEC cache. The model answers with JSON claims citing chunk IDs, XBRL facts or accession numbers; code checks each claim against what it cites, and the result is a cited answer.</desc>
   <style>
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
@@ -75,28 +75,24 @@
   <rect class="work" x="266" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="326.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">search_filings</text>
   <text class="sub" x="326.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">hybrid search</text>
-  <rect class="work" x="398" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
-  <text class="name" x="458.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">get_section</text>
-  <text class="sub" x="458.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">read an Item</text>
-  <rect class="work" x="530" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
-  <text class="name" x="590.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">calculator</text>
-  <text class="sub" x="590.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">arithmetic</text>
-  <rect class="work" x="662" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
-  <text class="name" x="722.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">xbrl_facts</text>
-  <text class="sub" x="722.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">tagged figures</text>
+  <rect class="work" x="442" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="502.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">calculator</text>
+  <text class="sub" x="502.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">arithmetic</text>
+  <rect class="work" x="618" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="678.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">xbrl_facts</text>
+  <text class="sub" x="678.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">tagged figures</text>
   <rect class="work" x="794" y="525" width="120" height="60" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="854.0" y="549" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">edgar_filings</text>
   <text class="sub" x="854.0" y="575" text-anchor="middle" font-size="13" fill="#4a5a68">filing metadata</text>
   <path class="edge" d="M 475 450 V 500" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-start="url(#arrow)"/>
   <path class="edge" d="M 326 500 H 854" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
   <path class="edge" d="M 326 500 V 519" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <path class="edge" d="M 458 500 V 519" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <path class="edge" d="M 590 500 V 519" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <path class="edge" d="M 722 500 V 519" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 502 500 V 519" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 678 500 V 519" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <path class="edge" d="M 854 500 V 519" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <text class="elabel" x="485" y="482" text-anchor="start" font-size="13.5" fill="#46586a">tool calls and results</text>
   <path class="edge" d="M 813 170 V 235 H 245 V 555 H 260" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <text class="elabel" x="500" y="227" text-anchor="middle" font-size="13.5" fill="#46586a">search_filings and get_section read the index</text>
+  <text class="elabel" x="500" y="227" text-anchor="middle" font-size="13.5" fill="#46586a">search_filings reads the index</text>
   <path class="edge" d="M 1039 170 V 255 H 935 V 555 H 915" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <text class="elabel" x="925" y="275" text-anchor="end" font-size="13.5" fill="#46586a">xbrl_facts and edgar_filings read the cache</text>
 </svg>

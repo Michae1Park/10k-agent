@@ -1,8 +1,8 @@
 # V3 · Agent
 
-**Goal:** whether letting the model drive the work with tools (search again, read a section, calculate, look up SEC data) fixes V2's failures, and how much of any gain comes from the SEC data rather than from the tool use itself.
+**Goal:** whether letting the model drive the work with tools (search again, calculate, look up SEC data) fixes V2's failures, and how much of any gain comes from the SEC data rather than from the tool use itself.
 
-**Result:** the agent gets **90.0%** of number and decline questions right with 10-K tools only, against V2's **71.7%** on the same 78 questions, model and server. Adding XBRL and EDGAR tools gives **91.5%**: about the same score, reached differently. On the held-out test split (24): V2 14, agent 19 (text tools) and 18 (with SEC data). With the text questions judged, overall: V2 66.7%, agent 85.9% / 88.5%. Run 2026-10-25 with `search_filings` as V1's full retrieval (round 3, §6).
+**Result:** the agent gets **90.0%** of number and decline questions right with 10-K tools only, against V2's **71.7%** on the same 78 questions, model and server. Adding XBRL and EDGAR tools gives **91.5%**: about the same score, reached differently. On the held-out test split (24): V2 14, agent 19 (text tools) and 18 (with SEC data). With the text questions judged, overall: V2 66.7%, agent 85.9% / 88.5%. Run 2026-10-25 with `search_filings` as V1's full retrieval (round 3, §6). **The tables on this page are round 3, run with a `get_section` tool.** Round 4 (2026-10-26, §6) tested the agent without it and removed it: 88.5% (`text`) and 87.2% (`full`) of the 78 right, against 85.9% and 85.9% for a rerun with it, so the tool added nothing.
 
 | Variant | Correct (all 78) | Number and decline | Text, judged | Test split (24) | Declined right | Wrong declines | Numeric claims grounded | Numbers in claims | Seconds |
 |---|---|---|---|---|---|---|---|---|---|
@@ -52,7 +52,7 @@ Plus one false premise ("Apple's net income fell in fiscal 2025…": it rose 19.
 | Variant | Tools | Context | Measures |
 |---|---|---|---|
 | **v2** | none | V1's top 8, then one call ([V2](V2_GENERATION.md)) | The baseline, rerun on the same server and scoring |
-| **text** | `search_filings`, `get_section`, `calculator` | What the agent fetches | What tool use adds |
+| **text** | `search_filings`, `calculator` (round 3: + `get_section`) | What the agent fetches | What tool use adds |
 | **full** | + `xbrl_facts`, `edgar_filings` | Also XBRL facts and filing metadata | What the SEC data adds on top |
 
 SEC data comes from the cache (`data/raw/edgar/`, fetched 2026-09-30) with the client off: no request leaves the machine during a run ([D-036](../docs/DECISIONS.md#d-036)).
@@ -133,6 +133,8 @@ The prompt was changed on dev questions only (§6); the test split was run but n
 
 ### Tool use
 
+Round 3, with `get_section`.
+
 | | text | full |
 |---|---|---|
 | Calls per question (max) | 3.9 (20) | 4.7 (19) |
@@ -177,8 +179,28 @@ The prompt and loop were fixed on dev questions, each fix for a failure seen in 
 | | Stop at 20k input tokens | One run exceeded the server's 32k context |
 | Round 2 rerun | Only a JSON object with `answer` is an answer (20 affected runs rerun) | On the answer turn the model sometimes wrote a tool call as text, whose JSON arguments were taken for the answer: 9 empty answers |
 | Round 3 (2026-10-25) | `search_filings` is V1's whole retrieval: sub-questions per company and filing, round-robin merge, `k` 8 in all (was 4 per company). `companies` / `fiscal_years` given replace those in the query; no company → an error. Prompt: pass the companies | The agent builds on V1 exactly; round 2 ran only V1's hybrid search, one search per company |
+| Round 4 (2026-10-26) | `get_section` removed: the tool, its `section_chunks` knob and the prompt's one mention of it | Ablation below: no score change beyond run-to-run spread, 6–14% fewer input tokens ([D-037](../docs/DECISIONS.md#d-037)) |
 
 Round 1 (before the grounding fix): `text` 85.2%, `full` 91.5% of number and decline questions, `full` 84.1% grounded; kept in `output/generation/v3-qwen3.6-27b-fp8-round1/`. Round 2 (search per company): `text` 55 / 60 (91.7%), `full` 54 / 59 (91.5%), overall 88.5% / 88.5%, test 18 / 17, every claim grounded; kept in `output/generation/v3-qwen3.6-27b-fp8-round2/`. Round 3 is within a question of round 2 on every headline number. Between rounds the two agent variants move by up to 7 points, so a difference of a few points between `text` and `full`, or between rounds, is within run-to-run variation; V2's gap is not.
+
+### Round 4: is `get_section` needed?
+
+`get_section` (one Item in order, 4 chunks a page) was the agent's fallback when a search came back incomplete. Parent-child chunks already return a hit with its whole subsection or table, so it might be redundant. Test: four variants in one session, same model, server and claim check, all 78 questions: `text` and `full` as in round 3 (a rerun), and `text-no-section` and `full-no-section` with the tool and the prompt's one mention of it removed. Output: `output/generation/v3-ablation-section/` (git-ignored). The rule, set before looking at scores: remove the tool if the no-section scores sit within the baseline's own run-to-run spread (the rerun against round 3) and calls and tokens don't get worse.
+
+| Variant | Correct (all 78) | Test split (24) | Declined right | Wrong declines | Numbers in claims | Numeric claims grounded | Calls / question | Input tokens / question | Seconds |
+|---|---|---|---|---|---|---|---|---|---|
+| `text`, round 3 (with the tool) | 85.9% (67) | 19 | 92.3% | 1.5% | 55.1% | 97.9% | 3.86 | 32,965 | 86 |
+| `text`, rerun (with the tool) | 85.9% (67) | 18 | 92.3% | 0.0% | 61.8% | 98.6% | 3.41 | 28,015 | 90 |
+| **`text-no-section`** | **88.5% (69)** | 18 | 92.3% | 1.5% | 64.7% | 99.3% | 3.17 | 26,239 | 82 |
+| `full`, round 3 (with the tool) | 88.5% (69) | 18 | 100% | 0.0% | 77.4% | 99.4% | 4.69 | 26,217 | 91 |
+| `full`, rerun (with the tool) | 85.9% (67) | 18 | 100% | 0.0% | 77.4% | 99.3% | 4.41 | 25,035 | 96 |
+| **`full-no-section`** | **87.2% (68)** | 19 | 100% | 0.0% | 74.5% | 100% | 4.65 | 21,586 | 93 |
+
+- **No score fell.** Without the tool, `text` is 2 questions above its rerun and `full` 1 above (against round 3: +2 and −1). The baseline's two runs differ by 0 questions in score for `text` and 2 for `full`, and flip the outcome of 4 and 2 questions; removing the tool flips 6 and 3. The change is the size of the noise.
+- **It is cheaper.** Input tokens per question fall 6% (`text`) and 14% (`full`). Calls per question: 3.41 → 3.17 for `text`, 4.41 → 4.65 for `full` (a few more calculator and search calls). Budget stops: 5 → 5 and 5 → 4.
+- **It was rarely used.** In the rerun, `get_section` was called 32 times in 7 questions (`text`) and 19 times in 6 (`full`) of 78, mostly comparisons and declines the model was already struggling with (round 3: 13 calls in a row on `cmp-capex-all4-fy2025`). On those questions the answer was right in 3 of 7 with the tool and 4 of 7 without (`text`), and 3 of 6 both ways (`full`).
+- **The model did not miss it.** No call to the removed tool in `text-no-section`, one unknown-tool error in `full-no-section`, no format errors.
+- **Limits.** One run per variant, and the rounds above moved by up to 7 points, so a gain from the tool of under about three questions cannot be excluded. Text answers were judged by `gpt-oss-20b` as before. The ablation ran on the code before the removal, with two extra tool sets (`text-no-section`, `full-no-section`) that are not kept; the shipped agent is the no-section one.
 
 ---
 

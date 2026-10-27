@@ -21,7 +21,7 @@ Questions about the annual reports (10-Ks) of a fixed corpus, answered from the 
 ## Pipeline
 
 <p align="center">
-  <img src="img/pipeline.svg" alt="Pipeline. Build, once per corpus: EDGAR 10-K HTML, preprocess (rules and an LLM structure agent), parent-child chunking, one SQLite file with chunks, FTS5 and vectors. SEC XBRL facts and EDGAR submissions cached as JSON. Ask, per question: the agent, a LangGraph loop, calls tools until it can answer: search_filings (hybrid search) and get_section read the index, calculator, and xbrl_facts and edgar_filings read the SEC cache; it answers with JSON claims citing IDs; claim check (code only); cited answer" width="100%">
+  <img src="img/pipeline.svg" alt="Pipeline. Build, once per corpus: EDGAR 10-K HTML, preprocess (rules and an LLM structure agent), parent-child chunking, one SQLite file with chunks, FTS5 and vectors. SEC XBRL facts and EDGAR submissions cached as JSON. Ask, per question: the agent, a LangGraph loop, calls tools until it can answer: search_filings (hybrid search) reads the index, calculator, and xbrl_facts and edgar_filings read the SEC cache; it answers with JSON claims citing IDs; claim check (code only); cited answer" width="100%">
 </p>
 
 The system was built in stages (the V0–V3 experiments), each tested on its own before the next was built. The specs and experiment reports keep those names.
@@ -31,7 +31,7 @@ The system was built in stages (the V0–V3 experiments), each tested on its own
 | **Parsing and chunking** | 10-K HTML → blocks (rules) → labels (LLM structure agent, validated and repaired) → one structured document → chunks, three ways | [spec](stages/V0_PARSING_CHUNKING.md) | [V0](../experiments/V0_PARSING_CHUNKING.md): rule-based and parent-child level (~93% exact heading paths, every risk factor on its own) |
 | **Retrieval (`search_filings`)** | Sub-questions per company and filing → keyword + dense → RRF → rerank → round-robin. No LLM | [spec](stages/V1_RETRIEVAL.md) | [V1](../experiments/V1_RETRIEVAL.md): parent-child best, Recall@5 87.3%, MRR 0.758 |
 | **Generation and claim check** | JSON answer with claims citing chunk IDs → each claim checked | [spec](stages/V2_GENERATION.md) | [V2](../experiments/V2_GENERATION.md): 21 / 30 number questions right, 8 / 8 declines, every numeric claim grounded (one call over the top 8 chunks, no tools) |
-| **Agent** | The model drives: search, read sections, calculate, XBRL facts and EDGAR metadata (LangGraph) → JSON answer and claim check | [spec](stages/V3_AGENT.md) | [V3](../experiments/V3_AGENT.md): 90.0% (10-K tools) and 91.5% (+ SEC data) of number and decline questions right vs V2's 71.7% |
+| **Agent** | The model drives: search, calculate, XBRL facts and EDGAR metadata (LangGraph) → JSON answer and claim check | [spec](stages/V3_AGENT.md) | [V3](../experiments/V3_AGENT.md): 88.5% (10-K tools) and 87.2% (+ SEC data) of 78 questions right vs V2's 66.7% |
 
 Each stage spec covers: data, knobs, outputs, how it works, gotchas.
 
