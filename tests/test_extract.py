@@ -194,3 +194,14 @@ def test_registry_covers_all_eight_companies():
     for ticker, entry in reg.items():
         for spec in [*entry["kpis"].values(), *(entry.get("guidance") or {}).values()]:
             assert spec["unit"], ticker
+
+
+def test_squash_ignores_zero_width_spaces():
+    assert extract._squash("Diluted $\u200b 0.42\u200b  $\u200b 0.51") == "Diluted $ 0.42 $ 0.51"
+
+
+def test_target_periods_normalize():
+    from tenk_agent.evaluation.extraction import _quarter
+
+    assert _quarter("Q3 2026") == _quarter("2026Q3") == "2026Q3"
+    assert _quarter("FY 2026") == _quarter("full-year 2026") == _quarter("2026") == "FY2026"

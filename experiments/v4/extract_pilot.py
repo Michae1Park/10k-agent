@@ -1,4 +1,4 @@
-"""V4.1 pilot: extract BKNG and UBER releases and score them against the gold labels.
+"""V4.1: extract every release in the gold set and score it against the labels.
 
   taskset -c 16-31 uv run python experiments/v4/extract_pilot.py [--model anthropic:<id>]
 """
@@ -25,8 +25,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="openai:Qwen/Qwen3.6-27B-FP8")
     ap.add_argument("--label", default="pilot-qwen3.6-27b")
+    ap.add_argument("--tickers", nargs="*")
     args = ap.parse_args()
-    gold = load_gold(GOLD)
+    gold = load_gold(GOLD, args.tickers)
     releases = sorted({(g["ticker"], g["period"]) for g in gold})
     filings = {
         (f.ticker, f"{f.fiscal_year}{f.fiscal_period}"): f.filing_date

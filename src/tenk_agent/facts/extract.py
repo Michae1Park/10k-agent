@@ -61,7 +61,8 @@ def release_chunks(store: Store, ticker: str, period: str) -> list[ChunkRecord]:
 
 
 def _squash(text: str) -> str:
-    return re.sub(r"\s+", " ", text).strip()
+    """Whitespace collapsed; zero-width spaces (in image-based releases' text) dropped."""
+    return re.sub(r"\s+", " ", text.replace("\u200b", "")).strip()
 
 
 def validate(row: dict, kind: str, chunks: dict[str, ChunkRecord], entry: dict) -> str | None:
