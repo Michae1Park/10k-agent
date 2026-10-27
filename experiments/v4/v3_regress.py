@@ -36,3 +36,14 @@ print("keyword search", h(hits), "child search", h(kids))
 print("filings", h([(f.ticker, f.fiscal_year, f.accession_no, f.filing_date) for f in db.filings()]),
       "chunks()", h([c.id for c in db.chunks("AAPL", 2025)]),
       "get_chunk", h([db.get_chunk(c).text if db.get_chunk(c) else None for c in hits[0]]))
+# The claim check over every claim of the saved V3 runs (verify.py, refs.py).
+from tenk_agent.agent.sec import SecData
+from tenk_agent.generation.verify import verify_claim
+sec = SecData(Path("data/raw/edgar"))
+checked = []
+for run in sorted(Path("output/generation").glob("v3-*/results.json")):
+    for row in json.loads(run.read_text()):
+        for claim in row.get("claims") or []:
+            out = verify_claim({k: v for k, v in claim.items() if k not in ("status", "status_reason")}, db, sec)
+            checked.append((run.parent.name, row["id"], claim.get("id"), out["status"], out["status_reason"]))
+print("claim check", len(checked), h(checked))

@@ -5,3 +5,4 @@ NVDA-FY2025 blocks True document True violations 5 c0e48888a56b919c
 embedding texts 1030 3288 7e3955662008bdd9 0e1d8520727ad931
 keyword search 3eeb4dd06ce38e5e child search 3e859751beba7276
 filings 19737c768a133350 chunks() 35effc232c712271 get_chunk 7e7f358635cb268a
+claim check 2348 04a1a25017396831
