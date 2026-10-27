@@ -14,18 +14,13 @@ import logging
 from pathlib import Path
 
 from tenk_agent.corpus import COMPANIES, company_by_ticker
+from tenk_agent.preprocess.forms import TEN_K, form_spec
 from tenk_agent.retrieval.embeddings import Embedder
 from tenk_agent.store import ChildRecord, ChunkRecord, FilingRecord, Store
 
 log = logging.getLogger(__name__)
 
-ITEM_NAMES = {
-    "1": "Business",
-    "1A": "Risk Factors",
-    "7": "Management's Discussion and Analysis",
-    "7A": "Market Risk",
-    "8": "Financial Statements",
-}
+ITEM_NAMES = TEN_K.item_names  # the 10-K's, for callers not yet form-aware
 COMPANY_NAMES = {c.ticker: c.name for c in COMPANIES}
 
 
@@ -34,9 +29,11 @@ COMPANY_NAMES = {c.ticker: c.name for c in COMPANIES}
 
 def chunk_header(chunk: ChunkRecord | ChildRecord, company_name: str) -> str:
     """Context line prepended to chunk text for embedding and reranking (not for display)."""
-    item = ITEM_NAMES.get(chunk.item, "")
+    spec = form_spec(getattr(chunk, "form", "10-K"))  # V3 chunks carry no form: all 10-Ks
+    item = spec.item_names.get(chunk.item, "")
     return (
-        f"{company_name} ({chunk.ticker}) fiscal {chunk.fiscal_year} 10-K, Item {chunk.item} {item}"
+        f"{company_name} ({chunk.ticker}) fiscal {chunk.fiscal_year} {spec.form}, "
+        f"Item {chunk.item} {item}"
     )
 
 

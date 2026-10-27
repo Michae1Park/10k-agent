@@ -8,6 +8,8 @@ prompt must name every value the schema allows, and the validator must check the
 import json
 import re
 
+import pytest
+
 from tenk_agent.preprocess.blocks import Block
 from tenk_agent.preprocess.validation import ITEMS, ROLE_FIELDS, is_item_table, role_fits_block
 from tenk_agent.prompts import PROMPTS
@@ -83,3 +85,17 @@ def test_other_tables_still_cannot_be_item_heading():
     ):
         assert not is_item_table(b)
         assert role_fits_block(b, {"role": "item_heading", "item": "1"}, None) is not None
+
+
+def test_form_spec_drives_the_item_rules():
+    from tenk_agent.preprocess.forms import FormSpec, form_spec
+    from tenk_agent.preprocess.validation import Context, items_in_order, statement_kinds_in_item_8
+
+    assert form_spec("10-K").items == tuple(ITEMS)
+    with pytest.raises(KeyError):
+        form_spec("10-Q")  # added in M6
+    other = FormSpec("X", ("B", "A"), frozenset({"A"}))
+    block = type("B", (), {"id": "b1"})()
+    ctx = Context(item="B", items=["B"], depth=0, previous={}, form=other)
+    assert items_in_order(block, {"item": "A"}, ctx) is None  # A follows B in this form
+    assert statement_kinds_in_item_8(block, {"kind": "statement"}, ctx)  # B holds no statements
