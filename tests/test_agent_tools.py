@@ -326,3 +326,17 @@ def test_search_filings_runs_v1_retrieval_and_asks_for_companies(tmp_path):
     assert result["error"].startswith("name the companies")
     named = tools.call("search_filings", {"query": "Apple revenue in fiscal 2025"})
     assert [c["chunk_id"] for c in named["chunks"]] == ["AAPL-FY2025-7-000"]
+
+
+def test_tool_sets_are_built_from_groups_in_v3_order():
+    from tenk_agent.agent.tools import GROUPS, TOOL_SETS
+
+    assert TOOL_SETS == {
+        "text": ("search_filings", "calculator"),
+        "full": ("search_filings", "calculator", "xbrl_facts", "edgar_filings"),
+    }
+    assert {t for tools in GROUPS.values() for t in tools} == set(TOOL_SETS["full"])
+
+
+def test_toolbox_sees_its_stores_asof(tools):
+    assert tools.asof == tools.store.asof
