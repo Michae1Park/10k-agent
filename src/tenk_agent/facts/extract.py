@@ -163,7 +163,8 @@ def extract(
             {
                 "role": "user",
                 "content": "These rows failed the checks; return only corrected "
-                f"versions of them (same JSON shape), or leave a row out:\n{problems}",
+                f"versions of them (same JSON shape), or leave a row out. A quote must be one "
+             f"unbroken piece of the chunk, without '...':\n{problems}",
             },
         ]
     out.exceptions = [{"kind": k, "row": r, "reason": why} for k, r, why in pending]

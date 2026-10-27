@@ -20,7 +20,7 @@ Only a JSON object:
 Rules:
 1. `kpis`: one row per registry KPI and segment, for **the reported quarter only** (not the prior-year column, not year-to-date, not full-year columns). Segment "total" for the consolidated figure, or when the KPI has no segments.
 2. `value` is in the registry's unit: "$51.0B" in USD millions is 51000; "3,867" trips in count millions is 3867. Per-share values in dollars. Negative values (shown in parentheses) are negative.
-3. `quote` is copied character for character from that chunk and contains the number you report: a table row, or the sentence or phrase. Keep it short: the row or the clause, not the paragraph.
+3. `quote` is copied character for character from that chunk and contains the number you report: a table row, or the sentence or phrase. Keep it short: the row or the clause, not the paragraph. Never shorten a quote with "..." or "…", and never join pieces from different places: code checks that the quote occurs in the chunk exactly. For a number in a long run of numbers (a quarterly series), quote the run from its label through the number.
 4. In a table with a prior-year and a current column, the current quarter is usually the later year. In a quarterly series (oldest first), take the column of the reported quarter; full-year totals may follow it.
 5. `guidance`: each numeric range or point the company gives for a future period, for metrics in the registry's guidance list. `low` = `high` for a point. `basis`: `level` (an amount), `growth_yoy` (a year-over-year growth range, in percent: "4% - 6%" is low 4, high 6), or `margin`. Skip words without numbers ("high single digits").
 6. A KPI the release does not show: leave it out. Never fill a gap.
