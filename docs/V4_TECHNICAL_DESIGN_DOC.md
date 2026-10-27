@@ -567,7 +567,7 @@ Today 15 modules assume 10-K only or `FISCAL_YEARS`: `cli.py`, `corpus.py`, `acq
 
 **Rules**
 - M1–M5 change no V3 behavior; a V3 test edited to pass is a regression unless the change is a rename noted in the commit.
-- The V3 agent gold rerun (vLLM, ~78 questions) runs at M4, M5 and at the end of each V4 phase that touches shared code.
+- `experiments/v4/v3_regress.py` checks byte identity offline after every step: blocks, documents, validator output, embedding texts, keyword search, store reads, and the claim check re-run over all 2,348 claims of the saved V3 runs. Where it is identical and the prompt and tool schemas are unchanged, the agent cannot behave differently, so the V3 agent gold rerun (vLLM, ~78 questions) runs once at the end of V4.0b and at the end of each later phase that touches shared code, not after each step.
 - `xbrl_facts` stays in `mode="v3"`; V4 modes get `financials` (§7.1).
 - When V4 no longer needs it, V3 retirement is its own decision entry, not a side effect.
 
