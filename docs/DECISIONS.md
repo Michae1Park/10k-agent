@@ -28,6 +28,7 @@ Why the project looks the way it does: decisions, and the issues found along the
 | [D-036](#d-036) | 2026-10-24 | V3 agent tools: 10-K search and sections, calculator, XBRL facts (cited directly), live EDGAR metadata only; cached, offline in evals | Accepted; the section tool dropped by D-037 |
 | [D-037](#d-037) | 2026-10-26 | Drop the `get_section` tool: removing it changed no score beyond run-to-run variation and cut input tokens 6–14% | Accepted |
 | [D-038](#d-038) | 2026-10-27 | V4 coverage: 8 travel and mobility companies, Q1 2023 to the as-of date; prices, forecasts and draft ratings allowed, labeled not investment advice | Accepted; supersedes D-001 for V4 |
+| [D-039](#d-039) | 2026-10-27 | V4 filings (10-K, 10-Q, release) are structured by rules, not the LLM structure agent: same Items as the agent on every block both keep | Accepted |
 
 ## Issues
 
@@ -114,6 +115,9 @@ The agent had a `get_section` tool (one 10-K Item in order, a page of chunks at 
 
 ### D-038
 **V4 coverage and scope** ([spec](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md), [design](V4_TECHNICAL_DESIGN_DOC.md)). Companies: BKNG, EXPE, ABNB, TRIP (travel) and UBER, LYFT, DASH, CART (mobility and delivery), listed in `companies.yaml`; all December year-end, verified by `tenk companies verify`. Data: 10-K, 10-Q, 8-K Item 2.02 releases, XBRL, Tiingo prices, FRED/ALFRED macro, Damodaran ERP and free cross-checks (BTS, NYC TLC; Stooq, TSA and Google Trends dropped, design §17.5), Q1 2023 to the latest filing **strictly before** each run's as-of date. In scope, unlike D-001: prices, forecasts, valuations, price targets and draft ratings. Each is produced by deterministic code (the LLM proposes bounded assumptions, never a number), written as a draft that a human approves, and labeled "for education and testing, not investment advice". Not in scope: publishing ratings to outside readers, real-time operation, estimates on airlines or hotel operators. D-001 still governs the V3 corpus (`companies-v3.yaml`), which stays runnable as a regression check.
+
+### D-039
+**Rule-based structure for V4 filings** (`preprocess/rules.py`). V0's LLM structure agent took 34–57 minutes per 10-K (V3 `labels-log.json`), about 6 GPU-hours for the 31 V4 10-Ks. Rules (bold "PART"/"Item n." lines moving forward in the form's Item order; statement, notes and auditor headings by wording) were checked against the agent's labels on the four V3 FY2025 10-Ks that have them: every block both keep is in the same Item, 3,340 / 3,340 (NVDA's statements, filed in Item 15, move into Item 8 as with the agent). The rules keep 1–9k characters more per filing (page headers the agent drops as furniture). All 31 V4 10-Ks get Items 1, 1A, 7, 7A, 8 and 15; all 86 10-Qs I.1–I.4, II.1, II.1A. Layout quirks handled: TRIP's "I tem 2." / "Ite m 8.", EXPE's "Part III. Item 10." on one line. V3 keeps the LLM agent (its outputs are the regression baseline). Revisit if retrieval on V4 shows heading-path errors.
 
 ## Issue details
 
