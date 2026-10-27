@@ -617,3 +617,60 @@ Each becomes a DECISIONS.md entry when built. Rows 1–11 fill gaps in the spec;
 **Settled earlier:** replace the corpus (V0–V3 results stay documented; code stays generic over the company list) · V3 stays runnable from `companies-v3.yaml` as the shared-code regression check (§14.1) · Ask/Research pass bars (§13.1) · the LLM proposes assumptions, code computes every number · Qwen3.6-27B local by default, Claude optional for comparison · both backtest designs (walk-forward main; one longer-horizon run) · both ratings, no consensus · CLI only, output under `output/` · Ask cites saved reports for estimates · Stooq for prices · one SQLite file (D-005) · ~80 gold questions.
 
 **Parking lot:** earnings-day diff job (new release vs our estimate → draft section 2) · tool routing by question class · airline read-throughs (spec §4 excludes airline estimates, not their data) · async model tools for `--all`-sized Research questions.
+
+---
+
+## 17. Pre-flight findings (V4.0a, 2026-10-27)
+
+Checked against live SEC and data-source endpoints; raw responses cached under `data/v4/raw/`.
+
+### 17.1 Companies (spec §8 items 1–2)
+
+`tenk companies verify` filled `companies.yaml`. All eight are listed (UBER on NYSE, the rest on Nasdaq) with a December year-end. Filings since 2023-01-01:
+
+| | BKNG | EXPE | ABNB | TRIP | UBER | LYFT | DASH | CART |
+|---|---|---|---|---|---|---|---|---|
+| CIK | 1075531 | 1324424 | 1559720 | 1526520 | 1543151 | 1759509 | 1792789 | 1579091 |
+| 10-K | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 3 |
+| 10-Q | 11 | 11 | 11 | 11 | 11 | 11 | 11 | 9 |
+| 8-K 2.02 | 15 | 15 | 15 | 15 | 15 | 15 | 15 | 12 |
+
+The 10-K count includes the FY2022 10-K filed in early 2023. The 15 releases are Q4 2022 to Q2 2026, so the 14 quarters in the window are all there; CART starts at Q3 2023 (12 = Q3 2023 to Q2 2026), as expected. Its legal name is Maplebear Inc. ABNB's older filings sit on a second submissions page, so counting needs every page, which `verify` and `fetch_company` already read.
+
+### 17.2 EDGAR end to end (UBER, BKNG)
+
+- **Rate limit and User-Agent:** the existing client (one request per 0.12 s, User-Agent with an email) got no 429s. SEC's published limit is still 10 requests/s. No change.
+- **Release timing:** `acceptanceDateTime` is UTC. Most companies release after the close (20:00–21:10 UTC). **UBER releases before the open** (~10:56 UTC), and TRIP (since 2024-05), CART and DASH sometimes do too. So `filing_date` = the release day, and with strictly-before an as-of of that day correctly excludes it; the backtest as-of = the day after `accepted_at` (§13.2) works for both cases.
+- **One release can have two `EX-99.1` documents** (BKNG 2026-08-04). The fetcher takes every `EX-99.*` and labels them by order.
+
+### 17.3 The three XBRL facts (§4.5): all confirmed, plus one more
+
+1. **No dimensional facts in company facts:** fact fields are only `accn, end, filed, form, fp, frame, fy, start, val`. The inline XBRL has them: UBER's Q2 2026 10-Q has 664 of 1,274 facts with dimensions, including `us-gaap:Revenues` by `uber:MobilityMember`/`DeliveryMember`/`FreightMember`.
+2. **10-Q cash flows are year-to-date only:** UBER and BKNG operating cash flow comes as 89–90, 180–181 and 272–273 day durations, with no three-month Q2 or Q3 fact. Income-statement items come as both three-month and year-to-date, sharing an end date (confirms the id change in §4.5).
+3. **Operating KPIs are untagged:** no gross bookings, trips or room-nights concept in either filing's XBRL. "Gross Bookings" appears 48 times in UBER's 10-Q text only.
+4. **New: company facts drops company-specific concepts.** It holds only `dei`, `us-gaap`, `srt`, `ecd`, `ffd`. Concepts such as `bkng:DeferredMerchantBookings` (needed by the `marketplace` template) and `uber:PlatformParticipantDirectTransactionCosts` exist only in the inline XBRL. **Change:** `facts/ixbrl.py` reads every company-specific fact, not just dimensional ones.
+
+### 17.4 Numeric guidance (from the latest release; the full 14-quarter survey runs with the V4.1 extractor)
+
+| Company | Latest guidance (Q2 2026 release) | Basis |
+|---|---|---|
+| BKNG | Q3 and full year 2026, as growth rates in a table | `growth_yoy` |
+| EXPE | Q3 and FY gross bookings, revenue, adj. EBITDA in $ ranges, plus growth | `level` |
+| ABNB | Raised FY revenue-growth and adj. EBITDA margin outlook; Q3 numbers in a table | `growth_yoy`, `margin` |
+| TRIP | The release refers to adj. EBITDA (margin) guidance but has **no numeric outlook in the text** | n/a so far (§4.6) |
+| UBER | Q3 gross bookings $58.25–60.25B, non-GAAP EPS, adj. EBITDA $2.86–2.96B | `level` |
+| LYFT | Q3 gross bookings $5.50–5.67B, adj. EBITDA $183–203M | `level` |
+| DASH | Q3 marketplace GOV $33.0–34.0B, adj. EBITDA $950–1,100M; FY SBC, D&A | `level` |
+| CART | Q3 GTV $10.30–10.55B, adj. EBITDA | `level` |
+
+### 17.5 Other data sources (spec §8 item 5)
+
+| Source | Reachable by script | Terms | Status |
+|---|---|---|---|
+| FRED / ALFRED | ✓ key works; all five series found; vintages (`realtime_start`) returned | Free API; attribute FRED; UMCSENT is © University of Michigan, cite it | OK |
+| Damodaran ERP | ✓ (HTTP 200) | Public, free | OK |
+| NYC TLC | ✓ `fhvhv_tripdata_YYYY-MM.parquet`, ~540 MB per month | NYC Open Data, public | OK; aggregate at fetch (§4.2). License codes (HV0003 Uber, HV0005 Lyft) to confirm on the first file |
+| BTS | ✓ (HTTP 200) | US government, public domain | OK |
+| **Stooq** | ✗ **now behind a JavaScript proof-of-work bot check**; the CSV endpoint returns the challenge page | Getting around the check is not acceptable | **Blocked: needs another price source (decision)** |
+| **TSA** | ✗ HTTP 403 to scripts | Public data, but the site blocks automated access | **Blocked: needs a manual download or must be dropped (decision)** |
+| Google Trends | not tested | No official API; unofficial clients break its terms | Proposed: drop (spec calls it optional) |
