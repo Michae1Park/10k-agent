@@ -56,3 +56,18 @@ def test_release_exhibits_become_pseudo_items():
     items = [lb["item"] for lb in labels.values() if lb["role"] == "item_heading"]
     assert items == ["EX99", "EX99.2"]
     assert [b.id for b in blocks][0] == "x1"
+
+
+def test_ten_k_quirks_and_statement_headings():
+    from tenk_agent.preprocess.forms import TEN_K
+
+    blocks = [
+        para(1, "Ite m 1A. Risk Factors"),  # TRIP
+        para(2, "Part III. Item 10. Directors", emph="-"),  # EXPE: not bold, Part on the line
+        para(3, "CONSOLIDATED BALANCE SHEETS"),
+        para(4, "Report of Independent Registered Public Accounting Firm"),
+    ]
+    labels = label_blocks(blocks, TEN_K)
+    assert [lb.get("item") or lb.get("kind") for lb in labels.values()] == [
+        "1A", "10", "statement", "auditor_report",
+    ]
