@@ -7,12 +7,16 @@
 
 Tools never raise: a bad call returns {"error": ...} for the model to read and recover from.
 The tool set ("text" or "full") is the V3 ablation (experiments/V3_AGENT.md).
+
+V4 (design doc §7.1): tools come in groups, and a tool set is a list of groups, so no single
+context gets every tool. A Toolbox sees what its store's AsOf sees; no tool takes an as-of.
 """
 
 import json
 from dataclasses import dataclass
 
 from tenk_agent.agent.sec import SecData, SecError
+from tenk_agent.asof import AsOf
 from tenk_agent.corpus import resolve_company
 from tenk_agent.generation.calculator import CalculatorError, calculate
 from tenk_agent.models import ToolSpec
@@ -92,10 +96,16 @@ SPECS = {
     ),
 }
 
-TOOL_SETS = {
-    "text": ("search_filings", "calculator"),
-    "full": ("search_filings", "calculator", "xbrl_facts", "edgar_filings"),
+GROUPS = {  # V4 §7.1; facts, market, reports and model gain their V4 tools in V4.2 and V4.5
+    "text": ("search_filings",),
+    "calc": ("calculator",),
+    "facts": ("xbrl_facts", "edgar_filings"),
 }
+GROUP_SETS = {
+    "text": ("text", "calc"),
+    "full": ("text", "calc", "facts"),
+}
+TOOL_SETS = {name: sum((GROUPS[g] for g in groups), ()) for name, groups in GROUP_SETS.items()}
 
 
 @dataclass
@@ -104,6 +114,10 @@ class Toolbox:
     search: SubQuestionRetriever | None  # None: search_filings unavailable (tests)
     sec: SecData | None
     tool_set: str = "full"
+
+    @property
+    def asof(self) -> AsOf:
+        return self.store.asof
 
     @property
     def specs(self) -> list[ToolSpec]:
@@ -222,16 +236,21 @@ def chunk_view(chunk: ChunkRecord) -> dict:
 
 
 def toolbox_from_settings(
-    settings: dict, tool_set: str = "full", live: bool = False, search: bool = True
+    settings: dict,
+    tool_set: str = "full",
+    live: bool = False,
+    search: bool = True,
+    asof: AsOf | None = None,
 ) -> Toolbox:
     """The tools as the config's `agent:` section sets them. live: SEC requests not in the
-    cache go to EDGAR (needs SEC_USER_AGENT); otherwise offline. search: load V1's models."""
+    cache go to EDGAR (needs SEC_USER_AGENT); otherwise offline. search: load V1's models.
+    asof: what the tools see (None: today, as in V3)."""
     import os
     from pathlib import Path
 
     from tenk_agent.acquisition.edgar import EdgarClient
 
-    store = Store(Path(settings["db"]))
+    store = Store(Path(settings["db"]), asof)
     retriever = SubQuestionRetriever.from_settings(store, settings["retrieval"]) if search else None
     client = None
     if live:
