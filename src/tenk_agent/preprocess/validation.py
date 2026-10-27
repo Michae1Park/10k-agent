@@ -1,13 +1,15 @@
 """The structure agent's validator rules (spec §2.2), one function per check.
 
   V1  one label per block                          missing_labels
-  V2  Items once each, in Form 10-K order          items_in_order
+  V2  Items once each, in the form's order         items_in_order
   V3  every required Item                          (needs a full filing, not checked)
   V4  fields match the role                        role_fits_block, item_is_valid,
                                                    heading_has_level_and_kind, layout_rows_match,
                                                    keep_role_fields (dropped, not repaired)
   V5  heading levels go down one at a time         levels_step_down
   V6  heading kinds only in their Item             risk_kinds_in_item_1a, statement_kinds_in_item_8
+
+Form-specific facts (Item order, where the statements live) come from forms.py.
   V7  a `note` heading where an XBRL note starts   note_at_xbrl_note
 
 A block rule gets the block, its label and the context open before it. It returns what the LLM
@@ -15,11 +17,12 @@ is told when the label breaks the rule, or None when it doesn't.
 """
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from tenk_agent.preprocess.blocks import ITEM_LABEL, Block
+from tenk_agent.preprocess.forms import TEN_K, FormSpec
 
-ITEMS = "1 1A 1B 1C 2 3 4 5 6 7 7A 8 9 9A 9B 9C 10 11 12 13 14 15 16".split()  # Form 10-K order
+ITEMS = list(TEN_K.items)  # the 10-K's Items, for callers not yet form-aware
 TABLE_ONLY_ROLES = {"data_table", "layout_table", "index_table"}  # V4: tables only
 TABLE_ROLES = TABLE_ONLY_ROLES | {"toc", "furniture", "cover"}  # V4: all a table can be
 ROLE_FIELDS = {  # V4: fields a role may carry besides id, role and uncertain
@@ -28,8 +31,7 @@ ROLE_FIELDS = {  # V4: fields a role may carry besides id, role and uncertain
     "data_table": {"units", "units_from"},
     "layout_table": {"rows"},
 }
-ITEM8_KINDS = {"statement", "note", "notes_header"}  # V6: headings only in Item 8 (or 15)
-ITEM8_HOMES = {"8", "15"}  # V6: some filers put the statements in Item 15 (A3 moves them)
+ITEM8_KINDS = {"statement", "note", "notes_header"}  # V6: headings only where statements live
 
 
 @dataclass
@@ -50,6 +52,7 @@ class Context:
     items: list[str]  # the Items seen so far, in order
     depth: int  # the open heading path's depth
     previous: dict  # the previous block's label
+    form: FormSpec = field(default=TEN_K)  # the filing's form
 
 
 # ---------- the rule registry ----------
@@ -122,7 +125,7 @@ def is_item_table(b: Block) -> bool:
 
 @rule("V4", role="item_heading")
 def item_is_valid(b: Block, label: dict, ctx: Context) -> str | None:
-    if label.get("item") not in ITEMS:
+    if label.get("item") not in ctx.form.items:
         return f"{b.id}: item_heading needs a valid `item`"
     return None
 
@@ -131,10 +134,11 @@ def item_is_valid(b: Block, label: dict, ctx: Context) -> str | None:
 def items_in_order(b: Block, label: dict, ctx: Context) -> str | None:
     """Only for a valid Item (an invalid one is V4) after an earlier one."""
     item = label.get("item")
-    if item not in ITEMS or not ctx.items:
+    items = ctx.form.items
+    if item not in items or not ctx.items:
         return None
     last = ctx.items[-1]
-    if ITEMS.index(item) <= ITEMS.index(last):
+    if items.index(item) <= items.index(last):
         return f"{b.id}: Item {item} after Item {last}; Items appear once, in order"
     return None
 
@@ -173,7 +177,7 @@ def risk_kinds_in_item_1a(b: Block, label: dict, ctx: Context) -> str | None:
 @rule("V6", role="heading")
 def statement_kinds_in_item_8(b: Block, label: dict, ctx: Context) -> str | None:
     kind = label.get("kind")
-    if kind in ITEM8_KINDS and ctx.item not in ITEM8_HOMES:
+    if kind in ITEM8_KINDS and ctx.item not in ctx.form.statement_homes:
         return f"{b.id}: `{kind}` outside Item 8 (open Item: {ctx.item})"
     return None
 

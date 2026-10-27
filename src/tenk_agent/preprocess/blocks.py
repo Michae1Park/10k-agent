@@ -23,6 +23,8 @@ from pathlib import Path
 
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 
+from tenk_agent.preprocess.forms import form_spec
+
 ITEM_LABEL = re.compile(r"^items?\s+\d{1,2}[a-c]?\b", re.I)  # "Item 1A", "Items 10 and 11"
 TEXT_BLOCK_TAGS = {"ix:nonnumeric", "ix:continuation"}  # tags that can carry an XBRL text block
 BLOCK_TAGS = {"div", "p", "li", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6", "table", "center"}
@@ -89,7 +91,7 @@ def cover_metadata(full_filing: Path) -> dict:
     for name in COVER_TAGS:
         m = re.search(rf'name="dei:{name}"[^>]*>(.*?)</ix:', html, re.S)
         tags[name] = _clean(BeautifulSoup(m.group(1), "lxml").get_text(" ")) if m else None
-    assert tags["DocumentType"] == "10-K", tags["DocumentType"]
+    form_spec(tags["DocumentType"])  # a form the preprocessor knows (forms.py)
     metadata = json.loads((full_filing.parent / "metadata.json").read_text())
     return {
         "ticker": tags["TradingSymbol"],
