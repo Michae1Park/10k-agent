@@ -1,0 +1,13 @@
+# The V0–V3 corpus (docs/DECISIONS.md D-001): 8 companies × fiscal years 2023–2025.
+# Selected by TENK_COMPANIES (default); kept runnable as the V4 regression check (design doc §14.1).
+
+fiscal_years: [2023, 2024, 2025]
+companies:
+  AAPL: {name: Apple Inc., cik: 320193, aliases: [Apple]}
+  MSFT: {name: Microsoft Corporation, cik: 789019, aliases: [Microsoft]}
+  AMZN: {name: "Amazon.com, Inc.", cik: 1018724, aliases: [Amazon, AWS, Amazon Web Services]}
+  GOOGL: {name: Alphabet Inc., cik: 1652044, aliases: [Alphabet, Google, GOOG, YouTube]}
+  META: {name: "Meta Platforms, Inc.", cik: 1326801, aliases: [Meta, Facebook, FB, Instagram]}
+  NVDA: {name: NVIDIA Corporation, cik: 1045810, aliases: [NVIDIA, Nvidia]}
+  TSLA: {name: "Tesla, Inc.", cik: 1318605, aliases: [Tesla]}
+  NFLX: {name: "Netflix, Inc.", cik: 1065280, aliases: [Netflix]}

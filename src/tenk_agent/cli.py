@@ -97,7 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     companies.add_argument("action", choices=("verify",))
     companies.add_argument("--file", type=Path, default=Path("companies.yaml"))
     companies.add_argument("--data-dir", type=Path, default=Path("data/v4"))
-    companies.add_argument("--since", default="2023-01-01", help="window start (filing date)")
+    companies.add_argument("--since", help="window start, filing date (default: the file's)")
     companies.add_argument("--refresh", action="store_true", help="re-download cached files")
 
     args = parser.parse_args(argv)

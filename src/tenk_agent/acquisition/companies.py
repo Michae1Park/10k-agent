@@ -60,15 +60,18 @@ def verify_company(ticker: str, entry: dict, cik: int | None, submissions: dict,
     return {**entry, "cik": cik, "verified": verified}, problems
 
 
-def verify(path: Path, data_dir: Path, user_agent: str, since: str = "2023-01-01",
+def verify(path: Path, data_dir: Path, user_agent: str, since: str | None = None,
            refresh: bool = False) -> list[str]:
-    """Verify every company in `path` and write the results back to it."""
+    """Verify every company in `path` and write the results back to it. `since` defaults to
+    the file's window start."""
     client = EdgarClient(user_agent)
     cache = data_dir / "raw" / "edgar"
     tickers = client.cached_json(TICKERS_URL, cache / "company_tickers.json", refresh)
     ciks = {row["ticker"]: row["cik_str"] for row in tickers.values()}
 
-    companies = yaml.safe_load(path.read_text())
+    data = yaml.safe_load(path.read_text())
+    since = since or str(data.get("window", {}).get("since", "2023-01-01"))
+    companies = data["companies"]
     problems = []
     for ticker, entry in companies.items():
         cik = ciks.get(ticker)
@@ -89,5 +92,5 @@ def verify(path: Path, data_dir: Path, user_agent: str, since: str = "2023-01-01
 
     header = "".join(line + "\n" for line in path.read_text().splitlines()
                      if line.startswith("#"))
-    path.write_text(header + "\n" + yaml.safe_dump(companies, sort_keys=False, width=100))
+    path.write_text(header + "\n" + yaml.safe_dump(data, sort_keys=False, width=100))
     return problems

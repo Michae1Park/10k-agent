@@ -1,217 +1,222 @@
 # V4 coverage (docs/V4_TECHNICAL_DESIGN_DOC.md §4.1), pinned per experiment like config.yaml.
 # cik and verified are written by `tenk companies verify` from SEC data, never typed.
+# fiscal_years: null = every period up to the as-of date, from window.since.
 
-BKNG:
-  name: Booking Holdings Inc.
-  cik: 1075531
-  aliases:
-  - Booking
-  - Booking.com
-  - Priceline
-  - Agoda
-  - KAYAK
-  - OpenTable
-  sector: travel
-  ipo: null
-  template: marketplace
-  main_kpi: room_nights
-  segments: []
-  scenario_drivers:
-  - room_nights_g
-  - adr_g
-  - take_rate
-  verified:
-    sec_name: Booking Holdings Inc.
-    exchanges:
-    - Nasdaq
-    fiscal_year_end: '1231'
-    since: '2023-01-01'
-    filings:
-      10-K: 4
-      10-Q: 11
-      8-K 2.02: 15
-EXPE:
-  name: Expedia Group, Inc.
-  cik: 1324424
-  aliases:
-  - Expedia
-  - Hotels.com
-  - Vrbo
-  sector: travel
-  ipo: null
-  template: marketplace
-  main_kpi: gross_bookings
-  segments:
-  - b2c
-  - b2b
-  scenario_drivers:
-  - room_nights_g
-  - adr_g
-  - take_rate
-  verified:
-    sec_name: Expedia Group, Inc.
-    exchanges:
-    - Nasdaq
-    fiscal_year_end: '1231'
-    since: '2023-01-01'
-    filings:
-      10-K: 4
-      10-Q: 11
-      8-K 2.02: 15
-ABNB:
-  name: Airbnb, Inc.
-  cik: 1559720
-  aliases:
-  - Airbnb
-  sector: travel
-  ipo: null
-  template: marketplace
-  main_kpi: nights_and_experiences
-  segments: []
-  scenario_drivers:
-  - nights_g
-  - adr_g
-  - take_rate
-  verified:
-    sec_name: Airbnb, Inc.
-    exchanges:
-    - Nasdaq
-    fiscal_year_end: '1231'
-    since: '2023-01-01'
-    filings:
-      10-K: 4
-      10-Q: 11
-      8-K 2.02: 15
-TRIP:
-  name: Tripadvisor, Inc.
-  cik: 1526520
-  aliases:
-  - TripAdvisor
-  - Tripadvisor
-  - Viator
-  - TheFork
-  sector: travel
-  ipo: null
-  template: trip
-  main_kpi: revenue
-  segments:
-  - tripadvisor
-  - viator
-  - thefork
-  scenario_drivers:
-  - viator_bv_g
-  - viator_take_rate
-  - tripadvisor_rev_g
-  verified:
-    sec_name: TripAdvisor, Inc.
-    exchanges:
-    - Nasdaq
-    fiscal_year_end: '1231'
-    since: '2023-01-01'
-    filings:
-      10-K: 4
-      10-Q: 11
-      8-K 2.02: 15
-UBER:
-  name: Uber Technologies, Inc.
-  cik: 1543151
-  aliases:
-  - Uber
-  - Uber Eats
-  - Uber Freight
-  sector: mobility
-  ipo: null
-  template: segments
-  main_kpi: gross_bookings
-  segments:
-  - mobility
-  - delivery
-  - freight
-  scenario_drivers:
-  - gb_growth.mobility
-  - gb_growth.delivery
-  - take_rate.mobility
-  verified:
-    sec_name: Uber Technologies, Inc
-    exchanges:
-    - NYSE
-    fiscal_year_end: '1231'
-    since: '2023-01-01'
-    filings:
-      10-K: 4
-      10-Q: 11
-      8-K 2.02: 15
-LYFT:
-  name: Lyft, Inc.
-  cik: 1759509
-  aliases:
-  - Lyft
-  sector: mobility
-  ipo: null
-  template: orders
-  main_kpi: gross_bookings
-  segments: []
-  scenario_drivers:
-  - rides_g
-  - gb_per_ride_g
-  - take_rate
-  verified:
-    sec_name: Lyft, Inc.
-    exchanges:
-    - Nasdaq
-    fiscal_year_end: '1231'
-    since: '2023-01-01'
-    filings:
-      10-K: 4
-      10-Q: 11
-      8-K 2.02: 15
-DASH:
-  name: DoorDash, Inc.
-  cik: 1792789
-  aliases:
-  - DoorDash
-  - Wolt
-  sector: mobility
-  ipo: null
-  template: orders
-  main_kpi: marketplace_gov
-  segments: []
-  scenario_drivers:
-  - orders_g
-  - aov_g
-  - net_revenue_margin
-  verified:
-    sec_name: DoorDash, Inc.
-    exchanges:
-    - Nasdaq
-    fiscal_year_end: '1231'
-    since: '2023-01-01'
-    filings:
-      10-K: 4
-      10-Q: 11
-      8-K 2.02: 15
-CART:
-  name: Maplebear Inc.
-  cik: 1579091
-  aliases:
-  - Instacart
-  - Maplebear
-  sector: mobility
-  ipo: 2023-09-19
-  template: orders
-  main_kpi: gtv
-  segments: []
-  scenario_drivers:
-  - orders_g
-  - aov_g
-  - transaction_take_rate
-  verified:
-    sec_name: Maplebear Inc.
-    exchanges:
-    - Nasdaq
-    fiscal_year_end: '1231'
-    since: '2023-01-01'
-    filings:
-      10-K: 3
-      10-Q: 9
-      8-K 2.02: 12
+fiscal_years: null
+window:
+  since: '2023-01-01'
+companies:
+  BKNG:
+    name: Booking Holdings Inc.
+    cik: 1075531
+    aliases:
+    - Booking
+    - Booking.com
+    - Priceline
+    - Agoda
+    - KAYAK
+    - OpenTable
+    sector: travel
+    ipo: null
+    template: marketplace
+    main_kpi: room_nights
+    segments: []
+    scenario_drivers:
+    - room_nights_g
+    - adr_g
+    - take_rate
+    verified:
+      sec_name: Booking Holdings Inc.
+      exchanges:
+      - Nasdaq
+      fiscal_year_end: '1231'
+      since: '2023-01-01'
+      filings:
+        10-K: 4
+        10-Q: 11
+        8-K 2.02: 15
+  EXPE:
+    name: Expedia Group, Inc.
+    cik: 1324424
+    aliases:
+    - Expedia
+    - Hotels.com
+    - Vrbo
+    sector: travel
+    ipo: null
+    template: marketplace
+    main_kpi: gross_bookings
+    segments:
+    - b2c
+    - b2b
+    scenario_drivers:
+    - room_nights_g
+    - adr_g
+    - take_rate
+    verified:
+      sec_name: Expedia Group, Inc.
+      exchanges:
+      - Nasdaq
+      fiscal_year_end: '1231'
+      since: '2023-01-01'
+      filings:
+        10-K: 4
+        10-Q: 11
+        8-K 2.02: 15
+  ABNB:
+    name: Airbnb, Inc.
+    cik: 1559720
+    aliases:
+    - Airbnb
+    sector: travel
+    ipo: null
+    template: marketplace
+    main_kpi: nights_and_experiences
+    segments: []
+    scenario_drivers:
+    - nights_g
+    - adr_g
+    - take_rate
+    verified:
+      sec_name: Airbnb, Inc.
+      exchanges:
+      - Nasdaq
+      fiscal_year_end: '1231'
+      since: '2023-01-01'
+      filings:
+        10-K: 4
+        10-Q: 11
+        8-K 2.02: 15
+  TRIP:
+    name: Tripadvisor, Inc.
+    cik: 1526520
+    aliases:
+    - TripAdvisor
+    - Tripadvisor
+    - Viator
+    - TheFork
+    sector: travel
+    ipo: null
+    template: trip
+    main_kpi: revenue
+    segments:
+    - tripadvisor
+    - viator
+    - thefork
+    scenario_drivers:
+    - viator_bv_g
+    - viator_take_rate
+    - tripadvisor_rev_g
+    verified:
+      sec_name: TripAdvisor, Inc.
+      exchanges:
+      - Nasdaq
+      fiscal_year_end: '1231'
+      since: '2023-01-01'
+      filings:
+        10-K: 4
+        10-Q: 11
+        8-K 2.02: 15
+  UBER:
+    name: Uber Technologies, Inc.
+    cik: 1543151
+    aliases:
+    - Uber
+    - Uber Eats
+    - Uber Freight
+    sector: mobility
+    ipo: null
+    template: segments
+    main_kpi: gross_bookings
+    segments:
+    - mobility
+    - delivery
+    - freight
+    scenario_drivers:
+    - gb_growth.mobility
+    - gb_growth.delivery
+    - take_rate.mobility
+    verified:
+      sec_name: Uber Technologies, Inc
+      exchanges:
+      - NYSE
+      fiscal_year_end: '1231'
+      since: '2023-01-01'
+      filings:
+        10-K: 4
+        10-Q: 11
+        8-K 2.02: 15
+  LYFT:
+    name: Lyft, Inc.
+    cik: 1759509
+    aliases:
+    - Lyft
+    sector: mobility
+    ipo: null
+    template: orders
+    main_kpi: gross_bookings
+    segments: []
+    scenario_drivers:
+    - rides_g
+    - gb_per_ride_g
+    - take_rate
+    verified:
+      sec_name: Lyft, Inc.
+      exchanges:
+      - Nasdaq
+      fiscal_year_end: '1231'
+      since: '2023-01-01'
+      filings:
+        10-K: 4
+        10-Q: 11
+        8-K 2.02: 15
+  DASH:
+    name: DoorDash, Inc.
+    cik: 1792789
+    aliases:
+    - DoorDash
+    - Wolt
+    sector: mobility
+    ipo: null
+    template: orders
+    main_kpi: marketplace_gov
+    segments: []
+    scenario_drivers:
+    - orders_g
+    - aov_g
+    - net_revenue_margin
+    verified:
+      sec_name: DoorDash, Inc.
+      exchanges:
+      - Nasdaq
+      fiscal_year_end: '1231'
+      since: '2023-01-01'
+      filings:
+        10-K: 4
+        10-Q: 11
+        8-K 2.02: 15
+  CART:
+    name: Maplebear Inc.
+    cik: 1579091
+    aliases:
+    - Instacart
+    - Maplebear
+    sector: mobility
+    ipo: 2023-09-19
+    template: orders
+    main_kpi: gtv
+    segments: []
+    scenario_drivers:
+    - orders_g
+    - aov_g
+    - transaction_take_rate
+    verified:
+      sec_name: Maplebear Inc.
+      exchanges:
+      - Nasdaq
+      fiscal_year_end: '1231'
+      since: '2023-01-01'
+      filings:
+        10-K: 3
+        10-Q: 9
+        8-K 2.02: 12
