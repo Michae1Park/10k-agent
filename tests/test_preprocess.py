@@ -93,7 +93,7 @@ def test_form_spec_drives_the_item_rules():
 
     assert form_spec("10-K").items == tuple(ITEMS)
     with pytest.raises(KeyError):
-        form_spec("10-Q")  # added in M6
+        form_spec("8-K")
     other = FormSpec("X", ("B", "A"), frozenset({"A"}))
     block = type("B", (), {"id": "b1"})()
     ctx = Context(item="B", items=["B"], depth=0, previous={}, form=other)
