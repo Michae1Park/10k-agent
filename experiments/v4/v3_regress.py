@@ -47,3 +47,10 @@ for run in sorted(Path("output/generation").glob("v3-*/results.json")):
             out = verify_claim({k: v for k, v in claim.items() if k not in ("status", "status_reason")}, db, sec)
             checked.append((run.parent.name, row["id"], claim.get("id"), out["status"], out["status_reason"]))
 print("claim check", len(checked), h(checked))
+# The agent's tools and system prompt per V3 tool set (agent/tools.py, agent/loop.py).
+from dataclasses import asdict as _asdict
+from tenk_agent.agent.loop import build_system
+from tenk_agent.agent.tools import Toolbox
+for tool_set in ("text", "full"):
+    box = Toolbox(db, None, sec, tool_set)
+    print("tools", tool_set, h([_asdict(s) for s in box.specs]), "system", h(build_system(box, 12)))
