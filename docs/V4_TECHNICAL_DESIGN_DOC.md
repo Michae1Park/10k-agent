@@ -676,3 +676,18 @@ The 10-K count includes the FY2022 10-K filed in early 2023. The 15 releases are
 | Tiingo | ✓ free Starter: 1,000 requests/day, 500 symbols/month, 30+ years | "Internal Use Only… may not display or share the data with another person". Checked alternatives (Alpha Vantage free = last 100 days only; EODHD, Nasdaq.com, Yahoo: personal use only) | **Used, kept private** (§11 publication rule) |
 | **TSA** | ✗ HTTP 403 to scripts | Public data, but the site blocks automated access | **Dropped** (BTS covers air traffic) |
 | Google Trends | not tested | No official API; unofficial clients break its terms | **Dropped** (optional in the spec) |
+
+### 17.6 V4.0b findings (2026-10-27)
+
+**Filings.** `tenk fetch` (V4 corpus) got every filing in the window, no problems: 30 per company (4 10-K, 11 10-Q, 15 releases), 24 for CART. Each release's quarter (the last quarter end before it was filed) matched a 10-Q or 10-K period end in every case.
+
+**10-Q structure by rules works** (`preprocess/rules.py`): all 86 10-Qs get Items I.1–I.4, II.1 and II.1A. Two layouts needed handling: EXPE writes "Part I. Item 1." on one line, and TRIP's styled initial reads "I tem 2." in the text.
+
+**Releases: three of eight are images.** ABNB (all), CART (through Q4 2025) and BKNG (since Q4 2024) publish EX-99.1 as slide or page images with a hidden 1-point text layer: the text is there, the tables are not. Extraction (V4.1) must read KPI values from flat text for these, so the extraction gold set must include them.
+
+**Facts.** Company facts gave 44,223 facts and inline XBRL 71,571 more (dimensional and company-specific). Quarters are derived on read from facts under the store's AsOf (no stored quarters table, so nothing goes stale between as-ofs).
+- Within a fiscal year a metric uses **one concept**: mixing SBC's income-statement concept (three-month facts) with its cash-flow concept (year-to-date) broke the Q2 arithmetic by $3–6M.
+- Q4 ties and year-to-date consistency: **571 of 586 pass at as-of 2026-10-27, 0 fail**; 15 read `restated`, all TRIP. TRIP's Q2 2026 10-Q (filed 2026-08-06) recast 2025 (H1 revenue $927.0M → $828.5M), leaving Q1 and Q3 2025 and Q1 2026 on the old basis until re-reported. A check that fails in a year on two bases reads `restated` (logged as an exception, spec §1.5) instead of `fail`. At as-ofs before the recast (2026-08-06, 2025-05-01) every check passes.
+- Gaps to fill from inline XBRL or alternative concepts in V4.3: BKNG net income, ABNB diluted EPS, capex and D&A, LYFT capex, EXPE total liabilities. EPS and diluted shares have no Q4 (they don't add up); Q4 comes from the release (V4.1).
+
+**Market data.** As-of 2026-08-06 sees UBER's 2026-08-05 close (spec example). CPI January 2025 reads 319.086 before its 2026-02-13 revision and 318.961 after. DGS10 is taken as published the day after its date (FRED's H.15 timing); Damodaran's monthly ERP three days after the month starts.
