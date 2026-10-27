@@ -1,0 +1,40 @@
+# Operating KPIs per company (V4 design doc §4.6, spec §1.4): what the extractor looks for in
+# each earnings release. unit: the unit values are stored in. labels: how the release names it.
+# segments: segment keys ("total" = consolidated). definition_version: bumped when a company
+# redefines the KPI (a recast); stored with every value.
+# guidance: metrics the company guides, and in what form (level, growth_yoy, margin).
+# Pilot companies first (BKNG, UBER); the other six follow after the pilot's layer-1 gate.
+
+UBER:
+  kpis:
+    gross_bookings: {unit: USD millions, segments: [total, mobility, delivery, freight],
+                     labels: ["Gross Bookings"]}
+    trips: {unit: count millions, labels: ["Trips"]}
+    mapcs: {unit: count millions, labels: ["Monthly Active Platform Consumers", "MAPCs"]}
+    revenue: {unit: USD millions, segments: [total, mobility, delivery, freight],
+              labels: ["Revenue"]}
+    adj_ebitda: {unit: USD millions, segments: [total, mobility, delivery, freight, corporate],
+                 labels: ["Adjusted EBITDA"]}
+    free_cash_flow: {unit: USD millions, labels: ["Free cash flow"]}
+    eps_diluted: {unit: USD per share, labels: ["Diluted", "GAAP Diluted EPS"]}
+  guidance:
+    gross_bookings: {unit: USD millions, basis: level}
+    adj_ebitda: {unit: USD millions, basis: level}
+    non_gaap_eps: {unit: USD per share, basis: level}
+
+BKNG:
+  kpis:
+    room_nights: {unit: count millions, labels: ["Room Nights"]}
+    gross_bookings: {unit: USD millions, labels: ["Total Gross Bookings", "Gross Bookings"]}
+    revenue: {unit: USD millions, labels: ["Total revenues"]}
+    adj_ebitda: {unit: USD millions, labels: ["Adjusted EBITDA"]}
+    net_income: {unit: USD millions, labels: ["Net income"]}
+    eps_diluted: {unit: USD per share,
+                  labels: ["Net income applicable to common stockholders per diluted common share"]}
+    adj_eps: {unit: USD per share, labels: ["Adjusted EPS"]}
+    free_cash_flow: {unit: USD millions, labels: ["Free cash flow"]}
+  guidance:
+    room_nights_growth: {unit: percent, basis: growth_yoy}
+    gross_bookings_growth: {unit: percent, basis: growth_yoy}
+    revenue_growth: {unit: percent, basis: growth_yoy}
+    adj_ebitda_growth: {unit: percent, basis: growth_yoy}
