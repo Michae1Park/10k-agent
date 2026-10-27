@@ -16,7 +16,7 @@ from pathlib import Path
 from tenk_agent.corpus import COMPANIES, company_by_ticker
 from tenk_agent.preprocess.forms import TEN_K, form_spec
 from tenk_agent.retrieval.embeddings import Embedder
-from tenk_agent.store import ChildRecord, ChunkRecord, FilingRecord, Store
+from tenk_agent.store import ChildRecord, ChunkRecord, FilingRecord, Store, id_prefix
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +52,16 @@ def child_text(child: dict) -> str:
     return " › ".join(path) + "\n" + child["text"]
 
 
+def meta_prefix(meta: dict) -> str:
+    """The chunk-id prefix of a filing from its metadata.json (store.id_prefix)."""
+    return id_prefix(
+        meta["ticker"],
+        meta["fiscal_year"],
+        meta.get("fiscal_period", "FY"),
+        meta.get("form", "10-K"),
+    )
+
+
 def chunk_ids(chunks: list[dict], prefix: str) -> list[tuple[str, int]]:
     """Each chunk's id and its position within its Item: <prefix>-<item>-<nnn>."""
     seq: dict[str, int] = {}
@@ -77,7 +87,7 @@ def load(path: Path, filings: list[tuple[dict, dict, list[dict]]]) -> dict[str, 
     for meta, document, chunks in filings:
         ticker, year = meta["ticker"], meta["fiscal_year"]
         company = company_by_ticker(ticker)
-        prefix = f"{ticker}-FY{year}"
+        prefix = meta_prefix(meta)
         filing = FilingRecord(
             meta["accession_no"],
             ticker,
@@ -85,7 +95,11 @@ def load(path: Path, filings: list[tuple[dict, dict, list[dict]]]) -> dict[str, 
             year,
             meta["period_end_date"],
             meta["filing_date"],
-            meta["source_url"],
+            meta.get("source_url") or meta["documents"][0]["url"],
+            form=meta.get("form", "10-K"),
+            fiscal_period=meta.get("fiscal_period", "FY"),
+            accepted_at=meta.get("accepted_at"),
+            retrieved_at=meta.get("retrieved_at"),
         )
         sections: dict[str, str] = {}
         for s in document["sections"]:
@@ -136,7 +150,7 @@ def add_pages(store: Store, filings: list[tuple[dict, list[dict]]]) -> dict[str,
     for meta, chunks in filings:
         if (meta["ticker"], meta["fiscal_year"]) not in loaded:
             continue
-        prefix = f"{meta['ticker']}-FY{meta['fiscal_year']}"
+        prefix = meta_prefix(meta)
         for (chunk_id, _), c in zip(chunk_ids(chunks, prefix), chunks, strict=True):
             updated = store.set_pages(chunk_id, c["text"], c.get("pages"), c.get("printed_pages"))
             counts["updated" if updated else "mismatched"] += 1

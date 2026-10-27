@@ -164,8 +164,12 @@ def _companies(args: argparse.Namespace, settings: dict) -> int:
 def _build(args: argparse.Namespace, settings: dict) -> int:
     from tenk_agent.build import build, filing_dirs
 
-    filings = filing_dirs(Path(settings["data_dir"]), args.filing)
-    out = args.out or Path(settings["build"]["out"])
+    if DATA_DIR:  # V4 corpus: its own data folder, every form
+        filings = filing_dirs(Path(DATA_DIR), args.filing, "*")
+        out = args.out or Path(DATA_DIR) / "build"
+    else:
+        filings = filing_dirs(Path(settings["data_dir"]), args.filing)
+        out = args.out or Path(settings["build"]["out"])
     methods = args.method or settings["build"]["methods"]
     build(filings, out, settings, methods, args.stage or ["chunk", "load", "embed"], args.jobs)
     return 0
