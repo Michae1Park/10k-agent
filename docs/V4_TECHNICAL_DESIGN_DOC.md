@@ -705,3 +705,7 @@ Extractor (`facts/extract.py`, Qwen3.6-27B, thinking off), three runs:
 | 3 | **100%** | **100%** | Prompt and repair forbid elided quotes; series quoted from label to number |
 
 Run 3: 7 of 8 releases in one call, no exceptions; 9–14k input tokens per release; ~3–4 minutes each on a GPU shared with another job. The validator also rejects a prior-year column when the row shows growth between two values (`growth_pair`); rows without a growth column (UBER's EPS line) rely on the XBRL reconciliation.
+
+### 17.8 V4.0b exit: V3 agent gold rerun (2026-10-28)
+
+After migration steps M1–M6 and the V4 data layer, the V3 agent gold set (78 questions, Qwen3.6-27B, judge gpt-oss-20b; `output/generation/v4-migration-check/`): **`text` 87.2%, `full` 87.2% correct**, against 85.9–88.5% (`text`) and 85.9–87.2% (`full`) in the two runs before (D-037). Within run-to-run variation, numeric claims grounded 100% in both, so V3 behaves as before. With the offline byte-identity check (`experiments/v4/v3_regress.py`) passing at every step, **V4.0b is done**.
