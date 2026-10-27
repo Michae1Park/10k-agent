@@ -35,7 +35,9 @@ def table_label(ticker, period, metric, unit, block_id, row_label, nth=0, column
             "block": block_id, "quote": quote}
 
 
-def text_label(ticker, period, metric, unit, pattern, group=1, scale=1.0, segment=None, target=None):
+def text_label(
+    ticker, period, metric, unit, pattern, group=1, scale=1.0, segment=None, target=None
+):
     """A value from the first sentence matching `pattern` (group = the number)."""
     doc = json.loads((BUILD / f"{ticker}-{period}-ER" / "document.json").read_text())
     for s in doc["sections"]:
@@ -75,7 +77,9 @@ NEXT = {"2025Q3": "2025Q4", "2025Q4": "2026Q1", "2026Q1": "2026Q2", "2026Q2": "2
 def uber() -> list[dict]:
     out = []
     for period, (hl, seg, inc) in UBER_BLOCKS.items():
-        t = lambda *a, **k: table_label("UBER", period, *a, **k)  # noqa: E731
+        def t(*a, period=period, **k):
+            return table_label("UBER", period, *a, **k)
+
         out += [
             t("gross_bookings", "USD millions", hl, "Gross Bookings", segment="total"),
             t("gross_bookings", "USD millions", seg, "Mobility", segment="mobility"),
@@ -104,7 +108,9 @@ BKNG_CURRENT = {"2025Q3": -1, "2025Q4": 7, "2026Q1": -1, "2026Q2": -1}  # in the
 def bkng() -> list[dict]:
     out = []
     for period, i in BKNG_CURRENT.items():
-        x = lambda *a, **k: text_label("BKNG", period, *a, **k)  # noqa: E731
+        def x(*a, period=period, **k):
+            return text_label("BKNG", period, *a, **k)
+
         out += [
             series_label("BKNG", period, "room_nights", "count millions",
                          r"Units Sold Room Nights", i),
@@ -131,8 +137,9 @@ def bkng() -> list[dict]:
 
 if __name__ == "__main__":
     rows = uber() + bkng()
-    for i, r in enumerate(rows):
-        r["id"] = f"{r['ticker']}-{r['period']}-{r['metric']}" + (f".{r['segment']}" if r["segment"] else "")
+    for r in rows:
+        segment = f".{r['segment']}" if r["segment"] else ""
+        r["id"] = f"{r['ticker']}-{r['period']}-{r['metric']}{segment}"
         r["verified_by"] = None
     OUT.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
     print(f"{len(rows)} labels → {OUT}")
