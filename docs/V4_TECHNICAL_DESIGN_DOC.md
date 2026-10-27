@@ -492,7 +492,7 @@ Pass bars frozen 2026-10-27 from spec §5; a miss is reported as a miss.
 | 3. Forecast | Walk-forward (§13.2) | `evaluation/backtest.py` | MAPE below seasonal-naive on revenue and main KPI; bias near zero, reported with sign |
 | 4. Valuation | Identical inputs → byte-identical `valuation.json`; monotonicity (higher WACC → lower PT) | `tests/test_valuation.py` | Identical; every target multiple inside the peer range or flagged |
 | 5. Note | Number trace, ten sections present, rubric (judge gpt-oss-20b + human sample), **seeded errors** (corrupt a fact or table; trace/lint must catch it) | `evaluation/note_eval.py` | 100% traced; rubric ≥ 4/5 |
-| Ask, Research | ~80 gold questions over the eight and the spec §2.1/§2.2 categories; Research golds check the `model:` ref and stated assumptions, not a fixed number. Gold format gains `period`, `form`, `as_of` | existing scoring + `model:` grading | Set before the first run |
+| Ask, Research | ~80 gold questions over the eight and the spec §2.1/§2.2 categories; Research golds check the `model:` ref and stated assumptions, not a fixed number. Gold format gains `period`, `form`, `as_of` | existing scoring + `model:` grading | Ask ≥ 85% correct and verified, 100% of cited claims resolve · Research ≥ 90% with a `model:` ref and stated assumptions, 100% of computed numbers from model tools |
 
 ### 13.2 Backtest (`evaluation/backtest.py`)
 
@@ -548,6 +548,28 @@ src/tenk_agent/
 | `tenk backtest --companies ... --from DATE --to DATE [--label]` | Walk-forward |
 | `tenk eval extraction` · `tenk eval note` | Layers 1 and 5 |
 
+### 14.1 Migration from V3
+
+V3 stays runnable as the regression check for the shared code (retrieval, claim check, agent loop). Its eight megacaps and FY2023–2025 move to `companies-v3.yaml`; `tenk ... --companies companies-v3.yaml` rebuilds and reruns it. The V4 corpus lives in its own data directory, so neither build overwrites the other.
+
+Today 15 modules assume 10-K only or `FISCAL_YEARS`: `cli.py`, `corpus.py`, `acquisition/` (`__init__`, `edgar`), `preprocess/` (`__init__`, `blocks`, `validation`), `retrieval/` (`index`, `decompose`), `agent/` (`__init__`, `loop`, `tools`, `sec`), `generation/generate.py`, `evaluation/gold.py`. The steps below change them in an order where every step leaves V3 green.
+
+| Step | Change | Modules | Safety net |
+|---|---|---|---|
+| **M1** Config | Company list, fiscal years and data dir come from a companies file; `FISCAL_YEARS` becomes a per-corpus value; `companies-v3.yaml` reproduces today's tuple | `corpus.py`, `cli.py`, `acquisition/`, `decompose.py`, `gold.py` | All V3 tests pass unchanged |
+| **M2** Forms | `preprocess/forms.py` with a 10-K `FormSpec` only; `blocks.py` and `validation.py` read it instead of hard-coding the 10-K; `index.py` labels by form | `preprocess/`, `retrieval/index.py` | V3 parse and chunk output byte-identical on the V3 corpus |
+| **M3** Store + as-of | `asof.py`; new schema (§4.3) with `form`, `fiscal_period`, `filed`; dated reads require `asof`. V3 runs pass `AsOf(today)` | `asof.py`, `store.py`, callers | V3 store tests; new leak test |
+| **M4** Refs | `research/refs.py` takes over `verify.py`'s three id cases; XBRL id part 6 becomes `<start>/<end>` for durations (§4.5), old ids still parse | `generation/verify.py`, `agent/sec.py` | V3 claim-check tests; V3 agent gold rerun within run-to-run spread of D-037 (~86–88%) |
+| **M5** Tools | `Toolbox(asof, mode)` with tool groups; `mode="v3"` gives exactly V3's four tools and prompt | `agent/tools.py`, `agent/loop.py` | V3 agent tests; same V3 gold rerun |
+| **M6** Forms, cont. | 10-Q and EX-99 `FormSpec`s, any-form fetch, 8-K exhibits, period chunk ids | `acquisition/edgar.py`, `preprocess/forms.py` | V4.0b gate |
+| **M7+** | New V4 modules (`facts/`, `research/`, new evaluation) | new | V4 gates (§15) |
+
+**Rules**
+- M1–M5 change no V3 behavior; a V3 test edited to pass is a regression unless the change is a rename noted in the commit.
+- The V3 agent gold rerun (vLLM, ~78 questions) runs at M4, M5 and at the end of each V4 phase that touches shared code.
+- `xbrl_facts` stays in `mode="v3"`; V4 modes get `financials` (§7.1).
+- When V4 no longer needs it, V3 retirement is its own decision entry, not a side effect.
+
 ---
 
 ## 15. Build order and test gates
@@ -557,7 +579,7 @@ Each phase passes its gate before the next (spec §7). Pilot BKNG + UBER (UBER i
 | Phase | Builds | Gate |
 |---|---|---|
 | **V4.0a Pre-flight** (spec §8) | `companies verify`; one company end to end on EDGAR (company facts, dates, rate limit); confirm the three §4.5 XBRL facts; release dates and numeric-guidance survey; dataset terms; D-001 successor entry | Findings written into this doc; `companies.yaml` filled |
-| **V4.0b Data** | `asof.py`, schema, any-form fetch, `FormSpec`, chunk ids, `facts`/`ixbrl`/`quarters`, prices, macro, as-of search | Unit tests incl. a leak test (as-of before a filing → zero rows from it); Q4 ties on the pilot |
+| **V4.0b Data** | Migration M1–M6 (§14.1), then `facts`/`ixbrl`/`quarters`, prices, macro, as-of search | V3 tests and V3 agent gold green; unit tests incl. a leak test (as-of before a filing → zero rows from it); Q4 ties on the pilot |
 | **V4.1 Extraction** | Pilot hand labels first; extractor, registry, guidance | Layer 1 on the pilot, then all eight |
 | **V4.2 Ask** | Tool groups, `refs.py`, prompts, ask gold set | Ask gold bars |
 | **V4.3 Model** | DSL, graph, templates (`segments`, `marketplace` first), checks, workbook Model tab + parity test | Layer 2 on the pilot |
@@ -592,6 +614,6 @@ Each becomes a DECISIONS.md entry when built. Rows 1–11 fill gaps in the spec;
 | 16 | Review | `draft` → `reviewed` via CLI; the human decides, the agent doesn't |
 | 17 | Clean backtest quarters | Q1–Q2 2026 (§12) |
 
-**Settled earlier:** replace the corpus (V0–V3 results stay documented; code stays generic over the company list) · the LLM proposes assumptions, code computes every number · Qwen3.6-27B local by default, Claude optional for comparison · both backtest designs (walk-forward main; one longer-horizon run) · both ratings, no consensus · CLI only, output under `output/` · Ask cites saved reports for estimates · Stooq for prices · one SQLite file (D-005) · ~80 gold questions.
+**Settled earlier:** replace the corpus (V0–V3 results stay documented; code stays generic over the company list) · V3 stays runnable from `companies-v3.yaml` as the shared-code regression check (§14.1) · Ask/Research pass bars (§13.1) · the LLM proposes assumptions, code computes every number · Qwen3.6-27B local by default, Claude optional for comparison · both backtest designs (walk-forward main; one longer-horizon run) · both ratings, no consensus · CLI only, output under `output/` · Ask cites saved reports for estimates · Stooq for prices · one SQLite file (D-005) · ~80 gold questions.
 
 **Parking lot:** earnings-day diff job (new release vs our estimate → draft section 2) · tool routing by question class · airline read-throughs (spec §4 excludes airline estimates, not their data) · async model tools for `--all`-sized Research questions.
