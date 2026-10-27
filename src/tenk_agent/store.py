@@ -91,6 +91,31 @@ CREATE VIRTUAL TABLE IF NOT EXISTS children_fts
     USING fts5(text, content='children', content_rowid='rowid');
 """
 
+# V4 structured data (design doc §4.3), added by enable_facts(). Every row carries the date it
+# became public (`filed`); reads go through the store's AsOf. Quarters are derived from facts on
+# read (facts/quarters.py), so they always match the store's AsOf.
+FACTS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS facts (
+    id TEXT PRIMARY KEY,          -- xbrl:… or ixbrl:… (research/refs.py)
+    ticker TEXT NOT NULL,
+    taxonomy TEXT NOT NULL,
+    concept TEXT NOT NULL,
+    dims TEXT NOT NULL,           -- JSON {axis: member}; '{}' = consolidated
+    start TEXT,                   -- NULL for an instant
+    end TEXT NOT NULL,
+    value REAL NOT NULL,
+    unit TEXT NOT NULL,
+    decimals INTEGER,
+    accession TEXT NOT NULL,
+    form TEXT NOT NULL,
+    fy INTEGER,
+    fp TEXT,
+    filed TEXT NOT NULL,
+    source TEXT NOT NULL          -- companyfacts | ixbrl
+);
+CREATE INDEX IF NOT EXISTS facts_lookup ON facts (ticker, concept, filed);
+"""
+
 # Older databases lack these columns; add them in place. V3 databases (all 10-Ks) gain the V4
 # form, period and filing-date columns; BACKFILL then dates their chunks from their filing.
 MIGRATIONS = (
@@ -306,6 +331,44 @@ class Store:
                 ),
             ).rowcount
         return bool(updated)
+
+    def enable_facts(self) -> None:
+        """Add the V4 facts table."""
+        with self._lock:
+            self.db.executescript(FACTS_SCHEMA)
+
+    def add_facts(self, facts: list) -> int:
+        """Insert facts (facts/xbrl.py Fact); an id already stored is kept. Returns the count
+        inserted."""
+        with self._lock, self.db:
+            before = self.db.total_changes
+            self.db.executemany(
+                f"INSERT OR IGNORE INTO facts VALUES ({', '.join('?' * 16)})",
+                [
+                    (f.id, f.ticker, f.taxonomy, f.concept, json.dumps(f.dims, sort_keys=True),
+                     f.start, f.end, f.value, f.unit, f.decimals, f.accession, f.form, f.fy, f.fp,
+                     f.filed, f.source)
+                    for f in facts
+                ],
+            )
+            return self.db.total_changes - before
+
+    def facts(self, ticker: str, concepts: list[str], dims: dict | None = None) -> list[dict]:
+        """Visible facts of these concepts (any taxonomy); `dims` None = consolidated only, else
+        exactly these dimensions. Every restated copy is returned (AsOf.latest picks)."""
+        visible, params = self.asof.sql("f")
+        rows = self._query(
+            f"SELECT * FROM facts f WHERE f.ticker = ? AND f.concept IN "
+            f"({', '.join('?' * len(concepts))}) AND f.dims = ? AND {visible}",
+            [ticker.upper(), *concepts, json.dumps(dims or {}, sort_keys=True), *params],
+        )
+        return [dict(r) | {"dims": json.loads(r["dims"])} for r in rows]
+
+    def fact(self, fact_id: str) -> dict | None:
+        visible, params = self.asof.sql("f")
+        sql = f"SELECT * FROM facts f WHERE f.id = ? AND {visible}"
+        rows = self._query(sql, [fact_id, *params])
+        return dict(rows[0]) | {"dims": json.loads(rows[0]["dims"])} if rows else None
 
     def rebuild_search_index(self) -> None:
         with self._lock, self.db:
