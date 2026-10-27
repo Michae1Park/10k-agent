@@ -1,7 +1,18 @@
-"""The fixed corpus (docs/DECISIONS.md D-001): 8 companies × fiscal years 2023–2025."""
+"""The corpus: companies and fiscal years from a companies file (design doc §14.1).
 
+$TENK_COMPANIES names the file, default companies-v3.yaml: the V0–V3 corpus (D-001),
+8 companies × fiscal years 2023–2025. companies.yaml is the V4 coverage (D-038). A relative
+path is read from the working directory, else the repo root.
+"""
+
+import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
+
+import yaml
+
+DEFAULT_FILE = "companies-v3.yaml"
 
 
 @dataclass(frozen=True)
@@ -12,17 +23,25 @@ class Company:
     aliases: tuple[str, ...] = ()
 
 
-COMPANIES: tuple[Company, ...] = (
-    Company("AAPL", 320193, "Apple Inc.", ("Apple",)),
-    Company("MSFT", 789019, "Microsoft Corporation", ("Microsoft",)),
-    Company("AMZN", 1018724, "Amazon.com, Inc.", ("Amazon", "AWS", "Amazon Web Services")),
-    Company("GOOGL", 1652044, "Alphabet Inc.", ("Alphabet", "Google", "GOOG", "YouTube")),
-    Company("META", 1326801, "Meta Platforms, Inc.", ("Meta", "Facebook", "FB", "Instagram")),
-    Company("NVDA", 1045810, "NVIDIA Corporation", ("NVIDIA", "Nvidia")),
-    Company("TSLA", 1318605, "Tesla, Inc.", ("Tesla",)),
-    Company("NFLX", 1065280, "Netflix, Inc.", ("Netflix",)),
-)
-FISCAL_YEARS: tuple[int, ...] = (2023, 2024, 2025)
+def companies_path(name: str | None = None) -> Path:
+    path = Path(name or os.environ.get("TENK_COMPANIES") or DEFAULT_FILE)
+    if path.is_absolute() or path.exists():
+        return path
+    return Path(__file__).resolve().parents[2] / path
+
+
+def load(path: Path) -> tuple[tuple[Company, ...], tuple[int, ...] | None]:
+    """The companies in `path` and its fiscal years (None: every period up to the as-of)."""
+    data = yaml.safe_load(path.read_text())
+    companies = tuple(
+        Company(ticker, entry["cik"], entry["name"], tuple(entry.get("aliases", ())))
+        for ticker, entry in data["companies"].items()
+    )
+    years = data.get("fiscal_years")
+    return companies, tuple(years) if years else None
+
+
+COMPANIES, FISCAL_YEARS = load(companies_path())
 
 
 def company_by_ticker(ticker: str) -> Company:
