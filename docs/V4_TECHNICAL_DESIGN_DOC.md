@@ -117,7 +117,7 @@ UBER:
 | DEF 14A | same | Latest per year; chunked text only | |
 | Form 4 | `acquisition/insiders.py` | XML → `insider_tx` (V4.7; dilution context only) | |
 | XBRL company facts | `acquisition/edgar.py` | Unchanged; refreshed each fetch, facts keep their `filed` date | `raw/edgar/<T>/companyfacts.json` |
-| Prices | `acquisition/prices.py` | Tiingo daily EOD per ticker + SPY (for beta), split-adjusted (`TIINGO_API_KEY`, free) | `raw/prices/` |
+| Prices | `acquisition/prices.py` | Tiingo daily EOD per ticker + SPY (for beta), split-adjusted (`TIINGO_API_KEY`, free Starter plan). Licence is internal use only: raw prices never leave `data/` (§11, §17.5) | `raw/prices/` |
 | Macro, ERP | `acquisition/macro.py` | ALFRED (`FRED_API_KEY`, free): DGS10, CPIAUCSL, UMCSENT, DTWEXBGS, RSFSDP; Damodaran monthly implied ERP | `raw/macro/` |
 | Cross-checks | `acquisition/crosscheck.py` | BTS T-100, NYC TLC by license (Uber/Lyft codes to verify). TLC Parquet is large: aggregate to trips per month per license at fetch (V4.7) | `raw/crosscheck/` |
 
@@ -452,6 +452,7 @@ Directory: `output/research/<TICKER>/<as_of>/v<n>/`, indexed in `model_versions`
 | `trace.jsonl`, `run.json` | runner | Time, tokens |
 
 - **Parity test:** after export, `soffice --headless --convert-to xlsx` recalculates; every formula cell is compared with `model.json` (1e-9 relative). A mismatch is a layer-2 FAIL.
+- **Publication rule (Tiingo licence, §17.5):** local outputs show every figure. A note or results file meant to leave the machine is exported with `--public`, which replaces each figure whose inputs include a `px:` ref (price, market cap, EV, 52-week range, return, PT, rating, multiples) with "n/a: price data licensed for personal use only"; the number trace (§10.2) finds them. No price data is committed: `data/` is gitignored.
 - **Review:** reports are written `draft`; `tenk report approve` sets `reviewed` (no number edits; amendments are a new version). Ask and Research show the status beside any cited estimate.
 - **Note build order (spec §2.3):** sections 1–5 first, 6–10 once the model and extraction tests pass.
 
@@ -614,7 +615,7 @@ Each becomes a DECISIONS.md entry when built. Rows 1–11 fill gaps in the spec;
 | 16 | Review | `draft` → `reviewed` via CLI; the human decides, the agent doesn't |
 | 17 | Clean backtest quarters | Q1–Q2 2026 (§12) |
 
-**Settled earlier:** replace the corpus (V0–V3 results stay documented; code stays generic over the company list) · V3 stays runnable from `companies-v3.yaml` as the shared-code regression check (§14.1) · Ask/Research pass bars (§13.1) · the LLM proposes assumptions, code computes every number · Qwen3.6-27B local by default, Claude optional for comparison · both backtest designs (walk-forward main; one longer-horizon run) · both ratings, no consensus · CLI only, output under `output/` · Ask cites saved reports for estimates · Tiingo for prices (Stooq blocked, §17.5) · TSA and Google Trends dropped · one SQLite file (D-005) · ~80 gold questions.
+**Settled earlier:** replace the corpus (V0–V3 results stay documented; code stays generic over the company list) · V3 stays runnable from `companies-v3.yaml` as the shared-code regression check (§14.1) · Ask/Research pass bars (§13.1) · the LLM proposes assumptions, code computes every number · Qwen3.6-27B local by default, Claude optional for comparison · both backtest designs (walk-forward main; one longer-horizon run) · both ratings, no consensus · CLI only, output under `output/` · Ask cites saved reports for estimates · Tiingo for prices, kept private (Stooq blocked; licence, §17.5, §11) · TSA and Google Trends dropped · one SQLite file (D-005) · ~80 gold questions.
 
 **Parking lot:** earnings-day diff job (new release vs our estimate → draft section 2) · tool routing by question class · airline read-throughs (spec §4 excludes airline estimates, not their data) · async model tools for `--all`-sized Research questions.
 
@@ -671,6 +672,7 @@ The 10-K count includes the FY2022 10-K filed in early 2023. The 15 releases are
 | Damodaran ERP | ✓ (HTTP 200) | Public, free | OK |
 | NYC TLC | ✓ `fhvhv_tripdata_YYYY-MM.parquet`, ~540 MB per month | NYC Open Data, public | OK; aggregate at fetch (§4.2). License codes (HV0003 Uber, HV0005 Lyft) to confirm on the first file |
 | BTS | ✓ (HTTP 200) | US government, public domain | OK |
-| Stooq | ✗ behind a JavaScript proof-of-work bot check; the CSV endpoint returns the challenge page | Getting around the check is not acceptable | **Dropped; replaced by Tiingo** (free key, split-adjusted EOD, personal and non-commercial use) |
+| Stooq | ✗ behind a JavaScript proof-of-work bot check; the CSV endpoint returns the challenge page | Getting around the check is not acceptable | **Dropped; replaced by Tiingo** |
+| Tiingo | ✓ free Starter: 1,000 requests/day, 500 symbols/month, 30+ years | "Internal Use Only… may not display or share the data with another person". Checked alternatives (Alpha Vantage free = last 100 days only; EODHD, Nasdaq.com, Yahoo: personal use only) | **Used, kept private** (§11 publication rule) |
 | **TSA** | ✗ HTTP 403 to scripts | Public data, but the site blocks automated access | **Dropped** (BTS covers air traffic) |
 | Google Trends | not tested | No official API; unofficial clients break its terms | **Dropped** (optional in the spec) |
