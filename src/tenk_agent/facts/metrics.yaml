@@ -1,0 +1,54 @@
+# Core financial lines (V4 design doc §4.5, §5.2): each metric's XBRL concepts in priority order
+# (the first with a value for a period wins), and its kind:
+#   flow       a duration; quarters derived from year-to-date facts (Q2 = H1 − Q1, Q4 = FY − 9M)
+#   instant    a balance at the period end
+#   per_share  a duration that doesn't add up (EPS): direct three-month and full-year facts only
+#   shares     weighted-average share counts: as per_share
+# Per-company overrides: `companies: {TICKER: [concepts]}` replaces the list for that company.
+
+revenue:
+  kind: flow
+  concepts: [Revenues, RevenueFromContractWithCustomerExcludingAssessedTax]
+operating_income:
+  kind: flow
+  concepts: [OperatingIncomeLoss]
+net_income:
+  kind: flow
+  concepts: [NetIncomeLoss, NetIncomeLossAvailableToCommonStockholdersBasic, ProfitLoss]
+income_tax:
+  kind: flow
+  concepts: [IncomeTaxExpenseBenefit]
+sbc:
+  kind: flow
+  concepts: [ShareBasedCompensation, AllocatedShareBasedCompensationExpense]
+d_and_a:
+  kind: flow
+  concepts: [DepreciationDepletionAndAmortization, DepreciationAndAmortization,
+             DepreciationAmortizationAndAccretionNet, DepreciationAmortizationAndOther]
+operating_cash_flow:
+  kind: flow
+  concepts: [NetCashProvidedByUsedInOperatingActivities]
+capex:
+  kind: flow
+  concepts: [PaymentsToAcquirePropertyPlantAndEquipment, PaymentsToAcquireProductiveAssets]
+buybacks:
+  kind: flow
+  concepts: [PaymentsForRepurchaseOfCommonStock]
+eps_diluted:
+  kind: per_share
+  concepts: [EarningsPerShareDiluted]
+shares_diluted:
+  kind: shares
+  concepts: [WeightedAverageNumberOfDilutedSharesOutstanding]
+cash:
+  kind: instant
+  concepts: [CashAndCashEquivalentsAtCarryingValue]
+total_assets:
+  kind: instant
+  concepts: [Assets]
+total_liabilities:
+  kind: instant
+  concepts: [Liabilities]
+equity:
+  kind: instant
+  concepts: [StockholdersEquity, StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest]

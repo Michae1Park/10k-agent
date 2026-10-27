@@ -57,3 +57,5 @@ select = ["E", "F", "I", "B", "UP"]
 [tool.ruff.lint.per-file-ignores]
 # HTML markup reads better unwrapped.
 "src/tenk_agent/evaluation/render.py" = ["E501"]
+# Inline XBRL fixture markup reads better unwrapped.
+"tests/test_facts.py" = ["E501"]
