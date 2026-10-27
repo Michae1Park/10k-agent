@@ -78,7 +78,7 @@ The spec's header says "on or before", §6 says "accepted before". We use **stri
 
 **Enforcement**
 - `asof.py` holds `AsOf` with `.sees(d)`, `.sql(alias, column)`, `.latest(rows)`. Nothing else compares dates.
-- Every `Store` read of dated data **requires** `asof` (no default; missing = `TypeError`). `Store.search(..., asof=)` adds `filed < ?` to `_filters`.
+- A `Store` is **bound to an `AsOf` when opened** (`Store(path, asof)`): every read of filings, chunks and children (search, `get_chunk`, `chunks`, `filing(s)`) goes through `asof.sql()` in `_filters`, so no read path can skip it. V3 opens at `AsOf.today()`; V4 code (`facts/`, `research/`) must pass one (`tests/test_asof.py` checks). Binding per store rather than per call keeps V3's ~15 call sites unchanged (M3, §14.1).
 - `Toolbox(asof=...)` is built per run. No `ToolSpec` has an `as_of` property, so the model cannot widen its view.
 - **Restatements:** `.latest()` returns, per (concept, period), the value from the newest filing visible at D. An as-of before a restatement sees the original.
 - Layer-2 check `no_future_input` (§5.4) asserts it on every run.
