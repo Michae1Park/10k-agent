@@ -173,6 +173,7 @@ def test_growth_pair_finds_the_later_column():
     assert extract.growth_pair("| Trips | 3,268 | 3,867 | 18% |") == (3268, 3867)
     assert extract.growth_pair("| Freight | (19) | (20) | (5)% |") == (19, 20)
     assert extract.growth_pair("| Brand Tripadvisor (1) | $235 | $255 | (8)% |") == (255, 235)
+    assert extract.growth_pair("| Total Revenue | $411 | $411 | 0% |") is None
     assert extract.growth_pair("| Viator | $294 | $270 | 9% |") == (270, 294)
     assert extract.growth_pair("| Freight | 1,273 | 1,267 | (1)% |") == (1273, 1267)
     assert extract.growth_pair("Gross Bookings of $58.25 billion to $60.25 billion") is None
@@ -205,3 +206,11 @@ def test_target_periods_normalize():
 
     assert _quarter("Q3 2026") == _quarter("2026Q3") == "2026Q3"
     assert _quarter("FY 2026") == _quarter("full-year 2026") == _quarter("2026") == "FY2026"
+
+
+def test_quote_miss_shows_the_chunk_text_around_the_value(tmp_path):
+    store = release_store(tmp_path)
+    chunks = {c.id: c for c in extract.release_chunks(store, "UBER", "2026Q2")}
+    entry = extract.registry()["UBER"]
+    why = extract.validate({**GOOD_GB, "quote": "Gross Bookings $58,022"}, "kpi", chunks, entry)
+    assert "not found verbatim" in why and "$58,022 | 24%" in why
