@@ -4,10 +4,11 @@ A gold label (evaluation/gold/extraction-gold.jsonl) matches when the extraction
 its (ticker, period, metric, segment) — guidance labels `guide.<metric>.low|high` match the
 guidance row for that metric and target period — with the same value to the label's precision
 (USD millions to 0.5; per share to half a cent; percent and counts exactly as printed). Pass
-bars: 98% overall, 100% on revenue, EPS and the company's main KPI.
+bars: 98% overall, 100% on consolidated revenue, EPS and the company's main KPI.
 """
 
 import json
+import re
 from pathlib import Path
 
 MAIN_KPI = {
@@ -24,10 +25,12 @@ CRITICAL = ("revenue", "eps_diluted")
 
 
 def _quarter(target: str | None) -> str | None:
-    """'Q3 2026' or '2026Q3' → '2026Q3'."""
+    """'Q3 2026' or '2026Q3' → '2026Q3'; 'FY 2026', 'full-year 2026' or '2026' → 'FY2026'."""
     if not target:
         return None
     t = target.replace(" ", "")
+    if m := re.fullmatch(r"(?i)(?:FY|full-?year|fiscal(?:year)?)?(\d{4})", t):
+        return f"FY{m.group(1)}"
     return f"{t[2:]}{t[:2]}" if t.upper().startswith("Q") else t
 
 
@@ -54,9 +57,8 @@ def score(gold: list[dict], extracted: dict[tuple[str, str], dict]) -> dict:
                 if k["metric"] == label["metric"] and (k.get("segment") or "total") == segment:
                     value = k["value"]
         ok = value is not None and _close(float(value), label["value"], label["unit"])
-        critical = label["metric"] in CRITICAL or (
-            label["metric"] == MAIN_KPI.get(label["ticker"])
-            and label.get("segment") in (None, "total")
+        critical = label.get("segment") in (None, "total") and (
+            label["metric"] in CRITICAL or label["metric"] == MAIN_KPI.get(label["ticker"])
         )
         rows.append(
             {
