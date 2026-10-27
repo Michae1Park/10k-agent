@@ -2,6 +2,7 @@
 # cik and verified are written by `tenk companies verify` from SEC data, never typed.
 # fiscal_years: null = every period up to the as-of date, from window.since.
 
+data_dir: data/v4  # raw filings, caches and databases of this corpus
 fiscal_years: null
 window:
   since: '2023-01-01'
