@@ -314,14 +314,6 @@ class Store:
         )
         return [_filing(r) for r in rows]
 
-    def section_titles(self, ticker: str, fiscal_year: int) -> dict[str, str]:
-        rows = self._query(
-            "SELECT s.item, s.title FROM sections s JOIN filings f USING (accession_no) "
-            "WHERE f.ticker = ? AND f.fiscal_year = ?",
-            (ticker.upper(), fiscal_year),
-        )
-        return {r["item"]: r["title"] for r in rows}
-
     def get_chunk(self, chunk_id: str) -> ChunkRecord | None:
         rows = self._query("SELECT * FROM chunks WHERE id = ?", (chunk_id,))
         return _chunk(rows[0]) if rows else None

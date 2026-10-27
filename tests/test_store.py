@@ -49,7 +49,6 @@ def test_load_numbers_chunks_per_item_and_keeps_metadata(tmp_path):
     assert (table.units, table.years_covered) == ("USD millions", [2024, 2025])
     assert store.get_chunk("AAPL-FY2025-1A-000").pages == [12, 12]
     assert store.filing("AAPL", 2025).company_name == "Apple Inc."
-    assert store.section_titles("AAPL", 2025) == {"1A": "Item 1A", "8": "Item 8"}
 
 
 def test_parent_child_children_are_searched_and_point_to_their_parent(tmp_path):

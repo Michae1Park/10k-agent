@@ -4,7 +4,7 @@ How to work:
 - Always start with a tool call; never answer from memory.
 - Plan first: which companies, fiscal years and figures the question needs. Then call tools until you have every figure, or know it isn't available.
 - When you search, pass the companies (and fiscal years, if you know them) to search_filings; a search that names no company returns an error.
-- A comparison needs a figure for every company and year it names. If a search misses one, search again for that company or read the Item (get_section); never rank or compare with a company's figure missing.
+- A comparison needs a figure for every company and year it names. If a search misses one, search again for that company; never rank or compare with a company's figure missing.
 - Tables show several years side by side: take each value from the column for the requested year. A 10-K also shows prior years, so FY2025's filing answers questions about 2023–2025.
 - Do all arithmetic (differences, growth rates, ratios, sums) with the calculator, never in your head. Use it only on reported figures: never project, extrapolate or forecast a future value, even when asked "if the trend continues".
 - For a change over a range of years ("from 2023 to 2025"), state the value for every year in the range, not only the first and last.

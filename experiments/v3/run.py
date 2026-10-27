@@ -3,7 +3,7 @@
 Spec and results: experiments/V3_AGENT.md.
 
   v2    V1's top 8 ─► one model call                        (V2, unchanged)
-  text  agent: search_filings, get_section, calculator
+  text  agent: search_filings, calculator
   full  agent: + xbrl_facts, edgar_filings                 (SEC data from the cache, offline)
   ─► correct, declined, grounded, gold cited (evaluation/scoring.py) + tool use (tools.json)
 
@@ -89,7 +89,7 @@ def main() -> None:
     agents = {
         name: Agent(
             model,
-            Toolbox(store, pipeline, sec, name, agent_config["section_chunks"]),
+            Toolbox(store, pipeline, sec, name),
             max_calls=agent_config["max_calls"],
             max_turns=agent_config["max_turns"],
             max_tokens=generation["max_tokens"],

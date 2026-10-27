@@ -30,7 +30,6 @@ agent:                                                  # variants text and full
   max_turns: 20
   max_context: 20000                                    # input tokens past which the agent must answer (server: 32k)
   result_chars: 16000
-  section_chunks: 4
   sec_cache: data/raw/edgar                             # offline: cached SEC responses only (D-036)
 
 score:

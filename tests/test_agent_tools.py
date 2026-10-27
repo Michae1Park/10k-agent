@@ -88,24 +88,7 @@ def make_sec(tmp_path) -> SecData:
 
 @pytest.fixture
 def tools(tmp_path) -> Toolbox:
-    return Toolbox(make_store(tmp_path), None, make_sec(tmp_path), section_chunks=2)
-
-
-def test_get_section_pages_through_an_item_in_order(tools):
-    first = tools.call("get_section", {"company": "Apple", "fiscal_year": 2025, "item": "8"})
-    assert (first["title"], first["page"], first["pages"]) == ("Financial Statements", 1, 3)
-    assert [c["chunk_id"] for c in first["chunks"]] == ["AAPL-FY2025-8-000", "AAPL-FY2025-8-001"]
-    last = tools.call(
-        "get_section", {"company": "AAPL", "fiscal_year": 2025, "item": "8", "page": 9}
-    )
-    assert last["page"] == 3 and [c["chunk_id"] for c in last["chunks"]] == ["AAPL-FY2025-8-004"]
-
-
-def test_get_section_errors_name_what_exists(tools):
-    missing = tools.call("get_section", {"company": "AAPL", "fiscal_year": 2025, "item": "7"})
-    assert "no Item 7" in missing["error"] and ["1A", "Risk Factors"] in map(list, missing["items"])
-    other = tools.call("get_section", {"company": "Oracle", "fiscal_year": 2025, "item": "8"})
-    assert other["corpus"] == ["AAPL FY2025"]
+    return Toolbox(make_store(tmp_path), None, make_sec(tmp_path))
 
 
 def test_calculator_tool_returns_formula_and_errors_as_results(tools):
@@ -165,7 +148,7 @@ def test_offline_sec_data_never_fetches(tools):
 
 def test_text_tool_set_hides_sec_tools(tools):
     tools.tool_set = "text"
-    assert [s.name for s in tools.specs] == ["search_filings", "get_section", "calculator"]
+    assert [s.name for s in tools.specs] == ["search_filings", "calculator"]
     assert "unknown tool" in tools.call("xbrl_facts", {})["error"]
 
 

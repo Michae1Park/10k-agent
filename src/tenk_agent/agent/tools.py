@@ -1,7 +1,6 @@
 """The V3 agent's tools: what each does, its schema, and the code that runs it.
 
   search_filings   V1's retrieval: sub-questions per company and filing, hybrid search, round-robin
-  get_section      one 10-K Item, in order, a page of chunks at a time
   calculator       generation/calculator.py: named operations or an expression over inputs
   xbrl_facts       SEC XBRL company facts for one concept and 10-K            (tool set "full")
   edgar_filings    live EDGAR filing metadata: which filings exist, when      (tool set "full")
@@ -43,22 +42,6 @@ SPECS = {
                 "k": {"type": "integer", "description": "Chunks in all (default 8, max 16)"},
             },
             "required": ["query"],
-        },
-    ),
-    "get_section": ToolSpec(
-        "get_section",
-        "Read one Item of a 10-K in order (e.g. 7 = MD&A, 8 = financial statements, "
-        "1A = risk factors), a page of chunks at a time. Use it when a search hit is "
-        "incomplete or the table you need is next to it.",
-        {
-            "type": "object",
-            "properties": {
-                "company": COMPANY,
-                "fiscal_year": {"type": "integer"},
-                "item": {"type": "string", "description": "Item number, e.g. '7', '8', '1A'"},
-                "page": {"type": "integer", "description": "Page of the Item, from 1"},
-            },
-            "required": ["company", "fiscal_year", "item"],
         },
     ),
     "calculator": ToolSpec(
@@ -110,8 +93,8 @@ SPECS = {
 }
 
 TOOL_SETS = {
-    "text": ("search_filings", "get_section", "calculator"),
-    "full": ("search_filings", "get_section", "calculator", "xbrl_facts", "edgar_filings"),
+    "text": ("search_filings", "calculator"),
+    "full": ("search_filings", "calculator", "xbrl_facts", "edgar_filings"),
 }
 
 
@@ -121,7 +104,6 @@ class Toolbox:
     search: SubQuestionRetriever | None  # None: search_filings unavailable (tests)
     sec: SecData | None
     tool_set: str = "full"
-    section_chunks: int = 4  # chunks per get_section page
 
     @property
     def specs(self) -> list[ToolSpec]:
@@ -174,29 +156,6 @@ class Toolbox:
                 for s in result.searches
             ],
             "chunks": [chunk_view(c) for c in result.chunks],
-        }
-
-    def get_section(self, company: str, fiscal_year: int, item: str, page: int = 1) -> dict:
-        tickers, unknown = self._tickers([company])
-        if unknown:
-            return {"error": f"not in the corpus: {unknown}", "corpus": self._corpus()}
-        ticker, item = tickers[0], str(item).upper().removeprefix("ITEM").strip()
-        chunks = [c for c in self.store.chunks(ticker, int(fiscal_year)) if c.item == item]
-        if not chunks:
-            items = sorted(self.store.section_titles(ticker, int(fiscal_year)).items())
-            return {"error": f"no Item {item} in {ticker} FY{fiscal_year}", "items": items}
-        pages = -(-len(chunks) // self.section_chunks)
-        page = max(1, min(int(page), pages))
-        start = (page - 1) * self.section_chunks
-        title = self.store.section_titles(ticker, int(fiscal_year)).get(item)
-        return {
-            "company": ticker,
-            "fiscal_year": int(fiscal_year),
-            "item": item,
-            "title": title,
-            "page": page,
-            "pages": pages,
-            "chunks": [chunk_view(c) for c in chunks[start : start + self.section_chunks]],
         }
 
     def _tickers(self, names: list[str]) -> tuple[list[str], list[str]]:
@@ -281,4 +240,4 @@ def toolbox_from_settings(
             raise SecError("live SEC requests need SEC_USER_AGENT, e.g. 'Name you@example.com'")
         client = EdgarClient(user_agent)
     sec = SecData(Path(settings["data_dir"]) / "raw" / "edgar", client)
-    return Toolbox(store, retriever, sec, tool_set, settings["agent"]["section_chunks"])
+    return Toolbox(store, retriever, sec, tool_set)
