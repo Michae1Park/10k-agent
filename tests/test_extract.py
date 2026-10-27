@@ -100,6 +100,7 @@ def test_valid_rows_are_kept_and_bad_ones_repaired_once(tmp_path):
     )
     out = extract.extract(model, store, "UBER", "2026Q2")
     assert out.calls == 2 and "failed the checks" in model.seen[1][-1]["content"]
+    assert {k["definition_version"] for k in out.kpis} == {1}
     assert {(k["metric"], k["value"]) for k in out.kpis} == {
         ("gross_bookings", 58022),
         ("trips", 3867),
@@ -117,6 +118,8 @@ def test_validate_rejects_unknown_metric_segment_and_value_not_in_quote(tmp_path
     assert "segment" in extract.validate({**GOOD_GB, "segment": "x"}, "kpi", chunks, entry)
     assert "not in the quote" in extract.validate({**GOOD_GB, "value": 5}, "kpi", chunks, entry)
     assert extract.validate(GUIDE, "guidance", chunks, entry) is None
+    assert extract.validate({**GUIDE, "high": None}, "guidance", chunks, entry) is None  # a floor
+    assert "low" in extract.validate({**GUIDE, "low": None}, "guidance", chunks, entry)
 
 
 def test_release_chunks_only_from_that_release_and_visible(tmp_path):
@@ -176,3 +179,18 @@ def test_growth_pair_finds_the_later_column():
     assert (
         extract.growth_pair("| Diluted | $1.20 | $3.11 | $1.36 | $4.57 |") is None
     )  # no growth column
+
+
+def test_definition_version_follows_the_recast():
+    spec = {"definitions": {"2026Q2": 2}}
+    assert extract.definition_version(spec, "2026Q1") == 1
+    assert extract.definition_version(spec, "2026Q2") == 2
+    assert extract.definition_version({}, "2026Q2") == 1
+
+
+def test_registry_covers_all_eight_companies():
+    reg = extract.registry()
+    assert set(reg) == {"BKNG", "EXPE", "ABNB", "TRIP", "UBER", "LYFT", "DASH", "CART"}
+    for ticker, entry in reg.items():
+        for spec in [*entry["kpis"].values(), *(entry.get("guidance") or {}).values()]:
+            assert spec["unit"], ticker

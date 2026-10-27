@@ -81,12 +81,22 @@ def validate(row: dict, kind: str, chunks: dict[str, ChunkRecord], entry: dict) 
     probe = ChunkRecord(
         chunk.id, chunk.ticker, chunk.fiscal_year, chunk.item, chunk.kind, quote, chunk.units, []
     )
-    for name in ("value",) if kind == "kpi" else ("low", "high"):
+    names = ("value",) if kind == "kpi" else ("low", "high")
+    if kind == "guidance" and row.get("high") is None:
+        names = ("low",)  # open-ended: "at least 35.5%"
+    for name in names:
         if row.get(name) is None or not find_value(row[name], spec["unit"], probe):
             return f"{name} {row.get(name)!r} ({spec['unit']}) is not in the quote"
     if kind == "kpi" and (later := growth_pair(quote)) and _number(row["value"]) == later[0]:
         return f"value {row['value']!r} is the earlier column; the quote shows {later[1]} after it"
     return None
+
+
+def definition_version(spec: dict, period: str) -> int:
+    """The KPI's definition version for a period: the latest `definitions` entry at or before
+    it (periods compare as text, 2025Q4 < 2026Q2), else 1."""
+    versions = [v for start, v in (spec.get("definitions") or {}).items() if str(start) <= period]
+    return max(versions, default=1)
 
 
 def _number(value) -> float | None:
@@ -168,10 +178,15 @@ def extract(
                 for row in reply.get(key) or []:
                     if not isinstance(row, dict):
                         continue
-                    if (why := validate(row, kind, by_id, entry)) is None:
-                        (out.kpis if kind == "kpi" else out.guidance).append(_clean(row, kind))
-                    else:
+                    if (why := validate(row, kind, by_id, entry)) is not None:
                         pending.append((kind, row, why))
+                    elif kind == "kpi":
+                        clean = _clean(row, kind)
+                        spec = entry["kpis"][clean["metric"]]
+                        clean["definition_version"] = definition_version(spec, period)
+                        out.kpis.append(clean)
+                    else:
+                        out.guidance.append(_clean(row, kind))
         if not pending or attempt == 1:
             break
         problems = "\n".join(f"- {kind} {json.dumps(row)}: {why}" for kind, row, why in pending)
@@ -181,7 +196,7 @@ def extract(
                 "role": "user",
                 "content": "These rows failed the checks; return only corrected "
                 f"versions of them (same JSON shape), or leave a row out. A quote must be one "
-             f"unbroken piece of the chunk, without '...':\n{problems}",
+                f"unbroken piece of the chunk, without '...':\n{problems}",
             },
         ]
     out.exceptions = [{"kind": k, "row": r, "reason": why} for k, r, why in pending]
