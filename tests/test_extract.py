@@ -169,6 +169,9 @@ def test_score_kpis_guidance_and_critical():
 def test_growth_pair_finds_the_later_column():
     assert extract.growth_pair("| Trips | 3,268 | 3,867 | 18% |") == (3268, 3867)
     assert extract.growth_pair("| Freight | (19) | (20) | (5)% |") == (19, 20)
+    assert extract.growth_pair("| Brand Tripadvisor (1) | $235 | $255 | (8)% |") == (255, 235)
+    assert extract.growth_pair("| Viator | $294 | $270 | 9% |") == (270, 294)
+    assert extract.growth_pair("| Freight | 1,273 | 1,267 | (1)% |") == (1273, 1267)
     assert extract.growth_pair("Gross Bookings of $58.25 billion to $60.25 billion") is None
     assert (
         extract.growth_pair("| Diluted | $1.20 | $3.11 | $1.36 | $4.57 |") is None
