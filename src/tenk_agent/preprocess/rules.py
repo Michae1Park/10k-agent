@@ -1,14 +1,16 @@
-"""Rule-based structure labels for 10-Qs and earnings releases (V4 design doc §4.4).
+"""Rule-based structure labels for V4 filings: 10-K, 10-Q, earnings release (D-039).
 
-The 10-K keeps V0's LLM structure agent. A 10-Q's headings are regular (a bold "PART I" line,
-then bold "Item 2." lines), and a release has no Items, so rules label both; the LLM agent is
-added only if the pilot shows headings the rules miss. The labels have the structure agent's
-shape, so V0's assembly and chunkers run unchanged.
+Headings in these filings are regular (a bold "PART I" line, then bold "Item 2." lines), and a
+release has no Items, so rules label all three. On the four V3 10-Ks with LLM labels, rules put
+every block both keep in the same Item (100%, D-039); V3 keeps V0's LLM structure agent. The
+labels have the structure agent's shape, so V0's assembly and chunkers run unchanged.
 
   item_heading  a bold, short, non-link "Item n." paragraph (or one-row table) that moves
                 forward in the form's Item order; 10-Q keys carry the open Part (I.2, II.1A)
   part_heading  "PART I" / "PART II" (dropped from the document, opens the Part)
-  heading       other bold paragraphs under 120 characters (level 1, kind other)
+  heading       other bold paragraphs under 120 characters (level 1): kind statement, notes_header
+                or auditor_report by their wording (so V0's assembly moves statements filed in
+                Item 15 into Item 8, as the LLM agent's labels do), else other
   furniture     a bare page number before a page break
   data_table    every other table; units from the table or the paragraph before it
   body          everything else
@@ -24,11 +26,18 @@ from tenk_agent.preprocess.blocks import Block, read_blocks
 from tenk_agent.preprocess.forms import FormSpec, form_spec
 from tenk_agent.preprocess.structure import assemble
 
-PART = re.compile(r"^part\s+(i{1,2})\b[\s.:—–-]*", re.I)  # EXPE: "Part I. Item 1. …" on one line
-ITEM = re.compile(r"^i\s?tems?\s+(\d{1,2}[a-c]?)\b", re.I)  # TRIP: "I tem 2." (styled initial)
+PART = re.compile(r"^part\s+(iv|i{1,3})\b[\s.:—–-]*", re.I)  # EXPE: "Part III. Item 10. …"
+ITEM = re.compile(r"^i\s?t\s?e\s?m\s?s?\s+(\d{1,2}[a-c]?)\b", re.I)  # TRIP: "I tem 2.", "Ite m 8."
 UNITS = re.compile(r"in (thousands|millions|billions)", re.I)
 PAGE_NUMBER = re.compile(r"^\s*(\d{1,3}|[A-Z]-\d{1,3})\s*$")
 MAX_HEADING = 150  # characters: longer bold text is a paragraph, not a heading
+HEADING_KINDS = (  # the structure agent's heading kinds a statement page's title shows
+    ("auditor_report", re.compile(r"^report of independent registered public accounting", re.I)),
+    ("notes_header", re.compile(r"^notes to (the )?(condensed )?consolidated financial", re.I)),
+    ("statement", re.compile(
+        r"^(condensed )?consolidated (balance sheets?|statements? of|statements? of cash)", re.I
+    )),
+)
 
 
 def _text(b: Block) -> str:
@@ -68,7 +77,8 @@ def label_blocks(blocks: list[Block], spec: FormSpec) -> dict[str, dict]:
         elif b.kind == "paragraph" and b.pb and PAGE_NUMBER.match(text):
             label["role"] = "furniture"
         elif b.kind == "paragraph" and _bold(b) and len(text) < 120 and not b.link:
-            label |= {"role": "heading", "level": 1, "kind": "other"}
+            kind = next((k for k, pattern in HEADING_KINDS if pattern.match(text)), "other")
+            label |= {"role": "heading", "level": 1, "kind": kind}
         labels[b.id] = label
     return labels
 
@@ -98,7 +108,7 @@ def label_release(blocks: list[Block], spec: FormSpec) -> dict[str, dict]:
 
 
 def preprocess_filing(folder: Path, out: Path, registrant: str) -> dict:
-    """A V4 10-Q or release folder (acquisition/filings.py) → blocks.json, labels.json,
+    """A V4 10-K, 10-Q or release folder (acquisition/filings.py) → blocks.json, labels.json,
     labels-log.json and document.json in `out`, as V0's preprocess writes them."""
     meta = json.loads((folder / "metadata.json").read_text())
     spec = form_spec(meta["form"])

@@ -85,7 +85,7 @@ def chunk_one(filing: Path, target: Path, settings: dict, methods) -> None:
     `target`. A document already there is reused; so are chunks made with these settings."""
     meta = json.loads((filing / "metadata.json").read_text())
     if not (target / "document.json").exists():
-        if meta.get("form") in ("10-Q", "ER"):  # V4: rule-based structure (preprocess/rules.py)
+        if "form" in meta:  # V4 filings: rule-based structure (preprocess/rules.py, D-039)
             from tenk_agent.corpus import company_by_ticker
             from tenk_agent.preprocess.rules import preprocess_filing
 
