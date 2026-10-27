@@ -43,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
                        help="V4 corpus: forms to fetch (default: all three)")
 
     build = commands.add_parser("build", help="V0 chunks of every filing → V1 database")
-    stages = ("chunk", "load", "embed", "pages")  # build.STAGES
+    stages = ("chunk", "load", "embed", "pages", "facts")  # build.STAGES
     build.add_argument(
         "--stage", action="append", choices=stages, help="default: chunk, load, embed"
     )

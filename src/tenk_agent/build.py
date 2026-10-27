@@ -7,6 +7,7 @@
   load   chunks → <out>/<method>.db, rebuilt from scratch; parent-child adds children
   embed  vectors for every chunk (and child). Stop vLLM first, or set retrieval.device: cpu
   pages  each chunk's pages, written into an already built <method>.db in place
+  facts  V4: XBRL company facts and inline facts of every 10-K and 10-Q into <method>.db
 
 Filings are read from <data_dir>/raw/filings/<TICKER>/FY<year>/ (tenk fetch); each one's work
 files (blocks, labels, document, chunks-<method>.json, chunk.log) go to <out>/<TICKER>-FY<year>/.
@@ -28,7 +29,7 @@ from tenk_agent.retrieval.embeddings import get_embedder
 from tenk_agent.retrieval.index import add_pages, embed_corpus, load
 from tenk_agent.store import Store
 
-STAGES = ("chunk", "load", "embed", "pages")
+STAGES = ("chunk", "load", "embed", "pages", "facts")
 
 
 def filing_dirs(
@@ -138,6 +139,26 @@ def pages_db(method: str, filings: list[Path], out: Path) -> None:
     print(f"{method}: pages for {add_pages(store, rows)} → {out / f'{method}.db'}")
 
 
+def facts_db(method: str, filings: list[Path], out: Path, since: str) -> None:
+    """V4 facts (facts/xbrl.py) into <out>/<method>.db: each company's companyfacts JSON (from
+    the fetch cache beside the filings) and the inline XBRL of its 10-Ks and 10-Qs."""
+    from tenk_agent.asof import AsOf
+    from tenk_agent.facts.xbrl import company_facts, filing_facts
+
+    store = Store(out / f"{method}.db", AsOf.today())  # loading only: no dated reads
+    store.enable_facts()
+    counts = {"companyfacts": 0, "inline": 0}
+    for ticker in sorted({f.parent.name for f in filings}):
+        raw = filings[0].parents[2] / "edgar" / ticker / "companyfacts.json"
+        counts["companyfacts"] += store.add_facts(
+            company_facts(ticker, json.loads(raw.read_text()), since)
+        )
+    for filing in filings:
+        if filing.name.endswith(("-10K", "-10Q")):
+            counts["inline"] += store.add_facts(filing_facts(filing))
+    print(f"{method}: facts {counts} → {out / f'{method}.db'}")
+
+
 def build(filings: list[Path], out: Path, settings: dict, methods, stages, jobs: int = 8) -> None:
     """Run `stages` in order. `settings`: llm, labeling and chunking (chunk), retrieval (embed)."""
     if "chunk" in stages and (failed := chunk_all(filings, out, settings, methods, jobs)):
@@ -151,3 +172,8 @@ def build(filings: list[Path], out: Path, settings: dict, methods, stages, jobs:
     if "pages" in stages:
         for method in methods:
             pages_db(method, filings, out)
+    if "facts" in stages:
+        from tenk_agent.corpus import WINDOW_START
+
+        for method in methods:
+            facts_db(method, filings, out, WINDOW_START)
