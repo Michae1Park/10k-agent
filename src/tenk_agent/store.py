@@ -2,6 +2,9 @@
 
 Keyword search uses the built-in FTS5; vector search uses the sqlite-vec extension.
 All database access goes through Store, so moving to Postgres + pgvector changes this module.
+
+A Store is bound to an AsOf (asof.py, V4 design doc §3): every read of filings, chunks and
+children sees only rows filed strictly before it. V3 opens stores at AsOf.today().
 """
 
 import json
@@ -13,6 +16,8 @@ from pathlib import Path
 
 import numpy as np
 import sqlite_vec
+
+from tenk_agent.asof import AsOf
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS companies (
@@ -28,7 +33,11 @@ CREATE TABLE IF NOT EXISTS filings (
     period_end_date TEXT NOT NULL,
     filing_date TEXT NOT NULL,
     source_url TEXT NOT NULL,
-    UNIQUE (ticker, fiscal_year)
+    form TEXT NOT NULL DEFAULT '10-K',
+    fiscal_period TEXT NOT NULL DEFAULT 'FY',  -- FY, Q1–Q3; a release: the quarter it reports
+    accepted_at TEXT,                         -- EDGAR acceptance time, UTC
+    retrieved_at TEXT,
+    UNIQUE (ticker, form, fiscal_year, fiscal_period)
 );
 CREATE TABLE IF NOT EXISTS sections (
     id TEXT PRIMARY KEY,
@@ -48,7 +57,10 @@ CREATE TABLE IF NOT EXISTS chunks (
     units TEXT,
     years_covered TEXT NOT NULL,
     pages TEXT,
-    printed_pages TEXT
+    printed_pages TEXT,
+    form TEXT NOT NULL DEFAULT '10-K',
+    fiscal_period TEXT NOT NULL DEFAULT 'FY',
+    filed TEXT  -- the filing's filing_date: the as-of filter
 );
 CREATE INDEX IF NOT EXISTS chunks_filter ON chunks (ticker, fiscal_year, item);
 CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts
@@ -68,7 +80,10 @@ CREATE TABLE IF NOT EXISTS children (
     fiscal_year INTEGER NOT NULL,
     item TEXT NOT NULL,
     kind TEXT NOT NULL,
-    text TEXT NOT NULL
+    text TEXT NOT NULL,
+    form TEXT NOT NULL DEFAULT '10-K',
+    fiscal_period TEXT NOT NULL DEFAULT 'FY',
+    filed TEXT
 );
 CREATE INDEX IF NOT EXISTS children_filter ON children (ticker, fiscal_year, item);
 CREATE INDEX IF NOT EXISTS children_parent ON children (parent_id);
@@ -76,11 +91,34 @@ CREATE VIRTUAL TABLE IF NOT EXISTS children_fts
     USING fts5(text, content='children', content_rowid='rowid');
 """
 
-# Older databases lack these columns; add them in place.
+# Older databases lack these columns; add them in place. V3 databases (all 10-Ks) gain the V4
+# form, period and filing-date columns; BACKFILL then dates their chunks from their filing.
 MIGRATIONS = (
     "ALTER TABLE companies ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'",
     "ALTER TABLE chunks ADD COLUMN pages TEXT",
     "ALTER TABLE chunks ADD COLUMN printed_pages TEXT",
+    "ALTER TABLE filings ADD COLUMN form TEXT NOT NULL DEFAULT '10-K'",
+    "ALTER TABLE filings ADD COLUMN fiscal_period TEXT NOT NULL DEFAULT 'FY'",
+    "ALTER TABLE filings ADD COLUMN accepted_at TEXT",
+    "ALTER TABLE filings ADD COLUMN retrieved_at TEXT",
+    "ALTER TABLE chunks ADD COLUMN form TEXT NOT NULL DEFAULT '10-K'",
+    "ALTER TABLE chunks ADD COLUMN fiscal_period TEXT NOT NULL DEFAULT 'FY'",
+    "ALTER TABLE chunks ADD COLUMN filed TEXT",
+)
+CHILD_MIGRATIONS = (
+    "ALTER TABLE children ADD COLUMN form TEXT NOT NULL DEFAULT '10-K'",
+    "ALTER TABLE children ADD COLUMN fiscal_period TEXT NOT NULL DEFAULT 'FY'",
+    "ALTER TABLE children ADD COLUMN filed TEXT",
+)
+BACKFILL = (
+    "UPDATE chunks SET filed = (SELECT f.filing_date FROM sections s JOIN filings f "
+    "USING (accession_no) WHERE s.id = chunks.section_id) WHERE filed IS NULL",
+    "CREATE INDEX IF NOT EXISTS chunks_asof ON chunks (ticker, filed, form, fiscal_year, item)",
+)
+CHILD_BACKFILL = (
+    "UPDATE children SET filed = (SELECT c.filed FROM chunks c WHERE c.id = children.parent_id) "
+    "WHERE filed IS NULL",
+    "CREATE INDEX IF NOT EXISTS children_asof ON children (ticker, filed, form, fiscal_year, item)",
 )
 
 
@@ -96,6 +134,9 @@ class ChunkRecord:
     years_covered: list[int]
     pages: list[int] | None = None  # V0 chunks: first and last page in the document
     printed_pages: list[str] | None = None  # the page numbers printed on those pages
+    form: str = "10-K"
+    fiscal_period: str = "FY"
+    filed: str | None = None  # the filing's filing_date (set on load)
 
 
 @dataclass
@@ -107,6 +148,9 @@ class ChildRecord:
     item: str
     kind: str  # "prose", "row" or "table_title"
     text: str
+    form: str = "10-K"
+    fiscal_period: str = "FY"
+    filed: str | None = None
 
 
 @dataclass
@@ -118,10 +162,17 @@ class FilingRecord:
     period_end_date: str
     filing_date: str
     source_url: str
+    form: str = "10-K"
+    fiscal_period: str = "FY"
+    accepted_at: str | None = None
+    retrieved_at: str | None = None
 
 
 class Store:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, asof: AsOf | None = None):
+        """`asof`: what reads see. None (V3 and loading only) means AsOf.today(); V4 code
+        always passes one (tests/test_asof.py checks)."""
+        self.asof = asof or AsOf.today()
         path.parent.mkdir(parents=True, exist_ok=True)
         # Parallel workers (V2 run.py) share one Store; a lock serializes access.
         self.db = sqlite3.connect(path, check_same_thread=False)
@@ -131,11 +182,19 @@ class Store:
         self.db.enable_load_extension(False)
         self._lock = threading.RLock()
         self.db.executescript(SCHEMA)
-        for statement in MIGRATIONS:
-            try:
+        self._migrate(MIGRATIONS, BACKFILL)
+        if self.has_children():
+            self._migrate(CHILD_MIGRATIONS, CHILD_BACKFILL)
+
+    def _migrate(self, statements: tuple[str, ...], backfill: tuple[str, ...]) -> None:
+        with self.db:
+            for statement in statements:
+                try:
+                    self.db.execute(statement)
+                except sqlite3.OperationalError:
+                    pass  # already applied
+            for statement in backfill:
                 self.db.execute(statement)
-            except sqlite3.OperationalError:
-                pass  # already applied
 
     def _query(self, sql: str, params=()) -> list[sqlite3.Row]:
         with self._lock:
@@ -147,6 +206,7 @@ class Store:
         """Add the children tables: this becomes a parent-child database."""
         with self._lock:
             self.db.executescript(CHILD_SCHEMA)
+            self._migrate(CHILD_MIGRATIONS, CHILD_BACKFILL)
 
     def add_filing(
         self,
@@ -167,7 +227,9 @@ class Store:
                 (filing.ticker, cik, filing.company_name, json.dumps(list(aliases))),
             )
             db.execute(
-                "INSERT INTO filings VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO filings (accession_no, ticker, fiscal_year, period_end_date, "
+                "filing_date, source_url, form, fiscal_period, accepted_at, retrieved_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     filing.accession_no,
                     filing.ticker,
@@ -175,6 +237,10 @@ class Store:
                     filing.period_end_date,
                     filing.filing_date,
                     filing.source_url,
+                    filing.form,
+                    filing.fiscal_period,
+                    filing.accepted_at,
+                    filing.retrieved_at,
                 ),
             )
             db.executemany(
@@ -186,7 +252,9 @@ class Store:
             )
             for c, seq in chunks:
                 db.execute(
-                    "INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO chunks (id, section_id, ticker, fiscal_year, item, seq, kind, "
+                    "text, units, years_covered, pages, printed_pages, form, fiscal_period, "
+                    "filed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         c.id,
                         f"{prefix}-{c.item}",
@@ -200,14 +268,18 @@ class Store:
                         json.dumps(c.years_covered),
                         json.dumps(c.pages) if c.pages else None,
                         json.dumps(c.printed_pages) if c.printed_pages else None,
+                        filing.form,
+                        filing.fiscal_period,
+                        filing.filing_date,
                     ),
                 )
             if children:
                 db.executemany(
-                    "INSERT INTO children (id, parent_id, ticker, fiscal_year, item, kind, text) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO children (id, parent_id, ticker, fiscal_year, item, kind, text, "
+                    "form, fiscal_period, filed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     [
-                        (k.id, k.parent_id, k.ticker, k.fiscal_year, k.item, k.kind, k.text)
+                        (k.id, k.parent_id, k.ticker, k.fiscal_year, k.item, k.kind, k.text,
+                         filing.form, filing.fiscal_period, filing.filing_date)
                         for k in children
                     ],
                 )
@@ -300,29 +372,35 @@ class Store:
         return filing.source_url if filing else None
 
     def filing(self, ticker: str, fiscal_year: int) -> FilingRecord | None:
+        """The fiscal year's 10-K, if filed before the as-of."""
+        visible, params = self.asof.sql("f", "filing_date")
         rows = self._query(
             "SELECT f.*, c.name FROM filings f JOIN companies c USING (ticker) "
-            "WHERE f.ticker = ? AND f.fiscal_year = ?",
-            (ticker.upper(), fiscal_year),
+            f"WHERE f.ticker = ? AND f.fiscal_year = ? AND f.form = '10-K' AND {visible}",
+            (ticker.upper(), fiscal_year, *params),
         )
         return _filing(rows[0]) if rows else None
 
     def filings(self) -> list[FilingRecord]:
+        visible, params = self.asof.sql("f", "filing_date")
         rows = self._query(
             "SELECT f.*, c.name FROM filings f JOIN companies c USING (ticker) "
-            "ORDER BY f.ticker, f.fiscal_year"
+            f"WHERE {visible} ORDER BY f.ticker, f.fiscal_year",
+            params,
         )
         return [_filing(r) for r in rows]
 
     def get_chunk(self, chunk_id: str) -> ChunkRecord | None:
-        rows = self._query("SELECT * FROM chunks WHERE id = ?", (chunk_id,))
+        visible, params = self.asof.sql("chunks")
+        rows = self._query(f"SELECT * FROM chunks WHERE id = ? AND {visible}", (chunk_id, *params))
         return _chunk(rows[0]) if rows else None
 
     def chunks(
         self, ticker: str | None = None, fiscal_year: int | None = None
     ) -> list[ChunkRecord]:
         where, params = _filters(
-            [ticker] if ticker else None, [fiscal_year] if fiscal_year else None, None
+            [ticker] if ticker else None, [fiscal_year] if fiscal_year else None, None,
+            asof=self.asof,
         )
         rows = self._query(f"SELECT * FROM chunks WHERE {where} ORDER BY id", params)
         return [_chunk(r) for r in rows]
@@ -380,7 +458,7 @@ class Store:
         if not terms:
             return []
         match = " OR ".join(f'"{term}"' for term in terms)
-        where, params = _filters(tickers, fiscal_years, items, table="c")
+        where, params = _filters(tickers, fiscal_years, items, table="c", asof=self.asof)
         return self._query(
             f"SELECT c.* FROM {table}_fts JOIN {table} c ON c.rowid = {table}_fts.rowid "
             f"WHERE {table}_fts MATCH ? AND {where} ORDER BY bm25({table}_fts) LIMIT ?",
@@ -388,7 +466,7 @@ class Store:
         )
 
     def _nearest(self, table, vector, tickers, fiscal_years, items, k) -> list[sqlite3.Row]:
-        where, params = _filters(tickers, fiscal_years, items, table="c")
+        where, params = _filters(tickers, fiscal_years, items, table="c", asof=self.asof)
         return self._query(
             f"SELECT c.* FROM {table} c JOIN {table}_vec v ON v.rowid = c.rowid WHERE {where} "
             f"ORDER BY vec_distance_cosine(v.embedding, ?) LIMIT ?",
@@ -404,8 +482,11 @@ STOPWORDS = {
 }  # fmt: skip
 
 
-def _filters(tickers, fiscal_years, items, table: str = "chunks") -> tuple[str, list]:
-    clauses, params = ["1 = 1"], []
+def _filters(
+    tickers, fiscal_years, items, table: str = "chunks", *, asof: AsOf
+) -> tuple[str, list]:
+    visible, params = asof.sql(table)
+    clauses = [visible]
     for column, values in (("ticker", tickers), ("fiscal_year", fiscal_years), ("item", items)):
         if values:
             clauses.append(f"{table}.{column} IN ({', '.join('?' * len(values))})")
@@ -425,6 +506,9 @@ def _chunk(row: sqlite3.Row) -> ChunkRecord:
         years_covered=json.loads(row["years_covered"]),
         pages=json.loads(row["pages"]) if row["pages"] else None,
         printed_pages=json.loads(row["printed_pages"]) if row["printed_pages"] else None,
+        form=row["form"],
+        fiscal_period=row["fiscal_period"],
+        filed=row["filed"],
     )
 
 
@@ -437,6 +521,9 @@ def _child(row: sqlite3.Row) -> ChildRecord:
         item=row["item"],
         kind=row["kind"],
         text=row["text"],
+        form=row["form"],
+        fiscal_period=row["fiscal_period"],
+        filed=row["filed"],
     )
 
 
@@ -449,4 +536,8 @@ def _filing(row: sqlite3.Row) -> FilingRecord:
         period_end_date=row["period_end_date"],
         filing_date=row["filing_date"],
         source_url=row["source_url"],
+        form=row["form"],
+        fiscal_period=row["fiscal_period"],
+        accepted_at=row["accepted_at"],
+        retrieved_at=row["retrieved_at"],
     )
