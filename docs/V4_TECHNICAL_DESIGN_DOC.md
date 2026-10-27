@@ -14,7 +14,7 @@ The spec says *what* to build; this doc says *how*, and how it plugs into V0–V
 |---|---|---|
 | **Job** | Cited answers about 10-Ks | Three modes: **Ask**, **Research**, **Report** (§2) |
 | **Companies** | 8 megacaps | BKNG, EXPE, ABNB, TRIP · UBER, LYFT, DASH, CART |
-| **Sources** | 10-K HTML, XBRL company facts, EDGAR metadata | + 10-Q, 8-K 2.02 Ex. 99.1, DEF 14A, Form 4, Stooq, FRED, Damodaran, TSA, BTS, NYC TLC, Google Trends |
+| **Sources** | 10-K HTML, XBRL company facts, EDGAR metadata | + 10-Q, 8-K 2.02 Ex. 99.1, DEF 14A, Form 4, Tiingo, FRED, Damodaran, BTS, NYC TLC |
 | **Time** | FY2023–2025, static | Q1 2023 → latest filed; **every run has an as-of date** |
 | **Numbers** | Reported, or calculator over reported | + deterministic three-statement model, forecasts, valuation |
 | **LLM role** | Finds, calculates, cites | Extracts KPIs, proposes assumptions, writes prose. **Never outputs a forecast number** |
@@ -38,8 +38,8 @@ The old gold sets don't transfer (different companies); the pattern does.
 ## 2. Architecture
 
 ```text
- EDGAR, Stooq, FRED, Damodaran,   build (offline):  fetch → raw cache → chunks + vectors (text)
- TSA, BTS, TLC, Trends                                              → facts, quarters (XBRL, inline XBRL)
+ EDGAR, Tiingo, FRED, Damodaran,  build (offline):  fetch → raw cache → chunks + vectors (text)
+ BTS, NYC TLC                                                       → facts, quarters (XBRL, inline XBRL)
                                                                     → KPIs, guidance (LLM extraction)
                                                                     → prices, macro, cross-checks
               one SQLite file; every row carries the date it became public
@@ -68,10 +68,10 @@ The central invariant: every leak is a backtest bug.
 | Data | Visible when | Column |
 |---|---|---|
 | Filings (any form), their chunks, facts, KPIs | `filing_date < D` | `filed` |
-| Stooq price | `date < D` (as-of 2026-08-06 uses the 08-05 close, as in the spec's example) | `date` |
+| Tiingo price | `date < D` (as-of 2026-08-06 uses the 08-05 close, as in the spec's example) | `date` |
 | FRED | observation `date < D` and, for revised series (CPI, sentiment, food-service sales), ALFRED `realtime_start < D`; DGS10 and the USD index are not revised | `date`, `realtime_start` |
 | Damodaran ERP | latest file published `< D` | `published` |
-| TSA, BTS, TLC, Trends | publish date `< D` (TLC lags ~2 months, BTS ~3): store publish date, not data month | `published` |
+| BTS, TLC | publish date `< D` (TLC lags ~2 months, BTS ~3): store publish date, not data month | `published` |
 | Our reports, model versions | `as_of < D` | `as_of` |
 
 The spec's header says "on or before", §6 says "accepted before". We use **strictly before**: it matches the example and is safest for backtests. It is one function, so flipping it is a one-line change.
@@ -117,9 +117,9 @@ UBER:
 | DEF 14A | same | Latest per year; chunked text only | |
 | Form 4 | `acquisition/insiders.py` | XML → `insider_tx` (V4.7; dilution context only) | |
 | XBRL company facts | `acquisition/edgar.py` | Unchanged; refreshed each fetch, facts keep their `filed` date | `raw/edgar/<T>/companyfacts.json` |
-| Prices | `acquisition/prices.py` | Stooq CSV per ticker + S&P 500 (for beta); split-adjusted | `raw/prices/` |
+| Prices | `acquisition/prices.py` | Tiingo daily EOD per ticker + SPY (for beta), split-adjusted (`TIINGO_API_KEY`, free) | `raw/prices/` |
 | Macro, ERP | `acquisition/macro.py` | ALFRED (`FRED_API_KEY`, free): DGS10, CPIAUCSL, UMCSENT, DTWEXBGS, RSFSDP; Damodaran monthly implied ERP | `raw/macro/` |
-| Cross-checks | `acquisition/crosscheck.py` | TSA, BTS T-100, NYC TLC by license (Uber/Lyft codes to verify), Trends. TLC Parquet is large: aggregate to trips per month per license at fetch (V4.7) | `raw/crosscheck/` |
+| Cross-checks | `acquisition/crosscheck.py` | BTS T-100, NYC TLC by license (Uber/Lyft codes to verify). TLC Parquet is large: aggregate to trips per month per license at fetch (V4.7) | `raw/crosscheck/` |
 
 Every raw file gets `retrieved_at` in `raw/manifest.json` (spec §1.2).
 
@@ -274,7 +274,7 @@ g(first)  = y/y growth implied by the guidance midpoint (current quarter), else 
 - **Variance flag:** vs guidance midpoint, over 2% (revenue) or 5% (adj. EBITDA) needs a written reason (from the proposer's rationale); none = exception.
 - **Horizon:** quarterly to Q4 2027E; annual 2026E–2028E; DCF years 4–10 faded.
 - **Scenarios:** bear/base/bull (25/50/25) vary the 2–3 `scenario_drivers`. Default shock ±1σ of the driver's y/y change over history; the proposer may move it within [0.5σ, 2σ].
-- **Outside data** (TSA, TLC, FRED) is context for the proposer and note; as a forecast input it is the "with vs without cross-checks" ablation.
+- **Outside data** (BTS, TLC, FRED) is context for the proposer and note; as a forecast input it is the "with vs without cross-checks" ablation.
 
 ### 6.2 Valuation (`research/valuation.py`)
 
@@ -306,7 +306,7 @@ All tools are bound to the run's `AsOf`, never raise, and return citable ids. V3
 | | `guidance` | low/high/basis, issued-in, prior guide vs actual | ✓ | ✓ | proposer |
 | | `edgar_filings` | filing metadata (as V3), as-of filtered | ✓ | ✓ | events |
 | market | `market_data` | prices, market cap, EV, macro, ERP | ✓ | ✓ | proposer |
-| | `crosscheck` | TSA/BTS/TLC/Trends aggregates with coverage notes | ✓ | ✓ | proposer, debates |
+| | `crosscheck` | BTS/TLC aggregates with coverage notes | ✓ | ✓ | proposer, debates |
 | calc | `calculator` | as V3, reported figures only | ✓ | ✓ | |
 | reports | `research_report` (company, as_of ≤ run's, section or metric) | saved estimates, PT, rating, status (`draft`/`reviewed`), ids | ✓ | ✓ | |
 | model | `model_view` | history + forecast lines, ratios, seasonal shares, assumption register | | ✓ | proposer |
@@ -475,7 +475,7 @@ Directory: `output/research/<TICKER>/<as_of>/v<n>/`, indexed in `model_versions`
 | **Determinism with an LLM in the loop** | Layer 4 needs identical output | Valuation is code on saved artifacts; same inputs hash = same output. LLM steps at temperature 0, cached by prompt hash, so a rerun replays them |
 | **Release time vs filing date** | After-close acceptance (after 17:30 ET) gets the next day's EDGAR date | Use `filing_date` (conservative); backtest as-of = day after `accepted_at` (ET) |
 | **Units and scales** | Releases mix $B, $M, %, bps | Registry fixes units; values normalized; `verify.SCALES` gains `bps`, `count billions` |
-| **Data licensing** | TSA, BTS, TLC, Stooq, Trends terms | Checked in V4.0a (spec §8); anything not permitted is dropped and listed in the write-up's limits |
+| **Data licensing** | BTS, TLC, Tiingo, FRED terms | Checked in V4.0a (§17.5): Stooq, TSA and Google Trends dropped; listed in the write-up's limits |
 
 ---
 
@@ -534,7 +534,7 @@ src/tenk_agent/
   prompts/                 NEW  extract.md propose.md events.md debates.md section.md (+ schemas)
 ```
 
-**Config.** `config.yaml` keeps its per-stage sections and gains per-step `budgets`. `companies.yaml` (§4.1) and `research.yaml` (every §6 knob, proposer bounds, step budgets, report type) are pinned per experiment (D-019). New dependency: `openpyxl`. New secret: `FRED_API_KEY` (`SEC_USER_AGENT` exists).
+**Config.** `config.yaml` keeps its per-stage sections and gains per-step `budgets`. `companies.yaml` (§4.1) and `research.yaml` (every §6 knob, proposer bounds, step budgets, report type) are pinned per experiment (D-019). New dependency: `openpyxl`. New secrets: `FRED_API_KEY`, `TIINGO_API_KEY` (`SEC_USER_AGENT` exists).
 
 | Command | Does |
 |---|---|
@@ -614,7 +614,7 @@ Each becomes a DECISIONS.md entry when built. Rows 1–11 fill gaps in the spec;
 | 16 | Review | `draft` → `reviewed` via CLI; the human decides, the agent doesn't |
 | 17 | Clean backtest quarters | Q1–Q2 2026 (§12) |
 
-**Settled earlier:** replace the corpus (V0–V3 results stay documented; code stays generic over the company list) · V3 stays runnable from `companies-v3.yaml` as the shared-code regression check (§14.1) · Ask/Research pass bars (§13.1) · the LLM proposes assumptions, code computes every number · Qwen3.6-27B local by default, Claude optional for comparison · both backtest designs (walk-forward main; one longer-horizon run) · both ratings, no consensus · CLI only, output under `output/` · Ask cites saved reports for estimates · Stooq for prices · one SQLite file (D-005) · ~80 gold questions.
+**Settled earlier:** replace the corpus (V0–V3 results stay documented; code stays generic over the company list) · V3 stays runnable from `companies-v3.yaml` as the shared-code regression check (§14.1) · Ask/Research pass bars (§13.1) · the LLM proposes assumptions, code computes every number · Qwen3.6-27B local by default, Claude optional for comparison · both backtest designs (walk-forward main; one longer-horizon run) · both ratings, no consensus · CLI only, output under `output/` · Ask cites saved reports for estimates · Tiingo for prices (Stooq blocked, §17.5) · TSA and Google Trends dropped · one SQLite file (D-005) · ~80 gold questions.
 
 **Parking lot:** earnings-day diff job (new release vs our estimate → draft section 2) · tool routing by question class · airline read-throughs (spec §4 excludes airline estimates, not their data) · async model tools for `--all`-sized Research questions.
 
@@ -671,6 +671,6 @@ The 10-K count includes the FY2022 10-K filed in early 2023. The 15 releases are
 | Damodaran ERP | ✓ (HTTP 200) | Public, free | OK |
 | NYC TLC | ✓ `fhvhv_tripdata_YYYY-MM.parquet`, ~540 MB per month | NYC Open Data, public | OK; aggregate at fetch (§4.2). License codes (HV0003 Uber, HV0005 Lyft) to confirm on the first file |
 | BTS | ✓ (HTTP 200) | US government, public domain | OK |
-| **Stooq** | ✗ **now behind a JavaScript proof-of-work bot check**; the CSV endpoint returns the challenge page | Getting around the check is not acceptable | **Blocked: needs another price source (decision)** |
-| **TSA** | ✗ HTTP 403 to scripts | Public data, but the site blocks automated access | **Blocked: needs a manual download or must be dropped (decision)** |
-| Google Trends | not tested | No official API; unofficial clients break its terms | Proposed: drop (spec calls it optional) |
+| Stooq | ✗ behind a JavaScript proof-of-work bot check; the CSV endpoint returns the challenge page | Getting around the check is not acceptable | **Dropped; replaced by Tiingo** (free key, split-adjusted EOD, personal and non-commercial use) |
+| **TSA** | ✗ HTTP 403 to scripts | Public data, but the site blocks automated access | **Dropped** (BTS covers air traffic) |
+| Google Trends | not tested | No official API; unofficial clients break its terms | **Dropped** (optional in the spec) |
