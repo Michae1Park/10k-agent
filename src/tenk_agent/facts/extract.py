@@ -46,11 +46,24 @@ class Extraction:
     output_tokens: int = 0
 
 
-def release_chunks(store: Store, ticker: str, period: str) -> list[ChunkRecord]:
-    """The release's chunks, tables first, cut to the character budget."""
+def release_chunks(
+    store: Store, ticker: str, period: str, entry: dict | None = None
+) -> list[ChunkRecord]:
+    """The release's chunks cut to the character budget: tables first, then (for releases that
+    are slides turned into text, all prose) the chunks naming the most registry labels."""
     prefix = f"{ticker}-{period}-ER-"
     chunks = [c for c in store.chunks(ticker) if c.id.startswith(prefix)]
-    ordered = sorted(chunks, key=lambda c: (c.kind != "table", c.id))
+    labels = [
+        label.lower()
+        for spec in (entry or {}).get("kpis", {}).values()
+        for label in spec.get("labels", [])
+    ]
+
+    def hits(c: ChunkRecord) -> int:
+        text = c.text.lower()
+        return sum(label in text for label in labels)
+
+    ordered = sorted(chunks, key=lambda c: (c.kind != "table", -hits(c), c.id))
     kept, size = [], 0
     for c in ordered:
         if size + len(c.text) > MAX_CHARS:
@@ -72,7 +85,7 @@ def validate(row: dict, kind: str, chunks: dict[str, ChunkRecord], entry: dict) 
         return f"unknown chunk_id {row.get('chunk_id')!r}"
     quote = _squash(str(row.get("quote") or ""))
     if not quote or quote not in _squash(chunk.text):
-        return f"quote not found verbatim in {chunk.id}"
+        return f"quote not found verbatim in {chunk.id}" + _context(row, chunk)
     spec = entry.get("kpis" if kind == "kpi" else "guidance", {}).get(row.get("metric"))
     if spec is None:
         return f"metric {row.get('metric')!r} is not in the registry"
@@ -91,6 +104,19 @@ def validate(row: dict, kind: str, chunks: dict[str, ChunkRecord], entry: dict) 
     if kind == "kpi" and (later := growth_pair(quote)) and _number(row["value"]) == later[0]:
         return f"value {row['value']!r} is the earlier column; the quote shows {later[1]} after it"
     return None
+
+
+def _context(row: dict, chunk: ChunkRecord) -> str:
+    """The chunk's text around the row's number, for the repair turn to copy from."""
+    probe = ChunkRecord(
+        chunk.id, chunk.ticker, chunk.fiscal_year, chunk.item, chunk.kind, chunk.text, None, []
+    )
+    span = find_value(row.get("value", row.get("low")), None, probe) if row else None
+    text = _squash(chunk.text)
+    at = text.find(_squash(span)) if span else -1
+    if at < 0:
+        return ""
+    return f"; the chunk reads there: {text[max(0, at - 120):at + 60]!r}"
 
 
 def definition_version(spec: dict, period: str) -> int:
@@ -118,7 +144,7 @@ def growth_pair(quote: str) -> tuple[float, float] | None:
     growth = [_growth(m.group(1)) for c in cells if (m := re.fullmatch(r"(\(?-?[\d.]+\)?)\s?%", c))]
     for i in range(len(values) - 1):
         (a, loss_a), (b, loss_b) = values[i], values[i + 1]
-        if not a or not b:
+        if not a or not b or a == b:  # equal columns: either one is the reported value
             continue
         if loss_a or loss_b:
             if any(abs(abs(b / a - 1) * 100 - abs(g)) <= 1.0 for g in growth):
@@ -158,7 +184,7 @@ def extract(
 ) -> Extraction:
     """Extract one release's KPIs and guidance (store: bound to an as-of after the release)."""
     entry = registry()[ticker]
-    chunks = release_chunks(store, ticker, period)
+    chunks = release_chunks(store, ticker, period, entry)
     by_id = {c.id: c for c in chunks}
     out = Extraction(ticker, period)
     messages = [{"role": "user", "content": _user(ticker, period, entry, chunks)}]
