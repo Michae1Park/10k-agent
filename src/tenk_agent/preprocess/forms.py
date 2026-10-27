@@ -1,7 +1,10 @@
 """What each SEC form looks like to the preprocessor (V4 design doc §4.4): its Items in order,
 where the financial statements live, and the names shown in chunk headers and citations.
 
-Only the 10-K so far; the 10-Q and the earnings release (EX-99) follow in migration step M6.
+  10-K     Items once each; the LLM structure agent labels it (V0)
+  10-Q     Items repeat per Part, so keys carry it: I.1 … I.4, II.1 … II.6; labeled by rules
+  release  an 8-K's EX-99 exhibits (form "ER"): no Items, one pseudo-Item per exhibit
+           (EX99, EX99.2, …); labeled by rules (design doc §4.4)
 """
 
 from dataclasses import dataclass, field
@@ -29,7 +32,30 @@ TEN_K = FormSpec(
     },
 )
 
-FORMS: dict[str, FormSpec] = {spec.form: spec for spec in (TEN_K,)}
+TEN_Q = FormSpec(
+    form="10-Q",
+    items=tuple("I.1 I.2 I.3 I.4 II.1 II.1A II.2 II.3 II.4 II.5 II.6".split()),
+    statement_homes=frozenset({"I.1"}),
+    item_names={
+        "I.1": "Financial Statements",
+        "I.2": "Management's Discussion and Analysis",
+        "I.3": "Market Risk",
+        "I.4": "Controls and Procedures",
+        "II.1": "Legal Proceedings",
+        "II.1A": "Risk Factors",
+        "II.2": "Unregistered Sales of Equity and Use of Proceeds",
+        "II.5": "Other Information",
+    },
+)
+
+RELEASE = FormSpec(
+    form="ER",
+    items=("EX99", "EX99.2", "EX99.3", "EX99.4"),
+    statement_homes=frozenset({"EX99"}),
+    item_names={"EX99": "Earnings Release", "EX99.2": "Shareholder Letter"},
+)
+
+FORMS: dict[str, FormSpec] = {spec.form: spec for spec in (TEN_K, TEN_Q, RELEASE)}
 
 
 def form_spec(form: str) -> FormSpec:
