@@ -709,3 +709,13 @@ Run 3: 7 of 8 releases in one call, no exceptions; 9–14k input tokens per rele
 ### 17.8 V4.0b exit: V3 agent gold rerun (2026-10-28)
 
 After migration steps M1–M6 and the V4 data layer, the V3 agent gold set (78 questions, Qwen3.6-27B, judge gpt-oss-20b; `output/generation/v4-migration-check/`): **`text` 87.2%, `full` 87.2% correct**, against 85.9–88.5% (`text`) and 85.9–87.2% (`full`) in the two runs before (D-037). Within run-to-run variation, numeric claims grounded 100% in both, so V3 behaves as before. With the offline byte-identity check (`experiments/v4/v3_regress.py`) passing at every step, **V4.0b is done**.
+
+### 17.9 Extraction gold verification (2026-10-28)
+
+The user delegated the spot-check. All 96 labels were checked by methods independent of the drafting script:
+GAAP labels (revenue, net income, diluted EPS; 18 of 20) equal the XBRL-derived quarters exactly; the two Q4 EPS
+labels (absent from XBRL) agree with net income ÷ diluted shares and with FY − 9M. UBER segment bookings sum to the
+total in all four quarters; every two-column UBER KPI matches its printed growth rate (current column is the later);
+BKNG's quarter series sum to the printed fiscal-year totals (2024, 2025), fixing the column position. Guidance and
+non-GAAP labels are verbatim from their quotes. `verified_by` reads `claude-crosscheck-2026-10-28` (not a human
+check). The V4.1 pilot (96/96 exact, critical 100%) therefore stands.
