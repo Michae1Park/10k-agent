@@ -14,14 +14,16 @@ V3 (D-036): a claim may also cite XBRL facts by their `xbrl:` id; a value equal 
 fact of the claim's company is verified too, and calculation inputs may come from them. The
 facts are read from the SEC cache (`sec`), never fetched. A claim about a filing (a date, a
 form) may cite its accession number, checked against the cached EDGAR submissions.
+
+V4: ids are parsed and resolved by research/refs.py, one grammar for every source kind.
 """
 
 import re
 from dataclasses import dataclass
-from typing import Protocol
 
 from tenk_agent.corpus import resolve_company
 from tenk_agent.generation.calculator import CalculatorError, calculate
+from tenk_agent.research.refs import FactSource, Resolver, parse
 from tenk_agent.store import ChunkRecord, Store
 
 SCALES = {
@@ -43,14 +45,7 @@ NUMBER = re.compile(
     r"(?P<close>\))?\s?(?P<suffix>%|percent\b|thousand\b|million\b|billion\b|trillion\b)?",
     re.IGNORECASE,
 )
-ACCESSION = re.compile(r"^\d{10}-\d{2}-\d{6}$")
 CHUNK_UNITS = re.compile(r"in (thousands|millions|billions)", re.IGNORECASE)
-
-
-class FactSource(Protocol):
-    def xbrl_fact(self, xbrl_id: str) -> dict | None: ...
-
-    def filing(self, accession: str) -> dict | None: ...
 
 
 @dataclass
@@ -146,13 +141,14 @@ def _close(target: float, shown: float, shown_rounding: float, claim_rounding: f
 def verify_claim(claim: dict, store: Store, sec: FactSource | None = None) -> dict:
     """Set a claim's status (verified / calculated / cited / unverified) and the reason."""
     ids = claim.get("chunk_ids") or []
-    facts = [(i, sec.xbrl_fact(i) if sec else None) for i in ids if i.startswith("xbrl:")]
-    filings = [(i, sec.filing(i) if sec else None) for i in ids if ACCESSION.match(i)]
-    cited = [
-        (cid, store.get_chunk(cid))
-        for cid in ids
-        if not cid.startswith("xbrl:") and not ACCESSION.match(cid)
+    resolver = Resolver(store, sec)
+    resolved = {i: resolver.resolve(i) for i in ids}
+    groups = {i: _group(i) for i in ids}
+    facts = [(i, r.fact if (r := resolved[i]) else None) for i in ids if groups[i] == "xbrl"]
+    filings = [
+        (i, r.filing if (r := resolved[i]) else None) for i in ids if groups[i] == "accession"
     ]
+    cited = [(i, r.chunk if (r := resolved[i]) else None) for i in ids if groups[i] == "chunk"]
     chunks = [c for _, c in cited if c]
     company = resolve_company(str(claim.get("company") or ""))
     found_facts = [(i, f) for i, f in facts if f and (not company or f["ticker"] == company.ticker)]
@@ -185,6 +181,14 @@ def verify_claim(claim: dict, store: Store, sec: FactSource | None = None) -> di
     if missing:
         reason = (reason + "; " if reason else "") + f"unknown chunk IDs {missing}"
     return claim | {"status": status, "status_reason": reason}
+
+
+def _group(ref_id: str) -> str:
+    """How the claim check counts an id: an XBRL fact (malformed ones too), a filing, or a
+    chunk (every other kind, until its data is built)."""
+    if ref_id.startswith("xbrl:"):
+        return "xbrl"
+    return "accession" if parse(ref_id).kind == "accession" else "chunk"
 
 
 def _direct(claim: dict, chunks: list[ChunkRecord], facts: list, store: Store):
