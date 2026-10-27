@@ -691,3 +691,17 @@ The 10-K count includes the FY2022 10-K filed in early 2023. The 15 releases are
 - Gaps to fill from inline XBRL or alternative concepts in V4.3: BKNG net income, ABNB diluted EPS, capex and D&A, LYFT capex, EXPE total liabilities. EPS and diluted shares have no Q4 (they don't add up); Q4 comes from the release (V4.1).
 
 **Market data.** As-of 2026-08-06 sees UBER's 2026-08-05 close (spec example). CPI January 2025 reads 319.086 before its 2026-02-13 revision and 318.961 after. DGS10 is taken as published the day after its date (FRED's H.15 timing); Damodaran's monthly ERP three days after the month starts.
+
+### 17.7 V4.1 extraction pilot (2026-10-28)
+
+Gold: 96 labels, BKNG and UBER, Q3 2025 to Q2 2026 releases, 12 fields each (`evaluation/gold/extraction-gold.jsonl`, drafted by `experiments/v4/draft_extraction_gold.py` from table rows and sentences with verbatim quotes, before the extractor ran; the 18 that XBRL also reports match it exactly). **Drafts until a human verifies them** (`verified_by`).
+
+Extractor (`facts/extract.py`, Qwen3.6-27B, thinking off), three runs:
+
+| Run | Exact | Critical | What changed |
+|---|---|---|---|
+| 1 | 0% | 0% | Thinking on (the model default): every call spent its 6,000 tokens reasoning and returned no JSON |
+| 2 | 97.9% | 95.8% | Thinking off. Both misses BKNG Q2 2026 room nights and gross bookings: right values, quotes elided with "...", rejected by the verbatim check, repair failed the same way |
+| 3 | **100%** | **100%** | Prompt and repair forbid elided quotes; series quoted from label to number |
+
+Run 3: 7 of 8 releases in one call, no exceptions; 9–14k input tokens per release; ~3–4 minutes each on a GPU shared with another job. The validator also rejects a prior-year column when the row shows growth between two values (`growth_pair`); rows without a growth column (UBER's EPS line) rely on the XBRL reconciliation.
