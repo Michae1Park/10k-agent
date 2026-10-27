@@ -168,6 +168,13 @@ class FilingRecord:
     retrieved_at: str | None = None
 
 
+def id_prefix(ticker: str, fiscal_year: int, fiscal_period: str = "FY", form: str = "10-K") -> str:
+    """A filing's section- and chunk-id prefix (V4 design doc §4.3): <TICKER>-<period>[-<doc>].
+    UBER-FY2025 (10-K, as in V0–V3) · UBER-2026Q2 (10-Q) · UBER-2026Q2-ER (release)."""
+    key = f"FY{fiscal_year}" if fiscal_period == "FY" else f"{fiscal_year}{fiscal_period}"
+    return f"{ticker}-{key}" + ("-ER" if form == "ER" else "")
+
+
 class Store:
     def __init__(self, path: Path, asof: AsOf | None = None):
         """`asof`: what reads see. None (V3 and loading only) means AsOf.today(); V4 code
@@ -219,7 +226,7 @@ class Store:
     ) -> None:
         """Insert one filing: its company, sections ({item: title}), chunks (each with its seq
         within its Item) and children. For a new database: nothing is replaced."""
-        prefix = f"{filing.ticker}-FY{filing.fiscal_year}"
+        prefix = id_prefix(filing.ticker, filing.fiscal_year, filing.fiscal_period, filing.form)
         with self._lock, self.db:
             db = self.db
             db.execute(

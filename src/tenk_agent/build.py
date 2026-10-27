@@ -31,10 +31,13 @@ from tenk_agent.store import Store
 STAGES = ("chunk", "load", "embed", "pages")
 
 
-def filing_dirs(data_dir: Path, names: list[str] | None = None) -> list[Path]:
-    """The filings' folders: `names` as TICKER/FYyear, or every one downloaded."""
+def filing_dirs(
+    data_dir: Path, names: list[str] | None = None, pattern: str = "FY*"
+) -> list[Path]:
+    """The filings' folders: `names` as TICKER/<folder>, or every one downloaded whose folder
+    matches `pattern` (V3: FY<year>; V4: FY2025-10K, 2026Q2-10Q, 2026Q2-ER, so "*")."""
     root = data_dir / "raw" / "filings"
-    return [root / n for n in names] if names else sorted(root.glob("*/FY*"))
+    return [root / n for n in names] if names else sorted(root.glob(f"*/{pattern}"))
 
 
 def filing_name(filing: Path) -> str:
@@ -78,9 +81,16 @@ def _chunk_logged(filing: Path, out: Path, settings: dict, methods: list[str]):
 def chunk_one(filing: Path, target: Path, settings: dict, methods) -> None:
     """V0's preprocessing and chunking on one full filing (it is its own cover page), into
     `target`. A document already there is reused; so are chunks made with these settings."""
-    html = next(filing.glob("*.htm"))
+    meta = json.loads((filing / "metadata.json").read_text())
     if not (target / "document.json").exists():
-        preprocess(html, html, target, settings["llm"], settings["labeling"])
+        if meta.get("form") in ("10-Q", "ER"):  # V4: rule-based structure (preprocess/rules.py)
+            from tenk_agent.corpus import company_by_ticker
+            from tenk_agent.preprocess.rules import preprocess_filing
+
+            preprocess_filing(filing, target, company_by_ticker(meta["ticker"]).name)
+        else:
+            html = next(filing.glob("*.htm"))
+            preprocess(html, html, target, settings["llm"], settings["labeling"])
     todo = [m for m in methods if not is_current(target, m, settings["chunking"])]
     if todo:
         chunk(target, settings["llm"], settings["chunking"], todo)

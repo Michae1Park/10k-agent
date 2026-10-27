@@ -88,3 +88,11 @@ def test_v4_modules_always_pass_an_asof():
 
 def test_today_default_is_today():
     assert AsOf.today().date == date.today()
+
+
+def test_id_prefixes_by_form():
+    from tenk_agent.store import id_prefix
+
+    assert id_prefix("UBER", 2025) == "UBER-FY2025"
+    assert id_prefix("UBER", 2026, "Q2", "10-Q") == "UBER-2026Q2"
+    assert id_prefix("UBER", 2026, "Q2", "ER") == "UBER-2026Q2-ER"
