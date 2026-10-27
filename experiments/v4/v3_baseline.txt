@@ -6,3 +6,5 @@ embedding texts 1030 3288 7e3955662008bdd9 0e1d8520727ad931
 keyword search 3eeb4dd06ce38e5e child search 3e859751beba7276
 filings 19737c768a133350 chunks() 35effc232c712271 get_chunk 7e7f358635cb268a
 claim check 2348 04a1a25017396831
+tools text f65f9e38104d75d4 system 6a1684bfe29fc134
+tools full 9a51a275ea1f4424 system bfbc8e24fab3a279
