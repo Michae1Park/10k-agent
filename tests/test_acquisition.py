@@ -109,3 +109,48 @@ def test_fetch_records_filings_and_skips_failed_companies(tmp_path, monkeypatch)
     manifest = json.loads((tmp_path / "raw" / "manifest.json").read_text())
     assert list(manifest) == ["TEST"]
     assert manifest["TEST"][0]["accession_no"] == "a-1"
+
+
+# --- companies verify (V4) --------------------------------------------------------------------
+
+from tenk_agent.acquisition.companies import counts, filing_rows, verify_company  # noqa: E402
+
+
+def filings_page(*rows):
+    """A submissions page from (form, accession, filing_date, items) rows."""
+    return {
+        "form": [r[0] for r in rows],
+        "accessionNumber": [r[1] for r in rows],
+        "filingDate": [r[2] for r in rows],
+        "items": [r[3] for r in rows],
+    }
+
+
+def test_filing_rows_dedupes_across_pages_and_applies_window():
+    a = filings_page(("10-Q", "a1", "2023-05-01", ""), ("10-K", "a0", "2022-02-01", ""))
+    b = filings_page(("10-Q", "a1", "2023-05-01", ""))
+    rows = filing_rows([a, b], "2023-01-01")
+    assert [r["accessionNumber"] for r in rows] == ["a1"]
+
+
+def test_counts_keeps_only_item_2_02_eight_ks():
+    page_ = filings_page(
+        ("10-K", "k", "2024-02-01", ""),
+        ("10-K/A", "ka", "2024-03-01", ""),
+        ("8-K", "e1", "2024-05-01", "2.02,9.01"),
+        ("8-K", "e2", "2024-06-01", "5.07"),
+    )
+    assert counts(filing_rows([page_], "2023-01-01")) == {"10-K": 1, "10-Q": 0, "8-K 2.02": 1}
+
+
+def test_verify_company_flags_fye_cik_and_missing_forms():
+    page_ = filings_page(("10-K", "k", "2024-02-01", ""))
+    subs = {"name": "X", "exchanges": ["NYSE"], "fiscalYearEnd": "0630"}
+    entry, problems = verify_company("X", {"cik": 1}, 2, subs, [page_], "2023-01-01")
+    assert entry["cik"] == 2 and entry["verified"]["filings"]["10-K"] == 1
+    assert len(problems) == 3  # CIK mismatch, FYE, no 10-Q
+
+
+def test_verify_company_reports_unknown_ticker():
+    entry, problems = verify_company("ZZZ", {"cik": None}, None, {}, [], "2023-01-01")
+    assert entry == {"cik": None} and problems

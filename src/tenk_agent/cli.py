@@ -9,6 +9,7 @@ tenk tool NAME key=value ...   V3: run one agent tool by hand (--list: the schem
 tenk agent "question"          V3: the agent picks and calls tools, then answers
 tenk gold [show|render|verify] review a gold question set
 tenk report LABEL              write a finished V2 run's end-to-end report to evaluation/results
+tenk companies verify          V4: check companies.yaml against SEC (CIK, FYE, filing counts)
 """
 
 import argparse
@@ -92,6 +93,13 @@ def main(argv: list[str] | None = None) -> int:
     report.add_argument("--context", default="retrieved", help="default: %(default)s")
     report.add_argument("--out", type=Path, help=f"default: {RESULTS}/<label>")
 
+    companies = commands.add_parser("companies", help="V4: the coverage in companies.yaml")
+    companies.add_argument("action", choices=("verify",))
+    companies.add_argument("--file", type=Path, default=Path("companies.yaml"))
+    companies.add_argument("--data-dir", type=Path, default=Path("data/v4"))
+    companies.add_argument("--since", default="2023-01-01", help="window start (filing date)")
+    companies.add_argument("--refresh", action="store_true", help="re-download cached files")
+
     args = parser.parse_args(argv)
     settings = config_file.load(args.config)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -107,6 +115,7 @@ def main(argv: list[str] | None = None) -> int:
         "agent": _agent,
         "gold": _gold,
         "report": _report,
+        "companies": _companies,
     }
     return handlers[args.command](args, settings)
 
@@ -124,6 +133,20 @@ def _fetch(args: argparse.Namespace, settings: dict) -> int:
     companies = [company_by_ticker(t) for t in args.tickers] if args.tickers else list(COMPANIES)
     ok = fetch(companies, FISCAL_YEARS, Path(settings["data_dir"]), user_agent, args.refresh)
     return 0 if ok else 1
+
+
+def _companies(args: argparse.Namespace, settings: dict) -> int:
+    from tenk_agent.acquisition.companies import verify
+
+    user_agent = os.environ.get("SEC_USER_AGENT")
+    if not user_agent:
+        print("Set SEC_USER_AGENT, e.g. 'Name you@example.com'", file=sys.stderr)
+        return 2
+    problems = verify(args.file, args.data_dir, user_agent, args.since, args.refresh)
+    for problem in problems:
+        print(problem, file=sys.stderr)
+    print(f"Verified {args.file}: {len(problems)} problem(s)")
+    return 1 if problems else 0
 
 
 def _build(args: argparse.Namespace, settings: dict) -> int:
