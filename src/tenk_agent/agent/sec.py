@@ -5,7 +5,8 @@ writes for the corpus). Offline (no client), only cached responses are served, s
 run never touches the network and always sees the same data.
 
 XBRL facts are a citable source of their own (D-036): `xbrl:<TICKER>:<taxonomy>:<concept>:
-<accession>:<period end>`. EDGAR metadata answers which filings exist and when; it never
+<accession>:<period end>`; V4 ids write a duration as `<start>/<end>`
+(research/refs.py). EDGAR metadata answers which filings exist and when; it never
 answers financial questions (D-036: metadata only).
 """
 
@@ -121,14 +122,17 @@ class SecData:
         parts = xbrl_id.split(":")
         if len(parts) != 6 or parts[0] != "xbrl":
             return None
-        _, ticker, taxonomy, tag, accession, end = parts
+        _, ticker, taxonomy, tag, accession, period = parts
+        start, _, end = period.rpartition("/")  # V4 ids name a duration's start; V3 ids don't
         path = self.cache / ticker / "companyfacts.json"
         if not path.exists():
             return None
         entry = json.loads(path.read_text()).get("facts", {}).get(taxonomy, {}).get(tag)
         for unit, rows in (entry or {}).get("units", {}).items():
             for row in rows:
-                if row.get("accn") == accession and row["end"] == end:
+                if row.get("accn") == accession and row["end"] == end and (
+                    not start or row.get("start") == start
+                ):
                     return {"value": row["val"], "unit": unit, "ticker": ticker}
         return None
 
