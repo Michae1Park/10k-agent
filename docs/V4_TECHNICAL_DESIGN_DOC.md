@@ -731,3 +731,23 @@ Gold: 337 labels, all eight companies, Q3 2025 to Q2 2026 (32 releases); the 241
 | 2 (`v4.1-all-qwen3.6-27b-r2`, `b47699f`) | **98.5%** | **100%** | **pass** | EXPE Q3 2025 guidance growth ranges (4 labels, 4 exceptions in that release); ABNB Q3 2025 GBV |
 
 Fixes between runs: equal current/prior values pass the column check; releases too long to send whole send registry-matched chunks first; a failed quote retry shows the model the chunk text; the prompt requires GAAP diluted EPS. Remaining misses are non-critical and logged as exceptions. **V4.1 is done**; next is V4.2 Ask.
+
+### 17.11 V4.2 Ask gold runs (2026-10-28)
+
+Data: `tenk build --stage kpis` loads the extraction of all 117 releases (`v4.2-releases-all`, gate still 98.5% / 100%) as 1,002 KPI and 227 guidance rows. Tool set `ask` (§7.1): `search_filings` (periods, forms), `calculator`, `financials`, `company_kpis`, `guidance`, `filings`, `market_data`; prompt `prompts/ask.md`; `kpi:`, `guide:`, `q:`, `px:`, `macro:` ids resolve and verify (§10.1). Not built: `crosscheck`, `research_report` (questions on them must decline).
+
+Gold: `evaluation/gold/ask-gold.jsonl`, 79 questions (`experiments/v4/draft_ask_gold.py`). 54 numeric ones take values from the extraction labels or XBRL quarters (calculations computed from them); 25 written by hand: 12 filing text, 10 declines (our estimates, forecasts, advice, cross-check data, two as-of leaks, a future quarter, a company outside the corpus), 3 false premises. Every evidence quote is checked in its filing at the question's as-of. **Not yet reviewed by a person** (`verified_by: null`). Runner `experiments/v4/ask_run.py` (Qwen3.6-27B, judge gpt-oss-20b): *correct and verified* = correct, and every expected number stated by a verified or calculated claim.
+
+| Run | Correct | Correct and verified | Cited ids resolve | Gate | What changed before it |
+|---|---|---|---|---|---|
+| 1 (`v4.2-ask-qwen3.6-27b`) | 93.7% | 77.2% | 100% | fail | — |
+| 2 (`-r2`, `b524b23`) | 96.2% | 79.5% | 99.5% | fail | Decomposer crashed on any year in a query when the corpus lists no fiscal years (44 failed searches in run 1); prompt: ranges as two claims, decline figures not yet public |
+| 3 (`-r3`, `edf2e2e`) | 94.9% | **84.8%** | **100%** | **fail (−0.2 pt, 67 of 79; 68 needed)** | Prompt example shows a range as low and high claims; `filings` rows get a citable id and accessions resolve from the store (run 2 cited an invented `filings:UBER:ER`) |
+
+Run 3 by category (correct and verified): reported financials, KPIs, our estimates, cross-check 100%; filing text 83%; failure cases 80%; guidance 43%. The 12 misses:
+
+- **Agent:** two guidance ranges still written as one claim without a value (CART GTV, LYFT EBITDA); EXPE drivers omit Rapid API; TheFork buyer premise says "sold" for a pending sale.
+- **Gold too strict:** six beat-or-miss questions are right (judged 1/1, full range in the text) but claim only the bound beaten, while the runner wants low, high and actual claimed; UBER's decline premise wants "22% constant currency" where the answer gives the reported 24.1% (58,022 / 46,756).
+- **Judge:** `trip-thefork-sale` scored 1/3 though the answer states all three points.
+
+The bar was frozen before the first run and is reported as missed. Before any run 4: (1) review the gold set (the hand-written points first); (2) decide whether a beat-or-miss answer needs the unbeaten bound as a claim; (3) recheck the TheFork judgment by hand. Changing gold after seeing answers must be logged as such, and the rerun reported beside these three.
