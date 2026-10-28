@@ -1,0 +1,23 @@
+# Operating build for travel marketplaces (V4 design doc §5.3): gross bookings = volume (room
+# nights; Airbnb: nights and experiences) × gross bookings per unit; revenue = gross bookings ×
+# take rate. A company binds its own KPI names under `companies`.
+
+lines:
+  volume:                   {kind: input, source: "kpi:room_nights", unit: count millions,
+                             label: room nights}
+  gross_bookings:           {kind: input, source: "kpi:gross_bookings", unit: USD millions}
+  gross_bookings_per_unit:  {kind: formula, expr: "gross_bookings / volume", unit: USD,
+                             label: gross bookings per night}
+  take_rate:                {kind: formula, expr: "revenue / gross_bookings", unit: fraction}
+  adj_ebitda_margin_gb:     {kind: formula, expr: "adj_ebitda / gross_bookings", unit: fraction,
+                             label: adjusted EBITDA margin on gross bookings}
+
+sums: {}
+
+companies:
+  BKNG:
+  EXPE:
+  ABNB:
+    sources:
+      volume: "kpi:nights_and_experiences"
+      gross_bookings: "kpi:gross_booking_value"

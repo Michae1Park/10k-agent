@@ -1,0 +1,63 @@
+# Condensed statements (V4 design doc §5.2), the same for all eight companies; each template
+# adds its operating build and may replace a line by name. History only (V4.3): forecast
+# formulas and assumptions arrive in V4.4.
+#
+# kind: input (source: q:<metric> from XBRL quarters, kpi:<metric>[.<segment>] from releases),
+#       formula (expr in the DSL, research/model/dsl.py)
+# fy:   sum | last | input (the reported FY) | formula (recomputed from FY values) | none
+# default: an input's value where the company doesn't tag it (logged as an exception)
+# Money in USD millions, counts in millions, ratios as fractions.
+
+lines:
+  # --- Income statement
+  revenue:            {kind: input, source: "q:revenue", unit: USD millions, statement: income}
+  adj_ebitda:         {kind: input, source: "kpi:adj_ebitda", unit: USD millions, statement: income,
+                       label: adjusted EBITDA}
+  adj_ebitda_margin:  {kind: formula, expr: "adj_ebitda / revenue", unit: fraction,
+                       statement: income, label: adjusted EBITDA margin (on revenue)}
+  sbc:                {kind: input, source: "q:sbc", unit: USD millions, statement: income,
+                       label: stock-based compensation}
+  d_and_a:            {kind: input, source: "q:d_and_a", unit: USD millions, statement: income,
+                       label: depreciation and amortization}
+  operating_income:   {kind: input, source: "q:operating_income", unit: USD millions,
+                       statement: income, label: GAAP operating income}
+  other_adjustments:  {kind: formula, expr: "adj_ebitda - sbc - d_and_a - operating_income",
+                       unit: USD millions, statement: income, fy: sum,
+                       label: other adjustments (adj. EBITDA bridge to operating income)}
+  income_tax:         {kind: input, source: "q:income_tax", unit: USD millions, statement: income}
+  net_income:         {kind: input, source: "q:net_income", unit: USD millions, statement: income}
+  tax_rate:           {kind: formula, expr: "income_tax / (net_income + income_tax)",
+                       unit: fraction, statement: income, label: effective tax rate}
+  shares_diluted:     {kind: input, source: "q:shares_diluted", unit: count millions,
+                       statement: income, fy: input, label: diluted weighted-average shares}
+  eps_diluted:        {kind: input, source: "q:eps_diluted", fallback: "kpi:eps_diluted",
+                       unit: USD per share, statement: income, fy: input,
+                       label: diluted EPS (Q4 from the release)}
+
+  # --- Cash flow
+  operating_cash_flow: {kind: input, source: "q:operating_cash_flow", unit: USD millions,
+                        statement: cash_flow}
+  capex:              {kind: input, source: "q:capex", unit: USD millions, statement: cash_flow,
+                       label: capital expenditures}
+  free_cash_flow:     {kind: formula, expr: "operating_cash_flow - capex", unit: USD millions,
+                       statement: cash_flow, fy: sum}
+  buybacks:           {kind: input, source: "q:buybacks", unit: USD millions,
+                       statement: cash_flow, default: 0, label: share repurchases}
+
+  # --- Balance sheet (condensed: the reported totals; detail stays in the data pack)
+  cash:               {kind: input, source: "q:cash", unit: USD millions, statement: balance,
+                       fy: last, label: cash and cash equivalents}
+  other_assets:       {kind: formula, expr: "total_assets - cash", unit: USD millions,
+                       statement: balance, fy: last}
+  total_assets:       {kind: input, source: "q:total_assets", unit: USD millions,
+                       statement: balance, fy: last}
+  total_liabilities:  {kind: input, source: "q:total_liabilities", unit: USD millions,
+                       statement: balance, fy: last}
+  mezzanine:          {kind: input, source: "q:mezzanine", unit: USD millions,
+                       statement: balance, fy: last, default: 0,
+                       label: redeemable non-controlling interests}
+  equity_total:       {kind: input, source: "q:equity_total", unit: USD millions,
+                       statement: balance, fy: last, label: total equity (incl. NCI)}
+  balance_gap:        {kind: formula, expr: "total_assets - total_liabilities - mezzanine - equity_total",
+                       unit: USD millions, statement: balance, fy: last,
+                       label: assets less liabilities and equity (must be 0)}
