@@ -68,3 +68,24 @@ def test_search_filters_by_company_year_and_item(tmp_path):
 def test_reloading_rebuilds_the_database(tmp_path):
     make_store(tmp_path)
     assert len(make_store(tmp_path).chunks("AAPL", 2025)) == 2
+
+
+def test_kpis_and_guidance_are_dated_by_their_release(tmp_path):
+    from datetime import date
+
+    from tenk_agent.asof import AsOf
+
+    kpi = {"metric": "trips", "segment": "total", "value": 3.1, "unit": "count millions",
+           "chunk_id": "UBER-2026Q2-ER-EX99-004", "quote": "Trips 3.1", "definition_version": 1}
+    guide = {"metric": "gross_bookings", "target_period": "Q3 2026", "low": 58250, "high": 60250,
+             "unit": "USD millions", "basis": "level", "chunk_id": "UBER-2026Q2-ER-EX99-003",
+             "quote": "Gross Bookings of $58.25 billion to $60.25 billion"}
+    store = Store(tmp_path / "s.db")
+    store.enable_facts()
+    store.add_extractions("UBER", "2026Q2", "2026-08-05", [kpi], [guide])
+    store.add_extractions("UBER", "2026Q2", "2026-08-05", [kpi], [guide])  # reload replaces
+    after = Store(tmp_path / "s.db", AsOf(date(2026, 8, 6)))
+    assert [(k["period"], k["value"]) for k in after.kpis("uber")] == [("2026Q2", 3.1)]
+    assert [(g["segment"], g["issued_in"]) for g in after.guidance("UBER")] == [("total", "2026Q2")]
+    before = Store(tmp_path / "s.db", AsOf(date(2026, 8, 5)))  # strictly before the release
+    assert before.kpis("UBER") == [] and before.guidance("UBER") == []

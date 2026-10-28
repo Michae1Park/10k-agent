@@ -9,6 +9,8 @@
   pages  each chunk's pages, written into an already built <method>.db in place
   facts  V4: XBRL company facts and inline facts of every 10-K and 10-Q into <method>.db
   market V4: prices, macro and ERP from the fetch caches into <method>.db
+  kpis   V4: release KPIs and guidance from an extraction run's extractions.json into <method>.db
+         (experiments/v4/extract_pilot.py --releases all writes it; build.kpis names the run)
 
 Filings are read from <data_dir>/raw/filings/<TICKER>/FY<year>/ (tenk fetch); each one's work
 files (blocks, labels, document, chunks-<method>.json, chunk.log) go to <out>/<TICKER>-FY<year>/.
@@ -30,7 +32,8 @@ from tenk_agent.retrieval.embeddings import get_embedder
 from tenk_agent.retrieval.index import add_pages, embed_corpus, load
 from tenk_agent.store import Store
 
-STAGES = ("chunk", "load", "embed", "pages", "facts", "market")
+STAGES = ("chunk", "load", "embed", "pages", "facts", "market", "kpis")
+KPIS = Path("output/extraction/v4.2-releases-all/extractions.json")
 
 
 def filing_dirs(
@@ -160,6 +163,29 @@ def facts_db(method: str, filings: list[Path], out: Path, since: str) -> None:
     print(f"{method}: facts {counts} → {out / f'{method}.db'}")
 
 
+def kpis_db(method: str, out: Path, extractions: Path) -> None:
+    """Each release's extracted KPIs and guidance, dated by the release's filing date."""
+    from tenk_agent.asof import AsOf
+
+    store = Store(out / f"{method}.db", AsOf.today())  # loading only
+    store.enable_facts()
+    filed = {
+        (f.ticker, f"{f.fiscal_year}{f.fiscal_period}"): f.filing_date
+        for f in store.filings()
+        if f.form == "ER"
+    }
+    n, missing = 0, []
+    for r in json.loads(extractions.read_text()).values():
+        if (r["ticker"], r["period"]) not in filed:
+            missing.append(f"{r['ticker']}-{r['period']}")
+            continue
+        n += store.add_extractions(
+            r["ticker"], r["period"], filed[r["ticker"], r["period"]], r["kpis"], r["guidance"]
+        )
+    print(f"{method}: kpis and guidance {n} rows → {out / f'{method}.db'}"
+          + (f" (no release filing: {', '.join(missing)})" if missing else ""))
+
+
 def build(filings: list[Path], out: Path, settings: dict, methods, stages, jobs: int = 8) -> None:
     """Run `stages` in order. `settings`: llm, labeling and chunking (chunk), retrieval (embed)."""
     if "chunk" in stages and (failed := chunk_all(filings, out, settings, methods, jobs)):
@@ -188,3 +214,6 @@ def build(filings: list[Path], out: Path, settings: dict, methods, stages, jobs:
 
         for method in methods:
             facts_db(method, filings, out, WINDOW_START)
+    if "kpis" in stages:
+        for method in methods:
+            kpis_db(method, out, Path(settings.get("build", {}).get("kpis", KPIS)))

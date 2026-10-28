@@ -121,6 +121,35 @@ CREATE TABLE IF NOT EXISTS market (  -- prices, macro, ERP (acquisition/market.p
     published TEXT NOT NULL,      -- when this value became public (a vintage, for revised series)
     PRIMARY KEY (series, date, published)
 );
+CREATE TABLE IF NOT EXISTS kpis (    -- release KPIs (facts/extract.py), public from the release
+    ticker TEXT NOT NULL,
+    metric TEXT NOT NULL,
+    segment TEXT NOT NULL,        -- 'total' = consolidated
+    period TEXT NOT NULL,         -- 2026Q2
+    value REAL NOT NULL,
+    unit TEXT NOT NULL,
+    definition_version INTEGER NOT NULL,
+    chunk_id TEXT NOT NULL,
+    quote TEXT NOT NULL,
+    method TEXT NOT NULL,         -- llm | rules
+    filed TEXT NOT NULL,
+    PRIMARY KEY (ticker, metric, segment, period, filed)
+);
+CREATE TABLE IF NOT EXISTS guidance (
+    ticker TEXT NOT NULL,
+    metric TEXT NOT NULL,
+    segment TEXT NOT NULL,
+    target_period TEXT NOT NULL,  -- as printed: Q3 2026, FY 2026
+    low REAL,
+    high REAL,
+    unit TEXT NOT NULL,
+    basis TEXT NOT NULL,          -- level | growth_yoy | margin
+    chunk_id TEXT NOT NULL,
+    quote TEXT NOT NULL,
+    issued_in TEXT NOT NULL,      -- the release's period, 2026Q2
+    filed TEXT NOT NULL,
+    PRIMARY KEY (ticker, metric, segment, target_period, issued_in)
+);
 """
 
 # Older databases lack these columns; add them in place. V3 databases (all 10-Ks) gain the V4
@@ -340,7 +369,7 @@ class Store:
         return bool(updated)
 
     def enable_facts(self) -> None:
-        """Add the V4 facts table."""
+        """Add the V4 tables: facts, market, kpis and guidance."""
         with self._lock:
             self.db.executescript(FACTS_SCHEMA)
 
@@ -383,6 +412,51 @@ class Store:
             for series in {r[0] for r in rows}:
                 self.db.execute("DELETE FROM market WHERE series = ?", (series,))
             self.db.executemany("INSERT OR REPLACE INTO market VALUES (?, ?, ?, ?)", rows)
+
+    def add_extractions(self, ticker: str, period: str, filed: str, kpis: list, guidance: list,
+                        method: str = "llm") -> int:
+        """One release's extract.py rows; replaces what that release loaded before. Returns the
+        rows inserted."""
+        with self._lock, self.db:
+            self.db.execute("DELETE FROM kpis WHERE ticker = ? AND period = ? AND filed = ?",
+                            (ticker, period, filed))
+            self.db.execute("DELETE FROM guidance WHERE ticker = ? AND issued_in = ?",
+                            (ticker, period))
+            self.db.executemany(
+                "INSERT OR REPLACE INTO kpis VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [(ticker, k["metric"], k.get("segment") or "total", period, k["value"], k["unit"],
+                  k.get("definition_version", 1), k["chunk_id"], k["quote"], method, filed)
+                 for k in kpis],
+            )
+            self.db.executemany(
+                "INSERT OR REPLACE INTO guidance VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [(ticker, g["metric"], g.get("segment") or "total", g["target_period"],
+                  g.get("low"), g.get("high"), g["unit"], g["basis"], g["chunk_id"], g["quote"],
+                  period, filed)
+                 for g in guidance],
+            )
+            return len(kpis) + len(guidance)
+
+    def kpis(self, ticker: str, metric: str | None = None) -> list[dict]:
+        """Visible KPI rows, oldest period first; a later release's copy of a period (a
+        restatement) is returned beside the original."""
+        visible, params = self.asof.sql("k")
+        rows = self._query(
+            f"SELECT * FROM kpis k WHERE k.ticker = ? AND (? IS NULL OR k.metric = ?) AND {visible}"
+            " ORDER BY k.period, k.metric, k.segment, k.filed",
+            [ticker.upper(), metric, metric, *params],
+        )
+        return [dict(r) for r in rows]
+
+    def guidance(self, ticker: str, metric: str | None = None) -> list[dict]:
+        """Visible guidance rows, in the order issued."""
+        visible, params = self.asof.sql("g")
+        rows = self._query(
+            f"SELECT * FROM guidance g WHERE g.ticker = ? AND (? IS NULL OR g.metric = ?) AND "
+            f"{visible} ORDER BY g.filed, g.metric, g.segment",
+            [ticker.upper(), metric, metric, *params],
+        )
+        return [dict(r) for r in rows]
 
     def series(self, name: str, start: str | None = None) -> list[tuple[str, float]]:
         """(date, value) of a market series as known at the store's AsOf: observations dated and

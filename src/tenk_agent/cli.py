@@ -45,7 +45,7 @@ def main(argv: list[str] | None = None) -> int:
                        help="V4 corpus: prices (TIINGO_API_KEY), macro (FRED_API_KEY) and ERP only")
 
     build = commands.add_parser("build", help="V0 chunks of every filing → V1 database")
-    stages = ("chunk", "load", "embed", "pages", "facts", "market")  # build.STAGES
+    stages = ("chunk", "load", "embed", "pages", "facts", "market", "kpis")  # build.STAGES
     build.add_argument(
         "--stage", action="append", choices=stages, help="default: chunk, load, embed"
     )
