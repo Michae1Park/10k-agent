@@ -1,0 +1,30 @@
+{
+ "questions": 72,
+ "pass": 0.8333333333333334,
+ "model_ref": 0.9722222222222222,
+ "assumptions": 0.9027777777777778,
+ "from_model": 0.973404255319149,
+ "forward_claims": 188,
+ "by_category": {
+  "forecast": 0.9166666666666666,
+  "scenario": 0.875,
+  "valuation": 1.0,
+  "variance_review": 0.875,
+  "peer_comparison": 0.125
+ },
+ "failed": [
+  "cart-forecast-revenue-2026q3",
+  "cart-scenario-rate",
+  "dash-forecast-revenue-2026q3",
+  "trip-variance-2026q2",
+  "uber-scenario-growth",
+  "peers-ev-to-ebitda-less-sbc",
+  "peers-ev-to-ebitda",
+  "peers-adj-ebitda-margin",
+  "peers-return",
+  "peers-fcf-yield",
+  "peers-pe",
+  "peers-free-cash-flow"
+ ],
+ "gate": false
+}

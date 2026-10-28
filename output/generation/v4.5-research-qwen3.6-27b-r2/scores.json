@@ -1,0 +1,27 @@
+{
+ "questions": 72,
+ "pass": 0.875,
+ "model_ref": 0.9722222222222222,
+ "assumptions": 0.9861111111111112,
+ "from_model": 0.9456521739130435,
+ "forward_claims": 184,
+ "by_category": {
+  "forecast": 0.875,
+  "scenario": 0.8125,
+  "variance_review": 0.75,
+  "valuation": 1.0,
+  "peer_comparison": 0.875
+ },
+ "failed": [
+  "bkng-forecast-main-kpi-2026q4",
+  "bkng-forecast-revenue-2026q3",
+  "cart-forecast-revenue-2026q3",
+  "dash-scenario-growth",
+  "dash-variance-2026q2",
+  "expe-scenario-rate",
+  "trip-variance-2026q2",
+  "uber-scenario-rate",
+  "peers-ev-to-ebitda-less-sbc"
+ ],
+ "gate": false
+}
