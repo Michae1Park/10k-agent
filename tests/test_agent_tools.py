@@ -334,8 +334,12 @@ def test_tool_sets_are_built_from_groups_in_v3_order():
     assert TOOL_SETS == {
         "text": ("search_filings", "calculator"),
         "full": ("search_filings", "calculator", "xbrl_facts", "edgar_filings"),
+        "ask": ("search_filings", "calculator", "financials", "company_kpis", "guidance",
+                "filings", "market_data"),
     }
-    assert {t for tools in GROUPS.values() for t in tools} == set(TOOL_SETS["full"])
+    assert {t for tools in GROUPS.values() for t in tools} == set(TOOL_SETS["full"]) | set(
+        TOOL_SETS["ask"]
+    )
 
 
 def test_toolbox_sees_its_stores_asof(tools):
