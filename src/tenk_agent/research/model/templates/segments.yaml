@@ -59,7 +59,7 @@ lines:
                    label: adjusted EBITDA margin on gross bookings}
   adj_ebitda:     {kind: input, source: "kpi:adj_ebitda", unit: USD millions, statement: income,
                    label: adjusted EBITDA, forecast: "adj_ebitda_margin_gb * gross_bookings"}
-  revenue:        {kind: input, source: "q:revenue", unit: USD millions, statement: income,
+  revenue:        {kind: input, source: "q:revenue", fallback: "kpi:revenue", unit: USD millions, statement: income,
                    forecast: "revenue_mobility + revenue_delivery + revenue_freight"}
 
 forecast:
