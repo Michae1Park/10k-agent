@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="700" viewBox="0 0 1180 700" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">search_filings in V4</title>
+  <desc id="svgdesc">Zoom of the search_filings tool in V4. Arguments are query, companies, periods, forms and k, bound to the run as-of date. Companies and periods come from the arguments or else the query; no company is an error; no period means the latest filing of each form visible at the as-of date. One sub-question per company and filing. Each sub-question runs a keyword search and a dense search, both filtered by company, form, period and filed before the as-of date inside the store, fused with reciprocal rank fusion, children swapped for parents, reranked by a cross-encoder. A round-robin merge returns k chunks with id, form, period and filing date. No LLM.</desc>
+  <style>
+    .plan { stroke-dasharray: 6 4; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .panel { fill: #151c24; stroke: #3a4753; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .llm   { fill: #3a1a2c; stroke: #d487b0; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .gate  { fill: #3a2f14; stroke: #d4a84a; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      #arrow > path { fill: #8496a6; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1179" height="699" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+  <rect class="ext" x="40" y="30" width="250" height="108" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="165.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Arguments</text>
+  <text class="sub" x="165.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">query · k</text>
+  <text class="sub" x="165.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">companies · periods · forms</text>
+  <text class="sub" x="165.0" y="114" text-anchor="middle" font-size="13" fill="#4a5a68">the model cannot pass an as-of</text>
+  <rect class="work plan" x="330" y="30" width="300" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="480.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Resolve slots</text>
+  <text class="sub" x="480.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">companies: arguments, else the query</text>
+  <text class="sub" x="480.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">no company: error asking for one</text>
+  <text class="sub" x="480.0" y="114" text-anchor="middle" font-size="13" fill="#4a5a68">periods: "Q2 2026" → period keys;</text>
+  <text class="sub" x="480.0" y="132" text-anchor="middle" font-size="13" fill="#4a5a68">none: latest filing of each form</text>
+  <rect class="work" x="670" y="30" width="230" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="785.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Sub-questions</text>
+  <text class="sub" x="785.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">one per company and</text>
+  <text class="sub" x="785.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">filing, each query</text>
+  <text class="sub" x="785.0" y="114" text-anchor="middle" font-size="13" fill="#4a5a68">rewritten for its company</text>
+  <rect class="gate" x="940" y="30" width="200" height="108" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="1040.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">AsOf(D)</text>
+  <text class="sub" x="1040.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">bound to the run</text>
+  <text class="sub" x="1040.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">when the Toolbox</text>
+  <text class="sub" x="1040.0" y="114" text-anchor="middle" font-size="13" fill="#4a5a68">is built</text>
+  <path class="edge" d="M 290 84 L 330 84" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 630 84 L 670 84" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="panel" x="20" y="170" width="1140" height="262" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="40" y="196" font-size="14.5" font-weight="600" fill="#46586a">Per sub-question: no LLM</text>
+  <rect class="gate" x="40" y="208" width="1100" height="40" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="233.0" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Store filters, applied to both searches: ticker · form · period · filed &lt; D</text>
+  <rect class="work" x="40" y="292" width="190" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="135.0" y="318" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Keyword</text>
+  <text class="sub" x="135.0" y="340" text-anchor="middle" font-size="13" fill="#4a5a68">BM25 over FTS5</text>
+  <text class="sub" x="135.0" y="358" text-anchor="middle" font-size="13" fill="#4a5a68">top 40 children</text>
+  <rect class="work" x="262" y="292" width="190" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="357.0" y="318" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Dense</text>
+  <text class="sub" x="357.0" y="340" text-anchor="middle" font-size="13" fill="#4a5a68">embedding of the query</text>
+  <text class="sub" x="357.0" y="358" text-anchor="middle" font-size="13" fill="#4a5a68">top 40 children by cosine</text>
+  <rect class="work" x="484" y="292" width="190" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="579.0" y="318" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">RRF</text>
+  <text class="sub" x="579.0" y="340" text-anchor="middle" font-size="13" fill="#4a5a68">reciprocal rank fusion</text>
+  <text class="sub" x="579.0" y="358" text-anchor="middle" font-size="13" fill="#4a5a68">each list: 1 / (60 + rank)</text>
+  <rect class="work" x="706" y="292" width="190" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="801.0" y="318" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Parents</text>
+  <text class="sub" x="801.0" y="340" text-anchor="middle" font-size="13" fill="#4a5a68">each child swapped for</text>
+  <text class="sub" x="801.0" y="358" text-anchor="middle" font-size="13" fill="#4a5a68">its parent, best first</text>
+  <rect class="work" x="928" y="292" width="190" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="1023.0" y="318" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Rerank</text>
+  <text class="sub" x="1023.0" y="340" text-anchor="middle" font-size="13" fill="#4a5a68">cross-encoder scores</text>
+  <text class="sub" x="1023.0" y="358" text-anchor="middle" font-size="13" fill="#4a5a68">each parent against</text>
+  <text class="sub" x="1023.0" y="376" text-anchor="middle" font-size="13" fill="#4a5a68">the sub-question</text>
+  <path class="edge" d="M 452 342 L 484 342" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 674 342 L 706 342" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 896 342 L 928 342" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 135.0 292 L 135.0 280 L 579.0 280 L 579.0 292" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 135.0 248 L 135.0 292" fill="none" stroke="#5a6b7a" stroke-width="1.6" stroke-dasharray="3 4" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 357.0 248 L 357.0 292" fill="none" stroke="#5a6b7a" stroke-width="1.6" stroke-dasharray="3 4" marker-end="url(#arrow)"/>
+  <text class="elabel" x="590" y="418" text-anchor="middle" font-size="12.5" fill="#46586a">repeated for every sub-question</text>
+  <path class="edge" d="M 785 138 L 785 170" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="420" y="462" width="330" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="585.0" y="488" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Round-robin merge</text>
+  <text class="sub" x="585.0" y="510" text-anchor="middle" font-size="13" fill="#4a5a68">one chunk per sub-question in turn</text>
+  <text class="sub" x="585.0" y="528" text-anchor="middle" font-size="13" fill="#4a5a68">until k chunks, so no company</text>
+  <text class="sub" x="585.0" y="546" text-anchor="middle" font-size="13" fill="#4a5a68">crowds out the others</text>
+  <path class="edge" d="M 1023 392 L 1023 445 L 585 445 L 585 462" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="ext" x="790" y="462" width="350" height="108" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="965.0" y="488" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">k chunks, citable</text>
+  <text class="sub" x="965.0" y="510" text-anchor="middle" font-size="13" fill="#4a5a68">id UBER-2026Q2-I.2-014</text>
+  <text class="sub" x="965.0" y="528" text-anchor="middle" font-size="13" fill="#4a5a68">form, period, filed in each chunk</text>
+  <text class="sub" x="965.0" y="546" text-anchor="middle" font-size="13" fill="#4a5a68">header "Uber Q2 2026 10-Q, Part I Item 2"</text>
+  <path class="edge" d="M 750 516 L 790 516" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="40" y="462" width="340" height="108" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="210.0" y="488" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Store</text>
+  <text class="sub" x="210.0" y="510" text-anchor="middle" font-size="13" fill="#4a5a68">chunks · children · FTS5 · vectors</text>
+  <text class="sub" x="210.0" y="528" text-anchor="middle" font-size="13" fill="#4a5a68">chunks_filter index on</text>
+  <text class="sub" x="210.0" y="546" text-anchor="middle" font-size="13" fill="#4a5a68">(ticker, filed, form, fiscal_year, item)</text>
+  <path class="edge" d="M 210 462 L 210 432" fill="none" stroke="#5a6b7a" stroke-width="1.6" stroke-dasharray="3 4" marker-end="url(#arrow)"/>
+  <text class="sub" x="40" y="606" text-anchor="start" font-size="12.5" fill="#4a5a68">Dashed: new in V4 (forms and periods as slots). Built: AsOf in Store reads; V1 search over children and parents.</text>
+  <rect class="work" x="40" y="664" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="sub" x="74" y="676" font-size="12.5" fill="#4a5a68">code</text>
+  <rect class="llm" x="190" y="664" width="26" height="14" rx="3" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="sub" x="224" y="676" font-size="12.5" fill="#4a5a68">LLM</text>
+  <rect class="sink" x="340" y="664" width="26" height="14" rx="3" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="sub" x="374" y="676" font-size="12.5" fill="#4a5a68">store</text>
+  <rect class="gate" x="490" y="664" width="26" height="14" rx="3" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="sub" x="524" y="676" font-size="12.5" fill="#4a5a68">date or check</text>
+  <rect class=" plan" x="640" y="664" width="26" height="14" rx="3" fill="none" stroke="#5a6b7a" stroke-width="1.5"/>
+  <text class="sub" x="674" y="676" font-size="12.5" fill="#4a5a68">planned</text>
+</svg>

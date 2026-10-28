@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="600" viewBox="0 0 1180 600" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">Quarters and the financials tool</title>
+  <desc id="svgdesc">Zoom of the quarter derivation. 10-Q three-month, half-year and nine-month facts and the 10-K full-year fact become one value per quarter: Q1 direct, Q2 direct or H1 minus Q1, Q3 direct or 9M minus H1, Q4 as FY minus 9M. For each period the newest fact visible at the as-of date is used. Checks run, results land in the quarters table, and the financials tool returns the value with its citable id and derivation.</desc>
+  <style>
+    .plan { stroke-dasharray: 6 4; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .panel { fill: #151c24; stroke: #3a4753; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .llm   { fill: #3a1a2c; stroke: #d487b0; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .gate  { fill: #3a2f14; stroke: #d4a84a; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      #arrow > path { fill: #8496a6; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1179" height="599" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+  <rect class="ext" x="40" y="30" width="260" height="82" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="170.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Q1 10-Q</text>
+  <text class="sub" x="170.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">3-month fact</text>
+  <text class="sub" x="170.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">Jan–Mar</text>
+  <rect class="work" x="40" y="152" width="260" height="82" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="170.0" y="178" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Q1</text>
+  <text class="sub" x="170.0" y="200" text-anchor="middle" font-size="13" fill="#4a5a68">the 3-month fact</text>
+  <text class="sub" x="170.0" y="218" text-anchor="middle" font-size="13" fill="#4a5a68">derivation: direct</text>
+  <path class="edge" d="M 170 112 L 170 152" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="ext" x="320" y="30" width="260" height="82" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="450.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Q2 10-Q</text>
+  <text class="sub" x="450.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">3-month fact</text>
+  <text class="sub" x="450.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">6-month (H1) fact, YTD</text>
+  <rect class="work" x="320" y="152" width="260" height="82" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="450.0" y="178" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Q2</text>
+  <text class="sub" x="450.0" y="200" text-anchor="middle" font-size="13" fill="#4a5a68">3-month fact, else H1 − Q1</text>
+  <text class="sub" x="450.0" y="218" text-anchor="middle" font-size="13" fill="#4a5a68">direct | ytd_diff</text>
+  <path class="edge" d="M 450 112 L 450 152" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="ext" x="600" y="30" width="260" height="82" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="730.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Q3 10-Q</text>
+  <text class="sub" x="730.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">3-month fact</text>
+  <text class="sub" x="730.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">9-month (9M) fact, YTD</text>
+  <rect class="work" x="600" y="152" width="260" height="82" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="730.0" y="178" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Q3</text>
+  <text class="sub" x="730.0" y="200" text-anchor="middle" font-size="13" fill="#4a5a68">3-month fact, else 9M − H1</text>
+  <text class="sub" x="730.0" y="218" text-anchor="middle" font-size="13" fill="#4a5a68">direct | ytd_diff</text>
+  <path class="edge" d="M 730 112 L 730 152" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="ext" x="880" y="30" width="260" height="82" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="1010.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">10-K</text>
+  <text class="sub" x="1010.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">12-month (FY) fact</text>
+  <text class="sub" x="1010.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">no fourth-quarter column</text>
+  <rect class="work" x="880" y="152" width="260" height="82" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="1010.0" y="178" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Q4</text>
+  <text class="sub" x="1010.0" y="200" text-anchor="middle" font-size="13" fill="#4a5a68">FY − 9M</text>
+  <text class="sub" x="1010.0" y="218" text-anchor="middle" font-size="13" fill="#4a5a68">derivation: fy_minus_9m</text>
+  <path class="edge" d="M 1010 112 L 1010 152" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="gate" x="40" y="274" width="1100" height="82" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="300" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Per metric and period, use the newest fact visible at the as-of date</text>
+  <text class="sub" x="590.0" y="322" text-anchor="middle" font-size="13" fill="#4a5a68">a restatement counts once it is filed; before that the original stands · balance-sheet items are instants (the balance at quarter end)</text>
+  <text class="sub" x="590.0" y="340" text-anchor="middle" font-size="13" fill="#4a5a68">EPS and share counts do not add up, so only their direct facts are kept (Q4 EPS comes from the release, V4.1)</text>
+  <path class="edge" d="M 170 234 L 170 274" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 450 234 L 450 274" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 730 234 L 730 274" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 1010 234 L 1010 274" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="40" y="424" width="330" height="118" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="205.0" y="450" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Checks (layer 2)</text>
+  <text class="sub" x="205.0" y="472" text-anchor="middle" font-size="13" fill="#4a5a68">ytd_consistency: a direct Q2 or Q3</text>
+  <text class="sub" x="205.0" y="490" text-anchor="middle" font-size="13" fill="#4a5a68">equals its YTD difference</text>
+  <text class="sub" x="205.0" y="508" text-anchor="middle" font-size="13" fill="#4a5a68">q4_ties: Q1+Q2+Q3+Q4 = FY</text>
+  <text class="sub" x="205.0" y="526" text-anchor="middle" font-size="13" fill="#4a5a68">recast year → restated, not fail</text>
+  <rect class="sink" x="410" y="424" width="330" height="118" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="575.0" y="450" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">quarters table</text>
+  <text class="sub" x="575.0" y="472" text-anchor="middle" font-size="13" fill="#4a5a68">metric · fiscal year · period</text>
+  <text class="sub" x="575.0" y="490" text-anchor="middle" font-size="13" fill="#4a5a68">value · unit · derivation</text>
+  <text class="sub" x="575.0" y="508" text-anchor="middle" font-size="13" fill="#4a5a68">input fact ids · filed · restated</text>
+  <rect class="work" x="780" y="424" width="360" height="118" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="960.0" y="450" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">financials tool</text>
+  <text class="sub" x="960.0" y="472" text-anchor="middle" font-size="13" fill="#4a5a68">company, metric or concept, periods</text>
+  <text class="sub" x="960.0" y="490" text-anchor="middle" font-size="13" fill="#4a5a68">returns the value, its derivation</text>
+  <text class="sub" x="960.0" y="508" text-anchor="middle" font-size="13" fill="#4a5a68">and an id: q:UBER:revenue:2025Q4</text>
+  <path class="edge" d="M 590 356 L 590 424" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 410 483 L 370 483" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 740 483 L 780 483" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="40" y="572" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="sub" x="74" y="584" font-size="12.5" fill="#4a5a68">code</text>
+  <rect class="llm" x="190" y="572" width="26" height="14" rx="3" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="sub" x="224" y="584" font-size="12.5" fill="#4a5a68">LLM</text>
+  <rect class="sink" x="340" y="572" width="26" height="14" rx="3" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="sub" x="374" y="584" font-size="12.5" fill="#4a5a68">store</text>
+  <rect class="gate" x="490" y="572" width="26" height="14" rx="3" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="sub" x="524" y="584" font-size="12.5" fill="#4a5a68">date or check</text>
+</svg>

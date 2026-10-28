@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="690" viewBox="0 0 1180 690" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">Report runner</title>
+  <desc id="svgdesc">Zoom of the report runner. Each step computes an inputs hash from upstream artifact hashes, knobs, prompt file hashes and the model name. If the hash matches the step.json on disk the step is skipped and its artifact reused; otherwise it runs and writes its artifact and step.json with hash, status, seconds and tokens. A failing code step stops the run and names the failed check. A failing LLM step degrades: defaults replace proposals, a section reads failed check, an exception row is written and the run finishes. Resume continues after a crash, from S7 reruns from valuation. Peers and all-company runs use a process pool pinned to cores 16 to 31. Every call is traced.</desc>
+  <style>
+    .plan { stroke-dasharray: 6 4; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .panel { fill: #151c24; stroke: #3a4753; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .llm   { fill: #3a1a2c; stroke: #d487b0; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .gate  { fill: #3a2f14; stroke: #d4a84a; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      #arrow > path { fill: #8496a6; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1179" height="689" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+  <rect class="panel" x="20" y="20" width="1140" height="216" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="40" y="46" font-size="14.5" font-weight="600" fill="#46586a">One step</text>
+  <rect class="work" x="40" y="64" width="230" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="155.0" y="90" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Inputs hash</text>
+  <text class="sub" x="155.0" y="112" text-anchor="middle" font-size="13" fill="#4a5a68">upstream artifact hashes</text>
+  <text class="sub" x="155.0" y="130" text-anchor="middle" font-size="13" fill="#4a5a68">+ knobs + prompt file hashes</text>
+  <text class="sub" x="155.0" y="148" text-anchor="middle" font-size="13" fill="#4a5a68">+ model name</text>
+  <rect class="gate" x="310" y="64" width="210" height="108" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="415.0" y="90" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">step.json exists,</text>
+  <text class="sub" x="415.0" y="112" text-anchor="middle" font-size="13" fill="#4a5a68">same hash?</text>
+  <text class="sub" x="415" y="128" text-anchor="start" font-size="12" fill="#4a5a68"></text>
+  <rect class="work" x="570" y="64" width="250" height="70" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="695.0" y="90" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Skip</text>
+  <text class="sub" x="695.0" y="112" text-anchor="middle" font-size="13" fill="#4a5a68">reuse the artifact</text>
+  <rect class="work" x="570" y="150" width="250" height="72" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="695.0" y="176" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Run the step</text>
+  <text class="sub" x="695.0" y="198" text-anchor="middle" font-size="13" fill="#4a5a68">code, or one bounded</text>
+  <text class="sub" x="695.0" y="216" text-anchor="middle" font-size="13" fill="#4a5a68">sub-agent or LLM call</text>
+  <rect class="sink" x="870" y="150" width="270" height="72" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="1005.0" y="176" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Write artifact + step.json</text>
+  <text class="sub" x="1005.0" y="198" text-anchor="middle" font-size="13" fill="#4a5a68">hash · status · seconds · tokens</text>
+  <rect class="work" x="870" y="64" width="270" height="72" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="1005.0" y="90" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Next step</text>
+  <text class="sub" x="1005.0" y="112" text-anchor="middle" font-size="13" fill="#4a5a68">reads the artifact,</text>
+  <text class="sub" x="1005.0" y="130" text-anchor="middle" font-size="13" fill="#4a5a68">never the previous chat</text>
+  <path class="edge" d="M 270 118 L 310 118" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 520 98 L 570 98" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="545" y="88" text-anchor="middle" font-size="12" fill="#46586a">yes</text>
+  <path class="edge" d="M 415 172 L 415 186 L 570 186" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="492" y="180" text-anchor="middle" font-size="12" fill="#46586a">no</text>
+  <path class="edge" d="M 820 186 L 870 186" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 1005 150 L 1005 136" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 820 98 L 870 98" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="panel" x="20" y="256" width="1140" height="190" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="40" y="282" font-size="14.5" font-weight="600" fill="#46586a">When a step fails</text>
+  <rect class="work" x="40" y="300" width="230" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="155.0" y="326" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Code step</text>
+  <text class="sub" x="155.0" y="348" text-anchor="middle" font-size="13" fill="#4a5a68">S1 S3 S5 S6 S7 S8 S11</text>
+  <text class="sub" x="155.0" y="366" text-anchor="middle" font-size="13" fill="#4a5a68">a failed layer-2 check or</text>
+  <text class="sub" x="155.0" y="384" text-anchor="middle" font-size="13" fill="#4a5a68">a missing input</text>
+  <rect class="gate" x="310" y="300" width="300" height="108" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="460.0" y="326" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Stop the run</text>
+  <text class="sub" x="460.0" y="348" text-anchor="middle" font-size="13" fill="#4a5a68">report the failing check</text>
+  <text class="sub" x="460.0" y="366" text-anchor="middle" font-size="13" fill="#4a5a68">nothing downstream runs on</text>
+  <text class="sub" x="460.0" y="384" text-anchor="middle" font-size="13" fill="#4a5a68">numbers that did not pass</text>
+  <path class="edge" d="M 270 354 L 310 354" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="llm" x="650" y="300" width="230" height="108" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="765.0" y="326" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">LLM step</text>
+  <text class="sub" x="765.0" y="348" text-anchor="middle" font-size="13" fill="#4a5a68">S2 events · S4 propose</text>
+  <text class="sub" x="765.0" y="366" text-anchor="middle" font-size="13" fill="#4a5a68">S9 debates · S10 write</text>
+  <text class="sub" x="765.0" y="384" text-anchor="middle" font-size="13" fill="#4a5a68">bad JSON after repair,</text>
+  <text class="sub" x="765.0" y="402" text-anchor="middle" font-size="13" fill="#4a5a68">or budget hit</text>
+  <rect class="gate" x="920" y="300" width="220" height="108" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="1030.0" y="326" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Degrade and finish</text>
+  <text class="sub" x="1030.0" y="348" text-anchor="middle" font-size="13" fill="#4a5a68">defaults replace proposals</text>
+  <text class="sub" x="1030.0" y="366" text-anchor="middle" font-size="13" fill="#4a5a68">"failed check: reason"</text>
+  <text class="sub" x="1030.0" y="384" text-anchor="middle" font-size="13" fill="#4a5a68">exception row written</text>
+  <path class="edge" d="M 880 354 L 920 354" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="panel" x="20" y="466" width="1140" height="176" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="40" y="492" font-size="14.5" font-weight="600" fill="#46586a">Running it</text>
+  <rect class="work" x="40" y="510" width="340" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="210.0" y="536" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Resume</text>
+  <text class="sub" x="210.0" y="558" text-anchor="middle" font-size="13" fill="#4a5a68">--resume continues after a crash</text>
+  <text class="sub" x="210.0" y="576" text-anchor="middle" font-size="13" fill="#4a5a68">--from S7 reruns from valuation</text>
+  <text class="sub" x="210.0" y="594" text-anchor="middle" font-size="13" fill="#4a5a68">a matching hash is not recomputed</text>
+  <rect class="work" x="410" y="510" width="340" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="580.0" y="536" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Parallel</text>
+  <text class="sub" x="580.0" y="558" text-anchor="middle" font-size="13" fill="#4a5a68">peers and --all in a process pool</text>
+  <text class="sub" x="580.0" y="576" text-anchor="middle" font-size="13" fill="#4a5a68">under taskset -c 16-31</text>
+  <text class="sub" x="580.0" y="594" text-anchor="middle" font-size="13" fill="#4a5a68">vLLM batches concurrent calls</text>
+  <rect class="sink" x="780" y="510" width="360" height="108" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="960.0" y="536" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Trace</text>
+  <text class="sub" x="960.0" y="558" text-anchor="middle" font-size="13" fill="#4a5a68">trace.jsonl: every LLM and tool call,</text>
+  <text class="sub" x="960.0" y="576" text-anchor="middle" font-size="13" fill="#4a5a68">prompt hash, tokens, seconds</text>
+  <text class="sub" x="960.0" y="594" text-anchor="middle" font-size="13" fill="#4a5a68">run.json totals · target &lt; 30 min</text>
+  <rect class="work" x="40" y="660" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="sub" x="74" y="672" font-size="12.5" fill="#4a5a68">code</text>
+  <rect class="llm" x="190" y="660" width="26" height="14" rx="3" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="sub" x="224" y="672" font-size="12.5" fill="#4a5a68">LLM</text>
+  <rect class="sink" x="340" y="660" width="26" height="14" rx="3" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="sub" x="374" y="672" font-size="12.5" fill="#4a5a68">store</text>
+  <rect class="gate" x="490" y="660" width="26" height="14" rx="3" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="sub" x="524" y="672" font-size="12.5" fill="#4a5a68">date or check</text>
+</svg>
