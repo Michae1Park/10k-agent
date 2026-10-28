@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS guidance (
     ticker TEXT NOT NULL,
     metric TEXT NOT NULL,
     segment TEXT NOT NULL,
-    target_period TEXT NOT NULL,  -- as printed: Q3 2026, FY 2026
+    target_period TEXT NOT NULL,  -- 2026Q3, FY2026 (target_key of the printed period)
     low REAL,
     high REAL,
     unit TEXT NOT NULL,
@@ -234,6 +234,16 @@ def id_prefix(ticker: str, fiscal_year: int, fiscal_period: str = "FY", form: st
     UBER-FY2025 (10-K, as in V0–V3) · UBER-2026Q2 (10-Q) · UBER-2026Q2-ER (release)."""
     key = f"FY{fiscal_year}" if fiscal_period == "FY" else f"{fiscal_year}{fiscal_period}"
     return f"{ticker}-{key}" + ("-ER" if form == "ER" else "")
+
+
+def target_key(printed: str) -> str:
+    """A guidance target as a period key: 'Q3 2026' → 2026Q3; 'Full-year 2026', 'FY 2026',
+    'Fiscal Year 2026', '2026' → FY2026. Anything else is kept as printed."""
+    year = re.search(r"\b(20\d\d)\b", printed)
+    quarter = re.search(r"\bQ([1-4])\b", printed, re.IGNORECASE)
+    if not year:
+        return printed
+    return f"{year[1]}Q{quarter[1]}" if quarter else f"FY{year[1]}"
 
 
 class Store:
@@ -430,7 +440,7 @@ class Store:
             )
             self.db.executemany(
                 "INSERT OR REPLACE INTO guidance VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                [(ticker, g["metric"], g.get("segment") or "total", g["target_period"],
+                [(ticker, g["metric"], g.get("segment") or "total", target_key(g["target_period"]),
                   g.get("low"), g.get("high"), g["unit"], g["basis"], g["chunk_id"], g["quote"],
                   period, filed)
                  for g in guidance],
@@ -483,6 +493,10 @@ class Store:
         return bool(
             self.db.execute("SELECT 1 FROM sqlite_master WHERE name = ?", (name,)).fetchone()
         )
+
+    def has_facts(self) -> bool:
+        """A V4 database: enable_facts added the facts, market, kpis and guidance tables."""
+        return self._has_table("kpis")
 
     def has_children(self) -> bool:
         """True for a parent-child database."""
