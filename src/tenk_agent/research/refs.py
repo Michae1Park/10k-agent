@@ -8,6 +8,7 @@
   quarter      q:UBER:revenue:2025Q4
   kpi, guide   kpi:UBER:gross_bookings.mobility:2026Q2 · guide:UBER:adj_ebitda:2026Q3
   price, macro px:UBER:2026-08-05 · macro:DGS10:2026-08-05
+  crosscheck   cc:tlc:HV0003:2026-06-01 · cc:bts:airline_passengers:2026-06-01
   model        model:UBER:2026-08-06:v3:adj_ebitda.FY2027 (or scratch-n)
   evidence     E-12 · X-03 (within one report)
 
@@ -34,6 +35,7 @@ PREFIXED = {  # prefix → (kind, number of ':'-separated parts after it)
     "guide": ("guide", 3),
     "px": ("price", 2),
     "macro": ("macro", 2),
+    "cc": ("crosscheck", 3),
     "model": ("model", 4),
 }
 
@@ -160,6 +162,9 @@ class Resolver:
             return Resolved(ref, extra=found)
         return Resolved(ref, values=[found | {"ticker": ticker}]) if found else None
 
+    def _crosscheck(self, ref: Ref, source: str, series: str, day: str) -> Resolved | None:
+        return self._series(ref, f"cc:{source}:{series}", day, "", "")
+
     def _price(self, ref: Ref, ticker: str, day: str) -> Resolved | None:
         return self._series(ref, f"px:{ticker}:close", day, "USD", ticker)
 
@@ -171,7 +176,7 @@ class Resolver:
         return Resolved(ref, values=[_value(found[0], unit, ticker)]) if found else None
 
 
-DATA = ("quarter", "kpi", "guide", "price", "macro", "model")
+DATA = ("quarter", "kpi", "guide", "price", "macro", "model", "crosscheck")
 
 
 def _value(value: float, unit: str, ticker: str) -> dict:
