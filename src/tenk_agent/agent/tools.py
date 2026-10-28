@@ -270,7 +270,8 @@ SPECS |= {
         "One metric across companies at today's as-of, from our models: a model line in a "
         "period (revenue, adj_ebitda, adj_ebitda_margin, eps_diluted, free_cash_flow, take_rate…"
         " in FY2027 by default) or a valuation output (ev_to_ebitda, ev_to_ebitda_less_sbc, pe, "
-        "fcf_yield, price_target, return, rating).",
+        "fcf_yield, price_target, return, rating). Each row lists the key assumptions behind "
+        "that company's number.",
         {
             "type": "object",
             "properties": {
@@ -707,8 +708,15 @@ class Toolbox:
                 unit = _unit(m.line(metric).unit)
                 value = _shown(m.value(metric, period), m.line(metric).unit)
                 ref = self.book.ref(t, "base", metric, period)
+            f = self.book.base(t)
+            anchored = {a.solve for a in f.anchors}
             rows.append({"company": t, "value": _round(value) if not isinstance(value, str)
-                         else value, "unit": unit, "id": ref})
+                         else value, "unit": unit, "id": ref,
+                         "assumptions": [
+                             {"driver": k, "value": _round(v),
+                              "source": "guidance" if k in anchored else "default"}
+                             for k, v in sorted(f.model.assumptions.items())
+                             if k.endswith((".g0", ".shift0"))][:4]})
         numeric = [r for r in rows if isinstance(r["value"], int | float)]
         numeric.sort(key=lambda r: r["value"])
         return {"metric": metric, "period": None if metric in valuation_fields else period,
