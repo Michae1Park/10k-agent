@@ -108,11 +108,18 @@ class Resolver:
             fact = self.sec.xbrl_fact(ref.id) if self.sec else None
             return Resolved(ref, fact=fact) if fact else None
         if ref.kind == "accession":
-            filing = self.sec.filing(ref.id) if self.sec else None
+            filing = self.sec.filing(ref.id) if self.sec else self._stored_filing(ref.id)
             return Resolved(ref, filing=filing) if filing else None
         if ref.kind in DATA and self.store.has_facts():
             return getattr(self, f"_{ref.kind}")(ref, *ref.parts)
         return None  # kinds whose data isn't built yet (§15)
+
+    def _stored_filing(self, accession: str) -> dict | None:
+        """V4 Ask has no SEC cache: a filing in the store, if filed before the as-of, in the
+        shape SecData.filing gives."""
+        f = next((f for f in self.store.filings() if f.accession_no == accession), None)
+        return f and {"form": f.form, "filingDate": f.filing_date,
+                      "reportDate": f.period_end_date, "ticker": f.ticker}
 
     def _quarter(self, ref: Ref, ticker: str, metric: str, period: str) -> Resolved | None:
         from tenk_agent.facts.quarters import derive, metrics
