@@ -193,6 +193,11 @@ def _default(model: Model, name: str, f: dict, bands: dict) -> float | None:
     if m := re.fullmatch(r"(.+)\.ratio", name):  # a line's trailing share of revenue
         pairs = [(v, r) for v, r in zip(_recent(model, m[1], 4), _recent(model, "revenue", 4),
                                         strict=True) if v is not None and r]
+        if not pairs and m[1] == "d_and_a":  # untagged (ABNB): the reported EBITDA-to-EBIT
+            pairs = [(a - s - o, r) for a, s, o, r in zip(  # bridge, D&A and other items
+                *(_recent(model, x, 4) for x in ("adj_ebitda", "sbc", "operating_income",
+                                                 "revenue")), strict=True)
+                if None not in (a, s, o) and r]
         return sum(v for v, _ in pairs) / sum(r for _, r in pairs) if pairs else None
     if name == "tax_rate":
         tax = [v for v in _recent(model, "income_tax", 4) if v is not None]
