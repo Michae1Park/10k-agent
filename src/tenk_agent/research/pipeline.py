@@ -151,15 +151,17 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
               "For education and testing. Not investment advice. No rating or PT is approved "
               "until the responsible analyst confirms it.")
     note_md = note_sections.markdown(built, header)
-    tables = [b for s in built for b in s.blocks if isinstance(b, str) and b.startswith("|")]
-    untraced = lint(note_md, facts, tables)
+    blocks = [b for s in built for b in s.blocks if isinstance(b, str) and b.strip()]
+    slots = [{"key": b.key, "text": b.text, "facts": b.facts} for s in built for b in s.blocks
+             if isinstance(b, note_sections.Slot) and b.text]
+    untraced = lint(note_md, facts, blocks, slots)
     exceptions += [{"severity": "error", "item": f"untraced number {u.text!r} ({u.where})"}
                    for u in untraced]
     (folder / "note.json").write_text(json.dumps(
         {"slots": {b.key: b.text for s in built for b in s.blocks
                    if isinstance(b, note_sections.Slot)},
          "sections": [s.title for s in built], "untraced": [u.text for u in untraced],
-         "tables": tables},
+         "blocks": blocks, "slot_facts": slots},
         indent=1))
 
     # S11: export, version, logs
@@ -187,16 +189,24 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
     return summary
 
 
-def lint(note_md: str, facts: Facts, tables: list[str] | None = None) -> list:
-    """Every number in the note body (tables and prose) must trace to a fact, and every table
-    must read exactly as code printed it (`tables`): a cell changed to another fact's value
-    still traces, but no longer matches its table."""
+def lint(note_md: str, facts: Facts, blocks: list[str] | None = None,
+         slots: list[dict] | None = None) -> list:
+    """Every number in the note body must trace to a fact; every block code wrote (`blocks`:
+    tables and lines) must read exactly as printed, so a figure changed to another fact's value
+    is still caught; each prose slot's numbers must trace to that slot's own facts (`slots`:
+    {text, facts}), not to any fact in the note."""
     body = note_md.split("\n## ", 1)[1] if "\n## " in note_md else note_md
-    out = [trace.Untraced("table changed", t.splitlines()[0][:40]) for t in tables or []
-           if t not in note_md]
+    out = [trace.Untraced("block changed", b.splitlines()[0][:40]) for b in blocks or []
+           if b not in note_md]
+    by_id = {f.id: f for f in facts.items}
+    for slot in slots or []:
+        own = Facts([by_id[i] for i in slot["facts"] if i in by_id])
+        if slot["text"] not in note_md:
+            out.append(trace.Untraced("prose changed", slot["key"]))
+        out += trace.check(slot["text"], own, slot["key"])
     for line in body.splitlines():
-        if line.startswith("##") or line.startswith("|---") or line.startswith("Key assumptions"):
-            continue  # headings; assumption values are model inputs, listed in the register
+        if line.startswith("##") or line.startswith("|---"):
+            continue
         out += trace.check(line, facts, line[:40])
     return out
 

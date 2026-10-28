@@ -279,10 +279,14 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
     # 9 -----------------------------------------------------------------------------------
     s9 = Section(9, TITLES[8])
     s9.blocks.append(f"Data as of {model.as_of}: " + "; ".join(ctx["sources"]))
-    s9.blocks.append("Key assumptions: " + "; ".join(
-        f"{k} = {v:.4g}" + (" (guidance)" if k in ctx["anchored"] else "")
-        for k, v in sorted(model.assumptions.items()) if k.endswith((".g0", ".shift0"))
-        or k == "fade") + ". Full register: workbook tab Assumptions.")
+    register = []
+    for k, v in sorted(model.assumptions.items()):
+        if k.endswith((".g0", ".shift0")) or k == "fade":
+            add(f"assumption {k}", round(v, 6), "number", f"model:{ticker}:{model.as_of}:"
+                      "base (assumption)")
+            register.append(f"{k} = {v:.4f}" + (" (guidance)" if k in ctx["anchored"] else ""))
+    s9.blocks.append("Key assumptions: " + "; ".join(register)
+                     + ". Full register: workbook tab Assumptions.")
     ins = ctx.get("insiders")
     if ins and ins["transactions"]:
         sold = add(f"{ins['period']} insider open-market shares sold", ins["sold"] / 1e6,

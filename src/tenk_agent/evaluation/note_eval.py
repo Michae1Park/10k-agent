@@ -45,7 +45,7 @@ def sections_present(note: str) -> bool:
 
 
 def seeded(note: str, facts: Facts, seeds: int, rng: random.Random,
-           tables: list[str] | None = None) -> tuple[int, int]:
+           blocks: list[str] | None = None, slots: list[dict] | None = None) -> tuple[int, int]:
     """(caught, planted): corrupt one figure of the body at a time (×1.07, then ×10) and count
     the corruptions the lint flags. Seeds are drawn from the figures the trace reads (never a
     date or section number), at least 1 in size."""
@@ -65,7 +65,7 @@ def seeded(note: str, facts: Facts, seeds: int, rng: random.Random,
             changed = list(lines)
             changed[i] = lines[i].replace(raw, raw.replace(digits, text, 1), 1)
             planted += 1
-            caught += bool(lint("\n".join(changed), facts, tables))
+            caught += bool(lint("\n".join(changed), facts, blocks, slots))
     return caught, planted
 
 
@@ -85,9 +85,10 @@ def rubric(note: str, llm) -> dict:
 def evaluate(folder: Path, llm=None, seeds: int = 10) -> dict:
     note = (folder / "note.md").read_text()
     facts = Facts([Fact(**f) for f in json.loads((folder / "facts.json").read_text())])
-    tables = json.loads((folder / "note.json").read_text()).get("tables") or []
-    untraced = lint(note.split("\n## EVIDENCE LOG")[0], facts, tables)
-    caught, planted = seeded(note, facts, seeds, random.Random(folder.name), tables)
+    saved = json.loads((folder / "note.json").read_text())
+    blocks, slots = saved.get("blocks") or [], saved.get("slot_facts") or []
+    untraced = lint(note.split("\n## EVIDENCE LOG")[0], facts, blocks, slots)
+    caught, planted = seeded(note, facts, seeds, random.Random(folder.name), blocks, slots)
     out = {"folder": str(folder), "sections": sections_present(note),
            "untraced": [u.text for u in untraced], "seeded_caught": caught,
            "seeded_planted": planted}
