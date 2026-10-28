@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="950" viewBox="0 0 1180 950" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">V4 data pipeline</title>
+  <desc id="svgdesc">Zoom of the V4 build. Fetch pulls filings, XBRL company facts, prices, macro and equity risk premium into a raw cache stamped with retrieved_at. Four lanes then run offline. Text: blocks, form-aware Item labels, validation, parent-child chunks, embeddings. Structured facts: company facts and inline XBRL merge into a facts table, which derives quarters and runs checks. Extraction: release chunks and the KPI registry go to one LLM call, code validates quotes and values, rows land in kpis and guidance. Market: prices, macro and ERP are dated by when each became public, with cross-checks planned. All lanes write one SQLite file.</desc>
+  <style>
+    .plan { stroke-dasharray: 6 4; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .panel { fill: #151c24; stroke: #3a4753; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .llm   { fill: #3a1a2c; stroke: #d487b0; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .gate  { fill: #3a2f14; stroke: #d4a84a; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      #arrow > path { fill: #8496a6; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1179" height="949" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+  <rect class="panel" x="20" y="20" width="1140" height="214" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="40" y="46" font-size="14.5" font-weight="600" fill="#46586a">Fetch: tenk fetch, cache first, then offline-safe</text>
+  <rect class="ext" x="40" y="58" width="260" height="100" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="170.0" y="84" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">EDGAR submissions</text>
+  <text class="sub" x="170.0" y="106" text-anchor="middle" font-size="13" fill="#4a5a68">10-K, 10-Q: one per form, period</text>
+  <text class="sub" x="170.0" y="124" text-anchor="middle" font-size="13" fill="#4a5a68">8-K Item 2.02 → its EX-99 files</text>
+  <text class="sub" x="170.0" y="142" text-anchor="middle" font-size="13" fill="#4a5a68">S-1 (CART) · DEF 14A</text>
+  <path class="edge" d="M 170 158 L 170 184" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="ext" x="320" y="58" width="260" height="100" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="450.0" y="84" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">XBRL company facts</text>
+  <text class="sub" x="450.0" y="106" text-anchor="middle" font-size="13" fill="#4a5a68">refreshed on each fetch</text>
+  <text class="sub" x="450.0" y="124" text-anchor="middle" font-size="13" fill="#4a5a68">facts keep their filed date</text>
+  <path class="edge" d="M 450 158 L 450 184" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="ext" x="600" y="58" width="260" height="100" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="730.0" y="84" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Tiingo · ALFRED · Damodaran</text>
+  <text class="sub" x="730.0" y="106" text-anchor="middle" font-size="13" fill="#4a5a68">prices, macro vintages, ERP</text>
+  <text class="sub" x="730.0" y="124" text-anchor="middle" font-size="13" fill="#4a5a68">raw/prices and raw/macro</text>
+  <path class="edge" d="M 730 158 L 730 184" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="ext plan" x="880" y="58" width="260" height="100" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="1010.0" y="84" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">BTS · NYC TLC · Form 4</text>
+  <text class="sub" x="1010.0" y="106" text-anchor="middle" font-size="13" fill="#4a5a68">cross-checks, insiders</text>
+  <text class="sub" x="1010.0" y="124" text-anchor="middle" font-size="13" fill="#4a5a68">V4.7</text>
+  <path class="edge" d="M 1010 158 L 1010 184" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="40" y="184" width="1100" height="46" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="210" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Raw cache</text>
+  <text class="sub" x="590.0" y="232" text-anchor="middle" font-size="13" fill="#4a5a68">raw/filings · raw/edgar · raw/prices · raw/macro, every file stamped retrieved_at in raw/manifest.json</text>
+  <rect class="panel" x="20" y="250" width="1140" height="548" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="40" y="276" font-size="14.5" font-weight="600" fill="#46586a">Build: offline, one lane per kind of data</text>
+  <path class="edge" d="M 255 230 L 255 250" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="name" x="40" y="348" text-anchor="start" font-size="15" fill="#132030" font-weight="600">Text</text>
+  <text class="name" x="40" y="472" text-anchor="start" font-size="15" fill="#132030" font-weight="600">Structured facts</text>
+  <text class="name" x="40" y="596" text-anchor="start" font-size="15" fill="#132030" font-weight="600">KPIs</text>
+  <text class="sub" x="40" y="616" text-anchor="start" font-size="12.5" fill="#4a5a68">LLM extraction</text>
+  <text class="name" x="40" y="720" text-anchor="start" font-size="15" fill="#132030" font-weight="600">Market</text>
+  <rect class="work" x="170" y="302" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="255.0" y="328" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Blocks</text>
+  <text class="sub" x="255.0" y="350" text-anchor="middle" font-size="13" fill="#4a5a68">HTML → blocks</text>
+  <text class="sub" x="255.0" y="368" text-anchor="middle" font-size="13" fill="#4a5a68">iXBRL unwrapped</text>
+  <rect class="work" x="362" y="302" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="447.0" y="328" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Label Items</text>
+  <text class="sub" x="447.0" y="350" text-anchor="middle" font-size="13" fill="#4a5a68">FormSpec per form</text>
+  <text class="sub" x="447.0" y="368" text-anchor="middle" font-size="13" fill="#4a5a68">10-Q keys I.n and II.n</text>
+  <text class="sub" x="447.0" y="386" text-anchor="middle" font-size="13" fill="#4a5a68">release: one Item, EX99</text>
+  <rect class="work" x="554" y="302" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="639.0" y="328" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Validate</text>
+  <text class="sub" x="639.0" y="350" text-anchor="middle" font-size="13" fill="#4a5a68">Items in form order</text>
+  <text class="sub" x="639.0" y="368" text-anchor="middle" font-size="13" fill="#4a5a68">statements in their Item</text>
+  <rect class="work" x="746" y="302" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="831.0" y="328" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Chunk</text>
+  <text class="sub" x="831.0" y="350" text-anchor="middle" font-size="13" fill="#4a5a68">parent-child, tables whole</text>
+  <text class="sub" x="831.0" y="368" text-anchor="middle" font-size="13" fill="#4a5a68">id UBER-2026Q2-I.2-014</text>
+  <rect class="work" x="938" y="302" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="1023.0" y="328" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Embed</text>
+  <text class="sub" x="1023.0" y="350" text-anchor="middle" font-size="13" fill="#4a5a68">children → vectors (CPU)</text>
+  <text class="sub" x="1023.0" y="368" text-anchor="middle" font-size="13" fill="#4a5a68">FTS5 keyword index</text>
+  <rect class="work" x="170" y="426" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="255.0" y="452" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Company facts</text>
+  <text class="sub" x="255.0" y="474" text-anchor="middle" font-size="13" fill="#4a5a68">SEC JSON, consolidated</text>
+  <text class="sub" x="255.0" y="492" text-anchor="middle" font-size="13" fill="#4a5a68">us-gaap · dei · srt</text>
+  <rect class="work" x="362" y="426" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="447.0" y="452" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Inline XBRL</text>
+  <text class="sub" x="447.0" y="474" text-anchor="middle" font-size="13" fill="#4a5a68">ix:nonFraction tags:</text>
+  <text class="sub" x="447.0" y="492" text-anchor="middle" font-size="13" fill="#4a5a68">segments, geography,</text>
+  <text class="sub" x="447.0" y="510" text-anchor="middle" font-size="13" fill="#4a5a68">custom concepts</text>
+  <rect class="work" x="554" y="426" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="639.0" y="452" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">facts</text>
+  <text class="sub" x="639.0" y="474" text-anchor="middle" font-size="13" fill="#4a5a68">one row per fact</text>
+  <text class="sub" x="639.0" y="492" text-anchor="middle" font-size="13" fill="#4a5a68">filed date on each</text>
+  <text class="sub" x="639.0" y="510" text-anchor="middle" font-size="13" fill="#4a5a68">xbrl: or ixbrl: id</text>
+  <rect class="work" x="746" y="426" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="831.0" y="452" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Quarters</text>
+  <text class="sub" x="831.0" y="474" text-anchor="middle" font-size="13" fill="#4a5a68">10-Q YTD → Q1 to Q4</text>
+  <text class="sub" x="831.0" y="492" text-anchor="middle" font-size="13" fill="#4a5a68">direct · ytd_diff ·</text>
+  <text class="sub" x="831.0" y="510" text-anchor="middle" font-size="13" fill="#4a5a68">fy_minus_9m</text>
+  <rect class="work" x="938" y="426" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="1023.0" y="452" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Checks</text>
+  <text class="sub" x="1023.0" y="474" text-anchor="middle" font-size="13" fill="#4a5a68">ytd_consistency</text>
+  <text class="sub" x="1023.0" y="492" text-anchor="middle" font-size="13" fill="#4a5a68">q4_ties; a recast year</text>
+  <text class="sub" x="1023.0" y="510" text-anchor="middle" font-size="13" fill="#4a5a68">is logged, not failed</text>
+  <rect class="work" x="170" y="550" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="255.0" y="576" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Release chunks</text>
+  <text class="sub" x="255.0" y="598" text-anchor="middle" font-size="13" fill="#4a5a68">tables first, ≤ 40k chars</text>
+  <text class="sub" x="255.0" y="616" text-anchor="middle" font-size="13" fill="#4a5a68">slides: ranked by labels</text>
+  <rect class="work" x="362" y="550" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="447.0" y="576" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Registry</text>
+  <text class="sub" x="447.0" y="598" text-anchor="middle" font-size="13" fill="#4a5a68">kpis.yaml per company</text>
+  <text class="sub" x="447.0" y="616" text-anchor="middle" font-size="13" fill="#4a5a68">unit, segments, labels</text>
+  <rect class="llm" x="554" y="550" width="170" height="100" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="639.0" y="576" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Extract</text>
+  <text class="sub" x="639.0" y="598" text-anchor="middle" font-size="13" fill="#4a5a68">one call per release</text>
+  <text class="sub" x="639.0" y="616" text-anchor="middle" font-size="13" fill="#4a5a68">JSON rows with a quote</text>
+  <rect class="work" x="746" y="550" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="831.0" y="576" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Validate</text>
+  <text class="sub" x="831.0" y="598" text-anchor="middle" font-size="13" fill="#4a5a68">quote verbatim in chunk</text>
+  <text class="sub" x="831.0" y="616" text-anchor="middle" font-size="13" fill="#4a5a68">value found in the quote</text>
+  <rect class="sink" x="938" y="550" width="170" height="100" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="1023.0" y="576" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">kpis · guidance</text>
+  <text class="sub" x="1023.0" y="598" text-anchor="middle" font-size="13" fill="#4a5a68">failed rows: one repair,</text>
+  <text class="sub" x="1023.0" y="616" text-anchor="middle" font-size="13" fill="#4a5a68">then an exception row</text>
+  <rect class="work" x="170" y="674" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="255.0" y="700" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Tiingo prices</text>
+  <text class="sub" x="255.0" y="722" text-anchor="middle" font-size="13" fill="#4a5a68">daily, split-adjusted</text>
+  <text class="sub" x="255.0" y="740" text-anchor="middle" font-size="13" fill="#4a5a68">+ SPY for beta</text>
+  <rect class="work" x="362" y="674" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="447.0" y="700" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">ALFRED · ERP</text>
+  <text class="sub" x="447.0" y="722" text-anchor="middle" font-size="13" fill="#4a5a68">CPI, sentiment vintages</text>
+  <text class="sub" x="447.0" y="740" text-anchor="middle" font-size="13" fill="#4a5a68">ERP published day 3</text>
+  <rect class="work plan" x="554" y="674" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="639.0" y="700" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Cross-checks</text>
+  <text class="sub" x="639.0" y="722" text-anchor="middle" font-size="13" fill="#4a5a68">BTS, NYC TLC</text>
+  <text class="sub" x="639.0" y="740" text-anchor="middle" font-size="13" fill="#4a5a68">V4.7</text>
+  <rect class="gate" x="746" y="674" width="170" height="100" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="831.0" y="700" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Dated by release</text>
+  <text class="sub" x="831.0" y="722" text-anchor="middle" font-size="13" fill="#4a5a68">close visible next open</text>
+  <text class="sub" x="831.0" y="740" text-anchor="middle" font-size="13" fill="#4a5a68">realtime_start for macro</text>
+  <rect class="sink" x="938" y="674" width="170" height="100" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="1023.0" y="700" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">market</text>
+  <text class="sub" x="1023.0" y="722" text-anchor="middle" font-size="13" fill="#4a5a68">series, date, value,</text>
+  <text class="sub" x="1023.0" y="740" text-anchor="middle" font-size="13" fill="#4a5a68">published</text>
+  <path class="edge" d="M 340 352.0 L 362 352.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 532 352.0 L 554 352.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 724 352.0 L 746 352.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 916 352.0 L 938 352.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 532 476.0 L 554 476.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 724 476.0 L 746 476.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 916 476.0 L 938 476.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 255.0 426 L 255.0 416 L 639.0 416 L 639.0 426" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 532 600.0 L 554 600.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 724 600.0 L 746 600.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 916 600.0 L 938 600.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 255.0 550 L 255.0 540 L 639.0 540 L 639.0 550" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 255.0 674 L 255.0 658 L 831.0 658 L 831.0 674" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 447.0 674 L 447.0 666 L 831.0 666 L 831.0 674" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 724 724.0 L 746 724.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 916 724.0 L 938 724.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 1108 352.0 L 1134 352.0" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
+  <path class="edge" d="M 1108 476.0 L 1134 476.0" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
+  <path class="edge" d="M 1108 600.0 L 1134 600.0" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
+  <path class="edge" d="M 1108 724.0 L 1134 724.0" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
+  <path class="edge" d="M 1134 352.0 L 1134 828" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="40" y="828" width="1100" height="72" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="590.0" y="854" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">One SQLite file (D-005)</text>
+  <text class="sub" x="590.0" y="876" text-anchor="middle" font-size="13" fill="#4a5a68">chunks · children · FTS5 · vectors · facts · quarters · kpis · guidance · market · exceptions</text>
+  <rect class="work" x="40" y="924" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="sub" x="74" y="936" font-size="12.5" fill="#4a5a68">code</text>
+  <rect class="llm" x="190" y="924" width="26" height="14" rx="3" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="sub" x="224" y="936" font-size="12.5" fill="#4a5a68">LLM</text>
+  <rect class="sink" x="340" y="924" width="26" height="14" rx="3" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="sub" x="374" y="936" font-size="12.5" fill="#4a5a68">store</text>
+  <rect class="gate" x="490" y="924" width="26" height="14" rx="3" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="sub" x="524" y="936" font-size="12.5" fill="#4a5a68">date or check</text>
+  <rect class=" plan" x="640" y="924" width="26" height="14" rx="3" fill="none" stroke="#5a6b7a" stroke-width="1.5"/>
+  <text class="sub" x="674" y="936" font-size="12.5" fill="#4a5a68">planned</text>
+</svg>

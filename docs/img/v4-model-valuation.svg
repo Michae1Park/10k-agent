@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="650" viewBox="0 0 1180 650" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">Model, forecast and valuation</title>
+  <desc id="svgdesc">Zoom of steps S3 to S7 of the report. S3 builds the model: history from quarters, KPIs and facts plus a company template become a ModelGraph in a small formula language, evaluated in Python to model.json with an Excel formula copy, then layer-2 checks. S4 and S5: guidance anchors the drivers, a bounded LLM proposer suggests assumptions that code clips, drivers roll forward from the same quarter last year with a fading growth rate, three scenarios, checks again. S6 and S7: peers get default models at the same as-of, then market cap and EV, a multiple price target and a DCF, blended and probability weighted, then the rating.</desc>
+  <style>
+    .plan { stroke-dasharray: 6 4; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .panel { fill: #151c24; stroke: #3a4753; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .llm   { fill: #3a1a2c; stroke: #d487b0; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .gate  { fill: #3a2f14; stroke: #d4a84a; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      #arrow > path { fill: #8496a6; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1179" height="649" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+  <rect class="panel" x="20" y="20" width="1140" height="166" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="40" y="46" font-size="14.5" font-weight="600" fill="#46586a">S3 model: code, one definition, two evaluators</text>
+  <rect class="sink" x="40" y="64" width="190" height="108" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="135.0" y="90" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">History</text>
+  <text class="sub" x="135.0" y="112" text-anchor="middle" font-size="13" fill="#4a5a68">quarters, kpis, facts</text>
+  <text class="sub" x="135.0" y="130" text-anchor="middle" font-size="13" fill="#4a5a68">as inputs, each with</text>
+  <text class="sub" x="135.0" y="148" text-anchor="middle" font-size="13" fill="#4a5a68">its provenance</text>
+  <rect class="work" x="262" y="64" width="190" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="357.0" y="90" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Template</text>
+  <text class="sub" x="357.0" y="112" text-anchor="middle" font-size="13" fill="#4a5a68">marketplace · segments</text>
+  <text class="sub" x="357.0" y="130" text-anchor="middle" font-size="13" fill="#4a5a68">orders · trip: YAML nodes</text>
+  <text class="sub" x="357.0" y="148" text-anchor="middle" font-size="13" fill="#4a5a68">companies.yaml drivers</text>
+  <rect class="work" x="484" y="64" width="190" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="579.0" y="90" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">ModelGraph</text>
+  <text class="sub" x="579.0" y="112" text-anchor="middle" font-size="13" fill="#4a5a68">nodes × periods, formulas</text>
+  <text class="sub" x="579.0" y="130" text-anchor="middle" font-size="13" fill="#4a5a68">parsed with Python ast</text>
+  <text class="sub" x="579.0" y="148" text-anchor="middle" font-size="13" fill="#4a5a68">(@fade, fy(), x[-4])</text>
+  <rect class="work" x="706" y="64" width="190" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="801.0" y="90" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">evaluate()</text>
+  <text class="sub" x="801.0" y="112" text-anchor="middle" font-size="13" fill="#4a5a68">Python → model.json</text>
+  <text class="sub" x="801.0" y="130" text-anchor="middle" font-size="13" fill="#4a5a68">source of truth; to_excel()</text>
+  <text class="sub" x="801.0" y="148" text-anchor="middle" font-size="13" fill="#4a5a68">writes the Model tab</text>
+  <rect class="gate" x="928" y="64" width="190" height="108" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="1023.0" y="90" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Layer-2 checks</text>
+  <text class="sub" x="1023.0" y="112" text-anchor="middle" font-size="13" fill="#4a5a68">balance · quarters_sum</text>
+  <text class="sub" x="1023.0" y="130" text-anchor="middle" font-size="13" fill="#4a5a68">q4_ties · no_future_input</text>
+  <text class="sub" x="1023.0" y="148" text-anchor="middle" font-size="13" fill="#4a5a68">any FAIL stops the run</text>
+  <path class="edge" d="M 230 118.0 L 262 118.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 452 118.0 L 484 118.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 674 118.0 L 706 118.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 896 118.0 L 928 118.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="panel" x="20" y="204" width="1140" height="166" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="40" y="230" font-size="14.5" font-weight="600" fill="#46586a">S4 and S5 propose and forecast: LLM proposes, code decides</text>
+  <rect class="sink" x="40" y="248" width="190" height="108" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="135.0" y="274" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Guidance</text>
+  <text class="sub" x="135.0" y="296" text-anchor="middle" font-size="13" fill="#4a5a68">low, high, basis; growth</text>
+  <text class="sub" x="135.0" y="314" text-anchor="middle" font-size="13" fill="#4a5a68">converted to a level via</text>
+  <text class="sub" x="135.0" y="332" text-anchor="middle" font-size="13" fill="#4a5a68">the year-ago actual</text>
+  <rect class="llm" x="262" y="248" width="190" height="108" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="357.0" y="274" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Proposer (S4)</text>
+  <text class="sub" x="357.0" y="296" text-anchor="middle" font-size="13" fill="#4a5a68">bounded sub-agent per</text>
+  <text class="sub" x="357.0" y="314" text-anchor="middle" font-size="13" fill="#4a5a68">company: value, basis,</text>
+  <text class="sub" x="357.0" y="332" text-anchor="middle" font-size="13" fill="#4a5a68">rationale, evidence ids</text>
+  <rect class="work" x="484" y="248" width="190" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="579.0" y="274" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Bounds</text>
+  <text class="sub" x="579.0" y="296" text-anchor="middle" font-size="13" fill="#4a5a68">take rate in 8-quarter range</text>
+  <text class="sub" x="579.0" y="314" text-anchor="middle" font-size="13" fill="#4a5a68">± 50 bps; fade d in [0.75, 1]</text>
+  <text class="sub" x="579.0" y="332" text-anchor="middle" font-size="13" fill="#4a5a68">out of bounds: clipped, logged</text>
+  <rect class="work" x="706" y="248" width="190" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="801.0" y="274" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Forecast (S5)</text>
+  <text class="sub" x="801.0" y="296" text-anchor="middle" font-size="13" fill="#4a5a68">D(q) = D(q−4) × (1 + g)</text>
+  <text class="sub" x="801.0" y="314" text-anchor="middle" font-size="13" fill="#4a5a68">g fades by d = 0.90 a quarter</text>
+  <text class="sub" x="801.0" y="332" text-anchor="middle" font-size="13" fill="#4a5a68">hits the guided total</text>
+  <rect class="work" x="928" y="248" width="190" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="1023.0" y="274" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Scenarios</text>
+  <text class="sub" x="1023.0" y="296" text-anchor="middle" font-size="13" fill="#4a5a68">bear / base / bull 25/50/25</text>
+  <text class="sub" x="1023.0" y="314" text-anchor="middle" font-size="13" fill="#4a5a68">2–3 drivers, ±1σ of y/y</text>
+  <text class="sub" x="1023.0" y="332" text-anchor="middle" font-size="13" fill="#4a5a68">checks again; variance flags</text>
+  <path class="edge" d="M 230 302.0 L 262 302.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 452 302.0 L 484 302.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 674 302.0 L 706 302.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 896 302.0 L 928 302.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="panel" x="20" y="388" width="1140" height="166" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="40" y="414" font-size="14.5" font-weight="600" fill="#46586a">S6 and S7 value: code only, same as-of for every peer</text>
+  <rect class="work" x="40" y="432" width="190" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="135.0" y="458" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Peers (S6)</text>
+  <text class="sub" x="135.0" y="480" text-anchor="middle" font-size="13" fill="#4a5a68">S1, S3, S5 per peer with</text>
+  <text class="sub" x="135.0" y="498" text-anchor="middle" font-size="13" fill="#4a5a68">defaults (no LLM), cached</text>
+  <text class="sub" x="135.0" y="516" text-anchor="middle" font-size="13" fill="#4a5a68">per ticker, as-of, inputs hash</text>
+  <rect class="work" x="262" y="432" width="190" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="357.0" y="458" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Market cap, EV</text>
+  <text class="sub" x="357.0" y="480" text-anchor="middle" font-size="13" fill="#4a5a68">last close before as-of ×</text>
+  <text class="sub" x="357.0" y="498" text-anchor="middle" font-size="13" fill="#4a5a68">latest diluted shares</text>
+  <text class="sub" x="357.0" y="516" text-anchor="middle" font-size="13" fill="#4a5a68">EV = cap + debt − cash</text>
+  <rect class="work" x="484" y="432" width="190" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="579.0" y="458" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Two price targets</text>
+  <text class="sub" x="579.0" y="480" text-anchor="middle" font-size="13" fill="#4a5a68">multiple: peer median ×</text>
+  <text class="sub" x="579.0" y="498" text-anchor="middle" font-size="13" fill="#4a5a68">2027E EBITDA − net debt</text>
+  <text class="sub" x="579.0" y="516" text-anchor="middle" font-size="13" fill="#4a5a68">DCF: 10 years, Gordon 3.0%</text>
+  <rect class="work" x="706" y="432" width="190" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="801.0" y="458" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Blend</text>
+  <text class="sub" x="801.0" y="480" text-anchor="middle" font-size="13" fill="#4a5a68">0.6 × multiple + 0.4 × DCF</text>
+  <text class="sub" x="801.0" y="498" text-anchor="middle" font-size="13" fill="#4a5a68">per scenario, then weighted</text>
+  <text class="sub" x="801.0" y="516" text-anchor="middle" font-size="13" fill="#4a5a68">25/50/25</text>
+  <rect class="gate" x="928" y="432" width="190" height="108" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="1023.0" y="458" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Rating (draft)</text>
+  <text class="sub" x="1023.0" y="480" text-anchor="middle" font-size="13" fill="#4a5a68">return ≥ +15%: Buy</text>
+  <text class="sub" x="1023.0" y="498" text-anchor="middle" font-size="13" fill="#4a5a68">≤ −10%: Sell, else Hold</text>
+  <text class="sub" x="1023.0" y="516" text-anchor="middle" font-size="13" fill="#4a5a68">relative rank in --all</text>
+  <path class="edge" d="M 230 486.0 L 262 486.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 452 486.0 L 484 486.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 674 486.0 L 706 486.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 896 486.0 L 928 486.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="40" y="614" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="sub" x="74" y="626" font-size="12.5" fill="#4a5a68">code</text>
+  <rect class="llm" x="190" y="614" width="26" height="14" rx="3" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="sub" x="224" y="626" font-size="12.5" fill="#4a5a68">LLM</text>
+  <rect class="sink" x="340" y="614" width="26" height="14" rx="3" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="sub" x="374" y="626" font-size="12.5" fill="#4a5a68">store</text>
+  <rect class="gate" x="490" y="614" width="26" height="14" rx="3" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="sub" x="524" y="626" font-size="12.5" fill="#4a5a68">date or check</text>
+</svg>

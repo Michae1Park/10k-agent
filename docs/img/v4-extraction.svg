@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="620" viewBox="0 0 1180 620" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">KPI and guidance extraction</title>
+  <desc id="svgdesc">Zoom of the layer-1 extractor. One LLM call per release takes the release chunks, tables first within a character budget, and the company registry entry, and returns KPI and guidance rows with a chunk id and verbatim quote. Code validates each row: the chunk id was given, the quote occurs verbatim, the value is in the quote, the metric is in the registry. Failures get one repair turn that shows the chunk text, then become exception rows, never stored values. Passing rows land in kpis and guidance. Afterwards values are reconciled with XBRL where the filing wins, recast releases create a new definition version, and the gold labels grade the result.</desc>
+  <style>
+    .plan { stroke-dasharray: 6 4; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .panel { fill: #151c24; stroke: #3a4753; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .llm   { fill: #3a1a2c; stroke: #d487b0; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .gate  { fill: #3a2f14; stroke: #d4a84a; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      #arrow > path { fill: #8496a6; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1179" height="619" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+  <rect class="work" x="40" y="40" width="220" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="150.0" y="66" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Release chunks</text>
+  <text class="sub" x="150.0" y="88" text-anchor="middle" font-size="13" fill="#4a5a68">tables first, ≤ 40k chars</text>
+  <text class="sub" x="150.0" y="106" text-anchor="middle" font-size="13" fill="#4a5a68">slide text: chunks naming</text>
+  <text class="sub" x="150.0" y="124" text-anchor="middle" font-size="13" fill="#4a5a68">the most registry labels</text>
+  <rect class="work" x="40" y="172" width="220" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="150.0" y="198" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Registry entry</text>
+  <text class="sub" x="150.0" y="220" text-anchor="middle" font-size="13" fill="#4a5a68">kpis.yaml, one company:</text>
+  <text class="sub" x="150.0" y="238" text-anchor="middle" font-size="13" fill="#4a5a68">key, unit, segments,</text>
+  <text class="sub" x="150.0" y="256" text-anchor="middle" font-size="13" fill="#4a5a68">label patterns, version</text>
+  <rect class="llm" x="300" y="40" width="230" height="170" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="415.0" y="66" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Extract</text>
+  <text class="sub" x="415.0" y="88" text-anchor="middle" font-size="13" fill="#4a5a68">one schema-constrained call</text>
+  <text class="sub" x="415.0" y="106" text-anchor="middle" font-size="13" fill="#4a5a68">thinking off · temperature 0</text>
+  <text class="sub" x="415.0" y="124" text-anchor="middle" font-size="13" fill="#4a5a68">KPI rows and guidance rows,</text>
+  <text class="sub" x="415.0" y="142" text-anchor="middle" font-size="13" fill="#4a5a68">each with chunk_id and quote</text>
+  <path class="edge" d="M 260 94 L 300 94" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 260 226 L 300 226" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="570" y="40" width="290" height="170" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="715.0" y="66" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Validate (code)</text>
+  <text class="sub" x="715.0" y="88" text-anchor="middle" font-size="13" fill="#4a5a68">chunk id is one the model was given</text>
+  <text class="sub" x="715.0" y="106" text-anchor="middle" font-size="13" fill="#4a5a68">quote occurs verbatim in that chunk</text>
+  <text class="sub" x="715.0" y="124" text-anchor="middle" font-size="13" fill="#4a5a68">value (guidance: low and high) is</text>
+  <text class="sub" x="715.0" y="142" text-anchor="middle" font-size="13" fill="#4a5a68">found in the quote, unit-aware</text>
+  <text class="sub" x="715.0" y="160" text-anchor="middle" font-size="13" fill="#4a5a68">metric and segment are in the registry</text>
+  <text class="sub" x="715.0" y="178" text-anchor="middle" font-size="13" fill="#4a5a68">prior-year column rejected</text>
+  <path class="edge" d="M 530 125 L 570 125" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="900" y="40" width="240" height="108" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="1020.0" y="66" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">kpis · guidance</text>
+  <text class="sub" x="1020.0" y="88" text-anchor="middle" font-size="13" fill="#4a5a68">value, unit, period,</text>
+  <text class="sub" x="1020.0" y="106" text-anchor="middle" font-size="13" fill="#4a5a68">definition_version,</text>
+  <text class="sub" x="1020.0" y="124" text-anchor="middle" font-size="13" fill="#4a5a68">source chunk, quote</text>
+  <path class="edge" d="M 860 94 L 900 94" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="880" y="84" text-anchor="middle" font-size="12" fill="#46586a">pass</text>
+  <rect class="llm" x="570" y="240" width="290" height="90" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="715.0" y="266" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">One repair turn</text>
+  <text class="sub" x="715.0" y="288" text-anchor="middle" font-size="13" fill="#4a5a68">lists the failed rows and shows</text>
+  <text class="sub" x="715.0" y="306" text-anchor="middle" font-size="13" fill="#4a5a68">the chunk text; revalidated</text>
+  <path class="edge" d="M 640 210 L 640 240" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 790 240 L 790 210" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="630" y="230" text-anchor="end" font-size="12" fill="#46586a">fail</text>
+  <text class="elabel" x="800" y="228" text-anchor="start" font-size="12" fill="#46586a">again</text>
+  <rect class="gate" x="900" y="240" width="240" height="90" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="1020.0" y="266" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Exception row</text>
+  <text class="sub" x="1020.0" y="288" text-anchor="middle" font-size="13" fill="#4a5a68">a data gap, never a value</text>
+  <text class="sub" x="1020.0" y="306" text-anchor="middle" font-size="13" fill="#4a5a68">carried into the report log</text>
+  <path class="edge" d="M 860 285 L 900 285" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="panel" x="20" y="360" width="1140" height="214" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="40" y="386" font-size="14.5" font-weight="600" fill="#46586a">After extraction</text>
+  <rect class="work" x="40" y="396" width="360" height="126" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="220.0" y="422" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Reconcile with XBRL</text>
+  <text class="sub" x="220.0" y="444" text-anchor="middle" font-size="13" fill="#4a5a68">where a KPI is also a fact (revenue,</text>
+  <text class="sub" x="220.0" y="462" text-anchor="middle" font-size="13" fill="#4a5a68">segment revenue) the filing wins</text>
+  <text class="sub" x="220.0" y="480" text-anchor="middle" font-size="13" fill="#4a5a68">gap under the stated rounding:</text>
+  <text class="sub" x="220.0" y="498" text-anchor="middle" font-size="13" fill="#4a5a68">information; above it: warning</text>
+  <rect class="work" x="420" y="396" width="360" height="126" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="600.0" y="422" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Restatements</text>
+  <text class="sub" x="600.0" y="444" text-anchor="middle" font-size="13" fill="#4a5a68">a recast release gives rows for</text>
+  <text class="sub" x="600.0" y="462" text-anchor="middle" font-size="13" fill="#4a5a68">prior periods, new definition_version</text>
+  <text class="sub" x="600.0" y="480" text-anchor="middle" font-size="13" fill="#4a5a68">quarters and the model read the newest;</text>
+  <text class="sub" x="600.0" y="498" text-anchor="middle" font-size="13" fill="#4a5a68">the log keeps the old</text>
+  <rect class="gate" x="800" y="396" width="340" height="126" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="970.0" y="422" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Layer 1: gold labels</text>
+  <text class="sub" x="970.0" y="444" text-anchor="middle" font-size="13" fill="#4a5a68">written before the extractor ran</text>
+  <text class="sub" x="970.0" y="462" text-anchor="middle" font-size="13" fill="#4a5a68">pass bar: ≥ 98% exact, 100% on</text>
+  <text class="sub" x="970.0" y="480" text-anchor="middle" font-size="13" fill="#4a5a68">revenue, EPS, main KPI</text>
+  <text class="sub" x="970.0" y="498" text-anchor="middle" font-size="13" fill="#4a5a68">V4.1: 98.5% exact, 100% critical</text>
+  <rect class="work" x="40" y="596" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="sub" x="74" y="608" font-size="12.5" fill="#4a5a68">code</text>
+  <rect class="llm" x="190" y="596" width="26" height="14" rx="3" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="sub" x="224" y="608" font-size="12.5" fill="#4a5a68">LLM</text>
+  <rect class="sink" x="340" y="596" width="26" height="14" rx="3" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="sub" x="374" y="608" font-size="12.5" fill="#4a5a68">store</text>
+  <rect class="gate" x="490" y="596" width="26" height="14" rx="3" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="sub" x="524" y="608" font-size="12.5" fill="#4a5a68">date or check</text>
+</svg>

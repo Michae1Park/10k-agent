@@ -37,6 +37,14 @@ The old gold sets don't transfer (different companies); the pattern does.
 
 ## 2. Architecture
 
+<p align="center">
+  <img src="img/v4-architecture.svg" alt="V4 architecture. Sources (EDGAR, Tiingo, FRED and Damodaran, BTS, TLC and Form 4) are fetched into a raw cache and built offline along four paths: text, structured facts, LLM KPI and guidance extraction, market data. All land in one SQLite file read only through the AsOf filter. Ask and Research are agents whose answers pass a claim check that resolves every cited id; Report is a checkpointed pipeline of eleven steps, S1 to S11, with the LLM only in S2, S4, S9 and S10. Report writes a note, a workbook and saved model versions that Ask and Research can cite. Evaluation grades extraction, model integrity, forecast, valuation and the note. Solid boxes are built (V4.0 to V4.1); dashed boxes are planned." width="100%">
+</p>
+
+Solid boxes are built (V4.0–V4.1); dashed ones are planned (V4.2 on). Pink steps call the LLM; everything else is code.
+
+The same picture in text:
+
 ```text
  EDGAR, Tiingo, FRED, Damodaran,  build (offline):  fetch → raw cache → chunks + vectors (text)
  BTS, NYC TLC                                                       → facts, quarters (XBRL, inline XBRL)
@@ -87,6 +95,12 @@ The spec's header says "on or before", §6 says "accepted before". We use **stri
 ---
 
 ## 4. Data layer
+
+<p align="center">
+  <img src="img/v4-data-pipeline.svg" alt="The V4 build: fetch into a raw cache, then four lanes (text, structured facts, KPI extraction, market data) into one SQLite file" width="100%">
+</p>
+
+The build, zoomed in from §2: one lane per kind of data, all dated by when they became public. Sections 4.2 to 4.6 give each part; the dashed box is planned (V4.7).
 
 ### 4.1 Companies move to config
 
@@ -168,6 +182,12 @@ Three XBRL facts shape the design (verified in V4.0a):
 
 **Citable ids.** `xbrl:<T>:<tax>:<concept>:<accession>:<end>` is ambiguous for 10-Qs (3-month and 6-month facts share an end date). Part 6 becomes `<start>/<end>` for durations and stays `<end>` for instants: still six colon-parts, one change in `SecData.xbrl_fact`. Dimensional facts get `ixbrl:<accession>:<fact id>`.
 
+<p align="center">
+  <img src="img/v4-quarters.svg" alt="Quarter derivation: Q1 direct, Q2 and Q3 direct or YTD difference, Q4 as FY minus 9M, newest fact visible at the as-of date, checks, quarters table, financials tool" width="100%">
+</p>
+
+Quarters from XBRL (`facts/quarters.py`), and where the `financials` tool (§7.1) reads them.
+
 ### 4.6 KPI and guidance extraction (layer 1)
 
 **Registry** `facts/kpis.yaml`: per company, each KPI's key, unit, segments, label patterns, definition version. Seeded from spec §1.4, checked against the latest 10-K and release.
@@ -186,6 +206,12 @@ UBER:
 5. **Restatements:** a recast release yields rows for prior periods with a new `definition_version`; `quarters` and the model read the newest, the log keeps the old.
 
 Guidance comes in dollars, growth rates, margins, or not at all (TRIP). `basis` keeps the original form; `forecast.anchor()` converts growth to a level via the year-ago actual. No numeric guidance = guidance baseline "n/a: no numeric guidance" (§13).
+
+<p align="center">
+  <img src="img/v4-extraction.svg" alt="KPI and guidance extraction: one LLM call per release, code validation of quote and value, one repair turn, exception rows, reconciliation with XBRL" width="100%">
+</p>
+
+The layer-1 extractor (`facts/extract.py`): the model proposes rows, code decides what is stored.
 
 ---
 
@@ -258,6 +284,12 @@ Run after building the model and again after forecasting. **Any FAIL stops the r
 ## 6. Forecast, valuation, rating
 
 All knobs live in `research.yaml` (D-019: pinned per experiment, none hard-coded).
+
+<p align="center">
+  <img src="img/v4-model-valuation.svg" alt="Steps S3 to S7: model graph and checks, guidance-anchored forecast with a bounded proposer, peers, price targets, rating" width="100%">
+</p>
+
+Report steps S3 to S7 (§9) in one view: the LLM proposes bounded assumptions (S4); everything else here is code.
 
 ### 6.1 Forecast (`research/forecast.py`)
 
@@ -336,6 +368,22 @@ A bounded sub-agent per company per run. For each key driver it returns:
 
 Code bounds every driver (take rate within the 8-quarter min/max ± 50 bps; `d` in [0.75, 1.0]; growth anchored to guidance where it exists). Out-of-bounds = clipped and logged. Evidence ids must resolve (§10). `research.proposer: llm | defaults` is the ablation switch.
 
+### 7.4 Zoom: `search_filings`
+
+<p align="center">
+  <img src="img/v4-search.svg" alt="search_filings in V4: slots resolved from arguments or query, one sub-question per company and filing, keyword and dense search under the as-of filter, fusion, parents, rerank, round-robin merge" width="100%">
+</p>
+
+The V1 retrieval, used by V3, with two changes: forms and periods become slots (dashed), and every read goes through the store's as-of filter. Still no LLM.
+
+### 7.5 Zoom: the model tools in Research
+
+<p align="center">
+  <img src="img/v4-research-tools.svg" alt="run_scenario, compare_peers and variance_review: validate, rerun or reuse cached code runs, return tables with citable ids" width="100%">
+</p>
+
+The three tools that run model code for the agent (all planned, V4.5). None writes a `model_versions` row.
+
 ---
 
 ## 8. Context management
@@ -399,6 +447,12 @@ S11 export    code       note.md/.pdf, workbook.xlsx (+ Log), parity check      
 - **Trace:** `trace.jsonl` per run (every LLM and tool call: prompt hash, tokens, seconds, output); `run.json` sums time and tokens. Target < 30 min per company (spec §2).
 - **Backtest = the same runner in a loop** (§13.2), stopped after S8 (`report.type: none`).
 
+<p align="center">
+  <img src="img/v4-report-runner.svg" alt="Report runner: inputs-hash checkpoint per step, skip or run, failure policy for code and LLM steps, resume, parallelism, trace" width="100%">
+</p>
+
+One step of the runner, its failure policy, and how a run is resumed.
+
 **Research questions that need long work** ("which of the eight is cheapest on 2027E…") call `compare_peers`, which runs S1–S7 per company (cached): slow first, fast after. V4 runs it synchronously with a longer per-tool timeout (`research.tool_timeout_s`); async is parked.
 
 ---
@@ -432,6 +486,12 @@ The writer must use facts verbatim and mark them `{F-07}`. `research/trace.py` t
 4. on failure, one repair turn with the violations; then the section becomes "failed check: number trace" plus an exception row.
 
 **Tables** (2.1, 2.2, 4.1, 4.2, 5, 6, 7) are rendered by code from artifacts and never pass through the LLM. Layer-5 "100% traced" therefore means: tables by construction, prose by `trace.py`.
+
+<p align="center">
+  <img src="img/v4-number-trace.svg" alt="Number trace: fact list from artifacts, writer marks facts, trace.py checks every number, one repair turn, failed-check section, tables rendered by code" width="100%">
+</p>
+
+Step S10: how a number gets into the note.
 
 ### 10.3 Evidence and exception log
 

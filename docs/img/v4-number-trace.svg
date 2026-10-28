@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="640" viewBox="0 0 1180 640" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">Number trace for the note</title>
+  <desc id="svgdesc">Zoom of step S10. Code pre-formats a fact list with ids from the saved artifacts. The writer model gets one section at a time and must use facts verbatim, marked with their id. trace.py extracts every number token in the prose and requires each to be a marked fact or an allowed non-financial token, and lints the note rules. A failing section gets one repair turn with the violations, and if it still fails becomes failed check: number trace plus an exception row. Tables are rendered by code and never pass through the model. Sections and tables are assembled into note.json, then note.md and note.pdf.</desc>
+  <style>
+    .plan { stroke-dasharray: 6 4; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .panel { fill: #151c24; stroke: #3a4753; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .llm   { fill: #3a1a2c; stroke: #d487b0; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .gate  { fill: #3a2f14; stroke: #d4a84a; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      #arrow > path { fill: #8496a6; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1179" height="639" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+  <rect class="sink" x="40" y="30" width="200" height="108" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="140.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Artifacts</text>
+  <text class="sub" x="140.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">model.json · estimates</text>
+  <text class="sub" x="140.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">valuation · revisions</text>
+  <text class="sub" x="140.0" y="114" text-anchor="middle" font-size="13" fill="#4a5a68">events · debates</text>
+  <rect class="work" x="270" y="30" width="230" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="385.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Fact list (code)</text>
+  <text class="sub" x="385.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">F-07  "+2.4%"  Revenue vs</text>
+  <text class="sub" x="385.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">our estimate  model:…</text>
+  <text class="sub" x="385.0" y="114" text-anchor="middle" font-size="13" fill="#4a5a68">rounding, 2027E / 2025A done</text>
+  <rect class="llm" x="530" y="30" width="230" height="108" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="645.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Writer, per section</text>
+  <text class="sub" x="645.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">≤ 8k tokens: that section's</text>
+  <text class="sub" x="645.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">facts, tables as text, events</text>
+  <text class="sub" x="645.0" y="114" text-anchor="middle" font-size="13" fill="#4a5a68">uses facts verbatim: {F-07}</text>
+  <rect class="work" x="790" y="30" width="350" height="144" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="965.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">trace.py (code)</text>
+  <text class="sub" x="965.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">every number token in the prose is a</text>
+  <text class="sub" x="965.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">marked fact or an allowed token (dates,</text>
+  <text class="sub" x="965.0" y="114" text-anchor="middle" font-size="13" fill="#4a5a68">section numbers, "Q2", "10-K")</text>
+  <text class="sub" x="965.0" y="132" text-anchor="middle" font-size="13" fill="#4a5a68">lint: no "pending" or "TBD"; gaps read</text>
+  <text class="sub" x="965.0" y="150" text-anchor="middle" font-size="13" fill="#4a5a68">"n/a: …"; an E-period number carries E</text>
+  <path class="edge" d="M 240 84 L 270 84" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 500 84 L 530 84" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 760 84 L 790 84" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="790" y="230" width="180" height="72" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="880.0" y="256" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Section text</text>
+  <text class="sub" x="880.0" y="278" text-anchor="middle" font-size="13" fill="#4a5a68">all numbers traced</text>
+  <rect class="llm" x="1000" y="230" width="140" height="72" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="1070.0" y="256" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Repair</text>
+  <text class="sub" x="1070.0" y="278" text-anchor="middle" font-size="13" fill="#4a5a68">violations</text>
+  <text class="sub" x="1070.0" y="296" text-anchor="middle" font-size="13" fill="#4a5a68">listed</text>
+  <rect class="gate" x="1000" y="350" width="140" height="72" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="1070.0" y="376" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Failed check</text>
+  <text class="sub" x="1070.0" y="398" text-anchor="middle" font-size="13" fill="#4a5a68">exception row</text>
+  <path class="edge" d="M 880 174 L 880 230" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="872" y="206" text-anchor="end" font-size="12" fill="#46586a">pass</text>
+  <path class="edge" d="M 1030 174 L 1030 230" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="1038" y="206" text-anchor="start" font-size="12" fill="#46586a">fail</text>
+  <path class="edge" d="M 1110 230 L 1110 174" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="1118" y="206" text-anchor="start" font-size="12" fill="#46586a">again</text>
+  <path class="edge" d="M 1070 302 L 1070 350" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="1078" y="330" text-anchor="start" font-size="12" fill="#46586a">still</text>
+  <rect class="gate" x="40" y="230" width="690" height="82" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="385.0" y="256" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Seeded errors (layer 5)</text>
+  <text class="sub" x="385.0" y="278" text-anchor="middle" font-size="13" fill="#4a5a68">corrupt a fact or a table in a copy of the artifacts: the trace or lint must flag it</text>
+  <text class="sub" x="385.0" y="296" text-anchor="middle" font-size="13" fill="#4a5a68">pass bar: 100% of prose numbers traced · rubric ≥ 4 of 5 (judge gpt-oss-20b + human sample)</text>
+  <rect class="work" x="40" y="450" width="470" height="82" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="275.0" y="476" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Tables, by code</text>
+  <text class="sub" x="275.0" y="498" text-anchor="middle" font-size="13" fill="#4a5a68">2.1  2.2  4.1  4.2  5  6  7: rendered from</text>
+  <text class="sub" x="275.0" y="516" text-anchor="middle" font-size="13" fill="#4a5a68">the artifacts, never through the model</text>
+  <rect class="sink" x="600" y="450" width="280" height="82" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="740.0" y="476" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">note.json</text>
+  <text class="sub" x="740.0" y="498" text-anchor="middle" font-size="13" fill="#4a5a68">sections + tables</text>
+  <text class="sub" x="740.0" y="516" text-anchor="middle" font-size="13" fill="#4a5a68">→ note.md · note.pdf</text>
+  <path class="edge" d="M 510 491 L 600 491" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 880 302 L 880 450" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 1070 422 L 1070 491 L 880 491" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="40" y="590" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="sub" x="74" y="602" font-size="12.5" fill="#4a5a68">code</text>
+  <rect class="llm" x="190" y="590" width="26" height="14" rx="3" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="sub" x="224" y="602" font-size="12.5" fill="#4a5a68">LLM</text>
+  <rect class="sink" x="340" y="590" width="26" height="14" rx="3" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="sub" x="374" y="602" font-size="12.5" fill="#4a5a68">store</text>
+  <rect class="gate" x="490" y="590" width="26" height="14" rx="3" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="sub" x="524" y="602" font-size="12.5" fill="#4a5a68">date or check</text>
+</svg>

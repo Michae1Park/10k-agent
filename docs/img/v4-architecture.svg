@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="1060" viewBox="0 0 1180 1060" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">V4 architecture</title>
+  <desc id="svgdesc">Sources (EDGAR filings, Tiingo prices, FRED and Damodaran, BTS and NYC TLC) are fetched into a raw cache, then built offline along four paths: text (form-aware preprocess, chunks, vectors), structured facts (XBRL, inline XBRL, derived quarters), LLM extraction of KPIs and guidance with code-checked quotes, and market data. All land in one SQLite file where every row carries the date it became public, read only through an AsOf filter. Three modes run at one as-of date: Ask (agent with read tools), Research (agent with read and model tools), both ending in a claim check that resolves every cited id; and Report, a checkpointed pipeline of eleven steps S1 to S11 where code does the numbers and the LLM works only in bounded steps. Report writes a note, a workbook and saved model versions, which Ask and Research can cite. Evaluation grades extraction, model integrity, forecasts, valuation and the note.</desc>
+  <style>
+    .plan { stroke-dasharray: 6 4; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .panel { fill: #151c24; stroke: #3a4753; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .llm   { fill: #3a1a2c; stroke: #d487b0; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .gate  { fill: #3a2f14; stroke: #d4a84a; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      #arrow > path { fill: #8496a6; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1179" height="1059" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+
+  <!-- Sources -->
+  <text class="ptitle" x="40" y="40" font-size="14.5" font-weight="600" fill="#46586a">Sources</text>
+  <rect class="ext" x="40" y="52" width="260" height="62" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="170" y="77" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">EDGAR</text>
+  <text class="sub" x="170" y="98" text-anchor="middle" font-size="13" fill="#4a5a68">10-K · 10-Q · 8-K 2.02 · XBRL · DEF 14A</text>
+  <rect class="ext" x="320" y="52" width="260" height="62" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="450" y="77" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Tiingo</text>
+  <text class="sub" x="450" y="98" text-anchor="middle" font-size="13" fill="#4a5a68">daily prices, split-adjusted</text>
+  <rect class="ext" x="600" y="52" width="260" height="62" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="730" y="77" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">FRED / ALFRED · Damodaran</text>
+  <text class="sub" x="730" y="98" text-anchor="middle" font-size="13" fill="#4a5a68">macro with vintages · equity risk premium</text>
+  <rect class="ext plan" x="880" y="52" width="260" height="62" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="1010" y="77" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">BTS · NYC TLC · Form 4</text>
+  <text class="sub" x="1010" y="98" text-anchor="middle" font-size="13" fill="#4a5a68">cross-checks · insiders (V4.7)</text>
+
+  <!-- Build -->
+  <rect class="panel" x="20" y="150" width="1140" height="240" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="470" y="176" font-size="14.5" font-weight="600" fill="#46586a">Build: offline</text>
+  <rect class="work" x="40" y="190" width="1100" height="44" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="590" y="210" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">tenk fetch → raw cache</text>
+  <text class="sub" x="590" y="227" text-anchor="middle" font-size="12.5" fill="#4a5a68">one filing per form and period · every file stamped retrieved_at in raw/manifest.json</text>
+
+  <rect class="work" x="40" y="262" width="260" height="106" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="170" y="286" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Text</text>
+  <text class="sub" x="170" y="308" text-anchor="middle" font-size="13" fill="#4a5a68">form-aware rules (FormSpec)</text>
+  <text class="sub" x="170" y="326" text-anchor="middle" font-size="13" fill="#4a5a68">10-K · 10-Q · release → blocks</text>
+  <text class="sub" x="170" y="344" text-anchor="middle" font-size="13" fill="#4a5a68">parent-child chunks → vectors</text>
+  <rect class="work" x="320" y="262" width="260" height="106" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="450" y="286" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Structured facts</text>
+  <text class="sub" x="450" y="308" text-anchor="middle" font-size="13" fill="#4a5a68">XBRL company facts</text>
+  <text class="sub" x="450" y="326" text-anchor="middle" font-size="13" fill="#4a5a68">inline XBRL (segments)</text>
+  <text class="sub" x="450" y="344" text-anchor="middle" font-size="13" fill="#4a5a68">quarters: YTD → Q1–Q4</text>
+  <rect class="llm" x="600" y="262" width="260" height="106" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="730" y="286" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">KPI and guidance extraction</text>
+  <text class="sub" x="730" y="308" text-anchor="middle" font-size="13" fill="#4a5a68">LLM, one call per release,</text>
+  <text class="sub" x="730" y="326" text-anchor="middle" font-size="13" fill="#4a5a68">schema-constrained · code checks</text>
+  <text class="sub" x="730" y="344" text-anchor="middle" font-size="13" fill="#4a5a68">verbatim quote and value</text>
+  <rect class="work" x="880" y="262" width="260" height="106" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="1010" y="286" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Market data</text>
+  <text class="sub" x="1010" y="308" text-anchor="middle" font-size="13" fill="#4a5a68">prices · macro · ERP</text>
+  <text class="sub" x="1010" y="326" text-anchor="middle" font-size="13" fill="#4a5a68">dated by when each value</text>
+  <text class="sub" x="1010" y="344" text-anchor="middle" font-size="13" fill="#4a5a68">became public</text>
+
+  <path class="edge" d="M 170 114 V 190" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 450 114 V 190" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 730 114 V 190" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 1010 114 V 190" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 170 234 V 256" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 450 234 V 256" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 730 234 V 256" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 1010 234 V 256" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- Store -->
+  <rect class="sink" x="40" y="420" width="1100" height="66" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="590" y="445" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">One SQLite file: every row carries the date it became public</text>
+  <text class="sub" x="590" y="468" text-anchor="middle" font-size="13" fill="#4a5a68">chunks · FTS5 · vectors · facts · quarters · kpis · guidance · market · model_versions · estimates · exceptions</text>
+  <path class="edge" d="M 170 368 V 420" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 450 368 V 420" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 730 368 V 420" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 1010 368 V 420" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- AsOf -->
+  <rect class="gate" x="40" y="512" width="1100" height="50" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="590" y="534" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">AsOf(D) inside Store: no read path can skip it</text>
+  <text class="sub" x="590" y="552" text-anchor="middle" font-size="12.5" fill="#4a5a68">filings filed &lt; D · prices dated &lt; D · macro realtime_start &lt; D · our reports as_of &lt; D · restatements: the value visible at D</text>
+  <path class="edge" d="M 590 486 V 506" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- Modes -->
+  <text class="ptitle" x="230" y="594" font-size="14.5" font-weight="600" fill="#46586a">Run: one as-of date per run</text>
+  <rect class="llm plan" x="40" y="608" width="340" height="92" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="210" y="632" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Ask</text>
+  <text class="sub" x="210" y="654" text-anchor="middle" font-size="13" fill="#4a5a68">V3 agent loop, read tools only:</text>
+  <text class="sub" x="210" y="672" text-anchor="middle" font-size="13" fill="#4a5a68">search · financials · kpis · guidance</text>
+  <text class="sub" x="210" y="690" text-anchor="middle" font-size="13" fill="#4a5a68">market · crosscheck · calculator · reports</text>
+  <rect class="llm plan" x="420" y="608" width="340" height="92" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="590" y="632" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Research</text>
+  <text class="sub" x="590" y="654" text-anchor="middle" font-size="13" fill="#4a5a68">same agent, + model tools: model_view,</text>
+  <text class="sub" x="590" y="672" text-anchor="middle" font-size="13" fill="#4a5a68">run_scenario, compare_peers, variance_review</text>
+  <text class="sub" x="590" y="690" text-anchor="middle" font-size="13" fill="#4a5a68">new numbers only from model code</text>
+  <rect class="work plan" x="800" y="608" width="340" height="92" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="970" y="632" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Report</text>
+  <text class="sub" x="970" y="654" text-anchor="middle" font-size="13" fill="#4a5a68">not an agent: code runs 11 steps,</text>
+  <text class="sub" x="970" y="672" text-anchor="middle" font-size="13" fill="#4a5a68">the LLM works only in bounded steps</text>
+  <text class="sub" x="970" y="690" text-anchor="middle" font-size="13" fill="#4a5a68">checkpointed, resumable</text>
+  <path class="edge" d="M 210 562 V 602" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 590 562 V 602" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 970 562 V 602" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- Claim check + answer -->
+  <rect class="work plan" x="40" y="740" width="520" height="78" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="300" y="764" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">Claim check (code only)</text>
+  <text class="sub" x="300" y="786" text-anchor="middle" font-size="13" fill="#4a5a68">refs.py resolves any cited id: chunk · xbrl · q: · kpi: · guide:</text>
+  <text class="sub" x="300" y="804" text-anchor="middle" font-size="13" fill="#4a5a68">px: · macro: · model: → verified · calculated · cited · unverified</text>
+  <rect class="ext plan" x="580" y="740" width="180" height="78" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="670" y="768" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Cited answer</text>
+  <text class="sub" x="670" y="790" text-anchor="middle" font-size="13" fill="#4a5a68">estimate status shown</text>
+  <path class="edge" d="M 210 700 V 722 H 300 V 734" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 590 700 V 722 H 300" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
+  <path class="edge" d="M 560 779 H 574" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- Evaluation -->
+  <rect class="panel plan" x="40" y="850" width="720" height="128" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="60" y="876" font-size="14.5" font-weight="600" fill="#46586a">Evaluation: gold sets and pass bars frozen before the code they grade</text>
+  <text class="sub" x="60" y="900" font-size="13" fill="#4a5a68">1  Extraction: hand labels vs extractor, ≥ 98% exact, 100% on revenue, EPS, main KPI</text>
+  <text class="sub" x="60" y="920" font-size="13" fill="#4a5a68">2  Model integrity: balance, quarters sum, Q4 ties, no future input (any FAIL stops)</text>
+  <text class="sub" x="60" y="940" font-size="13" fill="#4a5a68">3  Forecast: walk-forward backtest vs seasonal naive, guidance, no-tools LLM</text>
+  <text class="sub" x="60" y="960" font-size="13" fill="#4a5a68">4  Valuation: byte-identical reruns  ·  5  Note: number trace, rubric, seeded errors  ·  Ask and Research gold</text>
+  <path class="edge" d="M 400 818 V 832 H 400 V 844" fill="none" stroke="#5a6b7a" stroke-width="1.6" stroke-dasharray="3 4" marker-end="url(#arrow)"/>
+
+  <!-- Report steps -->
+  <rect class="panel plan" x="800" y="740" width="340" height="238" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
+  <text class="ptitle" x="816" y="760" font-size="13.5" font-weight="600" fill="#46586a">Report steps, each writes an artifact</text>
+  <g font-size="12.5">
+    <rect class="work" x="814" y="768" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="780.5" fill="#132030">S1  datapack · facts, KPIs, guidance, prices</text>
+    <rect class="llm" x="814" y="787" width="312" height="16" rx="3" fill="#fbe8f1" stroke="#b4538a"/><text class="name" x="822" y="799.5" fill="#132030">S2  events · what changed this quarter</text>
+    <rect class="work" x="814" y="806" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="818.5" fill="#132030">S3  model · history + checks (FAIL stops)</text>
+    <rect class="llm" x="814" y="825" width="312" height="16" rx="3" fill="#fbe8f1" stroke="#b4538a"/><text class="name" x="822" y="837.5" fill="#132030">S4  propose · bounded assumptions</text>
+    <rect class="work" x="814" y="844" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="856.5" fill="#132030">S5  forecast · anchor to guidance, scenarios</text>
+    <rect class="work" x="814" y="863" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="875.5" fill="#132030">S6  peers · S1, S3, S5 per peer, defaults</text>
+    <rect class="work" x="814" y="882" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="894.5" fill="#132030">S7  value · comps, DCF, targets, ratings</text>
+    <rect class="work" x="814" y="901" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="913.5" fill="#132030">S8  revise · bridge vs prior version</text>
+    <rect class="llm" x="814" y="920" width="312" height="16" rx="3" fill="#fbe8f1" stroke="#b4538a"/><text class="name" x="822" y="932.5" fill="#132030">S9  debates · bull, bear, trigger per driver</text>
+    <rect class="llm" x="814" y="939" width="312" height="16" rx="3" fill="#fbe8f1" stroke="#b4538a"/><text class="name" x="822" y="951.5" fill="#132030">S10 write · ten sections, number trace</text>
+    <rect class="work" x="814" y="958" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="970.5" fill="#132030">S11 export · note, workbook, parity check</text>
+  </g>
+  <path class="edge" d="M 970 700 V 740" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- Outputs and write-back -->
+  <rect class="ext plan" x="800" y="996" width="340" height="50" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <text class="name" x="970" y="1017" text-anchor="middle" font-size="15" font-weight="600" fill="#132030">note.md/.pdf · workbook.xlsx · model.json</text>
+  <text class="sub" x="970" y="1036" text-anchor="middle" font-size="12.5" fill="#4a5a68">saved as a model version: draft → reviewed</text>
+  <path class="edge" d="M 970 978 V 996" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 1140 1021 H 1158 V 537 H 1146" fill="none" stroke="#5a6b7a" stroke-width="1.6" stroke-dasharray="3 4" marker-end="url(#arrow)"/>
+  <text class="elabel" x="950" y="590" text-anchor="end" font-size="12.5" fill="#46586a">saved versions are read back as-of</text>
+
+  <!-- Legend -->
+  <g font-size="12.5">
+    <rect x="40" y="1000" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/><text class="sub" x="74" y="1012" fill="#4a5a68">code</text>
+    <rect x="120" y="1000" width="26" height="14" rx="3" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/><text class="sub" x="154" y="1012" fill="#4a5a68">LLM</text>
+    <rect x="200" y="1000" width="26" height="14" rx="3" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/><text class="sub" x="234" y="1012" fill="#4a5a68">store</text>
+    <rect x="290" y="1000" width="26" height="14" rx="3" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/><text class="sub" x="324" y="1012" fill="#4a5a68">date gate</text>
+    <rect x="40" y="1024" width="26" height="14" rx="3" fill="none" stroke="#5a6b7a" stroke-width="1.5"/><text class="sub" x="74" y="1036" fill="#4a5a68">built (V4.0 to V4.1)</text>
+    <rect x="200" y="1024" width="26" height="14" rx="3" fill="none" stroke="#5a6b7a" stroke-width="1.5" stroke-dasharray="6 4"/><text class="sub" x="234" y="1036" fill="#4a5a68">planned (V4.2 on)</text>
+  </g>
+</svg>
