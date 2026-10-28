@@ -820,3 +820,24 @@ The bar was frozen before the first run and is reported as missed. Before any ru
 | **4** (`v4.2-ask-qwen3.6-27b-r4`) | changed | 96.2% | **89.9%** | **100%** | **pass** |
 
 The rescore of run 3's unchanged answers shows the gain is the gold change, not the agent (run 4 is within run-to-run spread of it). Run 4 misses (8): two guidance ranges still written as one claim without a value (CART GTV, LYFT EBITDA, as in run 3); LYFT's within-range answer claims one bound; EXPE's beat margin claimed as an unverified $125M; DASH Deliveroo premise has an unverified $2,900M; LYFT working capital misses the insurance-reserves point; EXPE drivers omit Rapid API (as in run 3); `trip-thefork-sale` again judged 1/3 though the answer states all three points. **V4.2 passes** on run 4, with the gold set still unreviewed by a person.
+
+### 17.12 V4.3 exit: history models on the pilot (2026-10-28)
+
+Built: the DSL (`research/model/dsl.py`; Python and Excel evaluators), the graph (`graph.py`; lines × quarters with FY columns, lags skip FY), the S1 data pack (`research/datapack.py`; every input with its citable id and filing date), templates `statements` (condensed §5.2), `segments` (UBER) and `marketplace` (BKNG, EXPE, ABNB), layer-2 checks (`checks.py`), and the workbook Model tab with a LibreOffice parity check (`research/export/workbook.py`). Runner: `python -m tenk_agent.research.model.history <tickers> <as_of>`. History only: forecast columns, `formula_only` on them, and the Assumptions tab come with V4.4.
+
+| As of | UBER | BKNG | Parity (formula cells) |
+|---|---|---|---|
+| 2026-09-01 | all checks pass | all pass | 313 + 195, no difference |
+| 2026-03-01 | all pass | all pass (pre-split basis) | 291 + 177 |
+| 2025-08-15 | all pass | all pass | 222 + 136 |
+
+Checks run: `balance`, `quarters_sum`, `q4_ties`, `take_rate`, `segments_sum`, `no_future_input` (413 and 252 inputs), `formula_only` (nothing to test yet). Unit tests break a model on purpose for each check. **Layer 2 passes on the pilot.**
+
+Found while building:
+
+- **UBER balance:** `StockholdersEquity` excludes non-controlling interests; the sheet ties only with total equity and redeemable NCI (new metrics `equity_total`, `mezzanine`; 2026Q2: 65,801 − 37,402 − 28,219 − 180 = 0).
+- **BKNG 25-for-1 split (effective 2026-04-02):** later filings restate earlier quarters, earlier ones don't, so shares and EPS mixed bases (815M then 33M). The data pack puts every share and per-share point on the latest visible filing's basis using the tagged ratio, marks it `split_adjusted`, and leaves a pre-split as-of untouched.
+- **UBER segment measure changed in 2026Q1** from Segment Adjusted EBITDA to Segment Operating Income (prior year recast); segment EBITDA is missing from 2026, logged, and `segments_sum` skips those periods. UBER Mobility take rate steps from 29.9% (2025Q4) to 25.8% (2026Q1) with segment revenue still summing to total: open, to explain before forecasting.
+- Logged gaps: Q4 diluted shares (no XBRL three-month fact; Q4 EPS now falls back to the release), BKNG Q4 SBC, UBER buybacks before 2023Q3 (taken as 0).
+
+Not yet: `orders` (DASH, LYFT, CART) and `trip` (TRIP) templates; EXPE and ABNB are bound to `marketplace` but not yet gated. Both before the V4.4 all-eight run.
