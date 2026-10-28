@@ -14,7 +14,7 @@
 
 lines:
   # --- Income statement
-  revenue:            {kind: input, source: "q:revenue", unit: USD millions, statement: income}
+  revenue:            {kind: input, source: "q:revenue", fallback: "kpi:revenue", unit: USD millions, statement: income}
   adj_ebitda:         {kind: input, source: "kpi:adj_ebitda", unit: USD millions, statement: income,
                        label: adjusted EBITDA}
   adj_ebitda_margin:  {kind: formula, expr: "adj_ebitda / revenue", unit: fraction,

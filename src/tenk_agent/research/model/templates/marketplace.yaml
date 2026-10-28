@@ -13,7 +13,7 @@ lines:
   adj_ebitda_margin_gb:     {kind: formula, expr: "adj_ebitda / gross_bookings", unit: fraction,
                              label: adjusted EBITDA margin on gross bookings}
   # forecast identities (the statements' lines, redefined with a forecast)
-  revenue:     {kind: input, source: "q:revenue", unit: USD millions, statement: income,
+  revenue:     {kind: input, source: "q:revenue", fallback: "kpi:revenue", unit: USD millions, statement: income,
                 forecast: "gross_bookings * take_rate"}
   adj_ebitda:  {kind: input, source: "kpi:adj_ebitda", unit: USD millions, statement: income,
                 label: adjusted EBITDA, forecast: "adj_ebitda_margin_gb * gross_bookings"}
