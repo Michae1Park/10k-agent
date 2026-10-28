@@ -1,5 +1,7 @@
 """The SQLite store, as V1's index loads it: chunk ids and metadata, children, search filters."""
 
+import pytest
+
 from tenk_agent.retrieval.index import load
 from tenk_agent.store import Store
 
@@ -89,3 +91,20 @@ def test_kpis_and_guidance_are_dated_by_their_release(tmp_path):
     assert [(g["segment"], g["issued_in"]) for g in after.guidance("UBER")] == [("total", "2026Q2")]
     before = Store(tmp_path / "s.db", AsOf(date(2026, 8, 5)))  # strictly before the release
     assert before.kpis("UBER") == [] and before.guidance("UBER") == []
+
+
+def test_search_filters_by_period_and_form(tmp_path):
+    from tenk_agent.store import period_parts
+
+    k10 = filing("AAPL", 2025, "2025-09-27", [prose("7", "Services revenue grew.")])
+    q10 = filing("AAPL", 2026, "2026-03-28", [prose("I.2", "Services revenue grew again.")])
+    q10[0].update(form="10-Q", fiscal_period="Q2", accession_no="AAPL-2026Q2")
+    load(tmp_path / "s.db", [k10, q10])
+    store = Store(tmp_path / "s.db")
+    found = lambda **f: [c.id for c in store.search("services revenue", **f)]  # noqa: E731
+    assert len(found()) == 2
+    assert found(periods=["2026Q2"]) == found(forms=["10-Q"]) == ["AAPL-2026Q2-I.2-000"]
+    assert found(periods=["FY2025"]) == ["AAPL-FY2025-7-000"]
+    assert period_parts("fy2025") == (2025, "FY")
+    with pytest.raises(ValueError):
+        period_parts("Q2 2026")

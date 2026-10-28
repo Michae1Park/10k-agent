@@ -55,7 +55,7 @@ class HybridSearch:
         filters = {
             "tickers": [sub.ticker] if sub.ticker else None,
             "fiscal_years": sub.fiscal_years,
-        }
+        } | ({"periods": sub.periods, "forms": sub.forms} if sub.periods or sub.forms else {})
         size = max(self.candidates, k)
         children = self.store.has_children()
         keyword_search = self.store.child_search if children else self.store.search
@@ -144,13 +144,21 @@ class SubQuestionRetriever:
         k: int,
         tickers: list[str] | None = None,
         fiscal_years: list[int] | None = None,
+        periods: list[str] | None = None,
+        forms: list[str] | None = None,
     ) -> Result:
-        """tickers, fiscal_years: replace what the question names (QueryDecomposer.decompose)."""
+        """tickers, fiscal_years: replace what the question names (QueryDecomposer.decompose).
+        periods, forms (V4): filter every sub-question; periods replace the years."""
         subs = (
             self.decomposer.decompose(question, tickers, fiscal_years)
             if self.slot_search
             else [SubQuestion(question, None, None)]
         )
+        if periods or forms:
+            subs = [
+                SubQuestion(s.text, s.ticker, None if periods else s.fiscal_years, periods, forms)
+                for s in subs
+            ]
         per_sub = k if len(subs) == 1 else max(2, -(-k // len(subs)))
         searched = [self.hybrid.search(sub, per_sub) for sub in subs]
         # Round-robin, the best-matching sub-question first in every round.

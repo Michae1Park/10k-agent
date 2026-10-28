@@ -599,9 +599,12 @@ class Store:
         fiscal_years: list[int] | None = None,
         items: list[str] | None = None,
         k: int = 10,
+        periods: list[str] | None = None,
+        forms: list[str] | None = None,
     ) -> list[ChunkRecord]:
         """Keyword search (BM25) over chunk text, optionally filtered by company, year and item."""
-        return [_chunk(r) for r in self._keyword("chunks", query, tickers, fiscal_years, items, k)]
+        rows = self._keyword("chunks", query, tickers, fiscal_years, items, k, periods, forms)
+        return [_chunk(r) for r in rows]
 
     def vector_search(
         self,
@@ -610,9 +613,12 @@ class Store:
         fiscal_years: list[int] | None = None,
         items: list[str] | None = None,
         k: int = 10,
+        periods: list[str] | None = None,
+        forms: list[str] | None = None,
     ) -> list[ChunkRecord]:
         """Nearest chunks by cosine distance (brute force; milliseconds at this corpus size)."""
-        return [_chunk(r) for r in self._nearest("chunks", vector, tickers, fiscal_years, items, k)]
+        rows = self._nearest("chunks", vector, tickers, fiscal_years, items, k, periods, forms)
+        return [_chunk(r) for r in rows]
 
     def child_search(
         self,
@@ -621,9 +627,11 @@ class Store:
         fiscal_years: list[int] | None = None,
         items: list[str] | None = None,
         k: int = 10,
+        periods: list[str] | None = None,
+        forms: list[str] | None = None,
     ) -> list[ChildRecord]:
         """Keyword search (BM25) over children, with the same filters as `search`."""
-        rows = self._keyword("children", query, tickers, fiscal_years, items, k)
+        rows = self._keyword("children", query, tickers, fiscal_years, items, k, periods, forms)
         return [_child(r) for r in rows]
 
     def child_vector_search(
@@ -633,25 +641,35 @@ class Store:
         fiscal_years: list[int] | None = None,
         items: list[str] | None = None,
         k: int = 10,
+        periods: list[str] | None = None,
+        forms: list[str] | None = None,
     ) -> list[ChildRecord]:
         """Nearest children by cosine distance, with the same filters as `search`."""
-        rows = self._nearest("children", vector, tickers, fiscal_years, items, k)
+        rows = self._nearest("children", vector, tickers, fiscal_years, items, k, periods, forms)
         return [_child(r) for r in rows]
 
-    def _keyword(self, table, query, tickers, fiscal_years, items, k) -> list[sqlite3.Row]:
+    def _keyword(
+        self, table, query, tickers, fiscal_years, items, k, periods=None, forms=None
+    ) -> list[sqlite3.Row]:
         terms = [t for t in re.findall(r"\w+", query.lower()) if t not in STOPWORDS]
         if not terms:
             return []
         match = " OR ".join(f'"{term}"' for term in terms)
-        where, params = _filters(tickers, fiscal_years, items, table="c", asof=self.asof)
+        where, params = _filters(
+            tickers, fiscal_years, items, table="c", asof=self.asof, periods=periods, forms=forms
+        )
         return self._query(
             f"SELECT c.* FROM {table}_fts JOIN {table} c ON c.rowid = {table}_fts.rowid "
             f"WHERE {table}_fts MATCH ? AND {where} ORDER BY bm25({table}_fts) LIMIT ?",
             [match, *params, k],
         )
 
-    def _nearest(self, table, vector, tickers, fiscal_years, items, k) -> list[sqlite3.Row]:
-        where, params = _filters(tickers, fiscal_years, items, table="c", asof=self.asof)
+    def _nearest(
+        self, table, vector, tickers, fiscal_years, items, k, periods=None, forms=None
+    ) -> list[sqlite3.Row]:
+        where, params = _filters(
+            tickers, fiscal_years, items, table="c", asof=self.asof, periods=periods, forms=forms
+        )
         return self._query(
             f"SELECT c.* FROM {table} c JOIN {table}_vec v ON v.rowid = c.rowid WHERE {where} "
             f"ORDER BY vec_distance_cosine(v.embedding, ?) LIMIT ?",
@@ -668,15 +686,34 @@ STOPWORDS = {
 
 
 def _filters(
-    tickers, fiscal_years, items, table: str = "chunks", *, asof: AsOf
+    tickers, fiscal_years, items, table: str = "chunks", *, asof: AsOf, periods=None, forms=None
 ) -> tuple[str, list]:
+    """V4 adds `periods` (2026Q2, FY2025: a fiscal year and period) and `forms` (10-K, 10-Q,
+    ER); both None is V3's filter."""
     visible, params = asof.sql(table)
     clauses = [visible]
-    for column, values in (("ticker", tickers), ("fiscal_year", fiscal_years), ("item", items)):
+    for column, values in (
+        ("ticker", tickers), ("fiscal_year", fiscal_years), ("item", items), ("form", forms)
+    ):
         if values:
             clauses.append(f"{table}.{column} IN ({', '.join('?' * len(values))})")
             params.extend(v.upper() if isinstance(v, str) else v for v in values)
+    if periods:
+        pairs = [period_parts(p) for p in periods]
+        clauses.append("(" + " OR ".join(
+            f"({table}.fiscal_year = ? AND {table}.fiscal_period = ?)" for _ in pairs
+        ) + ")")
+        params.extend(v for pair in pairs for v in pair)
     return " AND ".join(clauses), params
+
+
+def period_parts(period: str) -> tuple[int, str]:
+    """2026Q2 → (2026, 'Q2'); FY2025 → (2025, 'FY')."""
+    key = period.strip().upper().replace(" ", "")
+    match = re.fullmatch(r"FY(\d{4})|(\d{4})(Q[1-4])", key)
+    if not match:
+        raise ValueError(f"bad period {period!r}: use e.g. 2026Q2 or FY2025")
+    return (int(match[1]), "FY") if match[1] else (int(match[2]), match[3])
 
 
 def _chunk(row: sqlite3.Row) -> ChunkRecord:
