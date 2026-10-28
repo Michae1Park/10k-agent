@@ -1,0 +1,756 @@
+[
+ {
+  "id": "uber-buyback-2026q2",
+  "split": null,
+  "category": "filing_text",
+  "kind": "figure",
+  "failure_mode": null,
+  "question": "How much did Uber have left under its share repurchase program at the end of Q2 2026, and how much stock did it buy back in the quarter?",
+  "as_of": "2026-09-01",
+  "period": "2026Q2",
+  "form": "10-Q",
+  "answer_type": "number_set",
+  "expected_answer": [
+   {
+    "value": 15700,
+    "unit": "USD millions",
+    "company": "UBER"
+   },
+   {
+    "value": 510,
+    "unit": "USD millions",
+    "company": "UBER"
+   }
+  ],
+  "tolerance": 0.005,
+  "required_points": [],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "UBER",
+    "period": "2026Q2",
+    "form": "10-Q",
+    "evidence": "As of June 30, 2026, we had approximately $15.7 billion available to repurchase shares"
+   },
+   {
+    "company": "UBER",
+    "period": "2026Q2",
+    "form": "10-Q",
+    "evidence": "we repurchased, and subsequently retired, 6.9 million and 46.6 million shares of common stock for $ 510 million and $ 3.5 billion"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "lyft-working-capital-2026h1",
+  "split": null,
+  "category": "filing_text",
+  "kind": "text",
+  "failure_mode": null,
+  "question": "What drove the change in working capital in Lyft's operating cash flow for the first half of 2026?",
+  "as_of": "2026-09-01",
+  "period": "2026Q2",
+  "form": "10-Q",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "Insurance was the main driver: insurance reserves rose with higher ride volume",
+   "Partly offset by a lower cost per mile from California's rideshare insurance reform (SB 371)"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "LYFT",
+    "period": "2026Q2",
+    "form": "10-Q",
+    "evidence": "The changes in working capital were primarily driven by insurance"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "lyft-rd-2026q2",
+  "split": null,
+  "category": "filing_text",
+  "kind": "text",
+  "failure_mode": null,
+  "question": "Why did Lyft's research and development expenses rise in Q2 2026, and by how much?",
+  "as_of": "2026-09-01",
+  "period": "2026Q2",
+  "form": "10-Q",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "R&D rose $9.9 million, or 9%, year over year",
+   "Mainly personnel-related costs from increased headcount"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "LYFT",
+    "period": "2026Q2",
+    "form": "10-Q",
+    "evidence": "Research and development expenses increased $9.9 million, or 9%, in the three months ended June 30, 2026"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "trip-thefork-sale",
+  "split": null,
+  "category": "filing_text",
+  "kind": "text",
+  "failure_mode": null,
+  "question": "What did Tripadvisor agree to do with TheFork in 2026, and how does it now report the business?",
+  "as_of": "2026-09-01",
+  "period": "2026Q2",
+  "form": "10-Q",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "Sell TheFork to American Express Travel for $700 million in cash",
+   "TheFork is classified as held for sale and reported as a discontinued operation",
+   "Closing expected by the end of 2026, subject to approvals"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "TRIP",
+    "period": "2026Q2",
+    "form": "10-Q",
+    "evidence": "to sell TheFork, its online restaurant reservation and management platform in Europe, for $700.0 million in cash"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "dash-deliveroo",
+  "split": null,
+  "category": "filing_text",
+  "kind": "text",
+  "failure_mode": null,
+  "question": "When did DoorDash complete its acquisition of Deliveroo, and what was the consideration?",
+  "as_of": "2026-09-01",
+  "period": "FY2025",
+  "form": "10-K",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "Completed October 2, 2025",
+   "Consideration with a fair value of about $3,724 million"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "DASH",
+    "period": "FY2025",
+    "form": "10-K",
+    "evidence": "On October 2, 2025, the Company completed the acquisition of substantially all of the outstanding equity interests of Deliveroo plc"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "dash-sevenrooms",
+  "split": null,
+  "category": "filing_text",
+  "kind": "text",
+  "failure_mode": null,
+  "question": "What does DoorDash say the SevenRooms acquisition adds, and what did it pay?",
+  "as_of": "2026-09-01",
+  "period": "2026Q2",
+  "form": "10-Q",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "Tools for merchants to manage reservations and tables, CRM and marketing",
+   "Consideration with a fair value of $1,152 million"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "DASH",
+    "period": "2026Q2",
+    "form": "10-Q",
+    "evidence": "The acquisition date fair value of the consideration transferred for SevenRooms was $ 1,152 million"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "expe-bookings-drivers-2026q2",
+  "split": null,
+  "category": "filing_text",
+  "kind": "text",
+  "failure_mode": null,
+  "question": "What drove Expedia's gross bookings growth in Q2 2026?",
+  "as_of": "2026-09-01",
+  "period": "2026Q2",
+  "form": "10-Q",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "Gross bookings grew 12%",
+   "B2C growth driven by momentum in the U.S.",
+   "B2B grew globally, with Rapid API the largest contributor"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "EXPE",
+    "period": "2026Q2",
+    "form": "10-Q",
+    "evidence": "B2B gross bookings grew globally with Rapid API the largest contributor to growth"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "abnb-app-nights-2026q2",
+  "split": null,
+  "category": "filing_text",
+  "kind": "text",
+  "failure_mode": null,
+  "question": "What role did Airbnb's app play in its Q2 2026 nights growth?",
+  "as_of": "2026-09-01",
+  "period": "2026Q2",
+  "form": "ER",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "Nights booked on the app grew 23% year over year",
+   "The app accounted for 64% of nights booked, up from 59%"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "ABNB",
+    "period": "2026Q2",
+    "form": "ER",
+    "evidence": "nights booked on our app in Q2 2026 increasing 23% year-over-year and accounting for 64% of total nights booked"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "abnb-na-adr-2026q2",
+  "split": null,
+  "category": "filing_text",
+  "kind": "text",
+  "failure_mode": null,
+  "question": "How did Airbnb's average daily rate in North America change in Q2 2026, and why?",
+  "as_of": "2026-09-01",
+  "period": "2026Q2",
+  "form": "ER",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "North America ADR rose 7% year over year",
+   "Driven by price appreciation and mix shift (toward larger entire homes)"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "ABNB",
+    "period": "2026Q2",
+    "form": "ER",
+    "evidence": "ADR in North America increased 7% in Q2 2026 compared to Q2 2025, driven by both price appreciation and mix shift"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "bkng-dma",
+  "split": null,
+  "category": "filing_text",
+  "kind": "text",
+  "failure_mode": null,
+  "question": "What designation has the European Commission given Booking Holdings under EU competition rules?",
+  "as_of": "2026-09-01",
+  "period": "FY2025",
+  "form": "10-K",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "Booking was designated a gatekeeper under the Digital Markets Act (DMA)"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "BKNG",
+    "period": "FY2025",
+    "form": "10-K",
+    "evidence": "following the European Commission's designation of us as a gatekeeper under the Digital Markets Act"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "uber-fcf-milestone-2026q2",
+  "split": null,
+  "category": "filing_text",
+  "kind": "text",
+  "failure_mode": null,
+  "question": "What free cash flow milestone did Uber's CFO point to in the Q2 2026 results?",
+  "as_of": "2026-09-01",
+  "period": "2026Q2",
+  "form": "ER",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "Trailing twelve-month free cash flow exceeded $10 billion for the first time"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "UBER",
+    "period": "2026Q2",
+    "form": "ER",
+    "evidence": "trailing twelve-month free cash flow exceeded $10 billion for the first time in Uber’s history"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "cart-storefronts-fy2025",
+  "split": null,
+  "category": "filing_text",
+  "kind": "figure",
+  "failure_mode": null,
+  "question": "According to its 2025 10-K, how many grocers' e-commerce sites does Instacart's storefront technology power?",
+  "as_of": "2026-09-01",
+  "period": "FY2025",
+  "form": "10-K",
+  "answer_type": "number",
+  "expected_answer": {
+   "value": 380,
+   "unit": "count",
+   "company": "CART"
+  },
+  "tolerance": 0.005,
+  "required_points": [],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "CART",
+    "period": "FY2025",
+    "form": "10-K",
+    "evidence": "Our storefront technology powers more than 380 grocers’ e-commerce sites"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "'more than 380'",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "uber-our-2027e-ebitda",
+  "split": null,
+  "category": "our_estimates",
+  "kind": "decline",
+  "failure_mode": null,
+  "question": "What is our 2027E adjusted EBITDA for Uber?",
+  "as_of": "2026-09-01",
+  "period": null,
+  "form": null,
+  "answer_type": "abstain",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [],
+  "should_abstain": true,
+  "sources": [],
+  "expected_tools": [],
+  "notes": "No research report exists yet (V4.6)",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "dash-our-price-target",
+  "split": null,
+  "category": "our_estimates",
+  "kind": "decline",
+  "failure_mode": null,
+  "question": "What price target do we have on DoorDash?",
+  "as_of": "2026-09-01",
+  "period": null,
+  "form": null,
+  "answer_type": "abstain",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [],
+  "should_abstain": true,
+  "sources": [],
+  "expected_tools": [],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "lyft-forecast-q4-2026",
+  "split": null,
+  "category": "failure_case",
+  "kind": "decline",
+  "failure_mode": "unsupported",
+  "question": "What will Lyft's gross bookings be in Q4 2026?",
+  "as_of": "2026-09-01",
+  "period": null,
+  "form": null,
+  "answer_type": "abstain",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [],
+  "should_abstain": true,
+  "sources": [],
+  "expected_tools": [
+   "guidance"
+  ],
+  "notes": "Only Q3 2026 is guided",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "abnb-advice",
+  "split": null,
+  "category": "failure_case",
+  "kind": "decline",
+  "failure_mode": "unsupported",
+  "question": "Should I buy Airbnb stock ahead of its Q3 earnings?",
+  "as_of": "2026-09-01",
+  "period": null,
+  "form": null,
+  "answer_type": "abstain",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [],
+  "should_abstain": true,
+  "sources": [],
+  "expected_tools": [],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "fastest-growth-next-year",
+  "split": null,
+  "category": "failure_case",
+  "kind": "decline",
+  "failure_mode": "unsupported",
+  "question": "Which of the eight companies will grow revenue fastest next year?",
+  "as_of": "2026-09-01",
+  "period": null,
+  "form": null,
+  "answer_type": "abstain",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [],
+  "should_abstain": true,
+  "sources": [],
+  "expected_tools": [],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "nyc-trips-uber-lyft-2026-05",
+  "split": null,
+  "category": "cross_check",
+  "kind": "decline",
+  "failure_mode": null,
+  "question": "How did NYC trips for Uber and Lyft compare in May 2026?",
+  "as_of": "2026-09-01",
+  "period": null,
+  "form": null,
+  "answer_type": "abstain",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [],
+  "should_abstain": true,
+  "sources": [],
+  "expected_tools": [],
+  "notes": "TLC cross-check data is not built yet (spec §2.1)",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "uber-gross-bookings-before-release",
+  "split": null,
+  "category": "failure_case",
+  "kind": "decline",
+  "failure_mode": "unsupported",
+  "question": "What were Uber's Q2 2026 gross bookings?",
+  "as_of": "2026-08-04",
+  "period": null,
+  "form": null,
+  "answer_type": "abstain",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [],
+  "should_abstain": true,
+  "sources": [],
+  "expected_tools": [
+   "company_kpis"
+  ],
+  "notes": "As-of leak: released 2026-08-05",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "dash-guide-before-release",
+  "split": null,
+  "category": "failure_case",
+  "kind": "decline",
+  "failure_mode": "unsupported",
+  "question": "What did DoorDash guide for Q3 2026 adjusted EBITDA?",
+  "as_of": "2026-07-15",
+  "period": null,
+  "form": null,
+  "answer_type": "abstain",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [],
+  "should_abstain": true,
+  "sources": [],
+  "expected_tools": [
+   "guidance"
+  ],
+  "notes": "As-of leak: issued with the Q2 release, 2026-08-05",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "uber-gross-bookings-2026q3",
+  "split": null,
+  "category": "failure_case",
+  "kind": "decline",
+  "failure_mode": "unsupported",
+  "question": "What were Uber's Q3 2026 gross bookings?",
+  "as_of": "2026-09-01",
+  "period": null,
+  "form": null,
+  "answer_type": "abstain",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [],
+  "should_abstain": true,
+  "sources": [],
+  "expected_tools": [
+   "company_kpis"
+  ],
+  "notes": "Not reported yet at the as-of; guidance is not an actual",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "grab-revenue",
+  "split": null,
+  "category": "failure_case",
+  "kind": "decline",
+  "failure_mode": "entity_naming",
+  "question": "What was Grab's revenue in Q2 2026?",
+  "as_of": "2026-09-01",
+  "period": null,
+  "form": null,
+  "answer_type": "abstain",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [],
+  "should_abstain": true,
+  "sources": [],
+  "expected_tools": [],
+  "notes": "Not in the corpus",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "uber-bookings-decline-premise",
+  "split": null,
+  "category": "failure_case",
+  "kind": "text",
+  "failure_mode": "false_premise",
+  "question": "Why did Uber's gross bookings decline in Q2 2026?",
+  "as_of": "2026-09-01",
+  "period": "2026Q2",
+  "form": "ER",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "Corrects the premise: gross bookings did not decline",
+   "They grew about 22% year over year (constant currency)"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "UBER",
+    "period": "2026Q2",
+    "form": "ER",
+    "evidence": "Gross Bookings grew 22% year-over-year on a constant currency basis"
+   }
+  ],
+  "expected_tools": [
+   "company_kpis",
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "trip-thefork-buyer-premise",
+  "split": null,
+  "category": "failure_case",
+  "kind": "text",
+  "failure_mode": "false_premise",
+  "question": "Why did Tripadvisor sell TheFork to Booking Holdings?",
+  "as_of": "2026-09-01",
+  "period": "2026Q2",
+  "form": "10-Q",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "Corrects the premise: the buyer is American Express Travel, not Booking Holdings",
+   "The sale was pending (expected to close by the end of 2026), for $700 million in cash"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "TRIP",
+    "period": "2026Q2",
+    "form": "10-Q",
+    "evidence": "On August 2, 2026, the Company entered into an Equity Purchase Agreement with American Express Travel to sell TheFork"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ },
+ {
+  "id": "dash-deliveroo-year-premise",
+  "split": null,
+  "category": "failure_case",
+  "kind": "text",
+  "failure_mode": "false_premise",
+  "question": "DoorDash bought Deliveroo in 2024. What did it pay?",
+  "as_of": "2026-09-01",
+  "period": "FY2025",
+  "form": "10-K",
+  "answer_type": "text",
+  "expected_answer": null,
+  "tolerance": 0.005,
+  "required_points": [
+   "Corrects the year: the acquisition closed on October 2, 2025",
+   "Consideration with a fair value of about $3,724 million"
+  ],
+  "should_abstain": false,
+  "sources": [
+   {
+    "company": "DASH",
+    "period": "FY2025",
+    "form": "10-K",
+    "evidence": "The acquisition date fair value of the consideration transferred for Deliveroo was $ 3,724 million"
+   }
+  ],
+  "expected_tools": [
+   "search_filings"
+  ],
+  "notes": "",
+  "origin": "drafted",
+  "verified_by": null,
+  "gold_set": "ask-gold"
+ }
+]
