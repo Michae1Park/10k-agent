@@ -26,6 +26,7 @@ from tenk_agent.models import Model, parse_json
 from tenk_agent.prompts import PROMPTS
 
 PROMPT = PROMPTS / "agent.md"
+ASK_PROMPT = PROMPTS / "ask.md"  # V4 tool set "ask"
 SEC_GUIDANCE = (
     "- xbrl_facts gives a figure as the company tagged it in XBRL; cite its xbrl_id. Prefer "
     "it for standard line items (revenue, net income, R&D), and the 10-K text (search_filings) "
@@ -75,6 +76,13 @@ class State(TypedDict):
 
 
 def build_system(toolbox: Toolbox, max_calls: int, prompt=PROMPT) -> str:
+    if toolbox.tool_set == "ask":
+        return (
+            (ASK_PROMPT if prompt == PROMPT else prompt).read_text()
+            .replace("{as_of}", toolbox.asof.date.isoformat())
+            .replace("{max_calls}", str(max_calls))
+            .replace("{coverage}", coverage_table(toolbox.store))
+        )
     full = toolbox.tool_set == "full"
     return (
         prompt.read_text()
@@ -83,6 +91,26 @@ def build_system(toolbox: Toolbox, max_calls: int, prompt=PROMPT) -> str:
         .replace("{xbrl_ids}", " or xbrl_id values, or a filing's accession_no" if full else "")
         .replace("{corpus}", corpus_table(toolbox.store))
     )
+
+
+def coverage_table(store) -> str:
+    """The Ask prompt's {coverage}: per company, the latest filing of each form visible at the
+    store's AsOf, and how far back the corpus goes."""
+    lines = ["Coverage (latest period of each form filed before today; earliest period):"]
+    by_company: dict[str, list] = {}
+    names = {}
+    for f in store.filings():
+        names[f.ticker] = f.company_name
+        by_company.setdefault(f.ticker, []).append(f)
+    for ticker, filings in sorted(by_company.items()):
+        latest = {}
+        for f in sorted(filings, key=lambda f: f.filing_date):
+            fy, fp = f.fiscal_year, f.fiscal_period
+            latest[f.form] = f"{f'FY{fy}' if fp == 'FY' else f'{fy}{fp}'} (filed {f.filing_date})"
+        earliest = min(f.period_end_date for f in filings)
+        forms = "; ".join(f"{f} {latest[f]}" for f in ("ER", "10-Q", "10-K") if f in latest)
+        lines.append(f"- {ticker} {names[ticker]}: {forms}; from {earliest}")
+    return "\n".join(lines)
 
 
 @dataclass

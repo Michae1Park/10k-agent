@@ -24,7 +24,7 @@ def finalize(raw: dict, store: Store, sec=None) -> dict:
             "fiscal_year": claim.get("fiscal_year"),
             "chunk_ids": _ids(claim.get("chunk_ids")),
             "calculation": claim.get("calculation"),
-        }
+        } | ({"period": claim["period"]} if "period" in claim else {})  # V4 Ask
         claims.append(verify_claim(claim, store, sec))
     return {
         "answer": str(raw.get("answer", "")),

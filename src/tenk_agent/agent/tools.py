@@ -5,6 +5,13 @@
   xbrl_facts       SEC XBRL company facts for one concept and 10-K            (tool set "full")
   edgar_filings    live EDGAR filing metadata: which filings exist, when      (tool set "full")
 
+V4 tool set "ask" (design doc §7.1), every result as of the store's AsOf:
+  financials       derived quarters and full years of a core line (facts/quarters.py)
+  company_kpis     release KPIs (facts/extract.py), with their source chunks
+  guidance         release guidance, with the actual where the target period has reported
+  filings          the corpus's 10-Ks, 10-Qs and releases, with filing dates
+  market_data      closing prices and macro series
+
 Tools never raise: a bad call returns {"error": ...} for the model to read and recover from.
 The tool set ("text" or "full") is the V3 ablation (experiments/V3_AGENT.md).
 
@@ -25,6 +32,12 @@ from tenk_agent.store import ChunkRecord, Store
 
 COMPANY = {"type": "string", "description": "Ticker or name, e.g. AAPL or Apple"}
 YEARS = {"type": "array", "items": {"type": "integer"}, "description": "Fiscal years (10-Ks)"}
+PERIODS = {
+    "type": "array",
+    "items": {"type": "string"},
+    "description": "Period keys, e.g. 2026Q2 or FY2025 (default: the latest eight)",
+}
+ROWS = 40  # rows a data tool returns at most; the rest are counted
 
 SPECS = {
     "search_filings": ToolSpec(
@@ -96,14 +109,98 @@ SPECS = {
     ),
 }
 
-GROUPS = {  # V4 §7.1; facts, market, reports and model gain their V4 tools in V4.2 and V4.5
+SPECS |= {
+    "financials": ToolSpec(
+        "financials",
+        "Reported financial lines of a company by quarter and full year, from its XBRL "
+        "filings: revenue, net_income, operating_income, diluted_eps, operating_cash_flow and "
+        "the others listed on an unknown metric. Q4 and other quarters missing from the filings "
+        "are derived (Q4 = FY - 9M) and say so. Values in USD (per share: USD/shares). Cite a "
+        "value by its id.",
+        {
+            "type": "object",
+            "properties": {
+                "company": COMPANY,
+                "metric": {"type": "string", "description": "e.g. revenue"},
+                "periods": PERIODS,
+            },
+            "required": ["company", "metric"],
+        },
+    ),
+    "company_kpis": ToolSpec(
+        "company_kpis",
+        "Operating KPIs from a company's earnings releases (gross bookings, trips, room "
+        "nights, orders, active riders, ...) by quarter and segment, each with the release "
+        "chunk and quote it came from. No metric: the KPIs the company reports. Cite a value "
+        "by its id.",
+        {
+            "type": "object",
+            "properties": {
+                "company": COMPANY,
+                "metric": {"type": "string", "description": "e.g. gross_bookings"},
+                "segment": {"type": "string", "description": "e.g. mobility (default: all)"},
+                "periods": PERIODS,
+            },
+            "required": ["company"],
+        },
+    ),
+    "guidance": ToolSpec(
+        "guidance",
+        "A company's outlook from its earnings releases: low and high, basis (level, "
+        "growth_yoy, margin), the period it targets and the release it was issued in, and the "
+        "actual once that period has reported. Cite a range by its id.",
+        {
+            "type": "object",
+            "properties": {
+                "company": COMPANY,
+                "metric": {"type": "string", "description": "e.g. adj_ebitda (default: all)"},
+                "periods": {**PERIODS, "description": "Target periods, e.g. 2026Q3, FY2026"},
+            },
+            "required": ["company"],
+        },
+    ),
+    "filings": ToolSpec(
+        "filings",
+        "Which 10-Ks, 10-Qs and earnings releases (ER) of a company are in the corpus, with "
+        "periods, filing dates and accession numbers. No financial data.",
+        {
+            "type": "object",
+            "properties": {
+                "company": COMPANY,
+                "form": {"type": "string", "description": "10-K, 10-Q or ER (default: all)"},
+            },
+            "required": ["company"],
+        },
+    ),
+    "market_data": ToolSpec(
+        "market_data",
+        "Daily closing prices of a company's stock (or SPY), or a macro series: DGS10 (10-year "
+        "Treasury yield, percent), CPIAUCSL, DTWEXBGS, RSFSDP, UMCSENT. Gives the last close "
+        "on or before each date asked for, or the series over a range. Cite a value by its id.",
+        {
+            "type": "object",
+            "properties": {
+                "company": COMPANY,
+                "series": {"type": "string", "description": "A macro series, e.g. DGS10"},
+                "dates": {"type": "array", "items": {"type": "string"},
+                          "description": "YYYY-MM-DD (default: the latest)"},
+                "start": {"type": "string", "description": "YYYY-MM-DD: a range from here"},
+            },
+        },
+    ),
+}
+
+GROUPS = {  # V4 §7.1; reports and model gain their tools in V4.5
     "text": ("search_filings",),
     "calc": ("calculator",),
-    "facts": ("xbrl_facts", "edgar_filings"),
+    "sec": ("xbrl_facts", "edgar_filings"),  # V3's facts group
+    "facts": ("financials", "company_kpis", "guidance", "filings"),
+    "market": ("market_data",),
 }
 GROUP_SETS = {
     "text": ("text", "calc"),
-    "full": ("text", "calc", "facts"),
+    "full": ("text", "calc", "sec"),
+    "ask": ("text", "calc", "facts", "market"),
 }
 TOOL_SETS = {name: sum((GROUPS[g] for g in groups), ()) for name, groups in GROUP_SETS.items()}
 
@@ -207,6 +304,143 @@ class Toolbox:
         if self.sec is None:
             return {"error": "SEC data is not available"}
         return self.sec.filings(company, form, int(fiscal_year) if fiscal_year else None)
+
+
+    # --- V4 data (tool set "ask") ------------------------------------------------------
+
+    def _ticker(self, company: str) -> str:
+        tickers, unknown = self._tickers([company])
+        if unknown:
+            raise ValueError(f"not in the corpus: {company!r}; companies: {self._companies()}")
+        return tickers[0]
+
+    def _companies(self) -> list[str]:
+        return sorted({f.ticker for f in self.store.filings()})
+
+    def financials(self, company: str, metric: str, periods: list[str] | None = None) -> dict:
+        from tenk_agent.facts.quarters import derive, metrics
+
+        ticker, specs = self._ticker(company), metrics()
+        if metric not in specs:
+            return {"error": f"unknown metric {metric!r}", "metrics": sorted(specs)}
+        rows = [
+            {"id": q.id, "period": _key(q), "value": q.value, "unit": q.unit,
+             "derivation": q.derivation} | ({"restated": True} if q.restated else {})
+            for q in derive(self.store, ticker, metric, specs[metric])
+        ]
+        return {"company": ticker, "metric": metric} | _pick(rows, periods)
+
+    def company_kpis(
+        self,
+        company: str,
+        metric: str | None = None,
+        segment: str | None = None,
+        periods: list[str] | None = None,
+    ) -> dict:
+        from tenk_agent.research.refs import kpi_id
+
+        ticker = self._ticker(company)
+        rows = self.store.kpis(ticker, metric)
+        if not rows:
+            reported = sorted({r["metric"] for r in self.store.kpis(ticker)})
+            return {"error": f"no KPI {metric!r} for {ticker}", "kpis": reported}
+        latest = {(r["metric"], r["segment"], r["period"]): r for r in rows}  # later filed wins
+        out = [
+            {"id": kpi_id(ticker, r["metric"], r["segment"], r["period"]), "period": r["period"],
+             "metric": r["metric"], "segment": r["segment"], "value": r["value"],
+             "unit": r["unit"], "chunk_id": r["chunk_id"], "quote": r["quote"]}
+            for r in latest.values()
+            if segment is None or r["segment"] == segment
+        ]
+        return {"company": ticker} | _pick(out, periods)
+
+    def guidance(
+        self, company: str, metric: str | None = None, periods: list[str] | None = None
+    ) -> dict:
+        from tenk_agent.research.refs import Resolver, guide_id, kpi_id
+
+        ticker = self._ticker(company)
+        rows = self.store.guidance(ticker, metric)
+        if not rows:
+            given = sorted({r["metric"] for r in self.store.guidance(ticker)})
+            return {"error": f"no guidance {metric!r} for {ticker}", "guided": given}
+        resolver, out = Resolver(self.store), []
+        for r in rows:  # oldest issue first: an update follows the guide it replaces
+            actual = r["basis"] == "level" and resolver.resolve(
+                kpi_id(ticker, r["metric"], r["segment"], r["target_period"])
+            )
+            out.append(
+                {"id": guide_id(ticker, r["metric"], r["segment"], r["target_period"]),
+                 "period": r["target_period"], "metric": r["metric"], "segment": r["segment"],
+                 "low": r["low"], "high": r["high"], "unit": r["unit"], "basis": r["basis"],
+                 "issued_in": r["issued_in"], "chunk_id": r["chunk_id"], "quote": r["quote"]}
+                | ({"actual": actual.values[0]["value"], "actual_id": actual.ref.id}
+                   if actual else {})
+            )
+        return {"company": ticker} | _pick(out, periods)
+
+    def filings(self, company: str, form: str | None = None) -> dict:
+        ticker = self._ticker(company)
+        rows = [
+            {"form": f.form, "period": f"FY{f.fiscal_year}" if f.fiscal_period == "FY"
+             else f"{f.fiscal_year}{f.fiscal_period}", "period_end_date": f.period_end_date,
+             "filing_date": f.filing_date, "accession_no": f.accession_no}
+            for f in self.store.filings()
+            if f.ticker == ticker and (form is None or f.form == form.upper())
+        ]
+        rows.sort(key=lambda r: r["filing_date"])
+        return {"company": ticker, "filings": rows[-ROWS:], "total": len(rows)}
+
+    def market_data(
+        self,
+        company: str | None = None,
+        series: str | None = None,
+        dates: list[str] | None = None,
+        start: str | None = None,
+    ) -> dict:
+        if bool(company) == bool(series):
+            return {"error": "give a company or a macro series, not both"}
+        if company:
+            ticker = "SPY" if company.upper() == "SPY" else self._ticker(company)
+            name, prefix, unit = f"px:{ticker}:close", f"px:{ticker}", "USD"
+        else:
+            name, prefix, unit = f"macro:{series.upper()}", f"macro:{series.upper()}", ""
+        points = self.store.series(name)
+        if not points:
+            return {"error": f"no data for {name}"}
+        if start:
+            chosen = [p for p in points if p[0] >= start]
+        else:
+            chosen = [
+                next((p for p in reversed(points) if p[0] <= d), None) for d in dates
+            ] if dates else [points[-1]]
+        rows = [{"id": f"{prefix}:{d}", "date": d, "value": v} for d, v in filter(None, chosen)]
+        return {"series": name, "unit": unit} | _cap(rows)
+
+
+def _key(q) -> str:
+    return f"FY{q.fiscal_year}" if q.period == "FY" else f"{q.fiscal_year}{q.period}"
+
+
+def _pick(rows: list[dict], periods: list[str] | None) -> dict:
+    """The rows of the periods asked for, or of the latest eight periods."""
+    if periods:
+        wanted = {p.upper().replace(" ", "") for p in periods}
+        rows = [r for r in rows if r["period"].upper() in wanted]
+    else:
+        latest = sorted({r["period"] for r in rows}, key=_order)[-8:]
+        rows = [r for r in rows if r["period"] in latest]
+    return _cap(sorted(rows, key=lambda r: _order(r["period"])))
+
+
+def _order(period: str) -> tuple:
+    """FY2025 sorts after 2025Q4."""
+    return (period[2:], "Q5") if period.startswith("FY") else (period[:4], period[4:])
+
+
+def _cap(rows: list[dict]) -> dict:
+    out = {"rows": rows[-ROWS:]}
+    return out | ({"omitted": len(rows) - ROWS} if len(rows) > ROWS else {})
 
 
 def _coerce(arguments: dict, properties: dict) -> dict:
