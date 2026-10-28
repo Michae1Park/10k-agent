@@ -15,7 +15,7 @@ NUMBER = re.compile(r"(?<![\w.])(?P<sign>[+\-−])?\$?"
                     r"(?P<num>\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)"
                     r"(?P<suffix>\s?(?:%|pts?|bps|x|B|M|bn|billion|million)\b|%)?")
 NOT_FIGURES = re.compile(r"\b\d{4}-\d\d-\d\d\b|\b(?:FY)?(?:19|20)\d\d(?:Q[1-4]|E|A)?\b"
-                         r"|\bQ[1-4]\b|\bF-\d+\b|\bX-\d+\b|\bE-\d+\b"
+                         r"|\bQ[1-4]\b|\bF-\d+\b|\bX-\d+\b|\bE-\d+\b|\bsections? \d+(?:\.\d+)?\b"
                          r"|\b\d+(?:\.\d+)?/\d+\b|\b\d\.\d+\s+(?=[A-Z])|^\s*\d+\.\s")
 
 

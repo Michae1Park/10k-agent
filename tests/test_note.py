@@ -73,3 +73,18 @@ def test_form4_parse():
     rows = parse(xml, "UBER", "0000000000-26-000001", "2026-05-03")
     assert rows == [("UBER", "0000000000-26-000001", "2026-05-03", "Doe Jane", 0, 1, "CFO",
                      "2026-05-01", "S", 1000.0, 70.5, "D")]
+
+
+def test_a_table_cell_changed_to_another_facts_value_is_caught(facts):
+    table = "| PT | Multiple |\n|---|---|\n| $95.00 | 17.3x |"
+    note = f"# UBER\n\n## 1. EXECUTIVE SUMMARY\n\n{table}\n"
+    assert lint(note, facts, [table]) == []
+    swapped = note.replace("| $95.00 | 17.3x |", "| $95.00 | 3.2x |")  # 3.2: another fact
+    assert [u.text for u in lint(swapped, facts, [table])] == ["table changed"]
+
+
+def test_negative_money_prints_its_sign_first():
+    f = Facts()
+    assert f.add("x", -7.0, "USD millions", "s").text() == "-$7M"
+    assert f.add("y", -0.5, "USD", "s").text() == "-$0.50"
+    assert figures("-$7M") == [("-$7M", -7.0, "money_millions")]
