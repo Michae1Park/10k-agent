@@ -10,6 +10,8 @@ tenk agent "question"          V3: the agent picks and calls tools, then answers
 tenk gold [show|render|verify] review a gold question set
 tenk report LABEL              write a finished V2 run's end-to-end report to evaluation/results
 tenk companies verify          V4: check companies.yaml against SEC (CIK, FYE, filing counts)
+tenk research report T --as-of D   V4 Report mode: note, workbook, logs (research/pipeline.py)
+tenk research approve T:vN --by X  V4: mark a report's model version reviewed
 """
 
 import argparse
@@ -104,6 +106,18 @@ def main(argv: list[str] | None = None) -> int:
     companies.add_argument("--since", help="window start, filing date (default: the file's)")
     companies.add_argument("--refresh", action="store_true", help="re-download cached files")
 
+    research = commands.add_parser("research", help="V4 Report mode")
+    research_actions = research.add_subparsers(dest="research_action", required=True)
+    run = research_actions.add_parser("report", help="S1–S11: note, workbook and logs")
+    run.add_argument("tickers", nargs="+")
+    run.add_argument("--as-of", required=True, help="YYYY-MM-DD: inputs filed before it")
+    run.add_argument("--no-llm", action="store_true", help="code-only draft (no events, "
+                     "debates or prose)")
+    run.add_argument("--resume", action="store_true", help="reuse saved LLM steps")
+    approve = research_actions.add_parser("approve", help="mark a model version reviewed")
+    approve.add_argument("version", help="e.g. UBER:v1")
+    approve.add_argument("--by", required=True, help="reviewer initials")
+
     args = parser.parse_args(argv)
     settings = config_file.load(args.config)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -120,6 +134,7 @@ def main(argv: list[str] | None = None) -> int:
         "gold": _gold,
         "report": _report,
         "companies": _companies,
+        "research": _research,
     }
     return handlers[args.command](args, settings)
 
@@ -158,6 +173,42 @@ def _fetch(args: argparse.Namespace, settings: dict) -> int:
         return 1 if problems else 0
     ok = fetch(companies, FISCAL_YEARS, Path(settings["data_dir"]), user_agent, args.refresh)
     return 0 if ok else 1
+
+
+def _research(args: argparse.Namespace, settings: dict) -> int:
+    from tenk_agent.asof import AsOf
+    from tenk_agent.store import Store
+
+    if not DATA_DIR:
+        print("Report mode needs the V4 corpus: TENK_COMPANIES=companies.yaml", file=sys.stderr)
+        return 2
+    db = Path(DATA_DIR) / "build" / "parent_child.db"
+    if args.research_action == "approve":
+        store = Store(db, AsOf.today())
+        store.enable_facts()
+        if not any(v["id"] == args.version for v in store.model_versions(
+                args.version.split(":")[0])):
+            print(f"no saved version {args.version}", file=sys.stderr)
+            return 2
+        store.set_version_status(args.version, f"reviewed by {args.by} on {date.today()}")
+        print(f"{args.version}: reviewed by {args.by}")
+        return 0
+    import yaml
+
+    from tenk_agent.research.forecast import knobs
+    from tenk_agent.research.pipeline import run
+
+    search = None
+    if not args.no_llm:
+        from tenk_agent.retrieval.search import SubQuestionRetriever
+
+        today = Store(db, AsOf.today())
+        retrieval = yaml.safe_load(Path("experiments/v1/config.yaml").read_text())["retrieval"]
+        search = SubQuestionRetriever.from_settings(today, retrieval | {"device": "cpu"})
+    for ticker in args.tickers:
+        print(json.dumps(run(db, ticker.upper(), args.as_of, knobs(), not args.no_llm,
+                             args.resume, search), indent=1))
+    return 0
 
 
 def _companies(args: argparse.Namespace, settings: dict) -> int:
