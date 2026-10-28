@@ -4,7 +4,10 @@
                                                  guidance); rebuilt on demand, so always citable
   model:<T>:<as_of>:scratch-<n>:<line>.<period>  a run_scenario run in this session (design §7.2:
                                                  scratch runs are not versions)
-  model:<T>:<as_of>:val-<version>:<field>        a valuation output (price_target, ev, …)
+  model:<T>:<as_of>:val-<version>:<field>        a valuation output (price_target, ev, …;
+                                                 rating resolves to its text)
+  model:<T>:<as_of>:var-<period>:<field>          variance_review's revenue bridge for a quarter
+Ratios resolve, and the model tools show them, in percent.
 Saved versions (v1, v2, …) come with Report mode (V4.6).
 """
 
@@ -81,9 +84,27 @@ class Book:
             return None
         if version.startswith("val-"):
             v = self.valuation(ticker, version[4:])
-            value = v.get(key) if key in v else v["scenarios"]["base"].get(key)
-            return {"value": value, "unit": "USD" if key in ("price_target", "price") else ""} \
-                if isinstance(value, int | float) else None
+            for where in (v, v["multiples_2027e"], v["scenarios"]["base"]):
+                if key in where:
+                    value = where[key]
+                    break
+            else:
+                return None
+            if key == "rating":
+                return {"text": value}
+            if not isinstance(value, int | float):
+                return None
+            if key in ("return", "fcf_yield"):  # fractions, written as percentages
+                return {"value": value * 100, "unit": "percent"}
+            unit = "USD" if key in ("price_target", "price", "dcf_pt", "multiple_pt") else (
+                "USD millions" if key in ("ev", "market_cap") else "")
+            return {"value": value, "unit": unit}
+        if version.startswith("var-"):
+            from tenk_agent.agent.tools import variance
+
+            found = variance(self, ticker, version[4:]).get("bridge") or {}
+            return {"value": found[key], "unit": "USD millions"} if found.get(key) is not None \
+                else None
         line, _, period = key.rpartition(".")
         model = self.model(ticker, version)
         if model is None or not any(x.name == line for x in model.lines):
