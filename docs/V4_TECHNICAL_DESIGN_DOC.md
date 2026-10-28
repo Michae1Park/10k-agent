@@ -871,3 +871,19 @@ By company (defaults, revenue model / naive): ABNB 1.4/3.7, BKNG 4.0/4.4, CART 1
 Extraction ablation (layer 1 gold, 337 labels): rules (label-pattern table rows, `facts/rules.py`) 31.5% exact (KPIs 47.7%, guidance 0%: not attempted) vs the LLM's 98.5% (KPIs 99.5%).
 
 Known limit of the defaults: a structural break (UBER's UK move to agent, 2026Q1) enters as the last y/y change and is held for four forecast quarters from the forecast start, not from the break, so UBER's 2027E adj. EBITDA margin rises to 23.9%. The proposer is the step meant to catch such breaks (it found the UK change in a smoke test) but on the backtest it hurt more than it helped.
+
+### 17.14 V4.5: valuation and Research mode (2026-10-28)
+
+Built: `research/valuation.py` (market cap and EV at the as-of; multiple PT on the sector peers' median 2027E EV/EBITDA, bear/bull ∓/± 15%; DCF on unlevered FCF with Ke = DGS10 + β × ERP, β from 60 monthly returns vs SPY; 60/40 blend; 25/50/25 scenarios; absolute and `--all` relative ratings; knobs in `research.yaml`), the model book and `model:` ids (`research/book.py`; base, scratch-n, val-*, var-*), the model tools `model_view`, `run_scenario`, `compare_peers`, `variance_review`, the Research prompt, and the Research gold set (`evaluation/gold/research-gold.jsonl`, 72 questions: 24 forecast, 16 scenario, 16 valuation, 8 variance review, 8 peer comparison; debates come with Report mode). New metrics: debt (with DASH's convertible notes), short-term investments, interest expense.
+
+**Layer 4: pass.** Identical inputs give byte-identical `valuation.json` for all eight; the PT falls as WACC rises wherever the DCF EV is positive; every target multiple is inside the peer range or flagged. A DCF with a non-positive EV (TRIP: continuing-operations unlevered FCF is negative) is left out of the PT, an exception, so TRIP's PT rests on 14× a thin EBITDA and is fragile. Ratings at 2026-09-01 are driven mostly by the sector-median multiple (DASH at its peers' 8× against its own ~19×); see the limits (§17.16).
+
+**Research gold: miss.** Bars frozen 2026-10-27: ≥ 90% pass (a cited expected model: id that verifies, assumptions listed, no unverified numeric claim) and 100% of forward-looking numbers from model tools.
+
+| Run | Pass | Model ref | Assumptions | From model | What changed before it |
+|---|---|---|---|---|---|
+| 1 (`v4.5-research-qwen3.6-27b`) | 79.2% | 93.1% | 90.3% | 92.9% | — |
+| 2 (`-r2`, `410d4d2`) | **87.5%** | 97.2% | 98.6% | **94.6%** | `compare_peers` lists each company's assumptions (peer questions 12.5% → 87.5%) |
+| 2, alternative scoring | 88.9% | 98.6% | 98.6% | 100% | not adopted: the user's call |
+
+Run 2 by category: valuation 100%, forecast 87.5%, peer comparison 87.5%, scenario 81%, variance review 75%. Remaining misses: the agent multiplies model values itself (take rate × GTV) instead of citing the model's line (CART, BKNG forecasts), scenario answers that cite the base rather than the scratch run, one peer answer. Two scoring corrections proposed after run 1, kept out of the gate: a variance answer may cite the bridge's own `var-` ids (the gold expected the prior estimate's revenue id); a claim citing only company guidance is reported data, not a computed number.
