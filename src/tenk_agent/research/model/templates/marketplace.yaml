@@ -17,6 +17,10 @@ sums: {}
 companies:
   BKNG:
   EXPE:
+    lines:  # no total liabilities tagged: derived from the reported right-hand total
+      total_liabilities: {kind: formula, statement: balance, fy: last, unit: USD millions,
+                          expr: "liabilities_and_equity - mezzanine - equity_total",
+                          label: total liabilities (derived)}
   ABNB:
     sources:
       volume: "kpi:nights_and_experiences"

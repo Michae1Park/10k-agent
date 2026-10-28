@@ -1,6 +1,7 @@
 """Layer-2 integrity checks on a built model (V4 design doc §5.4). Any FAIL stops the run.
 
-  balance          assets = liabilities + mezzanine + equity, every period, within $1M
+  balance          assets = liabilities + mezzanine + equity, and assets = the reported
+                   liabilities-and-equity total, every period, within $1M
   quarters_sum     the model's FY column (its quarters summed) = the reported fiscal year
   q4_ties          derived Q4 + 9M = the 10-K's FY (facts/quarters.py, per XBRL flow line)
   take_rate        each take rate recomputes from the reported revenue and gross bookings
@@ -69,14 +70,16 @@ def _result(name: str, tested: int, failures: list, skipped: list, note: str = "
 
 def balance(model: Model) -> Check:
     tested, failures, skipped = 0, [], []
+    gaps = [g for g in ("balance_gap", "sides_gap") if any(x.name == g for x in model.lines)]
     for column in model.columns:
-        gap = model.value("balance_gap", column)
-        if gap is None:
-            skipped.append(column)
-            continue
-        tested += 1
-        if abs(gap) > TOLERANCE:
-            failures.append(f"{column} off by {gap:,.1f}")
+        for name in gaps:
+            gap = model.value(name, column)
+            if gap is None:
+                skipped.append(f"{name} {column}")
+                continue
+            tested += 1
+            if abs(gap) > TOLERANCE:
+                failures.append(f"{name} {column} off by {gap:,.1f}")
     return _result("balance", tested, failures, skipped)
 
 
