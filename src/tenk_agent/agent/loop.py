@@ -27,6 +27,7 @@ from tenk_agent.prompts import PROMPTS
 
 PROMPT = PROMPTS / "agent.md"
 ASK_PROMPT = PROMPTS / "ask.md"  # V4 tool set "ask"
+RESEARCH_PROMPT = PROMPTS / "research.md"  # V4 tool set "research"
 SEC_GUIDANCE = (
     "- xbrl_facts gives a figure as the company tagged it in XBRL; cite its xbrl_id. Prefer "
     "it for standard line items (revenue, net income, R&D), and the 10-K text (search_filings) "
@@ -77,9 +78,10 @@ class State(TypedDict):
 
 
 def build_system(toolbox: Toolbox, max_calls: int, prompt=PROMPT) -> str:
-    if toolbox.tool_set == "ask":
+    if toolbox.tool_set in ("ask", "research"):
+        default = ASK_PROMPT if toolbox.tool_set == "ask" else RESEARCH_PROMPT
         return (
-            (ASK_PROMPT if prompt == PROMPT else prompt).read_text()
+            (default if prompt == PROMPT else prompt).read_text()
             .replace("{as_of}", toolbox.asof.date.isoformat())
             .replace("{max_calls}", str(max_calls))
             .replace("{coverage}", coverage_table(toolbox.store))

@@ -156,6 +156,8 @@ class Resolver:
 
     def _model(self, ref: Ref, ticker: str, as_of: str, version: str, key: str):
         found = self.book.resolve(ticker, as_of, version, key) if self.book else None
+        if found and "value" not in found:  # a text output (a rating): citable, no number
+            return Resolved(ref, extra=found)
         return Resolved(ref, values=[found | {"ticker": ticker}]) if found else None
 
     def _price(self, ref: Ref, ticker: str, day: str) -> Resolved | None:

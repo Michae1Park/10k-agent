@@ -563,8 +563,9 @@ class Toolbox:
         return {
             "company": ticker, "as_of": self.book.as_of, "forecast_from": m.forecast[0],
             "id_format": f"model:{ticker}:{self.book.as_of}:base:<line>.<period>",
-            "rows": [{"line": n, "unit": m.line(n).unit,
-                      "values": {c: _round(m.value(n, c)) for c in columns}} for n in names],
+            "rows": [{"line": n, "unit": _unit(m.line(n).unit),
+                      "values": {c: _shown(m.value(n, c), m.line(n).unit) for c in columns}}
+                     for n in names],
             "assumptions": [
                 {"driver": k, "value": _round(v), "default": _round(f.defaults.get(k)),
                  "source": f"guidance {anchored[k].guide_id}" if k in anchored else "default"}
@@ -638,44 +639,64 @@ class Toolbox:
                 v = self.book.valuation(t)
                 value = v["multiples_2027e"].get(metric, v.get(metric))
                 ref = f"model:{t}:{self.book.as_of}:val-base:{metric}"
+                unit = "percent" if metric in ("return", "fcf_yield") else (
+                    "USD" if metric == "price_target" else "")
+                if unit == "percent" and value is not None:
+                    value *= 100
             else:
                 m = self.book.base(t).model
                 if not any(x.name == metric for x in m.lines):
                     return {"error": f"unknown metric {metric!r}",
                             "model_lines": [x.name for x in m.lines if x.kind != "assumption"],
                             "valuation": sorted(valuation_fields)}
-                value = m.value(metric, period)
+                unit = _unit(m.line(metric).unit)
+                value = _shown(m.value(metric, period), m.line(metric).unit)
                 ref = self.book.ref(t, "base", metric, period)
             rows.append({"company": t, "value": _round(value) if not isinstance(value, str)
-                         else value, "id": ref})
+                         else value, "unit": unit, "id": ref})
         numeric = [r for r in rows if isinstance(r["value"], int | float)]
         numeric.sort(key=lambda r: r["value"])
         return {"metric": metric, "period": None if metric in valuation_fields else period,
                 "rows": numeric + [r for r in rows if r not in numeric]}
 
     def variance_review(self, company: str, period: str) -> dict:
-        from tenk_agent.evaluation.backtest import releases, run_day
-        from tenk_agent.research.forecast import next_quarter
+        return variance(self.book, self._ticker(company), period)
 
-        ticker = self._ticker(company)
-        actual = self.book.base(ticker).model
-        if period not in actual.history:
-            return {"error": f"{period} is not reported as of {self.book.as_of}"}
-        prior_period = next(p for p in sorted(releases(self.store, ticker))
-                            if next_quarter(p) == period)
-        prior_as_of = run_day(releases(self.store, ticker)[prior_period])
-        prior = self.book.at(prior_as_of).base(ticker).model
-        names = [n for n in _main_lines(actual) if any(x.name == n for x in prior.lines)]
-        rows = []
-        for n in names:
-            est, act = prior.value(n, period), actual.value(n, period)
-            rows.append({"line": n, "estimate": _round(est), "actual": _round(act),
-                         "variance_pct": _round((act / est - 1) * 100) if est and act else None,
-                         "estimate_id": f"model:{ticker}:{prior_as_of}:base:{n}.{period}",
-                         "actual_id": actual.cells[(n, period)].ref
-                         or self.book.ref(ticker, "base", n, period)})
-        return {"company": ticker, "period": period, "estimate_as_of": prior_as_of,
-                "rows": rows, "bridge": _bridge(prior, actual, period)}
+
+def variance(book, ticker: str, period: str) -> dict:
+    """Our estimate for `period` (made the day after the previous quarter's release) against
+    the actual, the revenue bridge with ids, and the estimate's assumptions."""
+    from tenk_agent.evaluation.backtest import releases, run_day
+    from tenk_agent.research.forecast import next_quarter
+
+    actual = book.base(ticker).model
+    if period not in actual.history:
+        return {"error": f"{period} is not reported as of {book.as_of}"}
+    by_period = releases(book.store, ticker)
+    prior_period = next(p for p in sorted(by_period) if next_quarter(p) == period)
+    prior_as_of = run_day(by_period[prior_period])
+    prior_forecast = book.at(prior_as_of).base(ticker)
+    prior = prior_forecast.model
+    names = [n for n in _main_lines(actual) if any(x.name == n for x in prior.lines)]
+    rows = []
+    for n in names:
+        unit = prior.line(n).unit
+        est, act = prior.value(n, period), actual.value(n, period)
+        rows.append({"line": n, "unit": _unit(unit), "estimate": _shown(est, unit),
+                     "actual": _shown(act, unit),
+                     "variance_pct": _round((act / est - 1) * 100) if est and act else None,
+                     "estimate_id": f"model:{ticker}:{prior_as_of}:base:{n}.{period}",
+                     "actual_id": actual.cells[(n, period)].ref
+                     or book.ref(ticker, "base", n, period)})
+    bridge = _bridge(prior, actual, period)
+    return {"company": ticker, "period": period, "estimate_as_of": prior_as_of, "rows": rows,
+            "bridge": bridge, "bridge_unit": "USD millions",
+            "bridge_ids": {k: f"model:{ticker}:{book.as_of}:var-{period}:{k}"
+                           for k in (bridge or {})},
+            "estimate_assumptions": [
+                {"driver": k, "value": _round(v)} for k, v in sorted(
+                    prior_forecast.model.assumptions.items())
+                if k.endswith((".g0", ".shift0")) or k == "fade"]}
 
 
 def _main_lines(model) -> list[str]:
@@ -708,6 +729,17 @@ def _bridge(prior, actual, period: str) -> dict | None:
         out["of_which_volume"] = _round((vol1 - vol0) * v(prior, unit) * tr0)
         out["of_which_value_per_unit"] = _round(vol1 * (v(actual, unit) - v(prior, unit)) * tr0)
     return out
+
+
+def _unit(unit: str) -> str:
+    return "percent" if unit == "fraction" else unit
+
+
+def _shown(value, unit: str):
+    """A value as the tools show it: ratios in percent (as model: ids resolve)."""
+    if value is None:
+        return None
+    return _round(value * 100 if unit == "fraction" else value)
 
 
 def _round(value):
