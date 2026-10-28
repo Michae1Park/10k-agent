@@ -51,8 +51,9 @@ def main() -> None:
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--score", action="store_true")
     ap.add_argument("--workers", type=int, default=4)
-    ap.add_argument("--alternative", action="store_true",
-                    help="with --score: the two corrections proposed after run 1")
+    ap.add_argument("--alternative", action="store_true", default=True,
+                    help="the two corrections proposed after run 1, adopted by the user "
+                         "2026-10-28 (the default)")
     args = ap.parse_args()
     config = yaml.safe_load(CONFIG.read_text())
     out = ROOT / "output" / "generation" / args.label
