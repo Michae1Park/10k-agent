@@ -12,7 +12,7 @@ Eight online marketplaces (UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP), Q1 2
 | 4. Valuation | identical inputs; WACC monotonicity; peer range | byte-identical; PT falls as WACC rises; multiples inside the peer range or flagged | **byte-identical for all eight; monotone wherever the DCF is meaningful; all inside or flagged** | pass |
 | 5. Note | ten sections, number trace, seeded errors, rubric | 100% traced; rubric ≥ 4/5; every seeded error caught | UBER: **100% traced, 60/60 seeded, rubric 4.2**; BKNG: 100% traced, 60/60 seeded, **rubric 3.8 then 3.4** | UBER pass, **BKNG miss** |
 | Ask | 79 questions | ≥ 85% correct and verified; 100% of cited ids resolve | **89.9%, 100%** (run 4, after the user's gold rulings; run 3 on the original gold: 84.8%) | pass |
-| Research | 72 questions | ≥ 90% pass (model: ref, assumptions, no unverified claim); 100% of forward numbers from model tools | **87.5%, 94.6%** (run 2; 88.9% / 100% under two scoring corrections left to the user) | **miss** |
+| Research | 72 questions | ≥ 90% pass (model: ref, assumptions, no unverified claim); 100% of forward numbers from model tools | **88.9%, 100%** (run 2, with two scoring corrections the user adopted after run 1; 87.5% / 94.6% as first frozen) | **miss** |
 
 ## Backtest
 
@@ -61,3 +61,10 @@ UBER, earnings update after Q2 2026, as of 2026-08-06: [note (Markdown)](example
 - **Gold sets are not human-reviewed.** Ask (79) and Research (72) questions were drafted by the agent and checked by script; extraction labels were cross-checked by independent methods, not by a person. The Ask set's NYC-trips decline question is now answerable (TLC loaded in V4.7) and needs updating.
 - **Judge noise.** The note rubric moved 3.8 → 3.4 on near-identical text; no human sample has been scored.
 - **XBRL gaps.** ABNB tags no D&A or capex (no FCF line); EPS and shares lack a three-month Q4; Q4 EPS comes from the release.
+
+## Decisions (2026-10-28)
+
+- Guidance anchor: the midpoint stays the default although the high end scored better (p = 0.011); a human review is pending.
+- Research scoring: the two corrections (variance answers may cite the bridge's `var-` ids; claims citing only guidance are reported data) are adopted, after run 1, by the user.
+- Qwen vs Claude on the LLM steps: not run, by the user's decision.
+- Gold sets and a human rubric sample: to be reviewed by the user later.
