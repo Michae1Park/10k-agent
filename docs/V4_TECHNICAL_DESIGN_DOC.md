@@ -719,3 +719,15 @@ total in all four quarters; every two-column UBER KPI matches its printed growth
 BKNG's quarter series sum to the printed fiscal-year totals (2024, 2025), fixing the column position. Guidance and
 non-GAAP labels are verbatim from their quotes. `verified_by` reads `claude-crosscheck-2026-10-28` (not a human
 check). The V4.1 pilot (96/96 exact, critical 100%) therefore stands.
+
+### 17.10 V4.1 exit: all eight companies (2026-10-28)
+
+Gold: 337 labels, all eight companies, Q3 2025 to Q2 2026 (32 releases); the 241 new labels were checked the same way as §17.9.
+
+| Run | Exact | Critical | Gate | Misses |
+|---|---|---|---|---|
+| 1 (`v4.1-all-qwen3.6-27b`) | 99.1% | 97.6% | fail | TRIP Q4 2025 revenue (current = prior, $411M, rejected as prior-year column); ABNB Q4 2025 GBV and Q1 2026 nights (image text splits labels; model rejoined them in the quote) |
+| ABNB + TRIP rerun | | | | Those fixed; new: TRIP Q1 2026 non-GAAP EPS taken for GAAP, ABNB GBV in another quarter |
+| 2 (`v4.1-all-qwen3.6-27b-r2`, `b47699f`) | **98.5%** | **100%** | **pass** | EXPE Q3 2025 guidance growth ranges (4 labels, 4 exceptions in that release); ABNB Q3 2025 GBV |
+
+Fixes between runs: equal current/prior values pass the column check; releases too long to send whole send registry-matched chunks first; a failed quote retry shows the model the chunk text; the prompt requires GAAP diluted EPS. Remaining misses are non-critical and logged as exceptions. **V4.1 is done**; next is V4.2 Ask.
