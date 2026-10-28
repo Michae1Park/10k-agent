@@ -10,6 +10,11 @@ Bars, frozen 2026-10-27 (design doc §13.1):
   from_model         100%: every forward-looking numeric claim (2026Q3 on, 2026E, 2027E) cites
                      a model: id
 Writes output/generation/<label>/results.json and scores.json.
+
+--score --alternative rescores with two corrections proposed after run 1, for the user to rule
+on (the frozen scoring stays the gate): a variance review may cite the bridge's own model ids
+(var-<period>), and a claim citing only company guidance (guide:) is reported data, not a
+computed number.
 """
 
 import argparse
@@ -46,6 +51,8 @@ def main() -> None:
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--score", action="store_true")
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--alternative", action="store_true",
+                    help="with --score: the two corrections proposed after run 1")
     args = ap.parse_args()
     config = yaml.safe_load(CONFIG.read_text())
     out = ROOT / "output" / "generation" / args.label
@@ -53,7 +60,8 @@ def main() -> None:
     questions = {q["id"]: q for q in gold.load(GOLD)}
     if args.score:
         rows = json.loads((out / "results.json").read_text())
-        return report(out, [score(r, questions[r["id"]]) for r in rows])
+        return report(out, [score(r, questions[r["id"]], args.alternative) for r in rows],
+                      "scores-alternative.json" if args.alternative else "scores.json")
 
     db = ROOT / config["run"]["db"]
     retrieval = yaml.safe_load((ROOT / config["retrieval"]).read_text())["retrieval"]
@@ -118,9 +126,12 @@ def main() -> None:
     report(out, done)
 
 
-def score(row: dict, q: dict) -> dict:
+def score(row: dict, q: dict, alternative: bool = False) -> dict:
     claims = row.get("claims") or []
-    patterns = [re.compile(p + "$") for p in q["expected_refs"]]
+    refs = list(q["expected_refs"])
+    if alternative and q["category"] == "variance_review":
+        refs.append(r"model:" + q["company"] + r":[\d-]+:var-2026Q2:\w+")
+    patterns = [re.compile(p + "$") for p in refs]
     good = ("verified", "calculated")
     model_ref = any(c["status"] in good and any(p.match(i) for p in patterns
                                                 for i in c["chunk_ids"]) for c in claims)
@@ -130,7 +141,8 @@ def score(row: dict, q: dict) -> dict:
         assumptions = []
     assumptions_ok = bool([a for a in assumptions if isinstance(a, dict) and a.get("driver")])
     numeric = [c for c in claims if c.get("value") is not None]
-    forward = [c for c in numeric if _forward(c)]
+    forward = [c for c in numeric if _forward(c) and not (
+        alternative and all(i.startswith("guide:") for i in c["chunk_ids"]))]
     from_model = [c for c in forward if any(i.startswith("model:") for i in c["chunk_ids"])]
     unverified = [c["id"] for c in numeric if c["status"] not in good]
     return row | {
@@ -150,7 +162,7 @@ def _forward(claim: dict) -> bool:
     return bool(re.fullmatch(r"\d{4}Q\d", period)) and period >= FIRST_FORECAST
 
 
-def report(out: Path, rows: list[dict]) -> None:
+def report(out: Path, rows: list[dict], name: str = "scores.json") -> None:
     passed = [r["pass"] for r in rows]
     forward = sum(r["forward_claims"] for r in rows)
     from_model = sum(r["forward_from_model"] for r in rows)
@@ -168,7 +180,7 @@ def report(out: Path, rows: list[dict]) -> None:
     }
     scores["gate"] = bool(scores["pass"] is not None and scores["pass"] >= 0.9
                           and scores["from_model"] == 1.0)
-    (out / "scores.json").write_text(json.dumps(scores, indent=1))
+    (out / name).write_text(json.dumps(scores, indent=1))
     print(json.dumps({k: v for k, v in scores.items() if k != "failed"}, indent=1))
     print("failed:", scores["failed"])
 
