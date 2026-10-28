@@ -26,10 +26,11 @@ class Fact:
         if isinstance(v, str):
             return v
         if self.unit == "USD millions":
-            return f"${v / 1e3:,.{1 if digits is None else digits}f}B" if abs(v) >= 1e3 \
-                else f"${v:,.0f}M"
+            sign, v = ("-" if v < 0 else ""), abs(v)
+            return (f"{sign}${v / 1e3:,.{1 if digits is None else digits}f}B" if v >= 1e3
+                    else f"{sign}${v:,.0f}M")
         if self.unit == "USD":
-            return f"${v:,.2f}"
+            return f"-${-v:,.2f}" if v < 0 else f"${v:,.2f}"
         if self.unit == "USD per share":
             return f"${v:,.2f}"
         if self.unit == "percent":

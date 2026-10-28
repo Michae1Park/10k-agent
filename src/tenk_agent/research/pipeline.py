@@ -151,13 +151,15 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
               "For education and testing. Not investment advice. No rating or PT is approved "
               "until the responsible analyst confirms it.")
     note_md = note_sections.markdown(built, header)
-    untraced = lint(note_md, facts)
+    tables = [b for s in built for b in s.blocks if isinstance(b, str) and b.startswith("|")]
+    untraced = lint(note_md, facts, tables)
     exceptions += [{"severity": "error", "item": f"untraced number {u.text!r} ({u.where})"}
                    for u in untraced]
     (folder / "note.json").write_text(json.dumps(
         {"slots": {b.key: b.text for s in built for b in s.blocks
                    if isinstance(b, note_sections.Slot)},
-         "sections": [s.title for s in built], "untraced": [u.text for u in untraced]},
+         "sections": [s.title for s in built], "untraced": [u.text for u in untraced],
+         "tables": tables},
         indent=1))
 
     # S11: export, version, logs
@@ -185,10 +187,13 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
     return summary
 
 
-def lint(note_md: str, facts: Facts) -> list:
-    """Every number in the note body (tables and prose) must trace to a fact."""
+def lint(note_md: str, facts: Facts, tables: list[str] | None = None) -> list:
+    """Every number in the note body (tables and prose) must trace to a fact, and every table
+    must read exactly as code printed it (`tables`): a cell changed to another fact's value
+    still traces, but no longer matches its table."""
     body = note_md.split("\n## ", 1)[1] if "\n## " in note_md else note_md
-    out = []
+    out = [trace.Untraced("table changed", t.splitlines()[0][:40]) for t in tables or []
+           if t not in note_md]
     for line in body.splitlines():
         if line.startswith("##") or line.startswith("|---") or line.startswith("Key assumptions"):
             continue  # headings; assumption values are model inputs, listed in the register
