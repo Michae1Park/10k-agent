@@ -68,3 +68,7 @@ UBER, earnings update after Q2 2026, as of 2026-08-06: [note (Markdown)](example
 - Research scoring: the two corrections (variance answers may cite the bridge's `var-` ids; claims citing only guidance are reported data) are adopted, after run 1, by the user.
 - Qwen vs Claude on the LLM steps: not run, by the user's decision.
 - Gold sets and a human rubric sample: to be reviewed by the user later.
+
+## Roll-out: UBER end to end (2026-10-28)
+
+`TENK_COMPANIES=companies.yaml tenk research report UBER --as-of 2026-08-06` (then `tenk research approve UBER:v1 --by <initials>` after review) ran all eleven steps on the Qwen 27B: 6 events, 3 debates, ten sections, saved as `UBER:v1` (draft), Buy, PT $83.62, workbook parity 750/750, 60/60 seeded errors caught. One figure in the debate prose ("20% constant currency") is not among that debate's facts; the writer kept it after its repair turn and it is logged as X-19 (error), so this note is not 100% traced. The example files above are this run.
