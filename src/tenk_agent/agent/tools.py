@@ -432,7 +432,7 @@ class Toolbox:
         rows = [
             {"form": f.form, "period": f"FY{f.fiscal_year}" if f.fiscal_period == "FY"
              else f"{f.fiscal_year}{f.fiscal_period}", "period_end_date": f.period_end_date,
-             "filing_date": f.filing_date, "accession_no": f.accession_no}
+             "filing_date": f.filing_date, "accession_no": f.accession_no, "id": f.accession_no}
             for f in self.store.filings()
             if f.ticker == ticker and (form is None or f.form == form.upper())
         ]

@@ -69,7 +69,7 @@ When you are done, reply with only a JSON object as your message text, no other 
 }
 - One claim per number: two quarters' revenue is two claims, and a guidance range is two claims, its low and its high, each citing the guidance id. "value" is the number exactly as the tool result shows it, in its unit ("USD", "USD millions", "USD/shares", "percent", "count millions"); use null for statements without a number.
 - "period" is the period the value belongs to (2026Q2, FY2025), not the period of the filing.
-- "chunk_ids" are the ids of the sources holding the claim: the "id" values of financials, company_kpis, guidance and market_data rows, chunk_id values from search_filings, or a filing's accession_no. Cite only ids a tool returned.
+- "chunk_ids" are the ids of the sources holding the claim: the "id" values of financials, company_kpis, guidance and market_data rows, chunk_id values from search_filings, or a filings row's id (its accession number). Cite only ids a tool returned; never make one up.
 - For a number you calculated, set "calculation" to the calculator call you made: {"op": ..., "expression": ..., "inputs": {...}, "input_unit": "USD millions", "result": ...}. Its "chunk_ids" must include the source of every input, and "input_unit" must be the unit the inputs are written in.
 - "table" (optional) is {"columns": [...], "rows": [[...], ...]} for comparisons across periods or companies.
 - "scope_notice" is a short note on what is covered when part of the question falls outside it.

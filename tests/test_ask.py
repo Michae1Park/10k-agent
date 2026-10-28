@@ -46,6 +46,8 @@ def test_data_ids_resolve_as_of_the_store(tmp_path):
     assert resolver.resolve("px:AAPL:2025-11-03").values[0]["value"] == 270.4
     assert resolver.resolve("px:AAPL:2025-11-04") is None  # published on the as-of date
     assert Resolver(ask(tmp_path, "2025-07-31").store).resolve("kpi:AAPL:units:2025Q3") is None
+    assert resolver.resolve("0000320193-25-000079").filing["form"] == "10-K"  # from the store
+    assert Resolver(ask(tmp_path, "2025-10-31").store).resolve("0000320193-25-000079") is None
 
 
 def test_claims_verify_against_data_rows(tmp_path):
