@@ -1,0 +1,98 @@
+{
+ "revenue": {
+  "forecasts": 12,
+  "model_mape": 0.028164630536297097,
+  "naive_mape": 0.037386223861983627,
+  "model_median_ape": 0.02220025631326883,
+  "naive_median_ape": 0.033415302945899394,
+  "model_bias": -0.009812171109648929,
+  "naive_bias": 0.011496129717361525,
+  "wilcoxon_p": 0.2333984375,
+  "guided": 4,
+  "guide_mid_mape": 0.03106582340779418,
+  "model_mape_where_guided": 0.031065823407794207,
+  "missing_forecast": 0
+ },
+ "main_kpi": {
+  "forecasts": 12,
+  "model_mape": 0.01876692558442016,
+  "naive_mape": 0.020708061173672142,
+  "model_median_ape": 0.01783529910201992,
+  "naive_median_ape": 0.017317056597388525,
+  "model_bias": -0.01003988339583949,
+  "naive_bias": 0.0018284860820523368,
+  "wilcoxon_p": 0.7646484375,
+  "guided": 10,
+  "guide_mid_mape": 0.01708578358392917,
+  "model_mape_where_guided": 0.017085783583929193,
+  "missing_forecast": 0
+ },
+ "gate": true,
+ "by_company": {
+  "BKNG": {
+   "revenue": {
+    "forecasts": 6,
+    "model_mape": 0.040442192295615596,
+    "naive_mape": 0.04408484488229462,
+    "model_median_ape": 0.042536637425174495,
+    "naive_median_ape": 0.04496498311793806,
+    "model_bias": -0.02485099171528445,
+    "naive_bias": 0.01061137054542786,
+    "wilcoxon_p": 1.0,
+    "guided": 4,
+    "guide_mid_mape": 0.03106582340779418,
+    "model_mape_where_guided": 0.031065823407794207,
+    "missing_forecast": 0
+   },
+   "main_kpi": {
+    "forecasts": 6,
+    "model_mape": 0.024422546019997122,
+    "naive_mape": 0.017726968048194125,
+    "model_median_ape": 0.026677375565610895,
+    "naive_median_ape": 0.009050230129690473,
+    "model_bias": -0.006968461642835784,
+    "naive_bias": 0.012245753012060157,
+    "wilcoxon_p": 0.8125,
+    "guided": 4,
+    "guide_mid_mape": 0.023047501236558188,
+    "model_mape_where_guided": 0.023047501236558188,
+    "missing_forecast": 0
+   }
+  },
+  "UBER": {
+   "revenue": {
+    "forecasts": 6,
+    "model_mape": 0.015887068776978597,
+    "naive_mape": 0.03068760284167264,
+    "model_median_ape": 0.008126576987530998,
+    "naive_median_ape": 0.02887007465458663,
+    "model_bias": 0.0052266494959865946,
+    "naive_bias": 0.012380888889295191,
+    "wilcoxon_p": 0.15625,
+    "guided": 0,
+    "guide_mid_mape": null,
+    "model_mape_where_guided": null,
+    "missing_forecast": 0
+   },
+   "main_kpi": {
+    "forecasts": 6,
+    "model_mape": 0.013111305148843197,
+    "naive_mape": 0.023689154299150156,
+    "model_median_ape": 0.016245685381709285,
+    "naive_median_ape": 0.02594234720536709,
+    "model_bias": -0.013111305148843197,
+    "naive_bias": -0.008588780847955483,
+    "wilcoxon_p": 0.3125,
+    "guided": 6,
+    "guide_mid_mape": 0.013111305148843158,
+    "model_mape_where_guided": 0.013111305148843197,
+    "missing_forecast": 0
+   }
+  }
+ },
+ "guidance": {
+  "forecasts": 14,
+  "actual_above_mid": 13,
+  "actual_below_mid": 1
+ }
+}
