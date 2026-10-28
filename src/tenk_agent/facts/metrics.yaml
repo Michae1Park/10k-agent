@@ -65,3 +65,17 @@ mezzanine:  # temporary equity between liabilities and equity: redeemable NCI (U
 liabilities_and_equity:  # the balance sheet's right-hand total (EXPE tags no total liabilities)
   kind: instant
   concepts: [LiabilitiesAndStockholdersEquity]
+debt:  # total long-term debt; DASH tags only its convertible notes; BKNG only the noncurrent part
+  # (research/valuation.py then adds debt_current)
+  kind: instant
+  concepts: [LongTermDebt, ConvertibleLongTermNotesPayable, LongTermDebtNoncurrent]
+debt_current:
+  kind: instant
+  concepts: [LongTermDebtCurrent, DebtCurrent]
+short_term_investments:
+  kind: instant
+  concepts: [ShortTermInvestments, MarketableSecuritiesCurrent,
+             AvailableForSaleSecuritiesDebtSecuritiesCurrent]
+interest_expense:
+  kind: flow
+  concepts: [InterestExpenseNonoperating, InterestExpense, InterestExpenseDebt]
