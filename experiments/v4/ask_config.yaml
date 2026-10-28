@@ -1,0 +1,29 @@
+# V4.2 Ask gold run, read by ask_run.py (and experiments/v2/judge.py --config this file).
+# Paths are relative to the repo root.
+
+run:
+  label: v4.2-ask-qwen3.6-27b                           # writes output/generation/<label>/
+  db: data/v4/build/parent_child.db
+  gold: [evaluation/gold/ask-gold.jsonl]                # experiments/v4/draft_ask_gold.py
+  workers: 4                                            # = the server's max_num_seqs
+
+retrieval: experiments/v1/config.yaml                   # V1's settings; search runs on the CPU beside vLLM
+device: cpu
+
+generation:
+  model: openai:Qwen/Qwen3.6-27B-FP8                    # scripts/serve_vllm.sh qwen3.6-27b-fp8
+  base_url: http://localhost:8001/v1
+  thinking: false
+  max_tokens: 4000
+
+agent:                                                  # tool set ask, prompts/ask.md
+  max_calls: 20
+  max_turns: 20
+  max_context: 20000
+  result_chars: 16000
+
+score:                                                  # bars frozen 2026-10-27 (design doc §13.1)
+  bar_correct_verified: 0.85
+  bar_cited_resolve: 1.0
+  judge_model: openai:openai/gpt-oss-20b                # experiments/v2/judge.py --config experiments/v4/ask_config.yaml
+  judge_base_url: http://localhost:8002/v1
