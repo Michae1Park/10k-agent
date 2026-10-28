@@ -310,8 +310,16 @@ def context(store, f, valuation, events, debates, revisions, results, exceptions
         "weights": settings["scenarios"]["weights"],
         "valuation_weights": settings["valuation"]["weights"], "sources": sources,
         "anchored": {a.solve for a in f.anchors}, "exceptions": exceptions,
+        "insiders": store.insider_summary(ticker, *_quarter_dates(last)) | {
+            "period": last},
         "rating_change": None,
     }
+
+
+def _quarter_dates(quarter: str) -> tuple[str, str]:
+    year, q = int(quarter[:4]), int(quarter[5])
+    end = (date(year, 3 * q, 28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    return f"{year}-{3 * q - 2:02d}-01", end.isoformat()
 
 
 def _latest_filings(store, ticker):

@@ -277,6 +277,17 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
         f"{k} = {v:.4g}" + (" (guidance)" if k in ctx["anchored"] else "")
         for k, v in sorted(model.assumptions.items()) if k.endswith((".g0", ".shift0"))
         or k == "fade") + ". Full register: workbook tab Assumptions.")
+    ins = ctx.get("insiders")
+    if ins and ins["transactions"]:
+        sold = add(f"{ins['period']} insider open-market shares sold", ins["sold"] / 1e6,
+                   "count millions", "Form 4 (insider_tx)")
+        value = add(f"{ins['period']} insider open-market sales", ins["sold_value"] / 1e6,
+                    "USD millions", "Form 4 (insider_tx)")
+        awarded = add(f"{ins['period']} insider shares awarded", ins["awarded"] / 1e6,
+                      "count millions", "Form 4 (insider_tx)")
+        s9.blocks.append(f"Insider activity in {ins['period']} (Form 4, dilution context): "
+                         f"{sold.text()} shares sold in the open market ({value.text()}), "
+                         f"{awarded.text()} awarded.")
     s9.blocks.append(f"Open issues: {len(ctx['exceptions'])}; see the exception log (X-rows).")
     s9.blocks.append("Rating definitions: Buy ≥ +15% 12-month return, Sell ≤ −10%, Hold "
                      "between. A draft for education and testing, not investment advice.")

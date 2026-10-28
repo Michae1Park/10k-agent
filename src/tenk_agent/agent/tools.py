@@ -11,6 +11,7 @@ V4 tool set "ask" (design doc §7.1), every result as of the store's AsOf:
   guidance         release guidance, with the actual where the target period has reported
   filings          the corpus's 10-Ks, 10-Qs and releases, with filing dates
   market_data      closing prices and macro series
+  crosscheck       outside series: NYC TLC trips (Uber, Lyft), BTS US airline passengers
 
 V4 tool set "research" (§7.1) adds the model group, over the session's model book
 (research/book.py), every number cited by a model: id:
@@ -295,12 +296,38 @@ SPECS |= {
     ),
 }
 
+SPECS["crosscheck"] = ToolSpec(
+    "crosscheck",
+    "Outside data that tests the companies' KPIs, monthly: NYC TLC high-volume for-hire trips "
+    "by company (Uber, Lyft; New York City only) and BTS US airline passengers (total, "
+    "domestic, international). Each value has the date it became public; a coverage note says "
+    "what the series can and cannot show. Cite a value by its id.",
+    {
+        "type": "object",
+        "properties": {
+            "series": {"type": "string",
+                       "description": "tlc (with companies) or bts (airline passengers)"},
+            "companies": {"type": "array", "items": COMPANY, "description": "For tlc"},
+            "start": {"type": "string", "description": "YYYY-MM (default: the last 13 months)"},
+            "end": {"type": "string", "description": "YYYY-MM"},
+        },
+        "required": ["series"],
+    },
+)
+TLC_CODES = {"UBER": "HV0003", "LYFT": "HV0005"}
+COVERAGE = {
+    "tlc": "NYC only, trips completed by each license; a directional check on Mobility "
+           "volume, not a company total. TLC publishes about two months after the month.",
+    "bts": "All US airlines' passengers, not any one company's bookings; BTS publishes about "
+           "three months after the month (publish dates estimated).",
+}
+
 GROUPS = {  # V4 §7.1; reports and model gain their tools in V4.5
     "text": ("search_filings",),
     "calc": ("calculator",),
     "sec": ("xbrl_facts", "edgar_filings"),  # V3's facts group
     "facts": ("financials", "company_kpis", "guidance", "filings"),
-    "market": ("market_data",),
+    "market": ("market_data", "crosscheck"),
     "model": ("model_view", "run_scenario", "compare_peers", "variance_review"),
 }
 GROUP_SETS = {
@@ -545,6 +572,34 @@ class Toolbox:
         rows = [{"id": f"{prefix}:{d}", "date": d, "value": v} for d, v in filter(None, chosen)]
         return {"series": name, "unit": unit} | _cap(rows)
 
+
+    def crosscheck(self, series: str, companies: list[str] | None = None,
+                   start: str | None = None, end: str | None = None) -> dict:
+        series = series.lower()
+        if series == "tlc":
+            tickers, unknown = self._tickers(companies or ["UBER", "LYFT"])
+            missing = [t for t in tickers if t not in TLC_CODES] + unknown
+            if missing:
+                return {"error": f"TLC covers Uber and Lyft only, not {missing}"}
+            names = {f"cc:tlc:{TLC_CODES[t]}": t for t in tickers}
+        elif series == "bts":
+            names = {f"cc:bts:{n}": n for n in ("airline_passengers",
+                                                "airline_passengers_domestic",
+                                                "airline_passengers_international")}
+        else:
+            return {"error": "series: tlc or bts"}
+        rows = []
+        for name, label in names.items():
+            points = self.store.series(name)
+            if start or end:
+                points = [p for p in points if (not start or p[0][:7] >= start)
+                          and (not end or p[0][:7] <= end)]
+            else:
+                points = points[-13:]
+            rows += [{"id": f"{name}:{d}", "series": label, "month": d[:7], "value": v}
+                     for d, v in points]
+        return {"series": series, "coverage": COVERAGE[series], "unit": "trips" if series ==
+                "tlc" else "passengers"} | _cap(rows)
 
     # --- V4 model (tool set "research") ------------------------------------------------
 

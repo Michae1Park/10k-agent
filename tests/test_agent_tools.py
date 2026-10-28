@@ -335,10 +335,10 @@ def test_tool_sets_are_built_from_groups_in_v3_order():
         "text": ("search_filings", "calculator"),
         "full": ("search_filings", "calculator", "xbrl_facts", "edgar_filings"),
         "ask": ("search_filings", "calculator", "financials", "company_kpis", "guidance",
-                "filings", "market_data"),
+                "filings", "market_data", "crosscheck"),
         "research": ("search_filings", "calculator", "financials", "company_kpis", "guidance",
-                     "filings", "market_data", "model_view", "run_scenario", "compare_peers",
-                     "variance_review"),
+                     "filings", "market_data", "crosscheck", "model_view", "run_scenario",
+                     "compare_peers", "variance_review"),
     }
     assert {t for tools in GROUPS.values() for t in tools} == set(TOOL_SETS["full"]) | set(
         TOOL_SETS["research"]

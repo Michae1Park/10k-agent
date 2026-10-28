@@ -150,6 +150,21 @@ CREATE TABLE IF NOT EXISTS guidance (
     filed TEXT NOT NULL,
     PRIMARY KEY (ticker, metric, segment, target_period, issued_in)
 );
+CREATE TABLE IF NOT EXISTS insider_tx (  -- Form 4 transactions (acquisition/insiders.py)
+    ticker TEXT NOT NULL,
+    accession TEXT NOT NULL,
+    filed TEXT NOT NULL,
+    owner TEXT,
+    director INTEGER,
+    officer INTEGER,
+    title TEXT,
+    date TEXT,                    -- the transaction date
+    code TEXT,                    -- S sale, P purchase, A award, M exercise, F tax, G gift
+    shares REAL NOT NULL,
+    price REAL,
+    acquired_disposed TEXT        -- A or D
+);
+CREATE INDEX IF NOT EXISTS insider_lookup ON insider_tx (ticker, filed);
 CREATE TABLE IF NOT EXISTS model_versions (  -- Report mode's saved models (research/pipeline.py)
     id TEXT PRIMARY KEY,          -- v1, v2, … per ticker: <TICKER>:v<n>
     ticker TEXT NOT NULL,
@@ -472,6 +487,29 @@ class Store:
             self.db.execute("INSERT INTO model_versions VALUES (?, ?, ?, ?, ?, ?, ?)",
                             (version, ticker, as_of, parent_id, inputs_hash, status, path))
             return version
+
+    def add_insider_tx(self, ticker: str, rows: list[tuple]) -> int:
+        """Replace the company's Form 4 rows (acquisition/insiders.py parse)."""
+        with self._lock, self.db:
+            self.db.execute("DELETE FROM insider_tx WHERE ticker = ?", (ticker,))
+            self.db.executemany(f"INSERT INTO insider_tx VALUES ({', '.join('?' * 12)})", rows)
+            return len(rows)
+
+    def insider_summary(self, ticker: str, start: str, end: str) -> dict:
+        """Visible Form 4 activity with transaction dates in [start, end]: open-market shares
+        sold and bought, shares awarded and options exercised (dilution context)."""
+        visible, params = self.asof.sql("i")
+        rows = self._query(
+            f"SELECT code, SUM(shares) AS shares, SUM(shares * COALESCE(price, 0)) AS value, "
+            f"COUNT(*) AS n FROM insider_tx i WHERE i.ticker = ? AND i.date >= ? AND "
+            f"i.date <= ? AND {visible} GROUP BY code", [ticker.upper(), start, end, *params])
+        by = {r["code"]: dict(r) for r in rows}
+        return {"sold": by.get("S", {}).get("shares", 0.0),
+                "sold_value": by.get("S", {}).get("value", 0.0),
+                "bought": by.get("P", {}).get("shares", 0.0),
+                "awarded": by.get("A", {}).get("shares", 0.0),
+                "exercised": by.get("M", {}).get("shares", 0.0),
+                "transactions": sum(r["n"] for r in rows)}
 
     def model_versions(self, ticker: str) -> list[dict]:
         """Saved versions visible at the as-of (made strictly before it), oldest first."""

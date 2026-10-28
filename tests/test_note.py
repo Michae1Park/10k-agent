@@ -56,3 +56,20 @@ def test_lint_reads_tables_and_prose(facts):
 def test_fact_text(facts):
     assert [f.text() for f in facts.items] == ["$9.7B", "+3.2%", "$95.00", "17.3x", "3.41B",
                                                "-0.4 pts", "50%"]
+
+
+def test_form4_parse():
+    from tenk_agent.acquisition.insiders import parse
+
+    xml = b"""<ownershipDocument><reportingOwner><reportingOwnerId><rptOwnerName>Doe Jane
+    </rptOwnerName></reportingOwnerId><reportingOwnerRelationship><isOfficer>1</isOfficer>
+    <officerTitle>CFO</officerTitle></reportingOwnerRelationship></reportingOwner>
+    <nonDerivativeTable><nonDerivativeTransaction><transactionDate><value>2026-05-01</value>
+    </transactionDate><transactionCoding><transactionCode>S</transactionCode></transactionCoding>
+    <transactionAmounts><transactionShares><value>1000</value></transactionShares>
+    <transactionPricePerShare><value>70.5</value></transactionPricePerShare>
+    <transactionAcquiredDisposedCode><value>D</value></transactionAcquiredDisposedCode>
+    </transactionAmounts></nonDerivativeTransaction></nonDerivativeTable></ownershipDocument>"""
+    rows = parse(xml, "UBER", "0000000000-26-000001", "2026-05-03")
+    assert rows == [("UBER", "0000000000-26-000001", "2026-05-03", "Doe Jane", 0, 1, "CFO",
+                     "2026-05-01", "S", 1000.0, 70.5, "D")]

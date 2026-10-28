@@ -122,7 +122,9 @@ def market_rows(raw: Path) -> list[tuple[str, str, float, str]]:
     erp = raw / "macro" / "ERPbymonth.xlsx"
     if erp.exists():
         rows += erp_rows(erp)
-    return rows
+    from tenk_agent.acquisition.crosscheck import rows as crosscheck_rows
+
+    return rows + crosscheck_rows(raw)  # V4.7: cc:tlc:<license>, cc:bts:<series>
 
 
 def erp_rows(path: Path) -> list[tuple[str, str, float, str]]:
