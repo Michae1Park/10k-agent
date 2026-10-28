@@ -58,3 +58,6 @@ equity_total:  # with non-controlling interests: the balance sheet's equity sect
 mezzanine:  # redeemable non-controlling interests, between liabilities and equity (UBER)
   kind: instant
   concepts: [RedeemableNoncontrollingInterestEquityCarryingAmount, TemporaryEquityCarryingAmountAttributableToParent]
+liabilities_and_equity:  # the balance sheet's right-hand total (EXPE tags no total liabilities)
+  kind: instant
+  concepts: [LiabilitiesAndStockholdersEquity]

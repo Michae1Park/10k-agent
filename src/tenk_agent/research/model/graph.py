@@ -87,6 +87,8 @@ def load_template(name: str, ticker: str) -> tuple[list[Line], dict]:
     for line_name, spec in template["lines"].items():
         specs.pop(line_name, None)
         specs[line_name] = spec
+    for line_name, spec in (binding.get("lines") or {}).items():  # the company's own definition
+        specs[line_name] = spec
     for line_name in binding.get("drop", []):
         specs.pop(line_name)
     lines = [_line(n, s, binding.get("sources", {})) for n, s in specs.items()]

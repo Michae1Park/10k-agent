@@ -61,3 +61,8 @@ lines:
   balance_gap:        {kind: formula, expr: "total_assets - total_liabilities - mezzanine - equity_total",
                        unit: USD millions, statement: balance, fy: last,
                        label: assets less liabilities and equity (must be 0)}
+  liabilities_and_equity: {kind: input, source: "q:liabilities_and_equity", unit: USD millions,
+                       statement: balance, fy: last, label: total liabilities and equity (reported)}
+  sides_gap:          {kind: formula, expr: "total_assets - liabilities_and_equity",
+                       unit: USD millions, statement: balance, fy: last,
+                       label: assets less reported liabilities and equity (must be 0)}
