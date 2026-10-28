@@ -2,8 +2,10 @@
 
   taskset -c 16-31 uv run python -m tenk_agent.research.model.history UBER 2026-09-01
 
-Writes <out>/<TICKER>/<as_of>/datapack.json, model.json and checks.json. Forecast columns
-(V4.4) and the workbook's other tabs (V4.6) build on this.
+Writes <out>/<TICKER>/<as_of>/datapack.json, model.json, checks.json and workbook.xlsx (the
+Model tab), then has LibreOffice recalculate the workbook: every formula cell must equal
+Python's value (the parity check). Exit 1 on any failed check or parity difference. Forecast
+columns (V4.4) and the workbook's other tabs (V4.6) build on this.
 """
 
 import argparse
@@ -12,6 +14,7 @@ from pathlib import Path
 
 from tenk_agent.asof import AsOf
 from tenk_agent.research import datapack
+from tenk_agent.research.export import workbook
 from tenk_agent.research.model import checks as layer2
 from tenk_agent.research.model.graph import Model, build, load_template
 from tenk_agent.store import Store
@@ -78,6 +81,7 @@ def main() -> None:
     for ticker in args.tickers:
         model, pack, results, exceptions = history(store, ticker)
         folder = write(args.out, model, pack, results, exceptions)
+        checked, differ = workbook.parity(model, workbook.write(model, folder / "workbook.xlsx"))
         print(f"{ticker} {model.template} {model.quarters[0]}–{model.quarters[-1]} → {folder}")
         for c in results:
             print(f"  {c.name:<16} {c.status:<4} tested {c.tested:>4}"
@@ -85,7 +89,10 @@ def main() -> None:
                   f"{f'  {c.note}' if c.note else ''}")
             for f in c.failures[:10]:
                 print(f"      FAIL {f}")
-        failed |= any(c.status == "fail" for c in results)
+        print(f"  {'parity':<16} {'fail' if differ else 'pass':<4} tested {checked:>4}")
+        for d in differ[:10]:
+            print(f"      DIFF {d}")
+        failed |= any(c.status == "fail" for c in results) or bool(differ)
         print(f"  exceptions {len(exceptions)}")
     raise SystemExit(1 if failed else 0)
 
