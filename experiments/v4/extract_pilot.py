@@ -1,6 +1,9 @@
 """V4.1: extract every release in the gold set and score it against the labels.
 
   taskset -c 16-31 uv run python experiments/v4/extract_pilot.py [--model anthropic:<id>]
+
+--releases all extracts every release in the store (V4.2: what `tenk build --stage kpis` loads);
+--reuse <label> takes releases already extracted by that run instead of calling the model again.
 """
 
 import argparse
@@ -26,14 +29,22 @@ def main() -> None:
     ap.add_argument("--model", default="openai:Qwen/Qwen3.6-27B-FP8")
     ap.add_argument("--label", default="pilot-qwen3.6-27b")
     ap.add_argument("--tickers", nargs="*")
+    ap.add_argument("--releases", choices=("gold", "all"), default="gold")
+    ap.add_argument("--reuse", help="label of a run whose extractions to keep")
     args = ap.parse_args()
     gold = load_gold(GOLD, args.tickers)
-    releases = sorted({(g["ticker"], g["period"]) for g in gold})
     filings = {
         (f.ticker, f"{f.fiscal_year}{f.fiscal_period}"): f.filing_date
         for f in Store(DB, AsOf.today()).filings()
-        if f.form == "ER"
+        if f.form == "ER" and (not args.tickers or f.ticker in args.tickers)
     }
+    releases = sorted(
+        filings if args.releases == "all" else {(g["ticker"], g["period"]) for g in gold}
+    )
+    reused = {}
+    if args.reuse:
+        saved = json.loads((OUT / args.reuse / "extractions.json").read_text())
+        reused = {(r["ticker"], r["period"]): r for r in saved.values()}
     model = get_model(args.model, thinking=False)  # as V3: thinking spends the whole budget
 
     def run(release):
@@ -45,7 +56,9 @@ def main() -> None:
         return release, out
 
     with ThreadPoolExecutor(4) as pool:
-        results = dict(pool.map(run, releases))
+        results = dict(pool.map(run, [r for r in releases if r not in reused]))
+    results |= {r: reused[r] for r in releases if r in reused}
+    results = dict(sorted(results.items()))
     folder = OUT / args.label
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "extractions.json").write_text(
