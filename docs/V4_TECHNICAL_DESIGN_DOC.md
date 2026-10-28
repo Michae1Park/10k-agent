@@ -751,3 +751,12 @@ Run 3 by category (correct and verified): reported financials, KPIs, our estimat
 - **Judge:** `trip-thefork-sale` scored 1/3 though the answer states all three points.
 
 The bar was frozen before the first run and is reported as missed. Before any run 4: (1) review the gold set (the hand-written points first); (2) decide whether a beat-or-miss answer needs the unbeaten bound as a claim; (3) recheck the TheFork judgment by hand. Changing gold after seeing answers must be logged as such, and the rerun reported beside these three.
+
+**Run 4 (gold changed after run 3, at the user's decision; `015d3a1`).** Two gold changes: UBER's decline premise accepts the reported 24% beside the 22% constant-currency figure, and a beat-or-miss question expects the actual and the bound it crossed (both bounds when the actual lands within the range), not the unbeaten bound. No code or prompt change.
+
+| Run | Gold | Correct | Correct and verified | Cited ids resolve | Gate |
+|---|---|---|---|---|---|
+| 3, rescored (`-r3-newgold`) | changed | 96.2% | 91.1% | 100% | pass |
+| **4** (`v4.2-ask-qwen3.6-27b-r4`) | changed | 96.2% | **89.9%** | **100%** | **pass** |
+
+The rescore of run 3's unchanged answers shows the gain is the gold change, not the agent (run 4 is within run-to-run spread of it). Run 4 misses (8): two guidance ranges still written as one claim without a value (CART GTV, LYFT EBITDA, as in run 3); LYFT's within-range answer claims one bound; EXPE's beat margin claimed as an unverified $125M; DASH Deliveroo premise has an unverified $2,900M; LYFT working capital misses the insurance-reserves point; EXPE drivers omit Rapid API (as in run 3); `trip-thefork-sale` again judged 1/3 though the answer states all three points. **V4.2 passes** on run 4, with the gold set still unreviewed by a person.
