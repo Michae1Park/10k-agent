@@ -114,6 +114,8 @@ class SubQuestion:
     text: str
     ticker: str | None
     fiscal_years: list[int] | None
+    periods: list[str] | None = None  # V4: 2026Q2, FY2025 (the agent's search_filings)
+    forms: list[str] | None = None  # V4: 10-K, 10-Q, ER
 
 
 @dataclass

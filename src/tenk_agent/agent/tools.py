@@ -28,7 +28,7 @@ from tenk_agent.corpus import resolve_company
 from tenk_agent.generation.calculator import CalculatorError, calculate
 from tenk_agent.models import ToolSpec
 from tenk_agent.retrieval.search import SubQuestionRetriever
-from tenk_agent.store import ChunkRecord, Store
+from tenk_agent.store import ChunkRecord, Store, period_parts
 
 COMPANY = {"type": "string", "description": "Ticker or name, e.g. AAPL or Apple"}
 YEARS = {"type": "array", "items": {"type": "integer"}, "description": "Fiscal years (10-Ks)"}
@@ -190,6 +190,35 @@ SPECS |= {
     ),
 }
 
+ASK_SPECS = {  # tool set "ask": the same tool over every form
+    "search_filings": ToolSpec(
+        "search_filings",
+        "Search the text of the filings: 10-Ks, 10-Qs and earnings releases (ER). Name the "
+        'companies (companies, or in the query; ["all"] for every company) and, if you know '
+        "them, the periods and forms. Runs one search per company and interleaves the results, "
+        "so a comparison gets chunks from every company. Returns chunks with their IDs to cite.",
+        {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "What to find, e.g. 'take rate'"},
+                "companies": {
+                    "type": "array",
+                    "items": COMPANY,
+                    "description": 'Companies to search; ["all"] for every company',
+                },
+                "periods": {**PERIODS, "description": "Period keys, e.g. 2026Q2 or FY2025"},
+                "forms": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["10-K", "10-Q", "ER"]},
+                    "description": "Forms to search (default: all)",
+                },
+                "k": {"type": "integer", "description": "Chunks in all (default 8, max 16)"},
+            },
+            "required": ["query"],
+        },
+    ),
+}
+
 GROUPS = {  # V4 §7.1; reports and model gain their tools in V4.5
     "text": ("search_filings",),
     "calc": ("calculator",),
@@ -218,12 +247,15 @@ class Toolbox:
 
     @property
     def specs(self) -> list[ToolSpec]:
-        return [SPECS[name] for name in TOOL_SETS[self.tool_set]]
+        return [self._spec(name) for name in TOOL_SETS[self.tool_set]]
+
+    def _spec(self, name: str) -> ToolSpec:
+        return (ASK_SPECS if self.tool_set == "ask" else {}).get(name) or SPECS[name]
 
     def call(self, name: str, arguments: dict) -> dict:
         if name not in TOOL_SETS[self.tool_set]:
             return {"error": f"unknown tool {name!r}; tools: {list(TOOL_SETS[self.tool_set])}"}
-        arguments = _coerce(arguments, SPECS[name].parameters["properties"])
+        arguments = _coerce(arguments, self._spec(name).parameters["properties"])
         try:
             return getattr(self, name)(**arguments)
         except (TypeError, AttributeError) as e:
@@ -239,9 +271,12 @@ class Toolbox:
         companies: list[str] | None = None,
         fiscal_years: list[int] | None = None,
         k: int = 8,
+        periods: list[str] | None = None,
+        forms: list[str] | None = None,
     ) -> dict:
         """V1's retrieval, with the companies and years the model gives in place of those it
-        would find in the query. No company given or named: an error, not an unfiltered search."""
+        would find in the query. No company given or named: an error, not an unfiltered search.
+        V4 (tool set "ask"): periods and forms in place of fiscal years."""
         if self.search is None:
             return {"error": "search is not available"}
         k = max(1, min(int(k), 16))
@@ -258,6 +293,19 @@ class Toolbox:
                 "error": 'name the companies to search: pass companies (or ["all"]), '
                 "or name them in the query",
                 "corpus": self._corpus(),
+            }
+        if self.tool_set == "ask":
+            for p in periods or []:
+                period_parts(p)  # a bad key: ValueError, returned as an error
+            result = self.search.search(query, k, tickers, None, periods or None, forms or None)
+            return {
+                "query": query,
+                "searches": [
+                    {"query": s.query, "company": s.ticker}
+                    | ({"periods": periods} if periods else {})
+                    for s in result.searches
+                ],
+                "chunks": [ask_chunk_view(c) for c in result.chunks],
             }
         result = self.search.search(query, k, tickers, years)
         return {
@@ -465,6 +513,23 @@ def chunk_view(chunk: ChunkRecord) -> dict:
         "kind": chunk.kind,
         "units": chunk.units,
         "printed_pages": chunk.printed_pages,
+        "text": chunk.text,
+    }
+
+
+def ask_chunk_view(chunk: ChunkRecord) -> dict:
+    """A chunk as the Ask model sees it: its form, period and filing date in place of the
+    10-K's fiscal year."""
+    fy, fp = chunk.fiscal_year, chunk.fiscal_period
+    return {
+        "chunk_id": chunk.id,
+        "company": chunk.ticker,
+        "form": chunk.form,
+        "period": f"FY{fy}" if fp == "FY" else f"{fy}{fp}",
+        "filed": chunk.filed,
+        "item": chunk.item,
+        "kind": chunk.kind,
+        "units": chunk.units,
         "text": chunk.text,
     }
 
