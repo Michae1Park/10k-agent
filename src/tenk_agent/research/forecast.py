@@ -178,7 +178,16 @@ def default_assumptions(model: Model, settings: dict) -> dict[str, float]:
 def _default(model: Model, name: str, f: dict, bands: dict) -> float | None:
     """None: the history can't give one (ABNB tags no D&A); its cells stay blank, logged."""
     if name == "fade":
-        return f["fade"]
+        if f["fade"] != "fitted":
+            return f["fade"]
+        # fitted (ablation, §13.2): the median quarter-to-quarter ratio of the growth drivers'
+        # y/y rates over the last 8 quarters, within fade_bounds
+        ratios = []
+        for line in (x.name for x in model.lines if x.name.endswith("_g")):
+            rates = [v for v in _recent(model, line, 8) if v is not None]
+            ratios += [b / a for a, b in zip(rates, rates[1:], strict=False) if a > 0 and b > 0]
+        lo, hi = f["fade_bounds"]
+        return min(max(statistics.median(ratios), lo), hi) if ratios else f["fade_bounds"][1]
     if name == "gb_g_adj":
         return 0.0
     if m := re.fullmatch(r"(.+)\.g0", name):  # a growth rate starts at its last y/y
