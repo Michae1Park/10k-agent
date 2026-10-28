@@ -1,9 +1,11 @@
 """S10 writer (design doc §10.2): prose for each slot from its facts only, number-traced.
 
 One LLM call per slot (prompts/section.md, no tools); the number trace (trace.py) checks it;
-one repair turn names the untraced numbers; whatever still fails to trace stays in the text
-and is logged as an exception (never silently removed).
+one repair turn names the untraced numbers; any sentence that still holds one is dropped from
+the text and logged as an exception (so a draft never carries a figure that has no source).
 """
+
+import re
 
 from tenk_agent.models import parse_json
 from tenk_agent.prompts import PROMPTS
@@ -34,10 +36,19 @@ def fill(sections: list[Section], facts: Facts, llm, max_tokens: int = 1500) -> 
                               + ", ".join(u.text for u in untraced)}]
                 text = _ask(llm, messages, system, max_tokens) or text
                 untraced = trace.check(text, _slot_facts(facts, block), block.key)
+            if untraced:
+                text = _drop_untraced(text, _slot_facts(facts, block), block.key)
             block.text = text
-            exceptions += [{"severity": "warning", "item": f"untraced number {u.text!r} in "
-                            f"section {section.number} ({u.where})"} for u in untraced]
+            exceptions += [{"severity": "warning", "item": f"dropped sentence with untraced "
+                            f"number {u.text!r} in section {section.number} ({u.where})"}
+                           for u in untraced]
     return exceptions
+
+
+def _drop_untraced(text: str, slot_facts: Facts, key: str) -> str:
+    """The text without the sentences whose figures still fail the trace."""
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    return " ".join(s for s in sentences if not trace.check(s, slot_facts, key))
 
 
 def _slot_facts(facts: Facts, slot: Slot) -> Facts:

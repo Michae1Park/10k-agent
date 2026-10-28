@@ -97,3 +97,21 @@ def test_prose_traces_to_its_own_slot_only(facts):
     other = {"key": "valuation", "text": "The multiple is 17.3x.", "facts": ["F-3"]}  # F-4's
     note2 = note.replace("The PT is $95.00.", "The multiple is 17.3x.")
     assert [u.text for u in lint(note2, facts, [], [other])] == ["17.3x"]
+
+
+def test_writer_drops_sentences_still_untraced_after_repair(facts):
+    from types import SimpleNamespace
+
+    from tenk_agent.research.note.sections import Section, Slot
+    from tenk_agent.research.note.write import fill
+
+    class Writer:  # keeps the bad figure on the repair turn too
+        def complete(self, messages, system, max_tokens):
+            return SimpleNamespace(
+                text='{"text": "EBITDA is $9.7B. Bookings grew 20% constant currency. PT $95.00."}')
+
+    slot = Slot("s", "write", [f.id for f in facts.items])
+    section = Section(1, "Summary", [slot])
+    exceptions = fill([section], facts, Writer())
+    assert slot.text == "EBITDA is $9.7B. PT $95.00."
+    assert len(exceptions) == 1 and "'20%'" in exceptions[0]["item"]

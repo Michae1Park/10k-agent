@@ -3,7 +3,7 @@
 A number traces when it equals a fact's value at the precision it is written, after units
 ("$9.7B" traces to 9,712 USD millions; "+3.2%" to 3.21 percent). Years, quarters, section and
 list numbers, and F-ids are not figures. Untraced numbers are the lint's errors: the writer
-gets one repair turn, then they stay as exceptions (never silently dropped).
+gets one repair turn, then the sentences that still hold one are dropped and logged.
 """
 
 import re
