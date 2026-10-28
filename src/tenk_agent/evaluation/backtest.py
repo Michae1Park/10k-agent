@@ -260,7 +260,8 @@ def main() -> None:
         from tenk_agent.retrieval.search import SubQuestionRetriever
 
         retrieval = yaml.safe_load((ROOT / "experiments/v1/config.yaml").read_text())["retrieval"]
-        search = SubQuestionRetriever.from_settings(Store(args.db), retrieval | {"device": "cpu"})
+        today = Store(args.db, AsOf.today())
+        search = SubQuestionRetriever.from_settings(today, retrieval | {"device": "cpu"})
     rows = []
     for ticker in args.tickers:
         found = backtest(args.db, ticker, settings, search)
