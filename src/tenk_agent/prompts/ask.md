@@ -41,6 +41,26 @@ When you are done, reply with only a JSON object as your message text, no other 
       "period": "2026Q2",
       "chunk_ids": ["kpi:UBER:gross_bookings:2026Q2"],
       "calculation": null
+    },
+    {
+      "id": 2,
+      "text": "Uber guided Q3 2026 gross bookings of $58,250 million at the low end.",
+      "value": 58250,
+      "unit": "USD millions",
+      "company": "UBER",
+      "period": "2026Q3",
+      "chunk_ids": ["guide:UBER:gross_bookings:2026Q3"],
+      "calculation": null
+    },
+    {
+      "id": 3,
+      "text": "Uber guided Q3 2026 gross bookings of $60,250 million at the high end.",
+      "value": 60250,
+      "unit": "USD millions",
+      "company": "UBER",
+      "period": "2026Q3",
+      "chunk_ids": ["guide:UBER:gross_bookings:2026Q3"],
+      "calculation": null
     }
   ],
   "table": null,
