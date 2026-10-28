@@ -172,6 +172,10 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
     for i, d in enumerate(ctx["debates"], 1):
         evidence = [add(f"evidence {e['id']}", e["value"], e["unit"], e["id"], e.get("period", ""))
                     for e in d.get("evidence_values", [])]
+        driver = d.get("driver")
+        if driver in model.assumptions:  # the debated assumption, as the model holds it
+            evidence.append(add(f"assumption {driver}", model.assumptions[driver] * 100,
+                                "percent", f"model:{ticker}:{model.as_of}:base (assumption)"))
         s3.blocks.append(f"3.{i} {d['question']}")
         s3.blocks.append(Slot(f"debate-{i}", "Write this debate in four labelled lines — Bull, "
                               "Bear, Hypothesis, Trigger — and one Data gap line, from the "
