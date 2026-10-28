@@ -6,7 +6,8 @@ black, written from the same DSL expression Python evaluated (research/model/dsl
 sheet recomputes what Python did. tests/test_model_workbook.py has LibreOffice recalculate it
 and compares every formula cell (the parity test). A cell Python leaves blank (an input
 missing) is left blank, not written as a formula Excel would compute from empty cells as 0.
-The other tabs (Summary, Bridge, Assumptions, …) come with V4.4–V4.6.
+V4.4 adds forecast columns and the Assumptions tab (one blue value per scalar assumption, which
+forecast formulas reference). The other tabs (Summary, Bridge, …) come with V4.5–V4.6.
 """
 
 import shutil
@@ -20,11 +21,12 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from tenk_agent.research.model.dsl import Cells, to_excel
-from tenk_agent.research.model.graph import Model
+from tenk_agent.research.model.graph import Model, expr_for
 
 BLUE, BLACK = Font(color="0000FF"), Font(color="000000")
 HEADER = Font(bold=True)
 SECTION = PatternFill("solid", fgColor="D9DEE8")
+FORECAST = PatternFill("solid", fgColor="F3F6FB")  # forecast columns, shaded
 STATEMENTS = (("operating", "Operating build"), ("income", "Income statement"),
               ("cash_flow", "Cash flow"), ("balance", "Balance sheet"))
 FORMATS = {"fraction": "0.0%", "USD per share": "0.00", "USD": "#,##0.00"}
@@ -37,7 +39,7 @@ def write(model: Model, path: Path) -> Path:
     sheet.title = "Model"
     rows = layout(model, sheet)
     column_of = {c: FIRST_COLUMN + i for i, c in enumerate(model.columns)}
-    cells = _cells(model, rows, column_of)
+    cells = _cells(model, rows, column_of, assumptions_tab(model, book))
     for line in model.lines:
         for column in model.columns:
             cell = model.cells[(line.name, column)]
@@ -50,6 +52,8 @@ def write(model: Model, path: Path) -> Path:
                                          "model")
             elif cell.value is not None:
                 target.value, target.font = formula(model, line, column, cells), BLACK
+                if column in model.forecast:
+                    target.fill = FORECAST
     path.parent.mkdir(parents=True, exist_ok=True)
     book.save(path)
     return path
@@ -80,7 +84,25 @@ def layout(model: Model, sheet) -> dict[str, int]:
     return rows
 
 
-def _cells(model: Model, rows: dict[str, int], column_of: dict[str, int]):
+def assumptions_tab(model: Model, book) -> dict[str, str]:
+    """The Assumptions tab: name and value per assumption; returns each one's cell."""
+    if not model.assumptions:
+        return {}
+    sheet = book.create_sheet("Assumptions")
+    sheet.cell(1, 1, "assumption").font = HEADER
+    sheet.cell(1, 2, "value").font = HEADER
+    sheet.column_dimensions["A"].width = 36
+    refs = {}
+    for row, (name, value) in enumerate(sorted(model.assumptions.items()), start=2):
+        sheet.cell(row, 1, name)
+        cell = sheet.cell(row, 2, value)
+        cell.font, cell.number_format = BLUE, "0.0000"
+        refs[name] = f"Assumptions!$B${row}"
+    return refs
+
+
+def _cells(model: Model, rows: dict[str, int], column_of: dict[str, int],
+           assumptions: dict[str, str] | None = None):
     def ref(name: str, column: str) -> str:
         return f"{get_column_letter(column_of[column])}{rows[name]}"
 
@@ -91,15 +113,16 @@ def _cells(model: Model, rows: dict[str, int], column_of: dict[str, int]):
             return None
         return f"{ref(name, quarters[0])}:{ref(name, quarters[-1])}"
 
-    return ref, year_range
+    return ref, year_range, assumptions or {}
 
 
 def formula(model: Model, line, column: str, cells) -> str:
-    """The cell's formula: an FY rule or the line's expression."""
-    ref, year_range = cells
-    if column.startswith("FY") and line.fy in ("sum", "last"):
-        if line.fy == "last":
-            return f"={ref(line.name, f'{column[2:]}Q4')}"
+    """The cell's formula: an FY rule or the expression Python evaluated (graph.expr_for)."""
+    ref, year_range, assumptions = cells
+    expr = expr_for(model, line, column)
+    if expr == "last":
+        return f"={ref(line.name, f'{column[2:]}Q4')}"
+    if expr == "sum":
         return f"=SUM({year_range(line.name, column)})"
     index = None if column.startswith("FY") else model.quarters.index(column)
 
@@ -110,8 +133,8 @@ def formula(model: Model, line, column: str, cells) -> str:
             return None
         return ref(name, model.quarters[index - lag])
 
-    return to_excel(line.expr, Cells(cell, lambda name: year_range(name, column),
-                                      lambda name: f"Assumptions!{name}"))
+    return to_excel(expr, Cells(cell, lambda name: year_range(name, column),
+                                lambda name: assumptions[name]))
 
 
 def parity(model: Model, path: Path) -> tuple[int, list[str]]:

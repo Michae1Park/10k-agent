@@ -7,7 +7,11 @@
   take_rate        each take rate recomputes from the reported revenue and gross bookings
   segments_sum     segment lines sum to the reported total (template `sums`)
   no_future_input  every input was filed before the as-of
-  formula_only     forecast cells are formulas (V4.4 adds forecast columns)
+  formula_only     forecast cells are formulas: no input or default in a forecast column (a line
+                   without a forecast rule, the balance-sheet detail, is blank)
+
+History checks test the reported columns: quarters before the forecast and FY columns of years
+with no forecast quarter.
 
 A check that has nothing to test in a period (an input missing) skips it and counts the skip;
 the skips and the model's other gaps are listed as exceptions, never hidden.
@@ -63,6 +67,13 @@ def exceptions(model: Model, checks: list[Check]) -> list[dict]:
     return out
 
 
+def _reported(model: Model) -> list[str]:
+    """History columns: quarters before the forecast, FY columns of fully reported years."""
+    years = {q[:4] for q in model.forecast}
+    return [c for c in model.columns if c not in model.forecast
+            and not (c.startswith("FY") and c[2:] in years)]
+
+
 def _result(name: str, tested: int, failures: list, skipped: list, note: str = "") -> Check:
     status = "fail" if failures else "pass" if tested else "skip"
     return Check(name, status, tested, failures, skipped, note)
@@ -71,7 +82,7 @@ def _result(name: str, tested: int, failures: list, skipped: list, note: str = "
 def balance(model: Model) -> Check:
     tested, failures, skipped = 0, [], []
     gaps = [g for g in ("balance_gap", "sides_gap") if any(x.name == g for x in model.lines)]
-    for column in model.columns:
+    for column in _reported(model):
         for name in gaps:
             gap = model.value(name, column)
             if gap is None:
@@ -94,7 +105,7 @@ def quarters_sum(model: Model, pack, store: Store | None = None) -> Check:
         metric = line.source[2:]
         concepts = specs[metric].get("companies", {}).get(model.ticker, specs[metric]["concepts"])
         recast = xbrl_quarters.recast_years(store, model.ticker, concepts) if store else set()
-        for column in (c for c in model.columns if c.startswith("FY")):
+        for column in (c for c in _reported(model) if c.startswith("FY")):
             if int(column[2:]) in recast:
                 skipped.append(f"{line.name} {column} (recast)")
                 continue
@@ -139,11 +150,11 @@ def take_rate(model: Model, pack) -> Check:
     the data pack (catches a template wired to the wrong series)."""
     tested, failures, skipped = 0, [], []
     for line in model.lines:
-        if not line.name.startswith("take_rate"):
-            continue
+        if not line.name.startswith("take_rate") or line.name.endswith("_shift"):
+            continue  # the forecast's take_rate…_shift lines are changes, not rates
         suffix = line.name[len("take_rate"):]
         top, bottom = model.line(f"revenue{suffix}"), model.line(f"gross_bookings{suffix}")
-        for column in model.quarters:
+        for column in model.history:
             rev = pack.get(top.source, {}).get(column)
             gb = pack.get(bottom.source, {}).get(column)
             value = model.value(line.name, column)
@@ -188,14 +199,13 @@ def no_future_input(model: Model) -> Check:
 
 
 def formula_only(model: Model) -> Check:
-    """Columns after the last reported quarter must hold formulas only (none before V4.4)."""
-    last = max((c for (_, c), cell in model.cells.items() if cell.kind == "input"
-                and not c.startswith("FY")), default=None)
-    forecast = [c for c in model.quarters if last and c > last]
+    """No input or default in a forecast column."""
     failures = [f"{line} {column}" for (line, column), cell in model.cells.items()
-                if column in forecast and cell.kind != "formula"]
-    return Check("formula_only", "fail" if failures else "pass", len(forecast), failures,
-                 note="" if forecast else "no forecast columns yet (V4.4)")
+                if column in model.forecast and cell.kind in ("input", "default")]
+    tested = sum(1 for (_, c), cell in model.cells.items()
+                 if c in model.forecast and cell.kind == "formula")
+    return Check("formula_only", "fail" if failures else "pass", tested, failures,
+                 note="" if model.forecast else "no forecast columns")
 
 
 def to_json(checks: list[Check]) -> list[dict]:

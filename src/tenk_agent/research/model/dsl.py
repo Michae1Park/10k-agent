@@ -4,6 +4,8 @@
   trips[-4] * (1 + trips_g)           a line k quarters back (an Excel cell k quarter columns left)
   fy(revenue)                         the fiscal year's four quarters summed (FY columns)
   min(a, b) · max(a, b) · if_(c, a, b)
+  first(a, b)                         a, or b where a can't be computed (an input missing, a zero
+                                      divisor); Excel: IFERROR(IF(COUNT(a's cells)=n, a, b), b)
   @fade                               an assumption (a cell on the Assumptions tab)
 
 Parsed with Python's `ast`, never `eval`: anything else is a DslError. `evaluate` computes a
@@ -37,7 +39,7 @@ class Expr:
     def lines(self) -> set[str]:
         """The lines it reads (same period or lagged), for ordering the graph."""
         return {n.id for n in ast.walk(self.tree) if isinstance(n, ast.Name)
-                and n.id not in (*FUNCTIONS, "fy") and not n.id.startswith("A__")}
+                and n.id not in (*FUNCTIONS, "fy", "first") and not n.id.startswith("A__")}
 
     @property
     def same_period(self) -> set[str]:
@@ -86,10 +88,12 @@ def _check(node: ast.AST, text: str) -> None:
         raise DslError(f"{text!r}: only numbers")
     if isinstance(node, ast.Call):
         name = getattr(node.func, "id", None)
-        if name not in (*FUNCTIONS, "fy") or node.keywords:
+        if name not in (*FUNCTIONS, "fy", "first") or node.keywords:
             raise DslError(f"{text!r}: unknown function {name!r}")
         if name == "fy" and (len(node.args) != 1 or not isinstance(node.args[0], ast.Name)):
             raise DslError(f"{text!r}: fy() takes one line")
+        if name == "first" and len(node.args) != 2:
+            raise DslError(f"{text!r}: first(a, b)")
         if name == "if_" and len(node.args) != 3:
             raise DslError(f"{text!r}: if_(condition, then, else)")
     if isinstance(node, ast.Subscript):
@@ -148,6 +152,11 @@ def _eval(node, read: Readers) -> float:
         return _need(read.fy(node.args[0].id))
     if name == "if_":
         return _eval(node.args[1] if _eval(node.args[0], read) else node.args[2], read)
+    if name == "first":
+        try:
+            return _eval(node.args[0], read)
+        except (_Missing, ZeroDivisionError):
+            return _eval(node.args[1], read)
     args = [_eval(a, read) for a in node.args]
     return {"min": min, "max": max, "abs": abs}[name](*args)
 
@@ -194,7 +203,32 @@ def _xl(node, cells: Cells, top: bool = False) -> str:
     name = node.func.id
     if name == "fy":
         return f"SUM({_ref(cells.fy(node.args[0].id))})"
+    if name == "first":
+        try:
+            b = _xl(node.args[1], cells, top=True)
+        except _Missing:  # b reads before the first column: only a can give a value
+            return _xl(node.args[0], cells)
+        try:
+            a = _xl(node.args[0], cells, top=True)
+        except _Missing:  # a reads before the first column: Python falls back to b as well
+            return b
+        refs = _refs(node.args[0], cells)
+        return f"IFERROR(IF(COUNT({','.join(refs)})={len(refs)},{a},{b}),{b})"
     return f"{FUNCTIONS[name]}({','.join(_xl(a, cells, top=True) for a in node.args)})"
+
+
+def _refs(node, cells: Cells) -> list[str]:
+    """The cells an expression reads (lines and assumptions), for first()'s COUNT."""
+    out = []
+    for n in ast.walk(node):
+        if isinstance(n, ast.Subscript):
+            out.append(cells.cell(n.value.id, n.slice.operand.value))
+        elif isinstance(n, ast.Name) and n.id.startswith("A__"):
+            out.append(cells.assumption(n.id[3:].replace("__", ".")))
+        elif isinstance(n, ast.Name) and n.id not in (*FUNCTIONS, "fy", "first") and not any(
+                isinstance(p, ast.Subscript) and p.value is n for p in ast.walk(node)):
+            out.append(cells.cell(n.id, 0))
+    return list(dict.fromkeys(out))
 
 
 def _ref(ref: str | None) -> str:

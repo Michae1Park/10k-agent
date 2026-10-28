@@ -8,19 +8,27 @@ lines:
   trips:                   {kind: input, source: "kpi:trips", unit: count millions}
   mapcs:                   {kind: input, source: "kpi:mapcs", unit: count millions, fy: none,
                             label: monthly active platform consumers}
-  gross_bookings_mobility: {kind: input, source: "kpi:gross_bookings.mobility", unit: USD millions}
-  gross_bookings_delivery: {kind: input, source: "kpi:gross_bookings.delivery", unit: USD millions}
-  gross_bookings_freight:  {kind: input, source: "kpi:gross_bookings.freight", unit: USD millions}
-  gross_bookings:          {kind: input, source: "kpi:gross_bookings", unit: USD millions}
+  gross_bookings_mobility: {kind: input, source: "kpi:gross_bookings.mobility", unit: USD millions,
+                            forecast: "gross_bookings_mobility[-4] * (1 + gb_g_mobility)"}
+  gross_bookings_delivery: {kind: input, source: "kpi:gross_bookings.delivery", unit: USD millions,
+                            forecast: "gross_bookings_delivery[-4] * (1 + gb_g_delivery)"}
+  gross_bookings_freight:  {kind: input, source: "kpi:gross_bookings.freight", unit: USD millions,
+                            forecast: "gross_bookings_freight[-4] * (1 + gb_g_freight)"}
+  gross_bookings:          {kind: input, source: "kpi:gross_bookings", unit: USD millions,
+                            forecast: "gross_bookings_mobility + gross_bookings_delivery + gross_bookings_freight"}
   gross_bookings_per_trip: {kind: formula, expr: "(gross_bookings_mobility + gross_bookings_delivery) / trips",
                             unit: USD, label: gross bookings per trip (Mobility and Delivery)}
-  revenue_mobility:        {kind: input, source: "kpi:revenue.mobility", unit: USD millions}
-  revenue_delivery:        {kind: input, source: "kpi:revenue.delivery", unit: USD millions}
-  revenue_freight:         {kind: input, source: "kpi:revenue.freight", unit: USD millions}
+  revenue_mobility:        {kind: input, source: "kpi:revenue.mobility", unit: USD millions,
+                            forecast: "gross_bookings_mobility * take_rate_mobility"}
+  revenue_delivery:        {kind: input, source: "kpi:revenue.delivery", unit: USD millions,
+                            forecast: "gross_bookings_delivery * take_rate_delivery"}
+  revenue_freight:         {kind: input, source: "kpi:revenue.freight", unit: USD millions,
+                            forecast: "gross_bookings_freight * take_rate_freight"}
   take_rate_mobility:      {kind: formula, expr: "revenue_mobility / gross_bookings_mobility", unit: fraction}
   take_rate_delivery:      {kind: formula, expr: "revenue_delivery / gross_bookings_delivery", unit: fraction}
   take_rate_freight:       {kind: formula, expr: "revenue_freight / gross_bookings_freight", unit: fraction}
-  take_rate:               {kind: formula, expr: "revenue / gross_bookings", unit: fraction}
+  take_rate:               {kind: formula, expr: "revenue / gross_bookings", unit: fraction,
+                            label: take rate (total)}
   adj_ebitda_mobility:     {kind: input, source: "kpi:adj_ebitda.mobility", unit: USD millions}
   adj_ebitda_delivery:     {kind: input, source: "kpi:adj_ebitda.delivery", unit: USD millions}
   adj_ebitda_freight:      {kind: input, source: "kpi:adj_ebitda.freight", unit: USD millions}
@@ -32,6 +40,36 @@ lines:
                             unit: fraction, label: Delivery adj. EBITDA margin on gross bookings}
   ebitda_margin_freight:   {kind: formula, expr: "adj_ebitda_freight / revenue_freight",
                             unit: fraction, label: Freight adj. EBITDA margin on revenue}
+
+  # Forecast: each segment's bookings grow on its own rate (faded), shifted by one common
+  # @gb_g_adj that the gross-bookings anchor solves; segment take rates as ratios; adj. EBITDA
+  # as a margin on total gross bookings (segment EBITDA stopped in 2026Q1, §17.12)
+  gb_g_mobility:  {kind: formula, expr: "gross_bookings_mobility / gross_bookings_mobility[-4] - 1",
+                   unit: fraction, fy: none, label: Mobility gross bookings growth y/y,
+                   forecast_first: "@gb_g_mobility.g0 + @gb_g_adj",
+                   forecast: "(gb_g_mobility[-1] - @gb_g_adj) * @fade + @gb_g_adj"}
+  gb_g_delivery:  {kind: formula, expr: "gross_bookings_delivery / gross_bookings_delivery[-4] - 1",
+                   unit: fraction, fy: none, label: Delivery gross bookings growth y/y,
+                   forecast_first: "@gb_g_delivery.g0 + @gb_g_adj",
+                   forecast: "(gb_g_delivery[-1] - @gb_g_adj) * @fade + @gb_g_adj"}
+  gb_g_freight:   {kind: formula, expr: "gross_bookings_freight / gross_bookings_freight[-4] - 1",
+                   unit: fraction, fy: none, label: Freight gross bookings growth y/y,
+                   forecast_first: "@gb_g_freight.g0", forecast: "gb_g_freight[-1] * @fade"}
+  adj_ebitda_margin_gb: {kind: formula, expr: "adj_ebitda / gross_bookings", unit: fraction,
+                   label: adjusted EBITDA margin on gross bookings}
+  adj_ebitda:     {kind: input, source: "kpi:adj_ebitda", unit: USD millions, statement: income,
+                   label: adjusted EBITDA, forecast: "adj_ebitda_margin_gb * gross_bookings"}
+  revenue:        {kind: input, source: "q:revenue", unit: USD millions, statement: income,
+                   forecast: "revenue_mobility + revenue_delivery + revenue_freight"}
+
+forecast:
+  growth: [trips]
+  ratios: {take_rate_mobility: take_rate, take_rate_delivery: take_rate,
+           take_rate_freight: take_rate, adj_ebitda_margin_gb: margin}
+
+anchors:
+  - {guide: gross_bookings, line: gross_bookings, basis: level, solve: gb_g_adj}
+  - {guide: adj_ebitda, line: adj_ebitda, basis: level, solve: adj_ebitda_margin_gb.shift0}
 
 # Sums the checks require (segments_sum): total line → its parts
 sums:

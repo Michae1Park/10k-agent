@@ -1,6 +1,10 @@
 # Condensed statements (V4 design doc §5.2), the same for all eight companies; each template
-# adds its operating build and may replace a line by name. History only (V4.3): forecast
-# formulas and assumptions arrive in V4.4.
+# adds its operating build and may replace a line by name. Forecast rules (V4.4, design §5.2):
+# revenue and adj. EBITDA come from the template's build; SBC, D&A and capex hold their
+# same-quarter-last-year share of revenue (the trailing four quarters' where that is missing); GAAP operating income = adj. EBITDA − SBC − D&A
+# (other adjustments 0); tax = @tax_rate (trailing, bounded) on positive operating income;
+# interest and other non-operating items 0; shares follow the trailing quarterly change; OCF =
+# NI + D&A + SBC (working capital 0, an exception); cash rolls with FCF less buybacks.
 #
 # kind: input (source: q:<metric> from XBRL quarters, kpi:<metric>[.<segment>] from releases),
 #       formula (expr in the DSL, research/model/dsl.py)
@@ -16,37 +20,37 @@ lines:
   adj_ebitda_margin:  {kind: formula, expr: "adj_ebitda / revenue", unit: fraction,
                        statement: income, label: adjusted EBITDA margin (on revenue)}
   sbc:                {kind: input, source: "q:sbc", unit: USD millions, statement: income,
-                       label: stock-based compensation}
+                       label: stock-based compensation, forecast: "first(sbc[-4] / revenue[-4], @sbc.ratio) * revenue"}
   d_and_a:            {kind: input, source: "q:d_and_a", unit: USD millions, statement: income,
-                       label: depreciation and amortization}
+                       label: depreciation and amortization, forecast: "first(d_and_a[-4] / revenue[-4], @d_and_a.ratio) * revenue"}
   operating_income:   {kind: input, source: "q:operating_income", unit: USD millions,
-                       statement: income, label: GAAP operating income}
+                       statement: income, label: GAAP operating income, forecast: "adj_ebitda - sbc - d_and_a"}
   other_adjustments:  {kind: formula, expr: "adj_ebitda - sbc - d_and_a - operating_income",
                        unit: USD millions, statement: income, fy: sum,
                        label: other adjustments (adj. EBITDA bridge to operating income)}
-  income_tax:         {kind: input, source: "q:income_tax", unit: USD millions, statement: income}
-  net_income:         {kind: input, source: "q:net_income", unit: USD millions, statement: income}
+  income_tax:         {kind: input, source: "q:income_tax", unit: USD millions, statement: income, forecast: "max(operating_income, 0) * @tax_rate"}
+  net_income:         {kind: input, source: "q:net_income", unit: USD millions, statement: income, forecast: "operating_income - income_tax"}
   tax_rate:           {kind: formula, expr: "income_tax / (net_income + income_tax)",
                        unit: fraction, statement: income, label: effective tax rate}
   shares_diluted:     {kind: input, source: "q:shares_diluted", unit: count millions,
-                       statement: income, fy: input, label: diluted weighted-average shares}
+                       statement: income, fy: input, label: diluted weighted-average shares, forecast_first: "@shares_last * (1 + @share_change)", forecast: "shares_diluted[-1] * (1 + @share_change)", fy_forecast: "fy(shares_diluted) / 4"}
   eps_diluted:        {kind: input, source: "q:eps_diluted", fallback: "kpi:eps_diluted",
                        unit: USD per share, statement: income, fy: input,
-                       label: diluted EPS (Q4 from the release)}
+                       label: diluted EPS (Q4 from the release), forecast: "net_income / shares_diluted", fy_forecast: "fy(net_income) / (fy(shares_diluted) / 4)"}
 
   # --- Cash flow
   operating_cash_flow: {kind: input, source: "q:operating_cash_flow", unit: USD millions,
-                        statement: cash_flow}
+                        statement: cash_flow, forecast: "net_income + d_and_a + sbc"}
   capex:              {kind: input, source: "q:capex", unit: USD millions, statement: cash_flow,
-                       label: capital expenditures}
+                       label: capital expenditures, forecast: "first(capex[-4] / revenue[-4], @capex.ratio) * revenue"}
   free_cash_flow:     {kind: formula, expr: "operating_cash_flow - capex", unit: USD millions,
                        statement: cash_flow, fy: sum}
   buybacks:           {kind: input, source: "q:buybacks", unit: USD millions,
-                       statement: cash_flow, label: share repurchases}
+                       statement: cash_flow, label: share repurchases, forecast: "@buybacks_q"}
 
   # --- Balance sheet (condensed: the reported totals; detail stays in the data pack)
   cash:               {kind: input, source: "q:cash", unit: USD millions, statement: balance,
-                       fy: last, label: cash and cash equivalents}
+                       fy: last, label: cash and cash equivalents, forecast: "cash[-1] + free_cash_flow - buybacks"}
   other_assets:       {kind: formula, expr: "total_assets - cash", unit: USD millions,
                        statement: balance, fy: last}
   total_assets:       {kind: input, source: "q:total_assets", unit: USD millions,
