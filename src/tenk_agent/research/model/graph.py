@@ -92,6 +92,10 @@ def load_template(name: str, ticker: str) -> tuple[list[Line], dict]:
     for line_name in binding.get("drop", []):
         specs.pop(line_name)
     lines = [_line(n, s, binding.get("sources", {})) for n, s in specs.items()]
+    labels = [x.label for x in lines]
+    if len(set(labels)) != len(labels):
+        twice = sorted({x for x in labels if labels.count(x) > 1})
+        raise ValueError(f"{name}: lines share labels {twice} (a YAML comma in a label?)")
     return _ordered(lines), template
 
 

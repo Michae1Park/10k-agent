@@ -147,16 +147,21 @@ def take_rate(model: Model, pack) -> Check:
     return _result("take_rate", tested, failures, skipped)
 
 
-def segments_sum(model: Model, sums: dict[str, list[str]]) -> Check:
+def segments_sum(model: Model, sums: dict[str, list]) -> Check:
+    """A total's parts: one list, or alternatives (segments redrawn) of which the first fully
+    reported in a period is tested."""
     tested, failures, skipped = 0, [], []
-    for total, parts in sums.items():
-        slack = max(TOLERANCE, 0.5 * len(parts))  # each part rounded to the million
+    for total, parts_spec in sums.items():
+        options = parts_spec if parts_spec and isinstance(parts_spec[0], list) else [parts_spec]
         for column in model.columns:
-            values = [model.value(p, column) for p in parts]
             reported = model.value(total, column)
-            if reported is None or None in values:
+            parts = next((o for o in options
+                          if all(model.value(p, column) is not None for p in o)), None)
+            if reported is None or parts is None:
                 skipped.append(f"{total} {column}")
                 continue
+            values = [model.value(p, column) for p in parts]
+            slack = max(TOLERANCE, 0.5 * len(parts))  # each part rounded to the million
             tested += 1
             if abs(sum(values) - reported) > slack:
                 failures.append(f"{total} {column}: parts {sum(values):,.1f} vs {reported:,.1f}")

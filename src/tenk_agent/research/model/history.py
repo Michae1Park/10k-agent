@@ -22,6 +22,8 @@ from tenk_agent.store import Store
 TEMPLATE_OF = {  # design doc §5.3
     "UBER": "segments",
     "BKNG": "marketplace", "EXPE": "marketplace", "ABNB": "marketplace",
+    "DASH": "orders", "LYFT": "orders", "CART": "orders",
+    "TRIP": "trip",
 }
 FIRST_QUARTER = "2023Q1"  # history from the first quarter every pilot series covers
 
@@ -51,10 +53,13 @@ def history(store: Store, ticker: str, quarters: list[str] | None = None):
 
 
 def _reported(pack, quarters: list[str]) -> list[str]:
-    """Drop trailing quarters no filing has reported yet (ended, not yet released)."""
+    """Drop quarters no filing reports: trailing ones (ended, not yet released) and leading
+    ones (before the company was public: CART from 2023Q3)."""
     reported = {p for series in pack.values() for p in series}
     while quarters and quarters[-1] not in reported:
         quarters = quarters[:-1]
+    while quarters and quarters[0] not in reported:
+        quarters = quarters[1:]
     return quarters
 
 

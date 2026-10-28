@@ -121,19 +121,19 @@ def parity(model: Model, path: Path) -> tuple[int, list[str]]:
     if soffice is None:
         raise RuntimeError("the parity check needs LibreOffice (soffice) on PATH")
     formulas = load_workbook(path)["Model"]
+    rows = layout(model, Workbook().active)  # the rows write() used, by line name
     with tempfile.TemporaryDirectory() as tmp:
         subprocess.run([soffice, "--headless", "--calc", "--convert-to", "xlsx", "--outdir", tmp,
                         str(path)], check=True, capture_output=True, timeout=300)
         values = load_workbook(Path(tmp) / path.name, data_only=True)["Model"]
-    rows = {formulas.cell(r, 1).value: r for r in range(1, formulas.max_row + 1)}
     checked, differ = 0, []
     for line in model.lines:
         for i, column in enumerate(model.columns):
-            cell = formulas.cell(rows[line.label], FIRST_COLUMN + i)
+            cell = formulas.cell(rows[line.name], FIRST_COLUMN + i)
             if not (isinstance(cell.value, str) and cell.value.startswith("=")):
                 continue
             checked += 1
             got, want = values.cell(cell.row, cell.column).value, model.value(line.name, column)
-            if got is None or abs(got - want) > 1e-9 * max(1.0, abs(want)):
+            if got is None or want is None or abs(got - want) > 1e-9 * max(1.0, abs(want)):
                 differ.append(f"{line.name} {column}: {cell.value} = {got}, Python {want}")
     return checked, differ

@@ -55,9 +55,13 @@ equity:
 equity_total:  # with non-controlling interests: the balance sheet's equity section (V4.3 balance check)
   kind: instant
   concepts: [StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest, StockholdersEquity]
-mezzanine:  # redeemable non-controlling interests, between liabilities and equity (UBER)
+mezzanine:  # temporary equity between liabilities and equity: redeemable NCI (UBER, DASH),
+  # redeemable preferred stock (CART, tagged per class of stock in the inline XBRL only)
   kind: instant
-  concepts: [RedeemableNoncontrollingInterestEquityCarryingAmount, TemporaryEquityCarryingAmountAttributableToParent]
+  concepts: [RedeemableNoncontrollingInterestEquityCarryingAmount,
+             TemporaryEquityCarryingAmountIncludingPortionAttributableToNoncontrollingInterests,
+             TemporaryEquityCarryingAmountAttributableToParent]
+  class_of_stock: true  # research/datapack.py: also summed across classes of stock
 liabilities_and_equity:  # the balance sheet's right-hand total (EXPE tags no total liabilities)
   kind: instant
   concepts: [LiabilitiesAndStockholdersEquity]
