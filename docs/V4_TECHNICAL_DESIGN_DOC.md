@@ -841,3 +841,11 @@ Found while building:
 - Logged gaps: Q4 diluted shares (no XBRL three-month fact; Q4 EPS now falls back to the release), BKNG Q4 SBC, UBER buybacks before 2023Q3 (taken as 0).
 
 Not yet: `orders` (DASH, LYFT, CART) and `trip` (TRIP) templates; EXPE and ABNB are bound to `marketplace` but not yet gated. Both before the V4.4 all-eight run.
+
+**All eight (2026-10-28).** Templates `orders` (DASH, LYFT, CART) and `trip` (TRIP) added; EXPE and ABNB gated on `marketplace`. All eight pass every layer-2 check with full workbook parity at 2026-09-01 and 2025-08-15 (`python -m tenk_agent.research.model.history UBER BKNG EXPE ABNB DASH LYFT CART TRIP <as_of>`). Fixes on the way:
+
+- **Balance:** a second test compares total assets with the reported liabilities-and-equity total for every company; EXPE tags no total liabilities, so its liabilities are derived from that total (and its first test is by construction). Temporary equity: DASH's redeemable NCI (`TemporaryEquityCarryingAmountIncludingPortionAttributableToNoncontrollingInterests`, $7–13M) and CART's Series A redeemable preferred ($175–192M, tagged only per class of stock in inline XBRL; the data pack sums classes).
+- **TRIP:** the old segments (Tripadvisor brand, Viator, TheFork) sum to the total only with intersegment eliminations, which the registry now extracts (`revenue.eliminations`; TRIP re-extracted, gold 27/27; merged run `v4.3-releases-all`, 1,243 rows). Segment sums take alternative part lists for the redrawn segments. TRIP's 2025 was recast to continuing operations in the 2026 10-Qs, so `quarters_sum` skips recast years (as `q4_ties` already did) and lists them.
+- **Missing buybacks** were filled with 0 by a template default, which broke FY sums; they stay blank and logged.
+- **Not tagged:** ABNB D&A and capex (no free cash flow line in its history model).
+- **UBER Mobility take rate** (29.9% → 25.8% in 2026Q1) is explained: from 2026-01-02 Uber is agent, not principal, in certain UK markets; 2026Q1 Mobility revenue −$1.0B and driver payments −$606M (10-Q MD&A). A structural break: the V4.4 forecast must start from the post-change rate.
