@@ -259,20 +259,19 @@ def _sensitivities(book: Book, ticker: str) -> list[dict]:
     growth = next((n for n in names if n.endswith(".g0") and ("volume" in n or "gb_g" in n
                                                               or "revenue_g" in n)), None)
     cost = next((n for n in names if n.startswith("cost_to_gb") and n.endswith(".shift0")), None)
-    for driver, delta, label in ((rate, -0.005, "take rate -50 bps"),
-                                 (growth, -0.01, "growth -1 pt"),
-                                 (cost, 0.005, "costs +50 bps of gross bookings")):
+    for driver, delta, what in ((rate, -0.005, "take rate"), (growth, -0.01, "growth"),
+                                (cost, 0.005, "costs as a share of gross bookings")):
         if driver:
-            picks.append((driver, delta, label))
+            picks.append((driver, delta, what))
     base_val = book.valuation(ticker)
     year = sorted({c for c in base.columns if c.startswith("FY")})[-1]
     out = []
-    for driver, delta, label in picks:
+    for driver, delta, what in picks:
         model = build(ticker, base.template, base.as_of, base.history, f.pack, base.forecast,
                       base.assumptions | {driver: base.assumptions[driver] + delta})
         version = book.add_scratch(model)
         val = book.valuation(ticker, version)
-        out.append({"label": label, "driver": driver,
+        out.append({"what": what, "shock": delta * 100, "driver": driver,
                     "ebitda_change": model.value("adj_ebitda", year) - base.value("adj_ebitda",
                                                                                   year),
                     "pt_change": val["price_target"] - base_val["price_target"],
@@ -314,6 +313,7 @@ def context(store, f, valuation, events, debates, revisions, results, exceptions
         "checks": [asdict(c) for c in results], "sensitivities": sensitivities,
         "weights": settings["scenarios"]["weights"],
         "valuation_weights": settings["valuation"]["weights"], "sources": sources,
+        "rating": settings["valuation"]["rating"],
         "anchored": {a.solve for a in f.anchors}, "exceptions": exceptions,
         "insiders": store.insider_summary(ticker, *_quarter_dates(last)) | {
             "period": last},
