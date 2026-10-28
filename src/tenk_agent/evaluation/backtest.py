@@ -11,6 +11,10 @@ growth) and the guidance midpoint where the company guided that line. With resea
 `proposer.method: llm` the proposer (research/propose.py) runs at every as-of (search on the CPU,
 as-ofs four at a time; the LLM must be served).
 
+Long-horizon variant (--long): one run the day after each company's Q4 2024 release, forecasting
+all four quarters of 2025 (where the fade d matters: a next-quarter forecast uses only the
+starting growth rate).
+
 Leakage probe: every forecast's model must pass no_future_input (each input filed before D) and
 must not hold the target quarter in its history; either failure stops the run.
 
@@ -139,6 +143,37 @@ def _score_one(db, ticker, period, release, by_period, store, f) -> list[Row]:
     return rows
 
 
+def long_horizon(db: Path, ticker: str, settings: dict) -> list[Row]:
+    """Q1–Q4 2025 from the day after the Q4 2024 release."""
+    today = Store(db, AsOf.today())
+    by_period = releases(today, ticker)
+    if FIRST_RELEASE not in by_period:
+        return []
+    as_of = run_day(by_period[FIRST_RELEASE])
+    f = forecast_with_proposer(Store(db, AsOf.of(as_of)), ticker, settings)
+    model = f.model
+    leak = no_future_input(model)
+    if leak.status == "fail":
+        raise RuntimeError(f"leak: {ticker} at {as_of}: {leak.failures[:3]}")
+    rows = []
+    for target in ("2025Q1", "2025Q2", "2025Q3", "2025Q4"):
+        if target not in by_period or target not in model.forecast:
+            continue
+        actual_store = Store(db, AsOf.of(run_day(by_period[target])))
+        for line, kpi in metrics_for(ticker):
+            spec = model.line(line)
+            pack = datapack.build(actual_store, ticker, {s for s in (spec.source, spec.fallback)
+                                                         if s})
+            point = pack[spec.source].get(target) or (
+                pack.get(spec.fallback, {}).get(target) if spec.fallback else None)
+            if point is None:
+                continue
+            rows.append(Row(ticker, as_of, FIRST_RELEASE, target, line, kpi, point.value,
+                            model.value(line, target), _seasonal_naive(model, line, target),
+                            None, False))
+    return rows
+
+
 def _seasonal_naive(model, line: str, target: str) -> float | None:
     """Same quarter last year × (1 + the last reported quarter's y/y growth)."""
     quarters = model.quarters
@@ -249,6 +284,8 @@ def main() -> None:
     ap.add_argument("--db", type=Path, default=ROOT / "data/v4/build/parent_child.db")
     ap.add_argument("--knobs", type=Path, help="research.yaml (default: the repo's)")
     ap.add_argument("--proposer", choices=("defaults", "llm"), help="override proposer.method")
+    ap.add_argument("--long", action="store_true", help="the long-horizon variant (2025 from "
+                    "the Q4 2024 release)")
     args = ap.parse_args()
     settings = knobs(args.knobs) if args.knobs else knobs()
     if args.proposer:
@@ -264,7 +301,8 @@ def main() -> None:
         search = SubQuestionRetriever.from_settings(today, retrieval | {"device": "cpu"})
     rows = []
     for ticker in args.tickers:
-        found = backtest(args.db, ticker, settings, search)
+        found = (long_horizon(args.db, ticker, settings) if args.long
+                 else backtest(args.db, ticker, settings, search))
         print(f"{ticker}: {len(found)} forecasts")
         rows += found
     result = score(rows)
