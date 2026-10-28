@@ -1,0 +1,39 @@
+# Tripadvisor (V4 design doc §5.3), by segment. Its segments changed: Tripadvisor brand, Viator
+# and TheFork through 2025Q3; Experiences and Hotels & Other (with TheFork) from 2025Q4; TheFork
+# held for sale and reported as discontinued from 2026Q2. No volume KPI is disclosed, so the
+# build is segment revenue and adjusted EBITDA; forecasts grow revenue (V4.4).
+
+lines:
+  revenue_tripadvisor:     {kind: input, source: "kpi:revenue.tripadvisor", unit: USD millions,
+                            label: "revenue, Tripadvisor brand (to 2025Q3)"}
+  revenue_viator:          {kind: input, source: "kpi:revenue.viator", unit: USD millions,
+                            label: "revenue, Viator (to 2025Q3)"}
+  revenue_thefork:         {kind: input, source: "kpi:revenue.thefork", unit: USD millions,
+                            label: "revenue, TheFork (to 2026Q1)"}
+  revenue_experiences:     {kind: input, source: "kpi:revenue.experiences", unit: USD millions,
+                            label: "revenue, Experiences (from 2025Q4)"}
+  revenue_hotels_other:    {kind: input, source: "kpi:revenue.hotels_other", unit: USD millions,
+                            label: "revenue, Hotels and Other (from 2025Q4)"}
+  revenue_eliminations:    {kind: input, source: "kpi:revenue.eliminations", unit: USD millions,
+                            label: "revenue, intersegment eliminations (to 2025Q3; negative)"}
+  adj_ebitda_tripadvisor:  {kind: input, source: "kpi:adj_ebitda.tripadvisor", unit: USD millions}
+  adj_ebitda_viator:       {kind: input, source: "kpi:adj_ebitda.viator", unit: USD millions}
+  adj_ebitda_thefork:      {kind: input, source: "kpi:adj_ebitda.thefork", unit: USD millions}
+  adj_ebitda_experiences:  {kind: input, source: "kpi:adj_ebitda.experiences", unit: USD millions}
+  adj_ebitda_hotels_other: {kind: input, source: "kpi:adj_ebitda.hotels_other", unit: USD millions}
+  release_revenue:         {kind: input, source: "kpi:revenue", unit: USD millions,
+                            label: revenue as the release reports it (continuing operations from 2026)}
+
+# Each total: alternative part lists, the first fully reported one tested per period
+sums:
+  release_revenue:
+    - [revenue_tripadvisor, revenue_viator, revenue_thefork, revenue_eliminations]
+    - [revenue_experiences, revenue_hotels_other, revenue_thefork]
+    - [revenue_experiences, revenue_hotels_other]
+  adj_ebitda:
+    - [adj_ebitda_tripadvisor, adj_ebitda_viator, adj_ebitda_thefork]
+    - [adj_ebitda_experiences, adj_ebitda_hotels_other, adj_ebitda_thefork]
+    - [adj_ebitda_experiences, adj_ebitda_hotels_other]
+
+companies:
+  TRIP:

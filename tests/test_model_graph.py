@@ -148,3 +148,38 @@ def test_template_errors(templates, tmp_path):
         graph.load_template("test", "TEST")
     with pytest.raises(ValueError, match="no binding"):
         graph.load_template("test", "OTHER")
+
+
+def test_alternative_part_lists_take_the_first_fully_reported(templates):
+    m = model()
+    old = {"gross_bookings": [["gb_missing"], ["gb_a", "gb_b"]]}
+    m.cells[("gb_missing", "2025Q1")] = graph.Cell(None, "missing")
+    result = checks.segments_sum(m, old)
+    assert result.status == "pass" and result.tested == len(m.columns)
+
+
+def test_duplicate_labels_are_rejected(templates, tmp_path):
+    bad = dict(TEMPLATE, lines={**TEMPLATE["lines"], "gb_c": {
+        "kind": "input", "source": "kpi:gb.c", "unit": "USD millions", "label": "gb a"}})
+    (tmp_path / "test.yaml").write_text(yaml.safe_dump(bad))
+    with pytest.raises(ValueError, match="share labels"):
+        graph.load_template("test", "TEST")
+
+
+def test_temporary_equity_tagged_per_class_of_stock_is_summed():
+    class Facts:
+        def facts(self, ticker, concepts, any_dims=False):
+            axis = {datapack.CLASS_AXIS: "x:SeriesA"}
+            return [
+                {"start": None, "end": "2024-12-31", "dims": axis, "value": 180e6,
+                 "filed": "2025-02-01", "id": "ixbrl:a:1"},
+                {"start": None, "end": "2024-12-31", "dims": axis, "value": 186e6,
+                 "filed": "2025-02-28", "id": "ixbrl:b:1"},  # the later copy wins
+                {"start": None, "end": "2024-12-31", "dims": {datapack.CLASS_AXIS: "x:B",
+                 "other": "y"}, "value": 1e9, "filed": "2025-02-28", "id": "no"},
+            ]
+
+    series = {"2024Q3": Point(1.0, "USD millions", "q", "2024-11-01")}
+    datapack._by_class(Facts(), "CART", ["TemporaryEquity"], series)
+    assert series["2024Q4"].value == 186.0 and series["2024Q4"].id == "ixbrl:b:1"
+    assert series["2024Q3"].value == 1.0  # a reported value is kept
