@@ -8,12 +8,17 @@ or defaults) may move them within bounds. Then each guidance anchor in the templ
 assumption so the first forecast quarter hits the guided midpoint (bookings, then revenue, then
 EBITDA). An anchor the bounds keep from reaching its target is logged, never forced.
 
+Scenarios (§6.1): bear and bull move each of the template's `scenarios` drivers by ∓/±
+shock_sigma × σ, σ the standard deviation of that driver's line over the history (a growth
+rate's y/y values, a ratio's y/y changes), from the anchored base; weights from research.yaml.
+
   taskset -c 16-31 uv run python -m tenk_agent.research.forecast UBER BKNG 2026-09-01
 """
 
 import argparse
 import json
 import re
+import statistics
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -49,6 +54,7 @@ class Forecast:
     defaults: dict[str, float]
     anchors: list[Anchor] = field(default_factory=list)
     exceptions: list[dict] = field(default_factory=list)
+    proposals: list = field(default_factory=list)  # research/propose.py Proposal
 
 
 def knobs(path: Path = KNOBS) -> dict:
@@ -91,6 +97,60 @@ def forecast(store: Store, ticker: str, settings: dict | None = None,
     result.exceptions.append({"severity": "info", "item": "working capital held at 0 in the "
                               "forecast; interest and other non-operating items 0 (§5.2)"})
     return result
+
+
+def forecast_with_proposer(store: Store, ticker: str, settings: dict, search=None) -> Forecast:
+    """research.yaml proposer.method: defaults → forecast(); llm → the proposer sets the
+    drivers no guide anchors, from a base forecast, and the anchors run again over its values."""
+    base = forecast(store, ticker, settings)
+    if settings["proposer"]["method"] != "llm":
+        return base
+    from tenk_agent.research.propose import propose
+
+    anchored = {a.solve: a.after for a in base.anchors}
+    overrides, proposals, exceptions = propose(base.model, store, anchored, settings, search)
+    result = forecast(store, ticker, settings, overrides)
+    result.proposals, result.exceptions = proposals, result.exceptions + exceptions
+    return result
+
+
+# --- Scenarios ---------------------------------------------------------------------------------
+
+SUMMARY = ("revenue", "adj_ebitda", "eps_diluted", "free_cash_flow")
+
+
+def scenarios(f: Forecast, settings: dict) -> dict[str, Model]:
+    """{bear, base, bull}: models with the scenario drivers shocked from the anchored base."""
+    model = f.model
+    _, template = load_template(model.template, model.ticker)
+    k = settings["scenarios"]["shock_sigma"]
+    shocks = {}
+    for name in template.get("scenarios") or []:
+        line = name.rsplit(".", 1)[0]
+        line = f"{line}_shift" if name.endswith(".shift0") else line
+        values = [v for v in (model.value(line, q) for q in model.history) if v is not None]
+        if len(values) >= 3 and name in model.assumptions:
+            shocks[name] = k * statistics.stdev(values)
+    out = {"base": model}
+    for scenario, sign in (("bear", -1), ("bull", 1)):
+        assumptions = dict(model.assumptions)
+        for name, shock in shocks.items():
+            assumptions[name] += sign * shock
+        out[scenario] = build(model.ticker, model.template, model.as_of, model.history, f.pack,
+                              model.forecast, assumptions)
+    return out
+
+
+def scenario_summary(models: dict[str, Model], weights: dict[str, float]) -> dict:
+    """Per scenario and weighted: the summary lines in each FY column with a forecast quarter."""
+    years = sorted({c for c in models["base"].columns if c.startswith("FY")
+                    and any(q.startswith(c[2:]) for q in models["base"].forecast)})
+    out = {name: {line: {y: m.value(line, y) for y in years} for line in SUMMARY}
+           for name, m in models.items()}
+    out["weighted"] = {line: {y: (sum(weights[n] * out[n][line][y] for n in weights)
+                                  if all(out[n][line][y] is not None for n in weights) else None)
+                              for y in years} for line in SUMMARY}
+    return out
 
 
 # --- Defaults ------------------------------------------------------------------------------
@@ -273,15 +333,18 @@ def main() -> None:
     from tenk_agent.research.export import workbook
 
     store = Store(args.db, AsOf.of(args.as_of))
+    settings = knobs()
     failed = False
     for ticker in args.tickers:
-        f = forecast(store, ticker)
+        f = forecast(store, ticker, settings)
         results = layer2.run(f.model, f.pack, store)
         exceptions = layer2.exceptions(f.model, results) + f.exceptions
         folder = write(args.out, f.model, f.pack, results, exceptions)
+        models = scenarios(f, settings)
         (folder / "forecast.json").write_text(json.dumps(
             {"assumptions": f.model.assumptions, "defaults": f.defaults,
-             "anchors": [asdict(a) for a in f.anchors]}, indent=1))
+             "anchors": [asdict(a) for a in f.anchors],
+             "scenarios": scenario_summary(models, settings["scenarios"]["weights"])}, indent=1))
         checked, differ = workbook.parity(f.model, workbook.write(f.model,
                                                                   folder / "workbook.xlsx"))
         bad = [c for c in results if c.status == "fail"]

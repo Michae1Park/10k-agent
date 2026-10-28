@@ -7,7 +7,9 @@ D = the day after the release's EDGAR acceptance (US Eastern), the model forecas
 quarter at D (research/forecast.py), and it is scored against the next quarter's first-reported
 value (as visible the day after that quarter's release), on revenue and the company's main KPI
 (companies.yaml `main_kpi`). Baselines: seasonal naive (same quarter last year × the latest y/y
-growth) and the guidance midpoint where the company guided that line.
+growth) and the guidance midpoint where the company guided that line. With research.yaml
+`proposer.method: llm` the proposer (research/propose.py) runs at every as-of (search on the CPU,
+as-ofs four at a time; the LLM must be served).
 
 Leakage probe: every forecast's model must pass no_future_input (each input filed before D) and
 must not hold the target quarter in its history; either failure stops the run.
@@ -30,7 +32,7 @@ from scipy.stats import wilcoxon
 from tenk_agent.asof import AsOf
 from tenk_agent.corpus import companies_path
 from tenk_agent.research import datapack
-from tenk_agent.research.forecast import forecast, knobs, next_quarter
+from tenk_agent.research.forecast import forecast_with_proposer, knobs, next_quarter
 from tenk_agent.research.model.checks import no_future_input
 from tenk_agent.research.model.graph import load_template
 from tenk_agent.research.model.history import TEMPLATE_OF
@@ -86,38 +88,54 @@ def metrics_for(ticker: str) -> list[tuple[str, str]]:
     return out
 
 
-def backtest(db: Path, ticker: str, settings: dict) -> list[Row]:
+def backtest(db: Path, ticker: str, settings: dict, search=None) -> list[Row]:
+    """`search`: a SubQuestionRetriever for the LLM proposer (rebound to each as-of)."""
+    from concurrent.futures import ThreadPoolExecutor
+    from dataclasses import replace
+
     today = Store(db, AsOf.today())
     by_period = releases(today, ticker)
+    work = [(p, r) for p, r in sorted(by_period.items())
+            if p >= FIRST_RELEASE and next_quarter(p) in by_period]
+
+    def one(item) -> list[Row]:
+        period, release = item
+        store = Store(db, AsOf.of(run_day(release)))
+        bound = search and replace(search, decomposer=replace(search.decomposer, store=store),
+                                   hybrid=replace(search.hybrid, store=store))
+        return _score_one(db, ticker, period, release, by_period, store,
+                          forecast_with_proposer(store, ticker, settings, bound))
+
+    llm = settings["proposer"]["method"] == "llm"
+    with ThreadPoolExecutor(4 if llm else 1) as pool:
+        return [row for rows in pool.map(one, work) for row in rows]
+
+
+def _score_one(db, ticker, period, release, by_period, store, f) -> list[Row]:
+    """One forecast (made after `period`'s release) against the next quarter's first report;
+    the leakage probe first."""
+    target, as_of = next_quarter(period), run_day(release)
+    model = f.model
+    if not model.forecast or model.forecast[0] != target:
+        raise RuntimeError(f"{ticker} at {as_of}: forecast starts {model.forecast[:1]}, "
+                           f"not {target}")
+    leak = no_future_input(model)
+    if leak.status == "fail" or target in model.history:
+        raise RuntimeError(f"leak: {ticker} at {as_of}: {leak.failures[:3]}")
+    actual_store = Store(db, AsOf.of(run_day(by_period[target])))
     rows = []
-    for period, release in sorted(by_period.items()):
-        target = next_quarter(period)
-        if period < FIRST_RELEASE or target not in by_period:
+    for line, kpi in metrics_for(ticker):
+        spec = model.line(line)
+        pack = datapack.build(actual_store, ticker, {s for s in (spec.source, spec.fallback) if s})
+        point = pack[spec.source].get(target) or (
+            pack.get(spec.fallback, {}).get(target) if spec.fallback else None)
+        if point is None:
             continue
-        as_of = run_day(release)
-        store = Store(db, AsOf.of(as_of))
-        f = forecast(store, ticker, settings)
-        model = f.model
-        if not model.forecast or model.forecast[0] != target:
-            raise RuntimeError(f"{ticker} at {as_of}: forecast starts {model.forecast[:1]}, "
-                               f"not {target}")
-        leak = no_future_input(model)
-        if leak.status == "fail" or target in model.history:
-            raise RuntimeError(f"leak: {ticker} at {as_of}: {leak.failures[:3]}")
-        actual_store = Store(db, AsOf.of(run_day(by_period[target])))
-        for line, kpi in metrics_for(ticker):
-            spec = model.line(line)
-            pack = datapack.build(actual_store, ticker, {s for s in (spec.source, spec.fallback)
-                                                         if s})
-            point = pack[spec.source].get(target) or (
-                pack.get(spec.fallback, {}).get(target) if spec.fallback else None)
-            if point is None:
-                continue
-            anchor = next((a for a in f.anchors if a.line == line and a.reached), None)
-            rows.append(Row(ticker, as_of, period, target, line, kpi, point.value,
-                            model.value(line, target), _seasonal_naive(model, line, target),
-                            next((a.target for a in f.anchors if a.line == line), None),
-                            anchor is not None))
+        guided = [a for a in f.anchors if a.line == line]
+        rows.append(Row(ticker, as_of, period, target, line, kpi, point.value,
+                        model.value(line, target), _seasonal_naive(model, line, target),
+                        guided[0].target if guided else None,
+                        any(a.reached for a in guided)))
     return rows
 
 
@@ -202,7 +220,7 @@ def report(label: str, rows: list[Row], result: dict) -> str:
              f"{len(rows)} forecasts; gate (MAPE below seasonal naive on revenue and main KPI): "
              f"**{'pass' if result['gate'] else 'fail'}**", "",
              "| | Forecasts | Model MAPE | Naive MAPE | Model bias | Naive bias | Wilcoxon p |"
-             " Guide-mid MAPE (n) |", "|---|---|---|---|---|---|---|---|"]
+             " Guide anchor MAPE (n) |", "|---|---|---|---|---|---|---|---|"]
     for g in ("revenue", "main_kpi"):
         e = result[g]
         p = "–" if e["wilcoxon_p"] is None else f"{e['wilcoxon_p']:.3f}"
@@ -217,8 +235,9 @@ def report(label: str, rows: list[Row], result: dict) -> str:
                      f"{pct(e['revenue']['naive_mape'])} | {pct(e['main_kpi']['model_mape'])} / "
                      f"{pct(e['main_kpi']['naive_mape'])} |")
     g = result["guidance"]
-    lines += ["", f"Guided forecasts: {g['forecasts']}; actual above the guided midpoint "
-              f"{g['actual_above_mid']}, below {g['actual_below_mid']}."]
+    lines += ["", f"Guided forecasts: {g['forecasts']}; actual above the guide anchor (the "
+              f"midpoint unless guidance_point: high) {g['actual_above_mid']}, below "
+              f"{g['actual_below_mid']}."]
     return "\n".join(lines) + "\n"
 
 
@@ -229,11 +248,22 @@ def main() -> None:
     ap.add_argument("--label", default="defaults")
     ap.add_argument("--db", type=Path, default=ROOT / "data/v4/build/parent_child.db")
     ap.add_argument("--knobs", type=Path, help="research.yaml (default: the repo's)")
+    ap.add_argument("--proposer", choices=("defaults", "llm"), help="override proposer.method")
     args = ap.parse_args()
     settings = knobs(args.knobs) if args.knobs else knobs()
+    if args.proposer:
+        settings["proposer"]["method"] = args.proposer
+    search = None
+    if settings["proposer"]["method"] == "llm":
+        import yaml
+
+        from tenk_agent.retrieval.search import SubQuestionRetriever
+
+        retrieval = yaml.safe_load((ROOT / "experiments/v1/config.yaml").read_text())["retrieval"]
+        search = SubQuestionRetriever.from_settings(Store(args.db), retrieval | {"device": "cpu"})
     rows = []
     for ticker in args.tickers:
-        found = backtest(args.db, ticker, settings)
+        found = backtest(args.db, ticker, settings, search)
         print(f"{ticker}: {len(found)} forecasts")
         rows += found
     result = score(rows)

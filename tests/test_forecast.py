@@ -1,6 +1,7 @@
 """Forecast columns, assumptions and guidance anchors (research/model/graph.py and
 research/forecast.py)."""
 
+import json
 import shutil
 
 import pytest
@@ -125,3 +126,30 @@ def test_forecast_parity_with_libreoffice(templates, tmp_path):
     m = model(pack(gb_missing=True))
     checked, differ = workbook.parity(m, workbook.write(m, tmp_path / "f.xlsx"))
     assert differ == [] and checked > 40
+
+
+def test_proposals_are_bounded_anchors_kept_and_evidence_required(templates):
+    from tenk_agent.research.propose import apply, proposable
+
+    m = model()
+    bounds = proposable(m, {"take_rate.shift0"}) | {"fade": (0.75, 1.0)}
+    assert "take_rate.shift0" not in bounds and "volume_g.g0" in bounds
+
+    class Resolver:
+        def resolve(self, ref):
+            return ref.startswith("kpi:")
+
+    reply = json.dumps({"answer": "x", "proposals": [
+        {"driver": "volume_g.g0", "value": 0.9, "evidence": ["kpi:TEST:volume:2026Q2"]},
+        {"driver": "fade", "value": 0.5, "evidence": ["kpi:TEST:volume:2026Q2"]},
+        {"driver": "price_g.g0", "value": 0.06, "evidence": ["made-up"]},
+        {"driver": "take_rate.shift0", "value": 0.01, "evidence": ["kpi:TEST:gb:2026Q2"]},
+    ]})
+    overrides, applied, exceptions = apply(reply, m, bounds, Resolver())
+    assert overrides["volume_g.g0"] == pytest.approx(bounds["volume_g.g0"][1])  # clipped
+    assert overrides["fade"] == 0.75
+    assert "price_g.g0" not in overrides and "take_rate.shift0" not in overrides
+    assert [p.clipped for p in applied] == [True, True]
+    items = " ".join(e["item"] for e in exceptions)
+    assert "no evidence id resolves" in items and "anchored" in items
+    assert apply("no json here", m, bounds, Resolver())[0] == {}
