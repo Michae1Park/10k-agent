@@ -60,3 +60,13 @@ def test_dependencies():
 def test_rejects_anything_else(text):
     with pytest.raises(DslError):
         parse(text)
+
+
+def test_first_falls_back_when_an_input_is_missing():
+    assert evaluate(parse("first(gb * x, tr)"), read()) == 0.25
+    assert evaluate(parse("first(gb / (tr - tr), 7)"), read()) == 7.0
+    assert evaluate(parse("first(gb, tr)"), read()) == 100.0
+    assert to_excel(parse("first(trips[-4] / gb, @fade)"), CELLS) == (
+        "=IFERROR(IF(COUNT(B12,F10)=2,B12/F10,Assumptions!$C$4),Assumptions!$C$4)")
+    assert to_excel(parse("first(gb[-9], tr)"), CELLS) == "=F11"  # a before the first column
+    assert parse("first(gb, tr)").lines == {"gb", "tr"}

@@ -5,12 +5,36 @@
 lines:
   volume:                   {kind: input, source: "kpi:room_nights", unit: count millions,
                              label: room nights}
-  gross_bookings:           {kind: input, source: "kpi:gross_bookings", unit: USD millions}
+  gross_bookings:           {kind: input, source: "kpi:gross_bookings", unit: USD millions,
+                             forecast: "volume * gross_bookings_per_unit"}
   gross_bookings_per_unit:  {kind: formula, expr: "gross_bookings / volume", unit: USD,
                              label: gross bookings per night}
   take_rate:                {kind: formula, expr: "revenue / gross_bookings", unit: fraction}
   adj_ebitda_margin_gb:     {kind: formula, expr: "adj_ebitda / gross_bookings", unit: fraction,
                              label: adjusted EBITDA margin on gross bookings}
+  # forecast identities (the statements' lines, redefined with a forecast)
+  revenue:     {kind: input, source: "q:revenue", unit: USD millions, statement: income,
+                forecast: "gross_bookings * take_rate"}
+  adj_ebitda:  {kind: input, source: "kpi:adj_ebitda", unit: USD millions, statement: income,
+                label: adjusted EBITDA, forecast: "adj_ebitda_margin_gb * gross_bookings"}
+
+forecast:
+  growth: [volume, gross_bookings_per_unit]
+  ratios: {take_rate: take_rate, adj_ebitda_margin_gb: margin}
+
+# Guidance → the line it constrains and the assumption solved so the first forecast quarter
+# hits the guided midpoint (in order: bookings, then revenue, then EBITDA; design §6.1)
+anchors:
+  - {guide: room_nights_growth, line: volume, basis: growth_yoy, solve: volume_g.g0}
+  - {guide: nights_growth, line: volume, basis: growth_yoy, solve: volume_g.g0}
+  - {guide: gross_bookings, line: gross_bookings, basis: level, solve: gross_bookings_per_unit_g.g0}
+  - {guide: gross_bookings_growth, line: gross_bookings, basis: growth_yoy,
+     solve: gross_bookings_per_unit_g.g0}
+  - {guide: revenue, line: revenue, basis: level, solve: take_rate.shift0}
+  - {guide: revenue_growth, line: revenue, basis: growth_yoy, solve: take_rate.shift0}
+  - {guide: adj_ebitda, line: adj_ebitda, basis: level, solve: adj_ebitda_margin_gb.shift0}
+  - {guide: adj_ebitda_growth, line: adj_ebitda, basis: growth_yoy,
+     solve: adj_ebitda_margin_gb.shift0}
 
 sums: {}
 

@@ -24,6 +24,17 @@ lines:
   release_revenue:         {kind: input, source: "kpi:revenue", unit: USD millions,
                             label: revenue as the release reports it (continuing operations from 2026)}
 
+  # Forecast: revenue grows on one faded rate (segments redrawn, no volume KPI); adj. EBITDA as
+  # a margin on revenue
+  adj_ebitda:        {kind: input, source: "kpi:adj_ebitda", unit: USD millions, statement: income,
+                      label: adjusted EBITDA, forecast: "adj_ebitda_margin * revenue"}
+
+forecast:
+  growth: [revenue]
+  ratios: {adj_ebitda_margin: margin}
+
+anchors: []  # TRIP gives no numeric guidance
+
 # Each total: alternative part lists, the first fully reported one tested per period
 sums:
   release_revenue:

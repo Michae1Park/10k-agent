@@ -5,13 +5,31 @@
 lines:
   volume:          {kind: input, source: "kpi:total_orders", unit: count millions, label: orders}
   gross_bookings:  {kind: input, source: "kpi:marketplace_gov", unit: USD millions,
-                    label: gross value (GOV, gross bookings or GTV)}
+                    label: gross value (GOV, gross bookings or GTV),
+                    forecast: "volume * value_per_unit"}
   value_per_unit:  {kind: formula, expr: "gross_bookings / volume", unit: USD,
                     label: gross value per order or ride}
   take_rate:       {kind: formula, expr: "revenue / gross_bookings", unit: fraction,
                     label: revenue as a share of gross value}
   adj_ebitda_margin_gb: {kind: formula, expr: "adj_ebitda / gross_bookings", unit: fraction,
                     label: adjusted EBITDA margin on gross value}
+  revenue:         {kind: input, source: "q:revenue", unit: USD millions, statement: income,
+                    forecast: "gross_bookings * take_rate"}
+  adj_ebitda:      {kind: input, source: "kpi:adj_ebitda", unit: USD millions, statement: income,
+                    label: adjusted EBITDA, forecast: "adj_ebitda_margin_gb * gross_bookings"}
+
+forecast:
+  growth: [volume, value_per_unit]
+  ratios: {take_rate: take_rate, adj_ebitda_margin_gb: margin}
+
+anchors:  # guide names as each company prints them (DASH GOV, CART GTV)
+  - {guide: marketplace_gov, line: gross_bookings, basis: level, solve: value_per_unit_g.g0}
+  - {guide: gtv, line: gross_bookings, basis: level, solve: value_per_unit_g.g0}
+  - {guide: gross_bookings, line: gross_bookings, basis: level, solve: value_per_unit_g.g0}
+  - {guide: gross_bookings_growth, line: gross_bookings, basis: growth_yoy,
+     solve: value_per_unit_g.g0}
+  - {guide: revenue, line: revenue, basis: level, solve: take_rate.shift0}
+  - {guide: adj_ebitda, line: adj_ebitda, basis: level, solve: adj_ebitda_margin_gb.shift0}
 
 sums: {}
 
