@@ -152,7 +152,7 @@ class Agent:
             {"recursion_limit": 2 * self.max_turns + 5},
         )
         raw = parse_answer(state["reply"])
-        answer = finalize(raw, self.toolbox.store, self.toolbox.sec)
+        answer = finalize(raw, self.toolbox.store, self.toolbox.sec, self.toolbox.book)
         return Run(answer, state["steps"], round(time.perf_counter() - start, 3), state["stop"],
                    state["reply"])
 

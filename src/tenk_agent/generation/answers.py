@@ -9,7 +9,7 @@ from tenk_agent.generation.verify import verify_claim
 from tenk_agent.store import Store
 
 
-def finalize(raw: dict, store: Store, sec=None) -> dict:
+def finalize(raw: dict, store: Store, sec=None, book=None) -> dict:
     """Normalize the model's JSON and verify each claim (sec: V3's XBRL facts, if cited)."""
     claims = []
     for i, claim in enumerate(raw.get("claims") or [], 1):
@@ -25,7 +25,7 @@ def finalize(raw: dict, store: Store, sec=None) -> dict:
             "chunk_ids": _ids(claim.get("chunk_ids")),
             "calculation": claim.get("calculation"),
         } | ({"period": claim["period"]} if "period" in claim else {})  # V4 Ask
-        claims.append(verify_claim(claim, store, sec))
+        claims.append(verify_claim(claim, store, sec, book))
     return {
         "answer": str(raw.get("answer", "")),
         "claims": claims,

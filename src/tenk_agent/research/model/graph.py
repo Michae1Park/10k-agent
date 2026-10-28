@@ -22,7 +22,9 @@ shows every formula):
                           the first forecast quarter, then x_g[-1] × @fade
   ratios: {r: band, …}    r = clamp(r[-4] + r_shift, @r.lo, @r.hi) (r[-8] where r[-4] is missing);
                           r_shift = r − r[-4] in history, @r.shift0 first, then r_shift[-1] ×
-                          @fade (band: research.yaml ratio_bounds)
+                          @fade until the change is lapped (four forecast quarters), then 0: a
+                          one-off change (UBER's UK move to agent) is not compounded into a
+                          second year (band: research.yaml ratio_bounds)
 
 `templates/statements.yaml` (the condensed statements, §5.2) is read first, then the company's
 template (its operating build), whose lines may replace statement lines by name.
@@ -56,6 +58,7 @@ class Line:
     forecast: Expr | None = None  # forecast quarters
     forecast_first: Expr | None = None  # the first forecast quarter (a growth rate's start)
     fy_forecast: Expr | None = None  # an FY column with forecast quarters, for fy: input
+    forecast_late: Expr | None = None  # forecast quarters after the fourth (a lapped change)
 
 
 @dataclass
@@ -144,7 +147,7 @@ def _expand_forecast(specs: dict, rules: dict) -> None:
                                            f"@{r}.lo), @{r}.hi)")
         specs[f"{r}_shift"] = {"kind": "formula", "expr": f"{r} - {r}[-4]", "unit": "fraction",
                                "forecast_first": f"@{r}.shift0",
-                               "forecast": f"{r}_shift[-1] * @fade",
+                               "forecast": f"{r}_shift[-1] * @fade", "forecast_late": "0",
                                "statement": specs[r].get("statement", "operating"), "fy": "none",
                                "label": f"{specs[r].get('label', r.replace('_', ' '))} change y/y"}
 
@@ -166,7 +169,7 @@ def _line(name: str, spec: dict, sources: dict) -> Line:
                 spec.get("statement", "operating"), fy,
                 parse(spec["expr"]) if kind == "formula" else None, source,
                 spec.get("fallback"), spec.get("default"), optional("forecast"),
-                optional("forecast_first"), optional("fy_forecast"))
+                optional("forecast_first"), optional("fy_forecast"), optional("forecast_late"))
 
 
 def _exprs(x: Line, regime: str = "all") -> list[Expr]:
@@ -174,9 +177,9 @@ def _exprs(x: Line, regime: str = "all") -> list[Expr]:
     if regime == "history":
         found = [x.expr]
     elif regime == "forecast":
-        found = [x.forecast, x.forecast_first] if x.forecast or x.forecast_first else [x.expr]
+        found = [e for e in (x.forecast, x.forecast_first, x.forecast_late) if e] or [x.expr]
     else:
-        found = [x.expr, x.forecast, x.forecast_first, x.fy_forecast]
+        found = [x.expr, x.forecast, x.forecast_first, x.fy_forecast, x.forecast_late]
     return [e for e in found if e]
 
 
@@ -264,6 +267,8 @@ def expr_for(model: Model, line: Line, column: str) -> Expr | str | None:
     if column in model.forecast:
         if column == model.forecast[0] and line.forecast_first:
             return line.forecast_first
+        if line.forecast_late and model.forecast.index(column) >= 4:
+            return line.forecast_late
         return line.forecast or (line.expr if line.kind == "formula" else None)
     return line.expr if line.kind == "formula" else None
 

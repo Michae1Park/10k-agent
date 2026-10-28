@@ -12,6 +12,13 @@ V4 tool set "ask" (design doc §7.1), every result as of the store's AsOf:
   filings          the corpus's 10-Ks, 10-Qs and releases, with filing dates
   market_data      closing prices and macro series
 
+V4 tool set "research" (§7.1) adds the model group, over the session's model book
+(research/book.py), every number cited by a model: id:
+  model_view       history and forecast lines, the assumption register and guidance anchors
+  run_scenario     overrides to the drivers → changed lines, price target and rating vs base
+  compare_peers    one metric (a model line or a valuation output) across companies
+  variance_review  our prior estimate for a quarter vs the actual, by driver, with the bridge
+
 Tools never raise: a bad call returns {"error": ...} for the model to read and recover from.
 The tool set ("text" or "full") is the V3 ablation (experiments/V3_AGENT.md).
 
@@ -219,17 +226,88 @@ ASK_SPECS = {  # tool set "ask": the same tool over every form
     ),
 }
 
+SPECS |= {
+    "model_view": ToolSpec(
+        "model_view",
+        "Our model of a company as of today: history and forecast (quarters and fiscal years) "
+        "of its main lines, the assumptions behind the forecast (each driver's value, default "
+        "and whether guidance anchors it) and its exceptions. Cite a value by the id pattern "
+        "the result gives.",
+        {
+            "type": "object",
+            "properties": {
+                "company": COMPANY,
+                "lines": {"type": "array", "items": {"type": "string"},
+                          "description": "Model lines (default: the main ones)"},
+                "periods": {**PERIODS, "description": "e.g. 2026Q3, FY2027 (default: recent "
+                            "quarters, the forecast and its fiscal years)"},
+            },
+            "required": ["company"],
+        },
+    ),
+    "run_scenario": ToolSpec(
+        "run_scenario",
+        "Rerun a company's model with changed drivers: give each driver's new value, or a "
+        "change from the base (deltas). Returns the changed lines (2026E, 2027E), the price "
+        "target and rating against the base, with ids. An unknown driver returns the valid ones."
+        " Growth drivers (.g0) and take-rate or margin changes (.shift0) are fractions: a take "
+        "rate 50 bps lower is a delta of -0.005.",
+        {
+            "type": "object",
+            "properties": {
+                "company": COMPANY,
+                "overrides": {"type": "object", "additionalProperties": {"type": "number"},
+                              "description": "driver → new value"},
+                "deltas": {"type": "object", "additionalProperties": {"type": "number"},
+                           "description": "driver → change from the base value"},
+            },
+            "required": ["company"],
+        },
+    ),
+    "compare_peers": ToolSpec(
+        "compare_peers",
+        "One metric across companies at today's as-of, from our models: a model line in a "
+        "period (revenue, adj_ebitda, adj_ebitda_margin, eps_diluted, free_cash_flow, take_rate…"
+        " in FY2027 by default) or a valuation output (ev_to_ebitda, ev_to_ebitda_less_sbc, pe, "
+        "fcf_yield, price_target, return, rating).",
+        {
+            "type": "object",
+            "properties": {
+                "metric": {"type": "string"},
+                "companies": {"type": "array", "items": COMPANY,
+                              "description": 'Companies (default: all eight); ["all"] too'},
+                "period": {"type": "string", "description": "For a model line (default FY2027)"},
+            },
+            "required": ["metric"],
+        },
+    ),
+    "variance_review": ToolSpec(
+        "variance_review",
+        "Our estimate for a reported quarter (made the day after the previous quarter's "
+        "release) against the actual, line by line, with the revenue bridge: how much of the "
+        "miss came from volume, from value per unit, and from the take rate.",
+        {
+            "type": "object",
+            "properties": {"company": COMPANY,
+                           "period": {"type": "string", "description": "e.g. 2026Q2"}},
+            "required": ["company", "period"],
+        },
+    ),
+}
+
 GROUPS = {  # V4 §7.1; reports and model gain their tools in V4.5
     "text": ("search_filings",),
     "calc": ("calculator",),
     "sec": ("xbrl_facts", "edgar_filings"),  # V3's facts group
     "facts": ("financials", "company_kpis", "guidance", "filings"),
     "market": ("market_data",),
+    "model": ("model_view", "run_scenario", "compare_peers", "variance_review"),
 }
 GROUP_SETS = {
     "text": ("text", "calc"),
     "full": ("text", "calc", "sec"),
     "ask": ("text", "calc", "facts", "market"),
+    "research": ("text", "calc", "facts", "market", "model"),
 }
 TOOL_SETS = {name: sum((GROUPS[g] for g in groups), ()) for name, groups in GROUP_SETS.items()}
 
@@ -240,6 +318,7 @@ class Toolbox:
     search: SubQuestionRetriever | None  # None: search_filings unavailable (tests)
     sec: SecData | None
     tool_set: str = "full"
+    book: object | None = None  # research/book.py Book: tool set "research" (model tools)
 
     @property
     def asof(self) -> AsOf:
@@ -250,7 +329,8 @@ class Toolbox:
         return [self._spec(name) for name in TOOL_SETS[self.tool_set]]
 
     def _spec(self, name: str) -> ToolSpec:
-        return (ASK_SPECS if self.tool_set == "ask" else {}).get(name) or SPECS[name]
+        v4 = self.tool_set in ("ask", "research")
+        return (ASK_SPECS if v4 else {}).get(name) or SPECS[name]
 
     def call(self, name: str, arguments: dict) -> dict:
         if name not in TOOL_SETS[self.tool_set]:
@@ -294,7 +374,7 @@ class Toolbox:
                 "or name them in the query",
                 "corpus": self._corpus(),
             }
-        if self.tool_set == "ask":
+        if self.tool_set in ("ask", "research"):
             for p in periods or []:
                 period_parts(p)  # a bad key: ValueError, returned as an error
             result = self.search.search(query, k, tickers, None, periods or None, forms or None)
@@ -464,6 +544,174 @@ class Toolbox:
             ] if dates else [points[-1]]
         rows = [{"id": f"{prefix}:{d}", "date": d, "value": v} for d, v in filter(None, chosen)]
         return {"series": name, "unit": unit} | _cap(rows)
+
+
+    # --- V4 model (tool set "research") ------------------------------------------------
+
+    def model_view(self, company: str, lines: list[str] | None = None,
+                   periods: list[str] | None = None) -> dict:
+        ticker = self._ticker(company)
+        f = self.book.base(ticker)
+        m = f.model
+        names = lines or _main_lines(m)
+        unknown = [n for n in names if not any(x.name == n for x in m.lines)]
+        if unknown:
+            return {"error": f"unknown lines {unknown}", "lines": [x.name for x in m.lines]}
+        columns = periods or (m.history[-4:] + m.forecast[:6] + sorted(
+            {c for c in m.columns if c.startswith("FY")})[-3:])
+        anchored = {a.solve: a for a in f.anchors}
+        return {
+            "company": ticker, "as_of": self.book.as_of, "forecast_from": m.forecast[0],
+            "id_format": f"model:{ticker}:{self.book.as_of}:base:<line>.<period>",
+            "rows": [{"line": n, "unit": m.line(n).unit,
+                      "values": {c: _round(m.value(n, c)) for c in columns}} for n in names],
+            "assumptions": [
+                {"driver": k, "value": _round(v), "default": _round(f.defaults.get(k)),
+                 "source": f"guidance {anchored[k].guide_id}" if k in anchored else "default"}
+                for k, v in sorted(m.assumptions.items())
+                if not k.endswith((".lo", ".hi"))],
+            "exceptions": [e["item"] for e in f.exceptions][:6],
+        }
+
+    def run_scenario(self, company: str, overrides: dict | None = None,
+                     deltas: dict | None = None) -> dict:
+        from tenk_agent.research.model.graph import build
+        from tenk_agent.research.propose import proposable
+
+        ticker = self._ticker(company)
+        f = self.book.base(ticker)
+        base = f.model
+        bounds = proposable(base, set()) | {
+            "fade": tuple(self.book.settings["forecast"]["fade_bounds"])}
+        changes = dict(overrides or {})
+        for k, d in (deltas or {}).items():
+            if k in base.assumptions:
+                changes[k] = base.assumptions[k] + float(d)
+            else:
+                changes[k] = float("nan")
+        bad = [k for k in changes if k not in bounds]
+        if bad or not changes:
+            return {"error": f"unknown drivers {bad}" if bad else "give overrides or deltas",
+                    "drivers": sorted(bounds)}
+        clipped = {}
+        for k, v in changes.items():
+            lo, hi = bounds[k]
+            changes[k] = min(max(float(v), lo), hi)
+            if changes[k] != float(v):
+                clipped[k] = [lo, hi]
+        model = build(ticker, base.template, base.as_of, base.history, f.pack, base.forecast,
+                      base.assumptions | changes)
+        version = self.book.add_scratch(model)
+        val_base, val = self.book.valuation(ticker), self.book.valuation(ticker, version)
+        years = sorted({c for c in model.columns if c.startswith("FY")})[-2:]
+        rows = []
+        for line in ("revenue", "adj_ebitda", "eps_diluted", "free_cash_flow"):
+            for y in years:
+                rows.append({"line": line, "period": y, "base": _round(base.value(line, y)),
+                             "scenario": _round(model.value(line, y)),
+                             "id": self.book.ref(ticker, version, line, y),
+                             "base_id": self.book.ref(ticker, "base", line, y)})
+        return {
+            "company": ticker, "version": version,
+            "changes": {k: _round(v) for k, v in changes.items()}, "clipped_to_bounds": clipped,
+            "rows": rows,
+            "price_target": {"base": _round(val_base["price_target"]),
+                             "scenario": _round(val["price_target"]),
+                             "id": f"model:{ticker}:{self.book.as_of}:val-{version}:price_target",
+                             "base_id": f"model:{ticker}:{self.book.as_of}:val-base:price_target"},
+            "rating": {"base": val_base["rating"], "scenario": val["rating"]},
+        }
+
+    def compare_peers(self, metric: str, companies: list[str] | None = None,
+                      period: str = "FY2027") -> dict:
+        if not companies or [c.lower() for c in companies] == ["all"]:
+            tickers = self._companies()
+        else:
+            tickers, unknown = self._tickers(companies)
+            if unknown:
+                return {"error": f"not in the corpus: {unknown}"}
+        valuation_fields = {"ev_to_ebitda", "ev_to_ebitda_less_sbc", "pe", "fcf_yield",
+                            "price_target", "return", "rating", "ev", "market_cap"}
+        rows = []
+        for t in tickers:
+            if metric in valuation_fields:
+                v = self.book.valuation(t)
+                value = v["multiples_2027e"].get(metric, v.get(metric))
+                ref = f"model:{t}:{self.book.as_of}:val-base:{metric}"
+            else:
+                m = self.book.base(t).model
+                if not any(x.name == metric for x in m.lines):
+                    return {"error": f"unknown metric {metric!r}",
+                            "model_lines": [x.name for x in m.lines if x.kind != "assumption"],
+                            "valuation": sorted(valuation_fields)}
+                value = m.value(metric, period)
+                ref = self.book.ref(t, "base", metric, period)
+            rows.append({"company": t, "value": _round(value) if not isinstance(value, str)
+                         else value, "id": ref})
+        numeric = [r for r in rows if isinstance(r["value"], int | float)]
+        numeric.sort(key=lambda r: r["value"])
+        return {"metric": metric, "period": None if metric in valuation_fields else period,
+                "rows": numeric + [r for r in rows if r not in numeric]}
+
+    def variance_review(self, company: str, period: str) -> dict:
+        from tenk_agent.evaluation.backtest import releases, run_day
+        from tenk_agent.research.forecast import next_quarter
+
+        ticker = self._ticker(company)
+        actual = self.book.base(ticker).model
+        if period not in actual.history:
+            return {"error": f"{period} is not reported as of {self.book.as_of}"}
+        prior_period = next(p for p in sorted(releases(self.store, ticker))
+                            if next_quarter(p) == period)
+        prior_as_of = run_day(releases(self.store, ticker)[prior_period])
+        prior = self.book.at(prior_as_of).base(ticker).model
+        names = [n for n in _main_lines(actual) if any(x.name == n for x in prior.lines)]
+        rows = []
+        for n in names:
+            est, act = prior.value(n, period), actual.value(n, period)
+            rows.append({"line": n, "estimate": _round(est), "actual": _round(act),
+                         "variance_pct": _round((act / est - 1) * 100) if est and act else None,
+                         "estimate_id": f"model:{ticker}:{prior_as_of}:base:{n}.{period}",
+                         "actual_id": actual.cells[(n, period)].ref
+                         or self.book.ref(ticker, "base", n, period)})
+        return {"company": ticker, "period": period, "estimate_as_of": prior_as_of,
+                "rows": rows, "bridge": _bridge(prior, actual, period)}
+
+
+def _main_lines(model) -> list[str]:
+    """The lines a view shows by default: the operating build's drivers, then the summary."""
+    names = [x.name for x in model.lines]
+    build = [n for n in ("volume", "trips", "gross_bookings", "value_per_unit",
+                         "gross_bookings_per_unit", "take_rate", "adj_ebitda_margin_gb")
+             if n in names]
+    return build + [n for n in ("revenue", "adj_ebitda", "adj_ebitda_margin", "eps_diluted",
+                                "free_cash_flow") if n in names]
+
+
+def _bridge(prior, actual, period: str) -> dict | None:
+    """Revenue variance = gross value effect + take-rate effect (gross value split into volume
+    and value per unit where the template has them)."""
+    def v(model, line):
+        return model.value(line, period) if any(x.name == line for x in model.lines) else None
+
+    gb0, gb1 = v(prior, "gross_bookings"), v(actual, "gross_bookings")
+    tr0, tr1 = v(prior, "take_rate"), v(actual, "take_rate")
+    if None in (gb0, gb1, tr0, tr1):
+        return None
+    out = {"revenue_variance": _round(gb1 * tr1 - gb0 * tr0),
+           "from_gross_value": _round((gb1 - gb0) * tr0),
+           "from_take_rate": _round(gb1 * (tr1 - tr0))}
+    unit = next((n for n in ("value_per_unit", "gross_bookings_per_unit")
+                 if v(prior, n) is not None), None)
+    vol0, vol1 = v(prior, "volume"), v(actual, "volume")
+    if unit and None not in (vol0, vol1, v(actual, unit)):
+        out["of_which_volume"] = _round((vol1 - vol0) * v(prior, unit) * tr0)
+        out["of_which_value_per_unit"] = _round(vol1 * (v(actual, unit) - v(prior, unit)) * tr0)
+    return out
+
+
+def _round(value):
+    return None if value is None else round(float(value), 4)
 
 
 def _key(q) -> str:

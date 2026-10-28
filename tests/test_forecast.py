@@ -153,3 +153,39 @@ def test_proposals_are_bounded_anchors_kept_and_evidence_required(templates):
     items = " ".join(e["item"] for e in exceptions)
     assert "no evidence id resolves" in items and "anchored" in items
     assert apply("no json here", m, bounds, Resolver())[0] == {}
+
+
+def test_a_ratio_change_holds_until_lapped(templates):
+    m = model()
+    m.assumptions["take_rate.shift0"] = 0.002
+    graph.evaluate_cells(m, pack())
+    assert m.value("take_rate_shift", "2026Q3") == pytest.approx(0.002)
+    assert m.value("take_rate_shift", "2027Q1") == pytest.approx(0.002 * 0.9**2)
+    for q in ("2027Q2", "2027Q3"):  # the fourth forecast quarter, then the fifth
+        m.forecast.append(q)
+        m.quarters.append(q)
+        m.columns.append(q)
+    graph.evaluate_cells(m, pack())
+    assert m.value("take_rate_shift", "2027Q2") == pytest.approx(0.002 * 0.9**3)
+    assert m.value("take_rate_shift", "2027Q3") == 0.0  # lapped
+
+
+def test_revenue_bridge_adds_up():
+    from tenk_agent.agent.tools import _bridge
+
+    class M:
+        lines = [type("L", (), {"name": n}) for n in ("gross_bookings", "take_rate", "volume",
+                                                       "value_per_unit")]
+
+        def __init__(self, vol, unit, rate):
+            self.v = {"volume": vol, "value_per_unit": unit, "gross_bookings": vol * unit,
+                      "take_rate": rate}
+
+        def value(self, line, period):
+            return self.v[line]
+
+    b = _bridge(M(100, 10.0, 0.2), M(110, 9.5, 0.21), "2026Q2")
+    assert b["revenue_variance"] == pytest.approx(110 * 9.5 * 0.21 - 200)
+    assert b["from_gross_value"] + b["from_take_rate"] == pytest.approx(b["revenue_variance"])
+    assert b["of_which_volume"] + b["of_which_value_per_unit"] == pytest.approx(
+        b["from_gross_value"])
