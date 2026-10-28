@@ -1,0 +1,37 @@
+# Research knobs (V4 design doc §6, D-019): pinned per experiment, none hard-coded.
+# research/forecast.py (V4.4), research/valuation.py (V4.5) and the report pipeline read it.
+
+forecast:
+  horizon: 2027Q4            # last forecast quarter
+  fade: fitted                 # d: g(q+1) = g(q) × d, each quarter ("fitted" is an ablation)
+  fade_bounds: [0.75, 1.0]   # the proposer may move d only within these
+  guidance_point: mid        # mid | high (ablation): the anchor within a guided range
+  ratio_bounds:              # a forecast ratio stays within its last-8-quarter min/max ± this
+    take_rate: 0.005         # 50 bps (§7.3)
+    margin: 0.02             # 200 bps for EBITDA margins
+  tax_rate_bounds: [0.10, 0.30]
+  variance_flag: {revenue: 0.02, adj_ebitda: 0.05}  # vs the guidance midpoint (§6.1)
+
+scenarios:
+  weights: {bear: 0.25, base: 0.50, bull: 0.25}
+  shock_sigma: 1.0           # ±1σ of the driver's y/y change over history
+  shock_sigma_bounds: [0.5, 2.0]
+
+proposer:
+  method: defaults           # defaults | llm (ablation, §13.2)
+  model: openai:Qwen/Qwen3.6-27B-FP8
+  base_url: http://localhost:8001/v1
+  budget: {max_calls: 10, max_context: 16000, max_tokens: 3000}
+
+valuation:                   # research/valuation.py (§6.2)
+  weights: {multiple: 0.6, dcf: 0.4}
+  target_year: 2027          # the multiple's EBITDA year (2027E)
+  scenario_multiple: 0.15    # bear/bull target multiple ∓/± 15% of the peer median
+  terminal_growth: 0.03
+  terminal_growth_grid: [0.025, 0.03, 0.035]
+  wacc_grid_step: 0.01       # ± 1 pt
+  dcf_years: 10              # explicit years after the as-of
+  annual_fade: 0.9           # growth fades by this each year after the model's horizon
+  beta_months: 60            # monthly returns vs SPY
+  debt_weight_threshold: 0.10  # WACC = Ke below this debt share, else weighted with Kd
+  rating: {buy: 0.15, sell: -0.10}

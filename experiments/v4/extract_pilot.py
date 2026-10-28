@@ -31,6 +31,8 @@ def main() -> None:
     ap.add_argument("--tickers", nargs="*")
     ap.add_argument("--releases", choices=("gold", "all"), default="gold")
     ap.add_argument("--reuse", help="label of a run whose extractions to keep")
+    ap.add_argument("--method", choices=("llm", "rules"), default="llm",
+                    help="rules: the label-pattern matcher, no LLM (facts/rules.py ablation)")
     args = ap.parse_args()
     gold = load_gold(GOLD, args.tickers)
     filings = {
@@ -45,13 +47,18 @@ def main() -> None:
     if args.reuse:
         saved = json.loads((OUT / args.reuse / "extractions.json").read_text())
         reused = {(r["ticker"], r["period"]): r for r in saved.values()}
-    model = get_model(args.model, thinking=False)  # as V3: thinking spends the whole budget
+    model = get_model(args.model, thinking=False) if args.method == "llm" else None
 
     def run(release):
         ticker, period = release
         store = Store(DB, AsOf.after(filings[release]))  # sees the release, nothing later
         t = time.time()
-        out = to_json(extract(model, store, ticker, period))
+        if args.method == "rules":
+            from tenk_agent.facts.rules import extract_rules
+
+            out = to_json(extract_rules(store, ticker, period))
+        else:
+            out = to_json(extract(model, store, ticker, period))
         out["seconds"] = round(time.time() - t, 1)
         return release, out
 
