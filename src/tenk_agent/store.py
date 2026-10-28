@@ -150,6 +150,15 @@ CREATE TABLE IF NOT EXISTS guidance (
     filed TEXT NOT NULL,
     PRIMARY KEY (ticker, metric, segment, target_period, issued_in)
 );
+CREATE TABLE IF NOT EXISTS model_versions (  -- Report mode's saved models (research/pipeline.py)
+    id TEXT PRIMARY KEY,          -- v1, v2, … per ticker: <TICKER>:v<n>
+    ticker TEXT NOT NULL,
+    as_of TEXT NOT NULL,          -- what it saw: inputs filed before this date
+    parent_id TEXT,               -- the version it revises
+    inputs_hash TEXT NOT NULL,
+    status TEXT NOT NULL,         -- draft | reviewed
+    path TEXT NOT NULL            -- its report folder
+);
 """
 
 # Older databases lack these columns; add them in place. V3 databases (all 10-Ks) gain the V4
@@ -452,6 +461,28 @@ class Store:
                  for g in guidance],
             )
             return len(kpis) + len(guidance)
+
+    def add_model_version(self, ticker: str, as_of: str, parent_id: str | None,
+                          inputs_hash: str, path: str, status: str = "draft") -> str:
+        """Save a report's model version; returns its id (<TICKER>:v<n>)."""
+        with self._lock, self.db:
+            n = self.db.execute("SELECT COUNT(*) FROM model_versions WHERE ticker = ?",
+                                (ticker,)).fetchone()[0] + 1
+            version = f"{ticker}:v{n}"
+            self.db.execute("INSERT INTO model_versions VALUES (?, ?, ?, ?, ?, ?, ?)",
+                            (version, ticker, as_of, parent_id, inputs_hash, status, path))
+            return version
+
+    def model_versions(self, ticker: str) -> list[dict]:
+        """Saved versions visible at the as-of (made strictly before it), oldest first."""
+        visible, params = self.asof.sql("v", "as_of")
+        rows = self._query(f"SELECT * FROM model_versions v WHERE v.ticker = ? AND {visible} "
+                           "ORDER BY v.as_of, v.id", [ticker.upper(), *params])
+        return [dict(r) for r in rows]
+
+    def set_version_status(self, version: str, status: str) -> None:
+        with self._lock, self.db:
+            self.db.execute("UPDATE model_versions SET status = ? WHERE id = ?", (status, version))
 
     def kpis(self, ticker: str, metric: str | None = None) -> list[dict]:
         """Visible KPI rows, oldest period first; a later release's copy of a period (a
