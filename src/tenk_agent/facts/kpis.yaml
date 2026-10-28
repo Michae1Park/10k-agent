@@ -76,10 +76,11 @@ ABNB:
 
 TRIP:
   kpis:
-    revenue: {unit: USD millions,
-              segments: [total, tripadvisor, viator, thefork, experiences, hotels_other],
+    revenue: {unit: USD millions,  # eliminations: negative, printed under the 2022–2025 segments
+              segments: [total, tripadvisor, viator, thefork, experiences, hotels_other,
+                         eliminations],
               labels: ["Total Revenue", "Brand Tripadvisor", "Viator", "TheFork",
-                       "Experiences", "Hotels and Other"],
+                       "Experiences", "Hotels and Other", "Intersegment eliminations"],
               definitions: {2026Q2: 2}}
     adj_ebitda: {unit: USD millions,
                  segments: [total, tripadvisor, viator, thefork, experiences, hotels_other],
