@@ -42,7 +42,7 @@ lines:
   free_cash_flow:     {kind: formula, expr: "operating_cash_flow - capex", unit: USD millions,
                        statement: cash_flow, fy: sum}
   buybacks:           {kind: input, source: "q:buybacks", unit: USD millions,
-                       statement: cash_flow, default: 0, label: share repurchases}
+                       statement: cash_flow, label: share repurchases}
 
   # --- Balance sheet (condensed: the reported totals; detail stays in the data pack)
   cash:               {kind: input, source: "q:cash", unit: USD millions, statement: balance,
