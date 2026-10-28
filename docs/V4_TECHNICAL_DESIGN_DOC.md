@@ -483,7 +483,7 @@ The writer must use facts verbatim and mark them `{F-07}`. `research/trace.py` t
 1. extracts every number token (`verify.numbers_in`);
 2. requires each to be a marked fact or an allow-listed non-financial token (dates, section numbers, "Q2", "10-K");
 3. lints the spec's note rules: no "pending"/"TBD"; gaps read "n/a: …" or "failed check: …"; any `E`-period number carries its "E";
-4. on failure, one repair turn with the violations; then the section becomes "failed check: number trace" plus an exception row.
+4. on failure, one repair turn with the violations; any sentence that still holds an untraced number is dropped and logged as an exception row.
 
 **Tables** (2.1, 2.2, 4.1, 4.2, 5, 6, 7) are rendered by code from artifacts and never pass through the LLM. Layer-5 "100% traced" therefore means: tables by construction, prose by `trace.py`.
 
