@@ -229,10 +229,13 @@ for t, metric, issued, target in (
     actual = label(t, target, metric)
     where = ("above" if actual["value"] > high["value"] else
              "below" if actual["value"] < low["value"] else "within")
+    # The actual and the bound it crossed (both bounds when it lands within); the unbeaten bound
+    # need not be claimed (gold change after run 3, design doc §17.11)
+    bounds = {"above": [high], "below": [low], "within": [low, high]}[where]
     add(f"{t.lower()}-{metric.replace('_', '-')}-vs-guide-{target.lower()}",
         f"Did {NAMES[t]}'s {nice(target)} {metric.replace('_', ' ').replace('adj ', 'adjusted ')} "
         "beat its guidance?", "guidance", "comparison",
-        [value(low, bound="low"), value(high, bound="high"), value(actual)],
+        [value(b, bound="high" if b is high else "low") for b in bounds] + [value(actual)],
         [source(low), source(actual)], ["guidance", "company_kpis"], period=target,
         points=[f"The actual was {where} the guided range"],
         answer_type="number_set", notes=f"actual {where} the range")

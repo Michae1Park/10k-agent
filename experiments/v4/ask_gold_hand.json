@@ -665,7 +665,7 @@
   "tolerance": 0.005,
   "required_points": [
    "Corrects the premise: gross bookings did not decline",
-   "They grew about 22% year over year (constant currency)"
+   "They grew about 22% year over year in constant currency (24% as reported)"
   ],
   "should_abstain": false,
   "sources": [
@@ -680,7 +680,7 @@
    "company_kpis",
    "search_filings"
   ],
-  "notes": "",
+  "notes": "Either growth figure is right: 22% constant currency, 24.1% reported (gold change after run 3, design doc §17.11)",
   "origin": "drafted",
   "verified_by": null,
   "gold_set": "ask-gold"
