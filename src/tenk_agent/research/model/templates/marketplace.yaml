@@ -24,6 +24,9 @@ forecast:
 
 # Guidance → the line it constrains and the assumption solved so the first forecast quarter
 # hits the guided midpoint (in order: bookings, then revenue, then EBITDA; design §6.1)
+# Scenario drivers (design §6.1): bear/bull move each by ∓/±σ of its history
+scenarios: [volume_g.g0, gross_bookings_per_unit_g.g0, take_rate.shift0]
+
 anchors:
   - {guide: room_nights_growth, line: volume, basis: growth_yoy, solve: volume_g.g0}
   - {guide: nights_growth, line: volume, basis: growth_yoy, solve: volume_g.g0}

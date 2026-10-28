@@ -67,6 +67,9 @@ forecast:
   ratios: {take_rate_mobility: take_rate, take_rate_delivery: take_rate,
            take_rate_freight: take_rate, adj_ebitda_margin_gb: margin}
 
+# Scenario drivers (design §6.1): bear/bull move each by ∓/±σ of its history
+scenarios: [gb_g_mobility.g0, gb_g_delivery.g0, take_rate_mobility.shift0]
+
 anchors:
   - {guide: gross_bookings, line: gross_bookings, basis: level, solve: gb_g_adj}
   - {guide: adj_ebitda, line: adj_ebitda, basis: level, solve: adj_ebitda_margin_gb.shift0}

@@ -33,6 +33,9 @@ forecast:
   growth: [revenue]
   ratios: {adj_ebitda_margin: margin}
 
+# Scenario drivers (design §6.1): bear/bull move each by ∓/±σ of its history
+scenarios: [revenue_g.g0, adj_ebitda_margin.shift0]
+
 anchors: []  # TRIP gives no numeric guidance
 
 # Each total: alternative part lists, the first fully reported one tested per period

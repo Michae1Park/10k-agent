@@ -59,6 +59,7 @@ class Run:
     steps: list[Step] = field(default_factory=list)
     seconds: float = 0.0
     stop: str = ""  # "answered", "budget", "turns"
+    reply: str = ""  # the last model text, unparsed (sub-agents return their own JSON)
 
     @property
     def tool_calls(self) -> list[Step]:
@@ -152,7 +153,8 @@ class Agent:
         )
         raw = parse_answer(state["reply"])
         answer = finalize(raw, self.toolbox.store, self.toolbox.sec)
-        return Run(answer, state["steps"], round(time.perf_counter() - start, 3), state["stop"])
+        return Run(answer, state["steps"], round(time.perf_counter() - start, 3), state["stop"],
+                   state["reply"])
 
     # --- Nodes ---------------------------------------------------------------------------
 

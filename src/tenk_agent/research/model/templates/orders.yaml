@@ -22,6 +22,9 @@ forecast:
   growth: [volume, value_per_unit]
   ratios: {take_rate: take_rate, adj_ebitda_margin_gb: margin}
 
+# Scenario drivers (design §6.1): bear/bull move each by ∓/±σ of its history
+scenarios: [volume_g.g0, value_per_unit_g.g0, take_rate.shift0]
+
 anchors:  # guide names as each company prints them (DASH GOV, CART GTV)
   - {guide: marketplace_gov, line: gross_bookings, basis: level, solve: value_per_unit_g.g0}
   - {guide: gtv, line: gross_bookings, basis: level, solve: value_per_unit_g.g0}
