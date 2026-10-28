@@ -63,7 +63,7 @@ def years_in(question: str) -> list[tuple[int, bool]]:
     for prefix, year in YEAR.findall(question):
         years[int(year)] = years.get(int(year), False) or bool(prefix)
     if LAST_N_YEARS.search(question):
-        for year in FISCAL_YEARS:
+        for year in FISCAL_YEARS or ():  # V4 corpora list no fiscal years
             years.setdefault(year, True)
     return sorted(years.items())
 
@@ -84,7 +84,11 @@ def slots(
     """(ticker, fiscal years) pairs to search separately; [(None, None)] for one search.
     `tickers` overrides the companies the question names (fan-out)."""
     tickers = companies_in(question) if tickers is None else tickers
-    years = [(y, fiscal) for y, fiscal in years_in(question) if y in FISCAL_YEARS or not fiscal]
+    years = [
+        (y, fiscal)
+        for y, fiscal in years_in(question)
+        if FISCAL_YEARS is None or y in FISCAL_YEARS or not fiscal  # V4: no fixed year list
+    ]
     if not tickers:
         return [(None, None)]
     if not years:

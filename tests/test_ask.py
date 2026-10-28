@@ -85,3 +85,13 @@ def test_ask_prompt_names_the_as_of_and_coverage(tmp_path):
     system = build_system(ask(tmp_path, "2025-11-04"), 12)
     assert "Today is 2025-11-04" in system and "- AAPL" in system
     assert "{" + "coverage}" not in system
+
+
+def test_decomposer_takes_years_without_a_fiscal_year_list(tmp_path, monkeypatch):
+    from tenk_agent.retrieval import decompose
+
+    monkeypatch.setattr(decompose, "FISCAL_YEARS", None)  # V4 corpora list none
+    store = ask(tmp_path, "2025-11-04").store
+    assert decompose.slots(store, "Apple guidance for Q3 2026 and FY2025", ["AAPL"]) == [
+        ("AAPL", [2025])
+    ]
