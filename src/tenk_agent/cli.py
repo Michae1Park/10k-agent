@@ -450,7 +450,9 @@ def _gold_render(args: argparse.Namespace, settings: dict) -> int:
     from tenk_agent.evaluation.render import render_pdf, render_summary_pdf
 
     out = args.out or args.gold.with_suffix(".pdf")
-    store = Store(Path(settings["db"]))
+    # V4 corpus: its own database (every form); V3: the config's
+    db = Path(DATA_DIR) / "build" / "parent_child.db" if DATA_DIR else Path(settings["db"])
+    store = Store(db)
     count = render_pdf(args.gold, store, Path(settings["data_dir"]), out)
     summary = out.with_name(f"{out.stem}-summary.pdf")
     render_summary_pdf(args.gold, summary)

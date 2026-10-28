@@ -15,6 +15,10 @@ from tenk_agent.evaluation import gold
 from tenk_agent.store import Store
 
 CONTEXT_CHARS = 700
+V4_CATEGORIES = (  # the Ask set's (spec §2.1), in this order after V3's
+    "reported_financials", "operating_kpis", "guidance", "filing_text", "cross_check",
+    "our_estimates",
+)
 CHROME = ("google-chrome", "chromium", "chromium-browser")
 
 STYLE = """
@@ -84,10 +88,11 @@ tr.group td { background: #d5dae8; font-weight: 700; font-size: 8.5pt; border-to
 
 
 def build_summary_html(title: str, questions: list[dict]) -> str:
+    order = (*gold.CATEGORIES[:-1], *V4_CATEGORIES, gold.CATEGORIES[-1])  # failures last
     ordered = sorted(
         questions,
         key=lambda q: (
-            gold.CATEGORIES.index(q["category"]) if q["category"] in gold.CATEGORIES else 99,
+            order.index(q["category"]) if q["category"] in order else 99,
             q.get("failure_mode") or "",
         ),
     )
@@ -124,12 +129,19 @@ def _answer(q: dict) -> str:
         many = len(values) > 1
         lines = []
         for v in values:
-            who = " ".join(str(v[k]) for k in ("company", "fiscal_year") if k in v)
+            who = _who(v)
             lines.append(
                 f"{f'{escape(who)}: ' if who and many else ''}<b>{v['value']:,}</b> {escape(v['unit'])}"
             )
         return "<br>".join(lines)
     return "; ".join(escape(p) for p in q.get("required_points", []))
+
+
+def _who(value: dict) -> str:
+    """What an expected value belongs to: company and fiscal year, or (V4) company, segment
+    and the guidance bound."""
+    keys = ("company", "fiscal_year", "segment", "bound")
+    return " ".join(str(value[k]) for k in keys if value.get(k) not in (None, "total"))
 
 
 def build_html(title: str, questions: list[dict], store: Store, data_dir: Path) -> str:
@@ -174,6 +186,8 @@ def _card(q: dict, store: Store, data_dir: Path) -> str:
         tags.append(f"<span>{escape(q['failure_mode'])}</span>")
     for tag in q.get("tags", []):
         tags.append(f"<span>{escape(tag)}</span>")
+    if q.get("as_of"):
+        tags.append(f"<span>as of {escape(q['as_of'])}</span>")
     tags.append(f"<span>{escape(q['origin'])}</span>")
     if gold.is_verified(q):
         tags.append(f"<span class=ok>verified {escape(q['verified_by'])}</span>")
@@ -212,7 +226,7 @@ def _expected(q: dict, checks: list) -> str:
         by_value = {(c.value, c.unit): c.matched_concept for c in checks}
         rows = []
         for v in values:
-            who = " ".join(str(v[k]) for k in ("company", "fiscal_year") if k in v)
+            who = _who(v)
             concept = by_value.get((v["value"], v["unit"]))
             xbrl = (
                 f"<td>{escape(concept)}</td>"
@@ -239,6 +253,11 @@ def _expected(q: dict, checks: list) -> str:
 
 def _source(store: Store, source: dict, chunk_ids: list[str], acceptable: bool) -> str:
     kind = "Acceptable alternative source" if acceptable else "Source"
+    if "period" in source:  # V4: a 10-K, 10-Q or release, by period
+        found = "" if chunk_ids else " · <b class=bad>NOT FOUND</b>"
+        meta = (f"<div class=meta><b>{kind}:</b> {escape(source['company'])} "
+                f"{escape(source['period'])} {escape(source['form'])}{found}</div>")
+        return f"<div class=source>{meta}{_excerpt(store, source, chunk_ids, source['evidence'])}</div>"
     url = store.filing_url(source["company"], source["fiscal_year"])
     link = f' · <a href="{escape(url)}">filing</a>' if url else ""
     found = "" if chunk_ids or not source.get("evidence") else " · <b class=bad>NOT FOUND</b>"
@@ -260,7 +279,7 @@ def _excerpt(store: Store, source: dict, chunk_ids: list[str], evidence: str) ->
         r"[\s|$]+".join(re.escape(t) for t in re.split(r"[\s|$]+", evidence.strip()) if t),
         re.IGNORECASE,
     )
-    for chunk in store.chunks(source["company"], source["fiscal_year"]):
+    for chunk in gold.source_chunks(store, source):
         if chunk.id not in chunk_ids:
             continue
         m = pattern.search(chunk.text)
