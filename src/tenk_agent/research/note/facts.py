@@ -40,6 +40,8 @@ class Fact:
             return f"{v:+.1f} pts"
         if self.unit == "weight":
             return f"{v * 100:.0f}%"
+        if self.unit == "count":
+            return f"{v:,.0f}"
         if self.unit == "x":
             return f"{v:.1f}x"
         if self.unit == "count millions":

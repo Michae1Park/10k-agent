@@ -253,10 +253,12 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
     s7 = Section(7, TITLES[6])
     rows7 = []
     for r in ctx["sensitivities"]:
-        d_e = add(f"2027E adj. EBITDA change if {r['label']}", r["ebitda_change"],
+        shock = add(f"{r['what']} shock", r["shock"], "points", "research: sensitivity")
+        label = f"{r['what']} {shock.text()}"
+        d_e = add(f"2027E adj. EBITDA change if {label}", r["ebitda_change"],
                   "USD millions", r["id"])
-        d_pt = add(f"PT change if {r['label']}", r["pt_change"], "USD", r["pt_id"])
-        rows7.append(fact_row(r["label"], [d_e, d_pt]))
+        d_pt = add(f"PT change if {label}", r["pt_change"], "USD", r["pt_id"])
+        rows7.append(fact_row(label, [d_e, d_pt]))
     s7.blocks.append(table(["Risk", "2027E adj. EBITDA", "PT impact"], rows7))
     s7.blocks.append("Probabilities beyond the scenario weights in section 6 are not assigned.")
     sections.append(s7)
@@ -288,9 +290,13 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
         s9.blocks.append(f"Insider activity in {ins['period']} (Form 4, dilution context): "
                          f"{sold.text()} shares sold in the open market ({value.text()}), "
                          f"{awarded.text()} awarded.")
-    s9.blocks.append(f"Open issues: {len(ctx['exceptions'])}; see the exception log (X-rows).")
-    s9.blocks.append("Rating definitions: Buy ≥ +15% 12-month return, Sell ≤ −10%, Hold "
-                     "between. A draft for education and testing, not investment advice.")
+    issues = add("open issues", float(len(ctx["exceptions"])), "count", "exception log")
+    s9.blocks.append(f"Open issues: {issues.text()}; see the exception log (X-rows).")
+    buy = add("Buy threshold return", ctx["rating"]["buy"] * 100, "percent", "research.yaml")
+    sell = add("Sell threshold return", ctx["rating"]["sell"] * 100, "percent", "research.yaml")
+    s9.blocks.append(f"Rating definitions: Buy ≥ {buy.text()} 12-month return, Sell ≤ "
+                     f"{sell.text()}, Hold between. A draft for education and testing, not "
+                     "investment advice.")
     sections.append(s9)
 
     # 10 ----------------------------------------------------------------------------------
