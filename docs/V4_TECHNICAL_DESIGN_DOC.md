@@ -849,3 +849,25 @@ Not yet: `orders` (DASH, LYFT, CART) and `trip` (TRIP) templates; EXPE and ABNB 
 - **Missing buybacks** were filled with 0 by a template default, which broke FY sums; they stay blank and logged.
 - **Not tagged:** ABNB D&A and capex (no free cash flow line in its history model).
 - **UBER Mobility take rate** (29.9% → 25.8% in 2026Q1) is explained: from 2026-01-02 Uber is agent, not principal, in certain UK markets; 2026Q1 Mobility revenue −$1.0B and driver payments −$606M (10-Q MD&A). A structural break: the V4.4 forecast must start from the post-change rate.
+
+### 17.13 V4.4 exit: forecast and backtest (2026-10-28)
+
+Built: forecast columns to 2027Q4 (`research/forecast.py`; graph `forecast`/`forecast_first`/`forecast_late`, separate history and forecast evaluation orders), the Assumptions tab, guidance anchors (a bracketing search solves one assumption per guide: bookings, then revenue, then EBITDA; an anchor the bounds stop is logged), bear/base/bull scenarios (±1σ of each template driver), the bounded LLM proposer (`research/propose.py`), and the walk-forward backtest with a leakage probe (`evaluation/backtest.py`; D = the day after each release's EDGAR acceptance, US Eastern; actuals as first reported). All eight forecast with every layer-2 check passing and full workbook parity. Design changes made while building, each to keep a forecast economically sound: adj. EBITDA = revenue − costs held as a share of gross bookings (§5.3's margin × GB left a take-rate cut without effect on EBITDA); a ratio's change holds until lapped (four quarters), then 0, so a one-off change is not compounded; a quarter missing a year ago steps from two years back (`first()` in the DSL; ABNB's unextracted 2025 GBV).
+
+**Layer 3 gate (90 forecasts, Q1 2025–Q2 2026, defaults): pass.**
+
+| Run | Revenue MAPE (model / naive) | Revenue bias | Main KPI MAPE (model / naive) | Main KPI bias | Wilcoxon p (rev / KPI) |
+|---|---|---|---|---|---|
+| **defaults (gate)** | **3.14% / 3.77%** | −0.15% | **2.30% / 2.58%** | −0.23% | 0.145 / 0.706 |
+| guidance high end | 3.00% / 3.77% | +0.68% | 2.01% / 2.58% | +0.50% | **0.011 / 0.011** |
+| proposer `llm` | 3.78% / 3.77% | +1.09% | 2.90% / 2.58% | +0.39% | 0.600 / 0.315 (gate fails) |
+| fitted fade | identical to defaults (a next-quarter forecast uses only the starting growth rate) | | | | |
+| long horizon, fixed d (32) | 4.03% / 4.18% | −1.15% | 4.18% / 3.38% | −1.51% | 0.624 / 0.304 |
+| long horizon, fitted d (32) | 3.29% / 4.18% | −0.14% | 3.73% / 3.38% | −0.55% | 0.845 / 0.278 |
+| plain LLM, no tools | 56.3% (all 90; 1 within 2%) | | | | |
+
+By company (defaults, revenue model / naive): ABNB 1.4/3.7, BKNG 4.0/4.4, CART 1.5/1.0, DASH 2.2/3.6, EXPE 3.5/2.9, LYFT 5.0/5.6, TRIP 5.9/5.9, UBER 1.6/3.1. Findings: companies beat their own guidance midpoint 43 times in 44, so anchoring at the high end is significantly better (p = 0.011); `guidance_point: mid` stays the default (frozen before the runs) and the change is the user's call. The LLM proposer hurt accuracy, most on TRIP and BKNG; `defaults` stays. The fitted fade helps the year-ahead forecast (bias −0.14%) but the main KPI stays worse than naive a year out. The no-tools LLM is far off (56%), so there is no sign the actuals are memorized; the LLM's training cutoff is not published, so no quarter can be called held out. Leakage probe: every forecast passed (no input filed on or after D).
+
+Extraction ablation (layer 1 gold, 337 labels): rules (label-pattern table rows, `facts/rules.py`) 31.5% exact (KPIs 47.7%, guidance 0%: not attempted) vs the LLM's 98.5% (KPIs 99.5%).
+
+Known limit of the defaults: a structural break (UBER's UK move to agent, 2026Q1) enters as the last y/y change and is held for four forecast quarters from the forecast start, not from the break, so UBER's 2027E adj. EBITDA margin rises to 23.9%. The proposer is the step meant to catch such breaks (it found the UK change in a smoke test) but on the backtest it hurt more than it helped.
