@@ -1,0 +1,43 @@
+# Operating build by segment (V4 design doc §5.3): Uber. Per segment, gross bookings × take
+# rate = revenue and adjusted EBITDA as a margin on gross bookings; corporate costs separate;
+# totals are the reported ones, and the checks require the segments to sum to them.
+
+segments: [mobility, delivery, freight]
+
+lines:
+  trips:                   {kind: input, source: "kpi:trips", unit: count millions}
+  mapcs:                   {kind: input, source: "kpi:mapcs", unit: count millions, fy: none,
+                            label: monthly active platform consumers}
+  gross_bookings_mobility: {kind: input, source: "kpi:gross_bookings.mobility", unit: USD millions}
+  gross_bookings_delivery: {kind: input, source: "kpi:gross_bookings.delivery", unit: USD millions}
+  gross_bookings_freight:  {kind: input, source: "kpi:gross_bookings.freight", unit: USD millions}
+  gross_bookings:          {kind: input, source: "kpi:gross_bookings", unit: USD millions}
+  gross_bookings_per_trip: {kind: formula, expr: "(gross_bookings_mobility + gross_bookings_delivery) / trips",
+                            unit: USD, label: gross bookings per trip (Mobility and Delivery)}
+  revenue_mobility:        {kind: input, source: "kpi:revenue.mobility", unit: USD millions}
+  revenue_delivery:        {kind: input, source: "kpi:revenue.delivery", unit: USD millions}
+  revenue_freight:         {kind: input, source: "kpi:revenue.freight", unit: USD millions}
+  take_rate_mobility:      {kind: formula, expr: "revenue_mobility / gross_bookings_mobility", unit: fraction}
+  take_rate_delivery:      {kind: formula, expr: "revenue_delivery / gross_bookings_delivery", unit: fraction}
+  take_rate_freight:       {kind: formula, expr: "revenue_freight / gross_bookings_freight", unit: fraction}
+  take_rate:               {kind: formula, expr: "revenue / gross_bookings", unit: fraction}
+  adj_ebitda_mobility:     {kind: input, source: "kpi:adj_ebitda.mobility", unit: USD millions}
+  adj_ebitda_delivery:     {kind: input, source: "kpi:adj_ebitda.delivery", unit: USD millions}
+  adj_ebitda_freight:      {kind: input, source: "kpi:adj_ebitda.freight", unit: USD millions}
+  adj_ebitda_corporate:    {kind: input, source: "kpi:adj_ebitda.corporate", unit: USD millions,
+                            label: corporate G&A and platform R&D}
+  ebitda_margin_mobility:  {kind: formula, expr: "adj_ebitda_mobility / gross_bookings_mobility",
+                            unit: fraction, label: Mobility adj. EBITDA margin on gross bookings}
+  ebitda_margin_delivery:  {kind: formula, expr: "adj_ebitda_delivery / gross_bookings_delivery",
+                            unit: fraction, label: Delivery adj. EBITDA margin on gross bookings}
+  ebitda_margin_freight:   {kind: formula, expr: "adj_ebitda_freight / revenue_freight",
+                            unit: fraction, label: Freight adj. EBITDA margin on revenue}
+
+# Sums the checks require (segments_sum): total line → its parts
+sums:
+  gross_bookings: [gross_bookings_mobility, gross_bookings_delivery, gross_bookings_freight]
+  revenue: [revenue_mobility, revenue_delivery, revenue_freight]
+  adj_ebitda: [adj_ebitda_mobility, adj_ebitda_delivery, adj_ebitda_freight, adj_ebitda_corporate]
+
+companies:
+  UBER:

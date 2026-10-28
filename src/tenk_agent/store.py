@@ -399,14 +399,19 @@ class Store:
             )
             return self.db.total_changes - before
 
-    def facts(self, ticker: str, concepts: list[str], dims: dict | None = None) -> list[dict]:
+    def facts(
+        self, ticker: str, concepts: list[str], dims: dict | None = None, any_dims: bool = False
+    ) -> list[dict]:
         """Visible facts of these concepts (any taxonomy); `dims` None = consolidated only, else
-        exactly these dimensions. Every restated copy is returned (AsOf.latest picks)."""
+        exactly these dimensions; `any_dims`: whatever their dimensions (a split ratio is tagged
+        per class of stock). Every restated copy is returned (AsOf.latest picks)."""
         visible, params = self.asof.sql("f")
+        dimmed = "" if any_dims else "AND f.dims = ?"
         rows = self._query(
             f"SELECT * FROM facts f WHERE f.ticker = ? AND f.concept IN "
-            f"({', '.join('?' * len(concepts))}) AND f.dims = ? AND {visible}",
-            [ticker.upper(), *concepts, json.dumps(dims or {}, sort_keys=True), *params],
+            f"({', '.join('?' * len(concepts))}) {dimmed} AND {visible}",
+            [ticker.upper(), *concepts,
+             *([] if any_dims else [json.dumps(dims or {}, sort_keys=True)]), *params],
         )
         return [dict(r) | {"dims": json.loads(r["dims"])} for r in rows]
 

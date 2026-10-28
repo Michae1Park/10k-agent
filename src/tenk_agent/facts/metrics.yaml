@@ -52,3 +52,9 @@ total_liabilities:
 equity:
   kind: instant
   concepts: [StockholdersEquity, StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest]
+equity_total:  # with non-controlling interests: the balance sheet's equity section (V4.3 balance check)
+  kind: instant
+  concepts: [StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest, StockholdersEquity]
+mezzanine:  # redeemable non-controlling interests, between liabilities and equity (UBER)
+  kind: instant
+  concepts: [RedeemableNoncontrollingInterestEquityCarryingAmount, TemporaryEquityCarryingAmountAttributableToParent]
