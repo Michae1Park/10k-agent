@@ -80,7 +80,7 @@ def test_a_table_cell_changed_to_another_facts_value_is_caught(facts):
     note = f"# UBER\n\n## 1. EXECUTIVE SUMMARY\n\n{table}\n"
     assert lint(note, facts, [table]) == []
     swapped = note.replace("| $95.00 | 17.3x |", "| $95.00 | 3.2x |")  # 3.2: another fact
-    assert [u.text for u in lint(swapped, facts, [table])] == ["table changed"]
+    assert [u.text for u in lint(swapped, facts, [table])] == ["block changed"]
 
 
 def test_negative_money_prints_its_sign_first():
@@ -88,3 +88,12 @@ def test_negative_money_prints_its_sign_first():
     assert f.add("x", -7.0, "USD millions", "s").text() == "-$7M"
     assert f.add("y", -0.5, "USD", "s").text() == "-$0.50"
     assert figures("-$7M") == [("-$7M", -7.0, "money_millions")]
+
+
+def test_prose_traces_to_its_own_slot_only(facts):
+    slot = {"key": "valuation", "text": "The PT is $95.00.", "facts": ["F-3"]}
+    note = "# UBER\n\n## 1. EXECUTIVE SUMMARY\n\nThe PT is $95.00.\n"
+    assert lint(note, facts, [], [slot]) == []
+    other = {"key": "valuation", "text": "The multiple is 17.3x.", "facts": ["F-3"]}  # F-4's
+    note2 = note.replace("The PT is $95.00.", "The multiple is 17.3x.")
+    assert [u.text for u in lint(note2, facts, [], [other])] == ["17.3x"]
