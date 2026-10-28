@@ -11,8 +11,10 @@
   model        model:UBER:2026-08-06:v3:adj_ebitda.FY2027 (or scratch-n)
   evidence     E-12 · X-03 (within one report)
 
-The claim check (generation/verify.py) resolves through here. Kinds whose data V4 has not built
-yet parse but don't resolve, so a claim citing one is reported as citing an unknown id.
+The claim check (generation/verify.py) resolves through here. Data kinds (quarter, kpi, guide,
+price, macro) resolve to `values`: {value, unit, ticker} in the row's own unit (a guide gives its
+low and high). Kinds whose data V4 has not built yet (ixbrl, model, evidence) parse but don't
+resolve, so a claim citing one is reported as citing an unknown id.
 """
 
 import re
@@ -54,7 +56,8 @@ class Resolved:
     chunk: ChunkRecord | None = None  # kind chunk
     fact: dict | None = None  # kind xbrl: {value, unit, ticker}
     filing: dict | None = None  # kind accession: {form, filingDate, reportDate, ticker}
-    extra: dict = field(default_factory=dict)
+    values: list[dict] = field(default_factory=list)  # data kinds: {value, unit, ticker}
+    extra: dict = field(default_factory=dict)  # data kinds: the row
 
 
 def parse(ref_id: str) -> Ref:
@@ -72,6 +75,15 @@ def parse(ref_id: str) -> Ref:
             return Ref(kind, ref_id, parts)
         return Ref("malformed", ref_id, parts)
     return Ref("chunk", ref_id)
+
+
+def kpi_id(ticker: str, metric: str, segment: str, period: str) -> str:
+    """kpi:UBER:gross_bookings.mobility:2026Q2; the consolidated figure drops '.total'."""
+    return f"kpi:{ticker}:{metric}{'' if segment == 'total' else '.' + segment}:{period}"
+
+
+def guide_id(ticker: str, metric: str, segment: str, target: str) -> str:
+    return f"guide:{ticker}:{metric}{'' if segment == 'total' else '.' + segment}:{target}"
 
 
 def xbrl_id(ticker: str, taxonomy: str, concept: str, accession: str, end: str,
@@ -98,4 +110,55 @@ class Resolver:
         if ref.kind == "accession":
             filing = self.sec.filing(ref.id) if self.sec else None
             return Resolved(ref, filing=filing) if filing else None
+        if ref.kind in DATA and self.store.has_facts():
+            return getattr(self, f"_{ref.kind}")(ref, *ref.parts)
         return None  # kinds whose data isn't built yet (§15)
+
+    def _quarter(self, ref: Ref, ticker: str, metric: str, period: str) -> Resolved | None:
+        from tenk_agent.facts.quarters import derive, metrics
+
+        spec = metrics().get(metric)
+        found = spec and next(
+            (q for q in derive(self.store, ticker, metric, spec) if q.id == ref.id), None
+        )
+        if not found:
+            return None
+        return Resolved(ref, values=[_value(found.value, found.unit, ticker)],
+                        extra={"derivation": found.derivation, "inputs": found.inputs})
+
+    def _kpi(self, ref: Ref, ticker: str, key: str, period: str) -> Resolved | None:
+        metric, _, segment = key.partition(".")
+        rows = [r for r in self.store.kpis(ticker, metric)
+                if r["period"] == period and r["segment"] == (segment or "total")]
+        if not rows:
+            return None
+        row = rows[-1]  # the latest visible release reporting the period
+        return Resolved(ref, values=[_value(row["value"], row["unit"], ticker)], extra=row)
+
+    def _guide(self, ref: Ref, ticker: str, key: str, target: str) -> Resolved | None:
+        metric, _, segment = key.partition(".")
+        rows = [r for r in self.store.guidance(ticker, metric)
+                if r["target_period"] == target and r["segment"] == (segment or "total")]
+        if not rows:
+            return None
+        row = rows[-1]  # the latest guide for the target: an update replaces the first
+        values = [_value(row[k], row["unit"], ticker)
+                  for k in ("low", "high") if row[k] is not None]
+        return Resolved(ref, values=values, extra=row)
+
+    def _price(self, ref: Ref, ticker: str, day: str) -> Resolved | None:
+        return self._series(ref, f"px:{ticker}:close", day, "USD", ticker)
+
+    def _macro(self, ref: Ref, series: str, day: str) -> Resolved | None:
+        return self._series(ref, f"macro:{series}", day, "", "")
+
+    def _series(self, ref: Ref, name: str, day: str, unit: str, ticker: str) -> Resolved | None:
+        found = [v for d, v in self.store.series(name, day) if d == day]
+        return Resolved(ref, values=[_value(found[0], unit, ticker)]) if found else None
+
+
+DATA = ("quarter", "kpi", "guide", "price", "macro")
+
+
+def _value(value: float, unit: str, ticker: str) -> dict:
+    return {"value": value, "unit": unit, "ticker": ticker}
