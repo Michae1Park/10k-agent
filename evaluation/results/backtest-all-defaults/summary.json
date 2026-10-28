@@ -1,0 +1,278 @@
+{
+ "revenue": {
+  "forecasts": 48,
+  "model_mape": 0.03141910586643982,
+  "naive_mape": 0.037712371956922563,
+  "model_median_ape": 0.025989583173666342,
+  "naive_median_ape": 0.028699725598484105,
+  "model_bias": -0.001499986363995826,
+  "naive_bias": 0.006350042225936779,
+  "wilcoxon_p": 0.1452056103473992,
+  "guided": 13,
+  "guide_mid_mape": 0.025407374695862652,
+  "model_mape_where_guided": 0.02348943470040058,
+  "missing_forecast": 0
+ },
+ "main_kpi": {
+  "forecasts": 48,
+  "model_mape": 0.022964444351678825,
+  "naive_mape": 0.025786780301432055,
+  "model_median_ape": 0.016637564132770566,
+  "naive_median_ape": 0.01752304409420452,
+  "model_bias": -0.0023329813046583103,
+  "naive_bias": 0.0017439665674010355,
+  "wilcoxon_p": 0.7061163334795777,
+  "guided": 31,
+  "guide_mid_mape": 0.01638577586481151,
+  "model_mape_where_guided": 0.016385775864811526,
+  "missing_forecast": 0
+ },
+ "gate": true,
+ "by_company": {
+  "ABNB": {
+   "revenue": {
+    "forecasts": 6,
+    "model_mape": 0.014241065173070258,
+    "naive_mape": 0.03683005614336241,
+    "model_median_ape": 0.010107624683801275,
+    "naive_median_ape": 0.03821431926607416,
+    "model_bias": -0.014241065173070258,
+    "naive_bias": -0.006047950738271894,
+    "wilcoxon_p": 0.09375,
+    "guided": 6,
+    "guide_mid_mape": 0.01839660182990477,
+    "model_mape_where_guided": 0.014241065173070258,
+    "missing_forecast": 0
+   },
+   "main_kpi": {
+    "forecasts": 6,
+    "model_mape": 0.01404292706489226,
+    "naive_mape": 0.014042927064892278,
+    "model_median_ape": 0.010049333337874777,
+    "naive_median_ape": 0.010049333337874833,
+    "model_bias": 0.0031742517123239944,
+    "naive_bias": 0.003174251712323902,
+    "wilcoxon_p": 1.0,
+    "guided": 0,
+    "guide_mid_mape": null,
+    "model_mape_where_guided": null,
+    "missing_forecast": 0
+   }
+  },
+  "BKNG": {
+   "revenue": {
+    "forecasts": 6,
+    "model_mape": 0.040442192295615596,
+    "naive_mape": 0.04408484488229462,
+    "model_median_ape": 0.042536637425174495,
+    "naive_median_ape": 0.04496498311793806,
+    "model_bias": -0.02485099171528445,
+    "naive_bias": 0.01061137054542786,
+    "wilcoxon_p": 1.0,
+    "guided": 4,
+    "guide_mid_mape": 0.03106582340779418,
+    "model_mape_where_guided": 0.031065823407794207,
+    "missing_forecast": 0
+   },
+   "main_kpi": {
+    "forecasts": 6,
+    "model_mape": 0.024422546019997122,
+    "naive_mape": 0.017726968048194125,
+    "model_median_ape": 0.026677375565610895,
+    "naive_median_ape": 0.009050230129690473,
+    "model_bias": -0.006968461642835784,
+    "naive_bias": 0.012245753012060157,
+    "wilcoxon_p": 0.8125,
+    "guided": 4,
+    "guide_mid_mape": 0.023047501236558188,
+    "model_mape_where_guided": 0.023047501236558188,
+    "missing_forecast": 0
+   }
+  },
+  "CART": {
+   "revenue": {
+    "forecasts": 6,
+    "model_mape": 0.015256684207078097,
+    "naive_mape": 0.010409834815855834,
+    "model_median_ape": 0.016238552912872573,
+    "naive_median_ape": 0.009368174474538304,
+    "model_bias": -0.014902488556142457,
+    "naive_bias": -0.006107392612222762,
+    "wilcoxon_p": 0.21875,
+    "guided": 0,
+    "guide_mid_mape": null,
+    "model_mape_where_guided": null,
+    "missing_forecast": 0
+   },
+   "main_kpi": {
+    "forecasts": 6,
+    "model_mape": 0.01523984097684089,
+    "naive_mape": 0.011138843328496536,
+    "model_median_ape": 0.01368152861813171,
+    "naive_median_ape": 0.010506112712729887,
+    "model_bias": -0.01523984097684089,
+    "naive_bias": -0.0064967326890494155,
+    "wilcoxon_p": 0.0625,
+    "guided": 6,
+    "guide_mid_mape": 0.01523984097684089,
+    "model_mape_where_guided": 0.01523984097684089,
+    "missing_forecast": 0
+   }
+  },
+  "DASH": {
+   "revenue": {
+    "forecasts": 6,
+    "model_mape": 0.021881038623991173,
+    "naive_mape": 0.03580147818485021,
+    "model_median_ape": 0.020723568305738793,
+    "naive_median_ape": 0.03385669905117639,
+    "model_bias": -0.008810225026193386,
+    "naive_bias": -0.013092900978633507,
+    "wilcoxon_p": 0.4375,
+    "guided": 0,
+    "guide_mid_mape": null,
+    "model_mape_where_guided": null,
+    "missing_forecast": 0
+   },
+   "main_kpi": {
+    "forecasts": 6,
+    "model_mape": 0.015557161878872128,
+    "naive_mape": 0.028816576995909598,
+    "model_median_ape": 0.014116209293454751,
+    "naive_median_ape": 0.01752304409420452,
+    "model_bias": -0.015557161878872128,
+    "naive_bias": -0.019449021452845622,
+    "wilcoxon_p": 1.0,
+    "guided": 6,
+    "guide_mid_mape": 0.015557161878872109,
+    "model_mape_where_guided": 0.015557161878872128,
+    "missing_forecast": 0
+   }
+  },
+  "EXPE": {
+   "revenue": {
+    "forecasts": 6,
+    "model_mape": 0.03455491216540141,
+    "naive_mape": 0.029018754874995778,
+    "model_median_ape": 0.030969591905464222,
+    "naive_median_ape": 0.026265480694611154,
+    "model_bias": -0.015469154338635013,
+    "naive_bias": -0.004900812502277381,
+    "wilcoxon_p": 0.6875,
+    "guided": 3,
+    "guide_mid_mape": 0.03188432214520306,
+    "model_mape_where_guided": 0.03188432214520306,
+    "missing_forecast": 0
+   },
+   "main_kpi": {
+    "forecasts": 6,
+    "model_mape": 0.034167306812723675,
+    "naive_mape": 0.032118645575812066,
+    "model_median_ape": 0.0254891851242674,
+    "naive_median_ape": 0.01688814060041255,
+    "model_bias": -0.0037008397820501027,
+    "naive_bias": 0.0025219455862242244,
+    "wilcoxon_p": 1.0,
+    "guided": 3,
+    "guide_mid_mape": 0.03412343522663811,
+    "model_mape_where_guided": 0.03412343522663811,
+    "missing_forecast": 0
+   }
+  },
+  "LYFT": {
+   "revenue": {
+    "forecasts": 6,
+    "model_mape": 0.05024023430406762,
+    "naive_mape": 0.05601675252703318,
+    "model_median_ape": 0.04882292082085726,
+    "naive_median_ape": 0.05188579318970665,
+    "model_bias": 0.019983061595575242,
+    "naive_bias": 0.016892812398379604,
+    "wilcoxon_p": 0.6875,
+    "guided": 0,
+    "guide_mid_mape": null,
+    "model_mape_where_guided": null,
+    "missing_forecast": 0
+   },
+   "main_kpi": {
+    "forecasts": 6,
+    "model_mape": 0.008324815525945495,
+    "naive_mape": 0.019911475713685862,
+    "model_median_ape": 0.006110069084377612,
+    "naive_median_ape": 0.019103844921823376,
+    "model_bias": -0.008324815525945495,
+    "naive_bias": -0.010520005587346596,
+    "wilcoxon_p": 0.0625,
+    "guided": 6,
+    "guide_mid_mape": 0.008324815525945458,
+    "model_mape_where_guided": 0.008324815525945495,
+    "missing_forecast": 0
+   }
+  },
+  "TRIP": {
+   "revenue": {
+    "forecasts": 6,
+    "model_mape": 0.05884965138531584,
+    "naive_mape": 0.05884965138531584,
+    "model_median_ape": 0.04334878447596857,
+    "naive_median_ape": 0.04334878447596857,
+    "model_bias": 0.04106432280579712,
+    "naive_bias": 0.04106432280579712,
+    "wilcoxon_p": null,
+    "guided": 0,
+    "guide_mid_mape": null,
+    "model_mape_where_guided": null,
+    "missing_forecast": 0
+   },
+   "main_kpi": {
+    "forecasts": 0,
+    "model_mape": null,
+    "naive_mape": null,
+    "model_median_ape": null,
+    "naive_median_ape": null,
+    "model_bias": null,
+    "naive_bias": null,
+    "wilcoxon_p": null,
+    "guided": 0,
+    "guide_mid_mape": null,
+    "model_mape_where_guided": null,
+    "missing_forecast": 0
+   }
+  },
+  "UBER": {
+   "revenue": {
+    "forecasts": 6,
+    "model_mape": 0.015887068776978597,
+    "naive_mape": 0.03068760284167264,
+    "model_median_ape": 0.008126576987530998,
+    "naive_median_ape": 0.02887007465458663,
+    "model_bias": 0.0052266494959865946,
+    "naive_bias": 0.012380888889295191,
+    "wilcoxon_p": 0.15625,
+    "guided": 0,
+    "guide_mid_mape": null,
+    "model_mape_where_guided": null,
+    "missing_forecast": 0
+   },
+   "main_kpi": {
+    "forecasts": 6,
+    "model_mape": 0.013111305148843197,
+    "naive_mape": 0.023689154299150156,
+    "model_median_ape": 0.016245685381709285,
+    "naive_median_ape": 0.02594234720536709,
+    "model_bias": -0.013111305148843197,
+    "naive_bias": -0.008588780847955483,
+    "wilcoxon_p": 0.3125,
+    "guided": 6,
+    "guide_mid_mape": 0.013111305148843158,
+    "model_mape_where_guided": 0.013111305148843197,
+    "missing_forecast": 0
+   }
+  }
+ },
+ "guidance": {
+  "forecasts": 44,
+  "actual_above_mid": 43,
+  "actual_below_mid": 1
+ }
+}
