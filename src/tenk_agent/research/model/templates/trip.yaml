@@ -28,6 +28,7 @@ lines:
 sums:
   release_revenue:
     - [revenue_tripadvisor, revenue_viator, revenue_thefork, revenue_eliminations]
+    - [revenue_experiences, revenue_hotels_other, revenue_thefork, revenue_eliminations]
     - [revenue_experiences, revenue_hotels_other, revenue_thefork]
     - [revenue_experiences, revenue_hotels_other]
   adj_ebitda:

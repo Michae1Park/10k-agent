@@ -38,7 +38,7 @@ def run(model: Model, pack: dict[str, dict[str, Point]], store: Store | None) ->
     """Every check; q4_ties reads the XBRL facts, so it needs the store."""
     _, template = load_template(model.template, model.ticker)
     return [
-        balance(model), quarters_sum(model, pack),
+        balance(model), quarters_sum(model, pack, store),
         *([q4_ties(model, store)] if store is not None else []),
         take_rate(model, pack), segments_sum(model, template.get("sums") or {}),
         no_future_input(model), formula_only(model),
@@ -83,12 +83,21 @@ def balance(model: Model) -> Check:
     return _result("balance", tested, failures, skipped)
 
 
-def quarters_sum(model: Model, pack) -> Check:
+def quarters_sum(model: Model, pack, store: Store | None = None) -> Check:
+    """A recast year (restated quarters beside an original FY: TRIP's 2025 moved to
+    continuing operations) is on two bases and is skipped, marked as such (needs the store)."""
+    specs = xbrl_quarters.metrics()
     tested, failures, skipped = 0, [], []
     for line in model.lines:
         if line.kind != "input" or line.fy != "sum" or not line.source.startswith("q:"):
             continue
+        metric = line.source[2:]
+        concepts = specs[metric].get("companies", {}).get(model.ticker, specs[metric]["concepts"])
+        recast = xbrl_quarters.recast_years(store, model.ticker, concepts) if store else set()
         for column in (c for c in model.columns if c.startswith("FY")):
+            if int(column[2:]) in recast:
+                skipped.append(f"{line.name} {column} (recast)")
+                continue
             reported = pack.get(line.source, {}).get(column)
             summed = model.value(line.name, column)
             if reported is None or summed is None:
