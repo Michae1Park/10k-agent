@@ -251,6 +251,7 @@ class Store:
         """`asof`: what reads see. None (V3 and loading only) means AsOf.today(); V4 code
         always passes one (tests/test_asof.py checks)."""
         self.asof = asof or AsOf.today()
+        self.path = path
         path.parent.mkdir(parents=True, exist_ok=True)
         # Parallel workers (V2 run.py) share one Store; a lock serializes access.
         self.db = sqlite3.connect(path, check_same_thread=False)

@@ -157,7 +157,8 @@ def scenario_summary(models: dict[str, Model], weights: dict[str, float]) -> dic
 
 
 def referenced(model: Model) -> set[str]:
-    return {a for x in model.lines for e in (x.expr, x.forecast, x.forecast_first, x.fy_forecast)
+    return {a for x in model.lines
+            for e in (x.expr, x.forecast, x.forecast_first, x.fy_forecast, x.forecast_late)
             if e for a in e.assumptions}
 
 

@@ -141,10 +141,11 @@ def _close(target: float, shown: float, shown_rounding: float, claim_rounding: f
     return abs(target - shown) <= slack
 
 
-def verify_claim(claim: dict, store: Store, sec: FactSource | None = None) -> dict:
-    """Set a claim's status (verified / calculated / cited / unverified) and the reason."""
+def verify_claim(claim: dict, store: Store, sec: FactSource | None = None, book=None) -> dict:
+    """Set a claim's status (verified / calculated / cited / unverified) and the reason.
+    `book`: Research mode's model book, for model: ids (research/book.py)."""
     ids = claim.get("chunk_ids") or []
-    resolver = Resolver(store, sec)
+    resolver = Resolver(store, sec, book)
     resolved = {i: resolver.resolve(i) for i in ids}
     groups = {i: _group(i) for i in ids}
     facts = [(i, r.fact if (r := resolved[i]) else None) for i in ids if groups[i] == "xbrl"]

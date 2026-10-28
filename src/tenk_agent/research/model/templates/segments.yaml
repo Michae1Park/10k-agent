@@ -57,22 +57,24 @@ lines:
                    forecast_first: "@gb_g_freight.g0", forecast: "gb_g_freight[-1] * @fade"}
   adj_ebitda_margin_gb: {kind: formula, expr: "adj_ebitda / gross_bookings", unit: fraction,
                    label: adjusted EBITDA margin on gross bookings}
+  cost_to_gb:      {kind: formula, expr: "(revenue - adj_ebitda) / gross_bookings", unit: fraction,
+                    label: costs before adj. EBITDA as a share of gross bookings}
   adj_ebitda:     {kind: input, source: "kpi:adj_ebitda", unit: USD millions, statement: income,
-                   label: adjusted EBITDA, forecast: "adj_ebitda_margin_gb * gross_bookings"}
+                   label: adjusted EBITDA, forecast: "revenue - cost_to_gb * gross_bookings"}
   revenue:        {kind: input, source: "q:revenue", fallback: "kpi:revenue", unit: USD millions, statement: income,
                    forecast: "revenue_mobility + revenue_delivery + revenue_freight"}
 
 forecast:
   growth: [trips]
   ratios: {take_rate_mobility: take_rate, take_rate_delivery: take_rate,
-           take_rate_freight: take_rate, adj_ebitda_margin_gb: margin}
+           take_rate_freight: take_rate, cost_to_gb: margin}
 
 # Scenario drivers (design §6.1): bear/bull move each by ∓/±σ of its history
 scenarios: [gb_g_mobility.g0, gb_g_delivery.g0, take_rate_mobility.shift0]
 
 anchors:
   - {guide: gross_bookings, line: gross_bookings, basis: level, solve: gb_g_adj}
-  - {guide: adj_ebitda, line: adj_ebitda, basis: level, solve: adj_ebitda_margin_gb.shift0}
+  - {guide: adj_ebitda, line: adj_ebitda, basis: level, solve: cost_to_gb.shift0}
 
 # Sums the checks require (segments_sum): total line → its parts
 sums:

@@ -12,9 +12,10 @@
   evidence     E-12 · X-03 (within one report)
 
 The claim check (generation/verify.py) resolves through here. Data kinds (quarter, kpi, guide,
-price, macro) resolve to `values`: {value, unit, ticker} in the row's own unit (a guide gives its
-low and high). Kinds whose data V4 has not built yet (ixbrl, model, evidence) parse but don't
-resolve, so a claim citing one is reported as citing an unknown id.
+price, macro, model) resolve to `values`: {value, unit, ticker} in the row's own unit (a guide
+gives its low and high; a model id needs the session's model book, research/book.py). Kinds
+whose data V4 has not built yet (ixbrl, evidence) parse but don't resolve, so a claim citing one
+is reported as citing an unknown id.
 """
 
 import re
@@ -96,8 +97,8 @@ def xbrl_id(ticker: str, taxonomy: str, concept: str, accession: str, end: str,
 class Resolver:
     """Resolves ids against one store (bound to its AsOf) and the SEC cache."""
 
-    def __init__(self, store: Store, sec: FactSource | None = None):
-        self.store, self.sec = store, sec
+    def __init__(self, store: Store, sec: FactSource | None = None, book=None):
+        self.store, self.sec, self.book = store, sec, book  # book: research/book.py Book
 
     def resolve(self, ref: Ref | str) -> Resolved | None:
         ref = parse(ref) if isinstance(ref, str) else ref
@@ -153,6 +154,10 @@ class Resolver:
                   for k in ("low", "high") if row[k] is not None]
         return Resolved(ref, values=values, extra=row)
 
+    def _model(self, ref: Ref, ticker: str, as_of: str, version: str, key: str):
+        found = self.book.resolve(ticker, as_of, version, key) if self.book else None
+        return Resolved(ref, values=[found | {"ticker": ticker}]) if found else None
+
     def _price(self, ref: Ref, ticker: str, day: str) -> Resolved | None:
         return self._series(ref, f"px:{ticker}:close", day, "USD", ticker)
 
@@ -164,7 +169,7 @@ class Resolver:
         return Resolved(ref, values=[_value(found[0], unit, ticker)]) if found else None
 
 
-DATA = ("quarter", "kpi", "guide", "price", "macro")
+DATA = ("quarter", "kpi", "guide", "price", "macro", "model")
 
 
 def _value(value: float, unit: str, ticker: str) -> dict:
