@@ -1,7 +1,7 @@
 # V4 technical design: from a 10-K Q&A agent to a junior sell-side analyst
 
-**Status:** Draft, nothing built. Settled items move to [DECISIONS.md](DECISIONS.md) as they are built.
-**Updated:** 2026-10-27 · **Spec:** [JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md). "Spec §n" is the spec's section; a bare "§n" is a section of this doc.
+**Status:** Built through V4.7 (§17 is the build log; results in [V4_RESULTS.md](V4_RESULTS.md)). Sections 1–16 are the design as planned; where the build differs, the section says so. Settled items are in [DECISIONS.md](DECISIONS.md).
+**Updated:** 2026-10-29 · **Spec:** [JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md). "Spec §n" is the spec's section; a bare "§n" is a section of this doc.
 **Not to be confused with** the retired V4 in `archive/` (D-034).
 
 The spec says *what* to build; this doc says *how*, and how it plugs into V0–V3.
@@ -502,11 +502,13 @@ Step S10: how a number gets into the note.
 
 ## 11. Outputs
 
-Directory: `output/research/<TICKER>/<as_of>/v<n>/`, indexed in `model_versions`.
+Directory: `output/reports/<TICKER>/<as_of>/`; each run is saved as a version (`UBER:v1`, `UBER:v2`, …) in `model_versions`, with its parent.
+
+**As built (V4.6):** the files below differ from the plan. Written: `note.md`, `note.pdf`, `note.json`, `workbook.xlsx`, `model.json`, `checks.json`, `valuation.json`, `revisions.json`, `events.json`, `debates.json`, `facts.json`, `exceptions.json`, `report.json`. Workbook tabs: Model, Assumptions (`export/workbook.py`) and Summary, Scenarios, Valuation, Revisions, Checks, Log (`export/report.py`); no README, Bridge, Model (prior) or DCF tab yet. The PDF is printed by headless Chrome through `evaluation/render.py`, not LibreOffice. Only the `update` report type exists; `initiation` and `--public` are not built.
 
 | File | Built by | Notes |
 |---|---|---|
-| `note.md`, `note.pdf` | `research/note/` render, then LibreOffice headless (already installed, used by `evaluation/render.py`) | `update` (3–5 pages) or `initiation` (+ business overview, industry and competition, model appendix; same ten sections) |
+| `note.md`, `note.pdf` | `research/note/` render, then a headless browser (`evaluation/render.py`) | `update` (3–5 pages) or `initiation` (+ business overview, industry and competition, model appendix; same ten sections) |
 | `workbook.xlsx` | `research/export/workbook.py` (openpyxl, new dependency) | Tabs: README, Summary, Bridge, Assumptions, Model, Model (prior), Scenarios, Valuation, DCF, Checks, Log; blue/black/green styles; layout of `docs/EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx` |
 | `model.json`, `estimates.json`, `valuation.json`, `revisions.json`, `assumptions.json`, `events.json`, `debates.json`, `checks.json`, `evidence.json` | steps | Machine-readable; Ask and Research cite these |
 | `trace.jsonl`, `run.json` | runner | Time, tokens |
@@ -589,6 +591,27 @@ src/tenk_agent/
                                 model/ (dsl.py graph.py templates/*.yaml checks.py)
                                 note/ (sections.py trace.py render.py)
                                 export/ (workbook.py pdf.py)
+```
+
+**As built.** The layout above was the plan; the code differs:
+
+```text
+src/tenk_agent/
+  asof.py corpus.py store.py
+  acquisition/   edgar.py filings.py companies.py (tenk companies verify) market.py (Tiingo, FRED,
+                 Damodaran) crosscheck.py (TLC, BTS) insiders.py (Form 4)
+  preprocess/    forms.py rules.py (rule-based Items for V4 filings, D-039) blocks.py structure.py validation.py
+  facts/         xbrl.py quarters.py extract.py (LLM) rules.py (rules extractor, ablation) kpis.yaml metrics.yaml
+                 (no ixbrl.py)
+  research/      refs.py book.py (model ids for Ask/Research) datapack.py subagents.py (events, debates)
+                 propose.py forecast.py valuation.py (also --all relative ratings) pipeline.py (S1–S11, revisions)
+                 model/ (dsl.py graph.py history.py checks.py templates/: statements segments marketplace
+                         orders trip)
+                 note/ (facts.py sections.py trace.py write.py)
+                 export/ (workbook.py: Model, Assumptions, parity · report.py: other tabs, PDF)
+  agent/         tools.py (groups, tool sets) loop.py sec.py
+  evaluation/    extraction.py backtest.py note_eval.py (+ the V0–V3 modules)
+  prompts/       ask.md research.md extract.md propose.md events.md debates.md section.md (+ V3's)
   agent/                   CHG  tools.py (groups, Toolbox(asof, mode)) · loop.py (sub-agent prompt, groups, budgets)
   generation/verify.py     CHG  resolves ids through research/refs.py
   evaluation/              NEW  extraction.py backtest.py note_eval.py
@@ -608,6 +631,21 @@ src/tenk_agent/
 | `tenk report approve TICKER --as-of D --by INITIALS` | Mark reviewed |
 | `tenk backtest --companies ... --from DATE --to DATE [--label]` | Walk-forward |
 | `tenk eval extraction` · `tenk eval note` | Layers 1 and 5 |
+
+**As built.** The table above was the plan. The commands that exist:
+
+| Command | Does |
+|---|---|
+| `tenk companies verify [--file companies.yaml]` | Resolve CIKs, FYE, filing counts |
+| `tenk fetch [--forms 10-K 10-Q ER] [--market]` · `tenk build --stage chunk,load,embed,pages,facts,market,kpis` | Acquisition and build; `--market` fetches prices, macro and ERP only |
+| `TENK_COMPANIES=companies.yaml tenk research report TICKER... --as-of D [--no-llm] [--resume]` | Report mode, S1–S11 (same as `python -m tenk_agent.research.pipeline TICKER D`) |
+| `tenk research approve TICKER:vN --by INITIALS` | Mark a saved version reviewed |
+| `python -m tenk_agent.research.valuation TICKER... AS_OF --all` | Valuation and relative ratings across the eight |
+| `python -m tenk_agent.evaluation.backtest [TICKER...] [--label] [--proposer defaults\|llm] [--long]` | Walk-forward backtest and ablations |
+| `python -m tenk_agent.evaluation.note_eval FOLDER... [--judge ...] [--seeds N]` | Layer 5 |
+| `experiments/v4/ask_run.py`, `research_run.py` | Ask and Research gold runs (no `tenk agent --mode`) |
+
+`tenk report` is still V2's run report; `tenk tool` and `tenk agent` are still V3's. Not built: `--type initiation`, `--from S7`, `--public`, `tenk backtest`, `tenk eval`.
 
 ### 14.1 Migration from V3
 
@@ -671,7 +709,7 @@ Each becomes a DECISIONS.md entry when built. Rows 1–11 fill gaps in the spec;
 | 12 | Model source of truth | Python from one DSL; xlsx generated with formulas; parity test |
 | 13 | Statement detail | Condensed (§5.2); full detail in the data pack |
 | 14 | Release preprocessing | Rules only, no structure agent unless the pilot shows bad headings |
-| 15 | PDF | LibreOffice headless (already used); no new dependency |
+| 15 | PDF | Headless browser via `evaluation/render.py` (as built; LibreOffice was the plan); no new dependency |
 | 16 | Review | `draft` → `reviewed` via CLI; the human decides, the agent doesn't |
 | 17 | Clean backtest quarters | Q1–Q2 2026 (§12) |
 
@@ -884,9 +922,9 @@ Built: `research/valuation.py` (market cap and EV at the as-of; multiple PT on t
 |---|---|---|---|---|---|
 | 1 (`v4.5-research-qwen3.6-27b`) | 79.2% | 93.1% | 90.3% | 92.9% | — |
 | 2 (`-r2`, `410d4d2`) | **87.5%** | 97.2% | 98.6% | **94.6%** | `compare_peers` lists each company's assumptions (peer questions 12.5% → 87.5%) |
-| 2, alternative scoring | 88.9% | 98.6% | 98.6% | 100% | not adopted: the user's call |
+| 2, alternative scoring | 88.9% | 98.6% | 98.6% | 100% | adopted by the user after run 1 (2026-10-28, [V4_RESULTS.md](V4_RESULTS.md#decisions-2026-10-28)); the reported result |
 
-Run 2 by category: valuation 100%, forecast 87.5%, peer comparison 87.5%, scenario 81%, variance review 75%. Remaining misses: the agent multiplies model values itself (take rate × GTV) instead of citing the model's line (CART, BKNG forecasts), scenario answers that cite the base rather than the scratch run, one peer answer. Two scoring corrections proposed after run 1, kept out of the gate: a variance answer may cite the bridge's own `var-` ids (the gold expected the prior estimate's revenue id); a claim citing only company guidance is reported data, not a computed number.
+Run 2 by category: valuation 100%, forecast 87.5%, peer comparison 87.5%, scenario 81%, variance review 75%. Remaining misses: the agent multiplies model values itself (take rate × GTV) instead of citing the model's line (CART, BKNG forecasts), scenario answers that cite the base rather than the scratch run, one peer answer. Two scoring corrections proposed after run 1, kept out of the frozen gate and later adopted by the user: a variance answer may cite the bridge's own `var-` ids (the gold expected the prior estimate's revenue id); a claim citing only company guidance is reported data, not a computed number.
 
 ### 17.15 V4.6: Report mode (2026-10-28)
 
