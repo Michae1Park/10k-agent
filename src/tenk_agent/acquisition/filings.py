@@ -254,7 +254,8 @@ def fetch(
             problems.append(str(error))
             continue
         problems += found
-        manifest[company.ticker] = [asdict(f) for f in filings if f.retrieved_at]
+        kept = [f for f in manifest.get(company.ticker, []) if f["form"] not in forms]
+        manifest[company.ticker] = kept + [asdict(f) for f in filings if f.retrieved_at]
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     return problems
