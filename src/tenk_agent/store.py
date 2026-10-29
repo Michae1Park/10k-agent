@@ -255,9 +255,10 @@ class FilingRecord:
 
 def id_prefix(ticker: str, fiscal_year: int, fiscal_period: str = "FY", form: str = "10-K") -> str:
     """A filing's section- and chunk-id prefix (V4 design doc §4.3): <TICKER>-<period>[-<doc>].
-    UBER-FY2025 (10-K, as in V0–V3) · UBER-2026Q2 (10-Q) · UBER-2026Q2-ER (release)."""
+    UBER-FY2025 (10-K, as in V0–V3) · UBER-2026Q2 (10-Q) · UBER-2026Q2-ER (release) ·
+    UBER-FY2025-DEF14A (proxy)."""
     key = f"FY{fiscal_year}" if fiscal_period == "FY" else f"{fiscal_year}{fiscal_period}"
-    return f"{ticker}-{key}" + ("-ER" if form == "ER" else "")
+    return f"{ticker}-{key}" + (f"-{form}" if form in ("ER", "DEF14A") else "")
 
 
 def target_key(printed: str) -> str:

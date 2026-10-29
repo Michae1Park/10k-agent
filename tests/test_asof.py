@@ -96,3 +96,4 @@ def test_id_prefixes_by_form():
     assert id_prefix("UBER", 2025) == "UBER-FY2025"
     assert id_prefix("UBER", 2026, "Q2", "10-Q") == "UBER-2026Q2"
     assert id_prefix("UBER", 2026, "Q2", "ER") == "UBER-2026Q2-ER"
+    assert id_prefix("UBER", 2025, "FY", "DEF14A") == "UBER-FY2025-DEF14A"

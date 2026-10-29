@@ -175,7 +175,7 @@ SPECS |= {
             "type": "object",
             "properties": {
                 "company": COMPANY,
-                "form": {"type": "string", "description": "10-K, 10-Q or ER (default: all)"},
+                "form": {"type": "string", "description": "10-K, 10-Q, ER or DEF14A (default: all)"},
             },
             "required": ["company"],
         },
@@ -217,7 +217,7 @@ ASK_SPECS = {  # tool set "ask": the same tool over every form
                 "periods": {**PERIODS, "description": "Period keys, e.g. 2026Q2 or FY2025"},
                 "forms": {
                     "type": "array",
-                    "items": {"type": "string", "enum": ["10-K", "10-Q", "ER"]},
+                    "items": {"type": "string", "enum": ["10-K", "10-Q", "ER", "DEF14A"]},
                     "description": "Forms to search (default: all)",
                 },
                 "k": {"type": "integer", "description": "Chunks in all (default 8, max 16)"},

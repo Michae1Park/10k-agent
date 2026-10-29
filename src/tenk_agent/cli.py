@@ -41,8 +41,8 @@ def main(argv: list[str] | None = None) -> int:
     fetch = commands.add_parser("fetch", help="download the corpus 10-Ks from EDGAR")
     fetch.add_argument("--tickers", nargs="*", help="subset of corpus tickers (default: all)")
     fetch.add_argument("--refresh", action="store_true", help="re-download cached files")
-    fetch.add_argument("--forms", nargs="*", choices=("10-K", "10-Q", "ER"),
-                       help="V4 corpus: forms to fetch (default: all three)")
+    fetch.add_argument("--forms", nargs="*", choices=("10-K", "10-Q", "ER", "DEF14A"),
+                       help="V4 corpus: forms to fetch (default: all four)")
     fetch.add_argument("--market", action="store_true",
                        help="V4 corpus: prices (TIINGO_API_KEY), macro (FRED_API_KEY) and ERP only")
 
