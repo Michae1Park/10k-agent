@@ -1,13 +1,16 @@
-"""V4 acquisition (design doc §4.2): every 10-K, 10-Q and earnings release in the window.
+"""V4 acquisition (design doc §4.2): every 10-K, 10-Q, earnings release and proxy in the window.
 
   10-K, 10-Q   one original per period (amendments ignored); fiscal year and period from the
                company-facts rows tagged with the filing's accession (as V3's D-004)
   release      8-K with Item 2.02; every EX-99.* exhibit from the filing index (99.1 release,
                99.2 letter where used); the quarter it reports is the last quarter end before
                it was filed, checked against that quarter's 10-Q or 10-K
+  DEF 14A      the annual proxy (form "DEF14A"): the first filed each year, keyed to the fiscal
+               year it reports on (filed in 2026 → FY2025); a later one that year (a special
+               meeting) is skipped. Text only: compensation, equity plans, share requests
 
 Each filing lands in <data_dir>/raw/filings/<TICKER>/<period>-<form>/ (FY2025-10K,
-2026Q2-10Q, 2026Q2-ER) with a metadata.json, and raw/manifest.json lists them all with the
+2026Q2-10Q, 2026Q2-ER, FY2025-DEF14A) with a metadata.json, and raw/manifest.json lists them all with the
 time each was retrieved. December fiscal years only (all V4 companies; companies verify checks).
 """
 
@@ -26,8 +29,8 @@ from tenk_agent.corpus import Company
 
 log = logging.getLogger(__name__)
 
-FORMS = ("10-K", "10-Q", "ER")
-FOLDER_FORM = {"10-K": "10K", "10-Q": "10Q", "ER": "ER"}
+FORMS = ("10-K", "10-Q", "ER", "DEF14A")
+FOLDER_FORM = {"10-K": "10K", "10-Q": "10Q", "ER": "ER", "DEF14A": "DEF14A"}
 INDEX_URL = "https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/{accession_dashed}-index.htm"
 
 
@@ -42,7 +45,7 @@ class Document:
 class FilingV4:
     ticker: str
     cik: int
-    form: str  # 10-K, 10-Q, ER (an 8-K Item 2.02 earnings release)
+    form: str  # 10-K, 10-Q, ER (an 8-K Item 2.02 earnings release), DEF14A (proxy)
     accession_no: str
     filing_date: str
     accepted_at: str  # EDGAR acceptance time, UTC
@@ -124,13 +127,24 @@ def resolve(
                     **common,
                 )
             )
+        elif form in ("DEF 14A", "DEFC14A"):  # DEFC14A: a contested proxy (LYFT 2025)
+            year = int(row["filingDate"][:4]) - 1
+            filings.append(
+                FilingV4(
+                    form="DEF14A",
+                    period_end_date=f"{year}-12-31",
+                    fiscal_year=year,
+                    fiscal_period="FY",
+                    **common,
+                )
+            )
 
     by_key: dict[tuple[str, str], list[FilingV4]] = {}
     for f in filings:
         by_key.setdefault((f.form, f.period), []).append(f)
     unique = []
     for (form, period), group in sorted(by_key.items()):
-        if len(group) > 1:
+        if len(group) > 1 and form != "DEF14A":  # a second proxy: a special meeting
             accessions = [f.accession_no for f in group]
             problems.append(f"{company.ticker} {form} {period}: {len(group)} filings {accessions}")
         unique.append(min(group, key=lambda f: f.filing_date))

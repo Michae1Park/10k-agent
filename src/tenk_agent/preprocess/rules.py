@@ -88,7 +88,8 @@ def release_blocks(documents: list[tuple[str, str]]) -> list[Block]:
     `documents`: (exhibit type, HTML) in index order, EX-99.1 first."""
     blocks: list[Block] = []
     for n, (exhibit, html) in enumerate(documents, start=1):
-        blocks.append(Block(id=f"x{n}", text=f"{exhibit} ({'release' if n == 1 else 'exhibit'})"))
+        kind = "proxy" if exhibit == "DEF14A" else "release" if n == 1 else "exhibit"
+        blocks.append(Block(id=f"x{n}", text=f"{exhibit} ({kind})"))
         for b in read_blocks(html):
             b.id = f"x{n}-{b.id}"
             blocks.append(b)
@@ -108,12 +109,12 @@ def label_release(blocks: list[Block], spec: FormSpec) -> dict[str, dict]:
 
 
 def preprocess_filing(folder: Path, out: Path, registrant: str) -> dict:
-    """A V4 10-K, 10-Q or release folder (acquisition/filings.py) → blocks.json, labels.json,
+    """A V4 10-K, 10-Q, release or proxy folder (acquisition/filings.py) → blocks.json, labels.json,
     labels-log.json and document.json in `out`, as V0's preprocess writes them."""
     meta = json.loads((folder / "metadata.json").read_text())
     spec = form_spec(meta["form"])
     t = time.time()
-    if meta["form"] == "ER":
+    if meta["form"] in ("ER", "DEF14A"):  # a proxy: one document, one pseudo-Item
         docs = [
             (d["type"], (folder / d["name"]).read_text(encoding="utf-8", errors="replace"))
             for d in meta["documents"]

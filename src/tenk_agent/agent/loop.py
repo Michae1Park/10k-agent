@@ -111,7 +111,8 @@ def coverage_table(store) -> str:
             fy, fp = f.fiscal_year, f.fiscal_period
             latest[f.form] = f"{f'FY{fy}' if fp == 'FY' else f'{fy}{fp}'} (filed {f.filing_date})"
         earliest = min(f.period_end_date for f in filings)
-        forms = "; ".join(f"{f} {latest[f]}" for f in ("ER", "10-Q", "10-K") if f in latest)
+        forms = "; ".join(f"{f} {latest[f]}" for f in ("ER", "10-Q", "10-K", "DEF14A")
+                          if f in latest)
         lines.append(f"- {ticker} {names[ticker]}: {forms}; from {earliest}")
     return "\n".join(lines)
 

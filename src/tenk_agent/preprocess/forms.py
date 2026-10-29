@@ -5,6 +5,8 @@ where the financial statements live, and the names shown in chunk headers and ci
   10-Q     Items repeat per Part, so keys carry it: I.1 … I.4, II.1 … II.6; labeled by rules
   release  an 8-K's EX-99 exhibits (form "ER"): no Items, one pseudo-Item per exhibit
            (EX99, EX99.2, …); labeled by rules (design doc §4.4)
+  proxy    a DEF 14A (form "DEF14A"): no Items, one pseudo-Item (PROXY) over the whole
+           document; labeled by the release rules
 """
 
 from dataclasses import dataclass, field
@@ -55,7 +57,14 @@ RELEASE = FormSpec(
     item_names={"EX99": "Earnings Release", "EX99.2": "Shareholder Letter"},
 )
 
-FORMS: dict[str, FormSpec] = {spec.form: spec for spec in (TEN_K, TEN_Q, RELEASE)}
+PROXY = FormSpec(
+    form="DEF14A",
+    items=("PROXY",),
+    statement_homes=frozenset(),
+    item_names={"PROXY": "Proxy Statement"},
+)
+
+FORMS: dict[str, FormSpec] = {spec.form: spec for spec in (TEN_K, TEN_Q, RELEASE, PROXY)}
 
 
 def form_spec(form: str) -> FormSpec:

@@ -85,3 +85,18 @@ def test_exhibits_reads_ex99_rows_from_the_index():
         ("r.htm", "EX-99.1", "https://base/r.htm"),
         ("l.htm", "EX-99.2", "https://base/l.htm"),
     ]
+
+
+def test_resolve_keys_the_annual_proxy_to_the_prior_fiscal_year():
+    rows = [
+        row("DEF 14A", "px", "2026-04-20"),
+        row("DEF 14A", "special", "2026-10-01"),  # a special meeting: skipped, not a problem
+        row("DEFA14A", "extra", "2026-04-25"),
+        row("DEFC14A", "contest", "2025-04-24"),
+    ]
+    filings, problems = resolve(CO, rows, facts())
+    assert [(f.accession_no, f.period, f.folder, f.period_end_date) for f in filings] == [
+        ("contest", "FY2024", "FY2024-DEF14A", "2024-12-31"),
+        ("px", "FY2025", "FY2025-DEF14A", "2025-12-31")
+    ]
+    assert problems == []
