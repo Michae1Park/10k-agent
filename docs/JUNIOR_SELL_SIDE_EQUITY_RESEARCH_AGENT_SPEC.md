@@ -4,7 +4,7 @@
 
 A portfolio project: one agent that covers eight US travel and mobility companies using only free, public data. It answers questions about them, runs the analyst loop on demand (model, forecast, value), and writes a draft sell-side note. A human reviews every rating and price target. All output is for education and testing, not investment advice.
 
-**Every run takes an as-of date.** The agent sees only data published on or before it. This is what makes backtesting possible (Section 6).
+**Every run takes an as-of date.** The agent sees only data published strictly before it. This is what makes backtesting possible (Section 6).
 
 ---
 
@@ -12,32 +12,44 @@ A portfolio project: one agent that covers eight US travel and mobility companie
 
 ### 1.1 Companies
 
-| Sector | Companies (ticker) |
-| --- | --- |
-| Travel | Booking (BKNG), Expedia (EXPE), Airbnb (ABNB), TripAdvisor (TRIP) |
-| Mobility and delivery | Uber (UBER), Lyft (LYFT), DoorDash (DASH), Instacart (CART) |
+| Company | Ticker | Travel | Mobility and delivery |
+| --- | --- | :---: | :---: |
+| Booking | BKNG | ✓ |  |
+| Expedia | EXPE | ✓ |  |
+| Airbnb | ABNB | ✓ |  |
+| TripAdvisor | TRIP | ✓ |  |
+| Uber | UBER |  | ✓ |
+| Lyft | LYFT |  | ✓ |
+| DoorDash | DASH |  | ✓ |
+| Instacart | CART |  | ✓ |
 
-All have a December fiscal year-end. Peers for comps are the other companies in the same sector. Instacart IPO'd in September 2023: it has no 10-Q or earnings release before Q3 2023, and its earlier periods come from its S-1.
+- All have a December fiscal year-end.
+- Peers for comps: the other companies in the same sector.
+- Instacart (legal name Maplebear Inc.) IPO'd on 2023-09-19:
+  - Data starts at Q3 2023: 12 releases, 9 10-Qs, 3 10-Ks.
+  - About 4 backtest points.
+  - Its S-1 is not fetched.
 
 ### 1.2 Data sources
 
-Window: **Q1 2023 through the latest quarter filed by the as-of date**. Today (2026-10-27) the data runs Q1 2023 to Q2 2026 (14 quarters); Q3 2026 results are not yet included.
+Window: **filings made from 2023-01-01 through the day before the as-of date**.
+
+- Starts at Q4 2022: the FY2022 10-K and Q4 2022 release were filed in early 2023.
+- Example, as-of 2026-10-27: Q4 2022 to Q2 2026 (15 periods); Q3 2026 not yet included.
+- Each number carries its source document, period and filing or publish date.
 
 | Source | What | Period | Used for |
 | --- | --- | --- | --- |
-| **10-K** (EDGAR) | Full text and financial statements | FY2023, FY2024, FY2025 (+ earlier years via XBRL) | Annual financials, risks, business description, Q4 derivation |
-| **10-Q** (EDGAR) | Full text and financial statements | Q1 2023 to Q2 2026 | Quarterly financials, MD&A |
-| **8-K Item 2.02, Ex. 99.1** | Earnings release and shareholder letter | Q1 2023 to Q2 2026 (14 per company) | KPIs, non-GAAP reconciliations, next-quarter guidance |
-| **XBRL company facts** (EDGAR API) | Structured financial values, each with its filing date | All periods above | Core numbers, point-in-time history |
-| **DEF 14A, Form 4** | Proxy, insider transactions | 2023 to as-of | Dilution, buybacks, SBC plans |
-| **Daily prices** (Stooq) | Close and volume | 2023 to as-of | Market cap, EV, beta, backtest prices |
-| **FRED** | 10-year Treasury, CPI, consumer sentiment, USD index, restaurant sales | 2023 to as-of | Discount rate, demand and FX inputs |
+| **10-K** (EDGAR) | Full text and financial statements | FY2022 (filed early 2023), FY2023, FY2024, FY2025; CART from FY2023 (+ earlier years via XBRL) | Annual financials, risks, business description, Q4 derivation |
+| **10-Q** (EDGAR) | Full text and financial statements | Q1 2023 to Q2 2026 (11 per company; CART 9) | Quarterly financials, MD&A |
+| **8-K Item 2.02, Ex. 99.1** | Earnings release and shareholder letter | Q4 2022 to Q2 2026 (15 per company; CART 12) | KPIs, non-GAAP reconciliations, next-quarter guidance |
+| **XBRL company facts** (EDGAR API) and inline XBRL | Structured financial values, each with its filing date | All periods above | Core numbers, point-in-time history |
+| **Form 4** (EDGAR) | Insider transactions | 2023 to as-of | Dilution context |
+| **Daily prices** (Tiingo; internal use only, never published) | Daily close, adjusted close and volume per ticker, plus SPY | 2023 to as-of | Market cap, EV, beta, backtest prices |
+| **FRED / ALFRED** | 10-year Treasury (DGS10), CPI (CPIAUCSL), consumer sentiment (UMCSENT), USD index (DTWEXBGS), restaurant sales (RSFSDP); revised series use each value's first-published date | 2023 to as-of | Discount rate, demand and FX inputs |
 | **Damodaran** | Implied equity risk premium | Latest before as-of | DCF |
-| **TSA, BTS** | Daily US air passengers, airline traffic | 2023 to as-of | Travel cross-check |
-| **NYC TLC** | Monthly trip records with a license number per company (~2 months lag, NYC only) | 2023 to as-of | Uber vs Lyft trip cross-check |
-| **Google Trends** | Search interest (weak, noisy) | 2023 to as-of | Optional early signal |
-
-Each number carries its source document, period, filing date and retrieval date.
+| **BTS** | Monthly US airline passengers (publish date estimated as month end + 90 days) | 2023 to as-of | Travel cross-check |
+| **NYC TLC** | Monthly high-volume for-hire trips per license (HV0003 Uber, HV0005 Lyft; ~2 months lag, NYC only) | 2023 to as-of | Uber vs Lyft trip cross-check |
 
 ### 1.3 Not available (free-data limits)
 
@@ -45,20 +57,45 @@ Each number carries its source document, period, filing date and retrieval date.
 | --- | --- |
 | Consensus estimates (paid) | Benchmark against management guidance and baselines; optionally hand-record a dated figure |
 | Call transcripts | Use releases, shareholder letters and 10-Q text |
-| Paid alternative data (hotel occupancy, app usage, card spend) | TSA, BTS, NYC TLC as directional checks, with coverage limits stated |
+| Paid alternative data (hotel occupancy, app usage, card spend) | BTS and NYC TLC as directional checks, with coverage limits stated |
+| **DEF 14A** proxy statements | Planned, not fetched; dilution context comes from Form 4 |
+| **Stooq** prices | Dropped: a bot check blocks scripts; Tiingo replaces it |
+| **TSA**: daily US air passengers (2023 to as-of) | Dropped: the site blocks automated access (HTTP 403); BTS covers air traffic |
+| **Google Trends**: search interest (weak, noisy; 2023 to as-of) | Dropped: no official API, and unofficial clients break its terms |
 
 ### 1.4 Core KPIs extracted each quarter
 
-| Company | KPIs |
-| --- | --- |
-| Booking | Room nights, gross bookings, revenue, take rate, ADR, adjusted EBITDA |
-| Expedia | Gross bookings by segment, room nights, revenue, take rate, adjusted EBITDA |
-| Airbnb | Nights and experiences booked, gross booking value, ADR, revenue, take rate, adjusted EBITDA, FCF |
-| TripAdvisor | Revenue by segment (Tripadvisor, Viator, TheFork), Viator booking value, adjusted EBITDA |
-| Uber | Gross bookings by segment (Mobility, Delivery, Freight), trips, MAPCs, revenue, take rate, adjusted EBITDA, FCF |
-| Lyft | Gross bookings, rides, active riders, revenue, adjusted EBITDA, FCF |
-| DoorDash | Total orders, marketplace GOV, net revenue margin, adjusted EBITDA |
-| Instacart | GTV, orders, AOV, transaction and advertising revenue, adjusted EBITDA |
+Pulled from each earnings release (`facts/kpis.yaml`).
+
+| KPI | BKNG | EXPE | ABNB | TRIP | UBER | LYFT | DASH | CART |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Revenue ¹ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Adjusted EBITDA | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Free cash flow ² | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Diluted EPS | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Gross bookings / GOV / GTV ³ | ✓ | ✓ | ✓ |  | ✓ | ✓ | ✓ | ✓ |
+| Volume: room nights, nights, trips, rides, orders ⁴ | ✓ | ✓ | ✓ |  | ✓ | ✓ | ✓ | ✓ |
+| Segment split ⁵ |  | ✓ |  | ✓ | ✓ |  |  |  |
+| Net income | ✓ |  | ✓ |  |  |  |  | ✓ |
+| Users: MAPCs, active riders |  |  |  |  | ✓ | ✓ |  |  |
+| Adjusted EPS | ✓ |  |  |  |  |  |  |  |
+
+- ¹ DoorDash: revenue is extracted, though the release headlines net revenue margin.
+- ² Extracted only where the release states it: BKNG 10 of 15 quarters, LYFT 11, CART 2 of 12; other five complete. Gaps fall back to XBRL (operating cash flow - capex, §3.1) where available; capex gaps in design §17.6.
+- ³ ABNB: gross booking value. DASH: marketplace GOV. CART: GTV. TRIP: Viator booking value not extracted.
+- ⁴ ABNB: nights and experiences booked. TRIP: none extracted (brand traffic only "if disclosed", design §5.3).
+- ⁵ Segments extracted:
+  - EXPE: B2C and B2B gross bookings and revenue.
+  - TRIP: Tripadvisor, Viator, TheFork revenue and adjusted EBITDA (Experiences and Hotels and Other before the 2026 recast).
+  - UBER: Mobility, Delivery, Freight gross bookings, revenue and adjusted EBITDA, plus corporate adjusted EBITDA.
+  - CART: transaction and advertising revenue not extracted separately.
+
+**Derived by the model, not extracted** (take rate is always computed from reported revenue and gross bookings, §1.5):
+
+| Derived KPI | BKNG | EXPE | ABNB | TRIP | UBER | LYFT | DASH | CART |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Take rate = revenue / gross bookings (DoorDash: net revenue margin) | ✓ | ✓ | ✓ |  | ✓ | ✓ | ✓ | ✓ |
+| Price per unit = gross bookings / volume (ADR, AOV, bookings per trip or ride) | ✓ | ✓ | ✓ |  | ✓ | ✓ | ✓ | ✓ |
 
 ### 1.5 Collection rules
 
@@ -66,7 +103,7 @@ Each number carries its source document, period, filing date and retrieval date.
 - Restate history when a KPI definition or segment structure changes, and note it.
 - Keep raw data separate from adjusted figures.
 - Q4 = full year minus (Q1 + Q2 + Q3), reconciled to the 10-K.
-- Send an identifying User-Agent to EDGAR and respect its rate limit (about 10 requests per second; verify).
+- Send an identifying User-Agent to EDGAR and respect its rate limit (SEC allows 10 requests per second; the client sends one per 0.12 s).
 
 ---
 
@@ -256,7 +293,7 @@ responsible analyst confirms it.
    Investor day and regulatory decisions: listed only if a filing mentions them; none found.
 
 9. SOURCES, ASSUMPTIONS, DISCLOSURES
-   Data as of 2026-08-06: 10-Q (filed ...), 8-K Ex. 99.1 (filed ...), Stooq prices, FRED DGS10.
+   Data as of 2026-08-06: 10-Q (filed ...), 8-K Ex. 99.1 (filed ...), Tiingo prices, FRED DGS10.
    Key assumptions (analyst-imposed): take rate 26.8% flat; growth fade 0.90; terminal growth 3%.
    Full register: workbook tab "Assumptions". Source for each figure: evidence log.
    Open issues: 5 (1 warning, 1 data gap, 3 information); see log X-01 to X-05.
@@ -358,7 +395,7 @@ Assets         = Liabilities + equity       (must balance, or the model fails)
 | Anchor | Current quarter starts at the guidance midpoint; later quarters use the 3-year average seasonal share |
 | Scenarios | Bear / base / bull (25 / 50 / 25%) by varying the 2–3 key drivers |
 | Variance flag | Versus guidance midpoint: over 2% on revenue or 5% on adjusted EBITDA needs a written reason |
-| Outside inputs | TSA, BTS, NYC TLC, FRED, Google Trends |
+| Outside inputs | BTS, NYC TLC, FRED |
 | Horizon | Quarterly through Q4 2027E; annual 2026E to 2028E |
 
 ### 3.3 Valuation and rating
@@ -428,5 +465,5 @@ Start with a pilot of one company per sector (BKNG and UBER) before scaling to e
 - [ ] Fiscal year-ends and exact KPI definitions in the latest 10-K and release
 - [ ] Earnings release dates per backtest quarter, and which companies give numeric guidance (TripAdvisor especially)
 - [ ] One company end to end on EDGAR: company-facts API, filing dates, current rate and User-Agent rules
-- [ ] Each free dataset is available and permitted for this use (TSA, BTS, NYC TLC, FRED, Stooq)
+- [ ] Each free dataset is available and permitted for this use (BTS, NYC TLC, FRED, Tiingo)
 - [ ] Defaults: scenario weights, 60/40 valuation weights, rating thresholds, pass bars, the single ERP
