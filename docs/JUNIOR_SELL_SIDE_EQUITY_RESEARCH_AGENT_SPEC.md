@@ -1,5 +1,7 @@
 # Junior Sell-Side Equity Research Agent: Spec
 
+> **This is the original request (2026-10-27), kept as written.** The build differs where a decision changed it: prices come from Tiingo (not Stooq); TSA and Google Trends were dropped; inputs are those filed **strictly before** the as-of date ([D-038](DECISIONS.md#d-038), design §16–17); only the `update` report type is built, and the workbook has the tabs Model, Assumptions, Summary, Scenarios, Valuation, Revisions, Checks and Log. How it was built: [V4_TECHNICAL_DESIGN_DOC.md](V4_TECHNICAL_DESIGN_DOC.md). What it scored: [V4_RESULTS.md](V4_RESULTS.md).
+
 A portfolio project: one agent that covers eight US travel and mobility companies using only free, public data. It answers questions about them, runs the analyst loop on demand (model, forecast, value), and writes a draft sell-side note. A human reviews every rating and price target. All output is for education and testing, not investment advice.
 
 **Every run takes an as-of date.** The agent sees only data published on or before it. This is what makes backtesting possible (Section 6).
