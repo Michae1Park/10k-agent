@@ -115,18 +115,18 @@ Window: **filings made from 2023-01-01 through the day before the as-of date**.
 
 | KPI | From the release (`facts/kpis.yaml`) | From XBRL | Derived by the model |
 | --- | --- | --- | --- |
-| Revenue | All 8, with segments for EXPE, TRIP, UBER | All 8 | |
+| Revenue | All 8, with segments for EXPE, TRIP, UBER, CART | All 8 | |
 | Adjusted EBITDA | All 8, with segments for TRIP, UBER | | |
 | Free cash flow | All 8 (BKNG 10 of 15 quarters, LYFT 11, CART 2 of 12) | Operating cash flow - capex, where available | |
 | Net income | BKNG, ABNB, CART | All but BKNG | |
 | Diluted EPS | All 8 | Direct quarterly and annual facts; Q4 from the release | |
-| Gross bookings / GOV / GTV | All but TRIP | | |
-| Volume | All but TRIP | | |
-| Segment split | EXPE, TRIP, UBER (CART not extracted) | | |
+| Gross bookings / GOV / GTV | All 8 (TRIP: Viator, 13 of 15 quarters) | | |
+| Volume | All 8 (TRIP: experience bookings, 6 of 15 quarters) | | |
+| Segment split | EXPE, TRIP, UBER, CART | | |
 | Users | UBER, LYFT | | |
-| Adjusted EPS | BKNG only (EXPE, TRIP, UBER report it, not extracted) | | |
-| Take rate | | | Revenue / gross bookings, all but TRIP |
-| Price per unit | | | Gross bookings / volume, all but TRIP |
+| Adjusted EPS | BKNG, EXPE, TRIP; UBER from Q4 2025 (3 quarters) | | |
+| Take rate | | | Revenue / gross bookings (DASH, CART also state it) |
+| Price per unit | | | Gross bookings / volume |
 
 ### 1.6 Collection rules
 
