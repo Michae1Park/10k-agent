@@ -44,6 +44,7 @@ Window: **filings made from 2023-01-01 through the day before the as-of date**.
 | **10-Q** (EDGAR) | Full text and financial statements | Q1 2023 to Q2 2026 (11 per company; CART 9) | Quarterly financials, MD&A |
 | **8-K Item 2.02, Ex. 99.1** | Earnings release and shareholder letter | Q4 2022 to Q2 2026 (15 per company; CART 12) | KPIs, non-GAAP reconciliations, next-quarter guidance |
 | **XBRL company facts** (EDGAR API) and inline XBRL | Structured financial values, each with its filing date | All periods above | Core numbers, point-in-time history |
+| **DEF 14A** (EDGAR) | Annual proxy statement, text only (DEFC14A when contested) | First filed each year, 2023 to as-of; keyed to the fiscal year it reports on (FY2022 to FY2025; CART from FY2023) | Executive pay, equity plans and share requests: dilution context |
 | **Form 4** (EDGAR) | Insider transactions | 2023 to as-of | Dilution context |
 | **Daily prices** (Tiingo; internal use only, never published) | Daily close, adjusted close and volume per ticker, plus SPY | 2023 to as-of | Market cap, EV, beta, backtest prices |
 | **FRED / ALFRED** | 10-year Treasury (DGS10), CPI (CPIAUCSL), consumer sentiment (UMCSENT), USD index (DTWEXBGS), restaurant sales (RSFSDP); revised series use each value's first-published date | 2023 to as-of | Discount rate, demand and FX inputs |
@@ -58,7 +59,6 @@ Window: **filings made from 2023-01-01 through the day before the as-of date**.
 | Consensus estimates (paid) | Benchmark against management guidance and baselines; optionally hand-record a dated figure |
 | Call transcripts | Use releases, shareholder letters and 10-Q text |
 | Paid alternative data (hotel occupancy, app usage, card spend) | BTS and NYC TLC as directional checks, with coverage limits stated |
-| **DEF 14A** proxy statements | Planned, not fetched; dilution context comes from Form 4 |
 | **Stooq** prices | Dropped: a bot check blocks scripts; Tiingo replaces it |
 | **TSA**: daily US air passengers (2023 to as-of) | Dropped: the site blocks automated access (HTTP 403); BTS covers air traffic |
 | **Google Trends**: search interest (weak, noisy; 2023 to as-of) | Dropped: no official API, and unofficial clients break its terms |

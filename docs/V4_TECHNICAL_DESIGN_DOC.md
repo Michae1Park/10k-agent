@@ -128,7 +128,7 @@ UBER:
 | 10-K, 10-Q | `acquisition/edgar.py` | One filing per (form, period); amendments ignored. `(fy, fp)` per accession from any company-facts row with that `accn` (generalizes `fiscal_years_by_accession`; keeps D-004) | `raw/filings/<T>/<period>-<form>/` |
 | 8-K releases | same | Submissions rows with `form=="8-K"` and `"2.02" in items`; the filing index `<acc>-index.htm` gives every `EX-99.*` (99.1 release; 99.2 letter where used). Period from the release text, cross-checked against the next 10-Q; mismatch = fetch error | `.../<period>-ER/` |
 | S-1 (CART) | same | 2023 S-1/424B4; pre-IPO quarters, extracted like a release | `raw/filings/CART/S1/` |
-| DEF 14A | same | Latest per year; chunked text only | |
+| DEF 14A | `acquisition/filings.py` | Submissions rows with `form` in `DEF 14A`, `DEFC14A`; the first each year (later ones are special meetings), keyed to the prior fiscal year. Form `DEF14A`, one pseudo-Item `PROXY`, labeled by the release rules; chunked text only | `.../FY<year>-DEF14A/` |
 | Form 4 | `acquisition/insiders.py` | XML → `insider_tx` (V4.7; dilution context only) | |
 | XBRL company facts | `acquisition/edgar.py` | Unchanged; refreshed each fetch, facts keep their `filed` date | `raw/edgar/<T>/companyfacts.json` |
 | Prices | `acquisition/prices.py` | Tiingo daily EOD per ticker + SPY (for beta), split-adjusted (`TIINGO_API_KEY`, free Starter plan). Licence is internal use only: raw prices never leave `data/` (§11, §17.5) | `raw/prices/` |
