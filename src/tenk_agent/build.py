@@ -33,7 +33,7 @@ from tenk_agent.retrieval.index import add_pages, embed_corpus, load
 from tenk_agent.store import Store
 
 STAGES = ("chunk", "load", "embed", "pages", "facts", "market", "kpis")
-KPIS = Path("output/extraction/v4.3-releases-all/extractions.json")  # v4.2 + TRIP eliminations
+KPIS = Path("output/extraction/v4.8-releases-all/extractions.json")  # v4.3 + adj. EPS, TRIP, CART
 
 
 def filing_dirs(
