@@ -19,6 +19,7 @@ UBER:
                  labels: ["Adjusted EBITDA"]}
     free_cash_flow: {unit: USD millions, labels: ["Free cash flow"]}
     eps_diluted: {unit: USD per share, labels: ["Diluted", "GAAP Diluted EPS"]}
+    adj_eps: {unit: USD per share, labels: ["Non-GAAP EPS"]}
   guidance:
     gross_bookings: {unit: USD millions, basis: level}
     adj_ebitda: {unit: USD millions, basis: level}
@@ -50,6 +51,7 @@ EXPE:
     adj_ebitda: {unit: USD millions, labels: ["Adjusted EBITDA"]}
     eps_diluted: {unit: USD per share,
                   labels: ["Diluted Earnings Per Share", "Diluted earnings per share"]}
+    adj_eps: {unit: USD per share, labels: ["Adjusted EPS"]}
     free_cash_flow: {unit: USD millions, labels: ["Free cash flow"]}
   guidance:
     gross_bookings: {unit: USD millions, basis: level}
@@ -86,6 +88,12 @@ TRIP:
                  segments: [total, tripadvisor, viator, thefork, experiences, hotels_other],
                  labels: ["Total Adjusted EBITDA"], definitions: {2026Q2: 2}}
     eps_diluted: {unit: USD per share, labels: ["Diluted"], definitions: {2026Q2: 2}}
+    adj_eps: {unit: USD per share,  # non-GAAP diluted EPS (from continuing operations since 2026Q2)
+              labels: ["Non-GAAP Diluted Earnings (Loss) per Share", "Non-GAAP Diluted EPS"],
+              definitions: {2026Q2: 2}}
+    gross_bookings: {unit: USD millions, segments: [viator],  # Viator only: "GBV"
+                     labels: ["Gross bookings value", "Gross booking value", "GBV"]}
+    experience_bookings: {unit: count millions, labels: ["experience bookings"]}
     free_cash_flow: {unit: USD millions, labels: ["Free cash flow"], definitions: {2026Q2: 2}}
   guidance: {}  # TRIP gives no numeric guidance in its releases (V4.0a survey)
 
@@ -120,7 +128,8 @@ CART:
   kpis:
     gtv: {unit: USD millions, labels: ["GTV", "Gross transaction value"]}
     orders: {unit: count millions, labels: ["Orders"]}
-    revenue: {unit: USD millions, labels: ["Total revenue"]}
+    revenue: {unit: USD millions, segments: [total, transaction, advertising],
+              labels: ["Total revenue", "Transaction revenue", "Advertising and other revenue"]}
     net_income: {unit: USD millions, labels: ["Net income", "GAAP net income"]}
     adj_ebitda: {unit: USD millions, labels: ["Adjusted EBITDA"]}
     free_cash_flow: {unit: USD millions, labels: ["Free cash flow"]}
