@@ -202,7 +202,7 @@ UBER:
 1. Input: release chunks (tables first) + that company's registry entries.
 2. Output: KPI rows `{metric, segment, period, value, unit, chunk_id, quote}` and guidance rows `{metric, target_period, low, high, basis, chunk_id, quote}`.
 3. **Code validates:** the quote occurs verbatim in the chunk, and `verify.find_value` finds the value in the quote (unit-aware). Failure = one repair turn, then an exception row (data gap); never a stored value.
-4. **Reconciliation:** where a KPI also exists as a fact (revenue, iXBRL segment revenue), the filing wins (spec §1.5) and the gap is an exception: `information` under the stated rounding, `warning` above it.
+4. **Reconciliation:** where a KPI also exists as a fact (revenue, iXBRL segment revenue), the filing wins (spec §1.6) and the gap is an exception: `information` under the stated rounding, `warning` above it.
 5. **Restatements:** a recast release yields rows for prior periods with a new `definition_version`; `quarters` and the model read the newest, the log keeps the old.
 
 Guidance comes in dollars, growth rates, margins, or not at all (TRIP). `basis` keeps the original form; `forecast.anchor()` converts growth to a level via the year-ago actual. No numeric guidance = guidance baseline "n/a: no numeric guidance" (§13).
@@ -705,7 +705,7 @@ Each becomes a DECISIONS.md entry when built. Rows 1–11 fill gaps in the spec;
 | 8 | Non-operating items | Forecast 0, flagged |
 | 9 | No numeric guidance | Growth guidance → level; none → trend + fade, guidance baseline n/a |
 | 10 | Relative rating | Only with `--all` |
-| 11 | Consensus | None; an optional hand-recorded dated figure later (spec §1.3) |
+| 11 | Consensus | None; an optional hand-recorded dated figure later (spec §1.4) |
 | 12 | Model source of truth | Python from one DSL; xlsx generated with formulas; parity test |
 | 13 | Statement detail | Condensed (§5.2); full detail in the data pack |
 | 14 | Release preprocessing | Rules only, no structure agent unless the pilot shows bad headings |

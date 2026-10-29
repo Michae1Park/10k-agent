@@ -1,10 +1,18 @@
 # Junior Sell-Side Equity Research Agent: Spec
 
-> **This is the original request (2026-10-27), kept as written.** The build differs where a decision changed it: prices come from Tiingo (not Stooq); TSA and Google Trends were dropped; inputs are those filed **strictly before** the as-of date ([D-038](DECISIONS.md#d-038), design §16–17); only the `update` report type is built, and the workbook has the tabs Model, Assumptions, Summary, Scenarios, Valuation, Revisions, Checks and Log. How it was built: [V4_TECHNICAL_DESIGN_DOC.md](V4_TECHNICAL_DESIGN_DOC.md). What it scored: [V4_RESULTS.md](V4_RESULTS.md).
+> **Status:** §1 matches the build; §2 onward is the original request. Not built: `initiation` reports. The workbook has a Revisions tab and no Bridge or DCF tab. See [D-038](DECISIONS.md#d-038), the [design doc](V4_TECHNICAL_DESIGN_DOC.md) and the [results](V4_RESULTS.md).
 
-A portfolio project: one agent that covers eight US travel and mobility companies using only free, public data. It answers questions about them, runs the analyst loop on demand (model, forecast, value), and writes a draft sell-side note. A human reviews every rating and price target. All output is for education and testing, not investment advice.
+A portfolio project: one agent covers eight US travel and mobility companies using only free, public data. It answers questions, runs the analyst loop on demand (model, forecast, value) and writes a draft sell-side note. A human reviews every rating and price target. All output is for education and testing, not investment advice.
 
-**Every run takes an as-of date.** The agent sees only data published strictly before it. This is what makes backtesting possible (Section 6).
+Three modes (details in §2):
+
+| Mode | You give it | You get |
+| --- | --- | --- |
+| **Ask** | A question | A short cited answer from filed data |
+| **Research** | A question | An analytical answer from the model, forecast or valuation |
+| **Report** | A ticker | A draft note, a model-change workbook and an evidence log |
+
+**Every run takes an as-of date.** The agent sees only data published strictly before it, which is what makes backtesting possible (§6).
 
 ---
 
@@ -52,7 +60,21 @@ Window: **filings made from 2023-01-01 through the day before the as-of date**.
 | **BTS** | Monthly US airline passengers (publish date estimated as month end + 90 days) | 2023 to as-of | Travel cross-check |
 | **NYC TLC** | Monthly high-volume for-hire trips per license (HV0003 Uber, HV0005 Lyft; ~2 months lag, NYC only) | 2023 to as-of | Uber vs Lyft trip cross-check |
 
-### 1.3 Not available (free-data limits)
+### 1.3 Non-numerical data
+
+| Text | Source | Used by |
+| --- | --- | --- |
+| Risk factors | 10-K Item 1A; 10-Q risk-factor updates | Ask, Research, debates (§3), events (§8) |
+| MD&A | 10-K, 10-Q | Ask, Research, debates, events |
+| Management commentary | Earnings release and shareholder letter | Ask, Research, debates, events |
+| Business description | 10-K Item 1 | Ask, Research |
+| Executive pay, equity plans | DEF 14A | Ask, Research |
+
+- Ask and Research find passages with the same search tool; Report reads them in its events and debates steps.
+- Search is keyword plus dense, reranked, and bound to the as-of date. Each risk factor is its own chunk.
+- Note prose is written from registered facts, not from raw text.
+
+### 1.4 Not available (free-data limits)
 
 | Missing | Handling |
 | --- | --- |
@@ -63,41 +85,50 @@ Window: **filings made from 2023-01-01 through the day before the as-of date**.
 | **TSA**: daily US air passengers (2023 to as-of) | Dropped: the site blocks automated access (HTTP 403); BTS covers air traffic |
 | **Google Trends**: search interest (weak, noisy; 2023 to as-of) | Dropped: no official API, and unofficial clients break its terms |
 
-### 1.4 Core KPIs extracted each quarter
+### 1.5 Core KPIs
 
-Pulled from each earnings release (`facts/kpis.yaml`).
+**What each company reports** (checked against each company's Q2 2026 release):
 
 | KPI | BKNG | EXPE | ABNB | TRIP | UBER | LYFT | DASH | CART |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Revenue ¹ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Revenue | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Adjusted EBITDA | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Free cash flow ² | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Free cash flow | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Net income | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Diluted EPS | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Gross bookings / GOV / GTV ³ | ✓ | ✓ | ✓ |  | ✓ | ✓ | ✓ | ✓ |
-| Volume: room nights, nights, trips, rides, orders ⁴ | ✓ | ✓ | ✓ |  | ✓ | ✓ | ✓ | ✓ |
-| Segment split ⁵ |  | ✓ |  | ✓ | ✓ |  |  |  |
-| Net income | ✓ |  | ✓ |  |  |  |  | ✓ |
-| Users: MAPCs, active riders |  |  |  |  | ✓ | ✓ |  |  |
-| Adjusted EPS | ✓ |  |  |  |  |  |  |  |
+| Gross bookings / GOV / GTV ¹ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Volume: room nights, nights, bookings, trips, rides, orders ² | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Segment split ³ |  | ✓ |  | ✓ | ✓ |  |  | ✓ |
+| Adjusted EPS | ✓ | ✓ |  | ✓ | ✓ |  |  |  |
+| Users: MAPCs, active riders ⁴ |  |  |  |  | ✓ | ✓ |  |  |
+| Price per unit: ADR, AOV ⁵ |  | ✓ | ✓ |  |  |  |  | ✓ |
+| Take rate / net revenue margin ⁶ |  |  |  |  |  |  | ✓ | ✓ |
 
-- ¹ DoorDash: revenue is extracted, though the release headlines net revenue margin.
-- ² Extracted only where the release states it: BKNG 10 of 15 quarters, LYFT 11, CART 2 of 12; other five complete. Gaps fall back to XBRL (operating cash flow - capex, §3.1) where available; capex gaps in design §17.6.
-- ³ ABNB: gross booking value. DASH: marketplace GOV. CART: GTV. TRIP: Viator booking value not extracted.
-- ⁴ ABNB: nights and experiences booked. TRIP: none extracted (brand traffic only "if disclosed", design §5.3).
-- ⁵ Segments extracted:
-  - EXPE: B2C and B2B gross bookings and revenue.
-  - TRIP: Tripadvisor, Viator, TheFork revenue and adjusted EBITDA (Experiences and Hotels and Other before the 2026 recast).
-  - UBER: Mobility, Delivery, Freight gross bookings, revenue and adjusted EBITDA, plus corporate adjusted EBITDA.
-  - CART: transaction and advertising revenue not extracted separately.
+- ¹ ABNB: gross booking value. TRIP: Viator gross bookings value. DASH: marketplace GOV. CART: GTV.
+- ² ABNB: nights and experiences booked. TRIP: Viator experience bookings.
+- ³ EXPE: B2C and B2B. TRIP: Tripadvisor, Viator, TheFork. UBER: Mobility, Delivery, Freight. CART: transaction and advertising revenue.
+- ⁴ DASH gives monthly active users only as a December figure in its Q4 letter, and describes them in other quarters without a number.
+- ⁵ BKNG mentions ADR only in a footnote; DASH cites average order value as a driver without a figure.
+- ⁶ DASH: net revenue margin. CART: revenue as a share of GTV. The others state no take rate.
 
-**Derived by the model, not extracted** (take rate is always computed from reported revenue and gross bookings, §1.5):
+**How we get each one:**
 
-| Derived KPI | BKNG | EXPE | ABNB | TRIP | UBER | LYFT | DASH | CART |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Take rate = revenue / gross bookings (DoorDash: net revenue margin) | ✓ | ✓ | ✓ |  | ✓ | ✓ | ✓ | ✓ |
-| Price per unit = gross bookings / volume (ADR, AOV, bookings per trip or ride) | ✓ | ✓ | ✓ |  | ✓ | ✓ | ✓ | ✓ |
+| KPI | From the release (`facts/kpis.yaml`) | From XBRL | Derived by the model |
+| --- | --- | --- | --- |
+| Revenue | All 8, with segments for EXPE, TRIP, UBER | All 8 | |
+| Adjusted EBITDA | All 8, with segments for TRIP, UBER | | |
+| Free cash flow | All 8 (BKNG 10 of 15 quarters, LYFT 11, CART 2 of 12) | Operating cash flow - capex, where available | |
+| Net income | BKNG, ABNB, CART | All but BKNG | |
+| Diluted EPS | All 8 | Direct quarterly and annual facts; Q4 from the release | |
+| Gross bookings / GOV / GTV | All but TRIP | | |
+| Volume | All but TRIP | | |
+| Segment split | EXPE, TRIP, UBER (CART not extracted) | | |
+| Users | UBER, LYFT | | |
+| Adjusted EPS | BKNG only (EXPE, TRIP, UBER report it, not extracted) | | |
+| Take rate | | | Revenue / gross bookings, all but TRIP |
+| Price per unit | | | Gross bookings / volume, all but TRIP |
 
-### 1.5 Collection rules
+### 1.6 Collection rules
 
 - The filing wins when sources disagree; log the gap.
 - Restate history when a KPI definition or segment structure changes, and note it.
@@ -341,7 +372,7 @@ Example exception rows:
 
 | ID | Severity | Item | Treatment |
 | --- | --- | --- | --- |
-| X-01 | Warning | Q2 adj. EBITDA 2.1 (release) vs. 2.08 (10-Q) | Rounding; filing wins (§1.5) |
+| X-01 | Warning | Q2 adj. EBITDA 2.1 (release) vs. 2.08 (10-Q) | Rounding; filing wins (§1.6) |
 | X-02 | Data gap | AV economics not disclosed | Scenario only, not a forecast |
 | X-03 | Information | No consensus source | Benchmark against guidance and baselines |
 | X-04 | Information | Three comps only | Flag thin range |
