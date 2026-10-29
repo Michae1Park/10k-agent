@@ -17,7 +17,7 @@ import argparse
 import json
 import tempfile
 import urllib.request
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
@@ -67,8 +67,9 @@ def fetch_tlc(raw: Path, since: str = "2023-01") -> list[str]:
             licenses = pq.read_table(tmp.name, columns=["hvfhs_license_num"])[0]
             counts = pc.value_counts(licenses).to_pylist()
         trips = {c["values"]: c["counts"] for c in counts}
+        retrieved = datetime.now(UTC).isoformat(timespec="seconds")
         out.write_text(json.dumps({"month": month, "published": published, "trips": trips,
-                                   "source": TLC.format(month=month)}))
+                                   "source": TLC.format(month=month), "retrieved_at": retrieved}))
         added.append(month)
         print(f"TLC {month}: {sum(trips.values()):,} trips, published {published}")
     return added

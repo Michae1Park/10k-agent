@@ -63,3 +63,15 @@ def test_unrevised_daily_series_are_published_the_next_day_and_gaps_skipped(tmp_
     assert Store(tmp_path / "m.db", AsOf.of("2026-08-06")).series("macro:DGS10") == [
         ("2026-08-04", 4.63)
     ]
+
+
+def test_erp_fetch_records_when_it_was_retrieved(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from tenk_agent.acquisition import market
+
+    monkeypatch.setattr(market.httpx, "get",
+                        lambda *a, **k: SimpleNamespace(status_code=200, content=b"xlsx"))
+    assert market.fetch_erp(tmp_path) == []
+    stamp = (tmp_path / "macro" / "ERPbymonth.xlsx.retrieved").read_text()
+    assert stamp.startswith("20") and stamp.endswith("+00:00")

@@ -92,6 +92,7 @@ def fetch_erp(raw: Path, refresh: bool = False) -> list[str]:
         return [f"Damodaran ERP: HTTP {response.status_code}"]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(response.content)
+    path.with_name(path.name + ".retrieved").write_text(_now())  # the xlsx can't hold a date
     return []
 
 

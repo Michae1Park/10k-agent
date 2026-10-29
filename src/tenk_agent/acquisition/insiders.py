@@ -3,17 +3,18 @@
   taskset -c 16-31 uv run python -m tenk_agent.acquisition.insiders [TICKERS] [--since 2023-01-01]
 
 Each company's Form 4 filings from its cached EDGAR submissions: the raw ownership XML (the
-primary document without its xsl stylesheet folder) is cached under raw/insiders/<T>/ and its
-non-derivative transactions loaded into the store's insider_tx table, dated by filing date (the
-as-of filter). Codes: S open-market sale, P purchase, A award, M option exercise, F shares
-withheld for tax, G gift. The store's insider_summary gives a quarter's net open-market and
-award shares, for the note's dilution context.
+primary document without its xsl stylesheet folder) is cached under raw/insiders/<T>/ (with
+retrieved.json: fetch times) and its non-derivative transactions loaded into the store's
+insider_tx table, dated by filing date (the as-of filter). Codes: S open-market sale, P purchase,
+A award, M option exercise, F shares withheld for tax, G gift. The store's insider_summary gives a
+quarter's net open-market and award shares, for the note's dilution context.
 """
 
 import argparse
 import json
 import os
 import xml.etree.ElementTree as ET
+from datetime import UTC, datetime
 from pathlib import Path
 
 from tenk_agent.acquisition.edgar import EdgarClient
@@ -35,6 +36,8 @@ def filings(raw: Path, ticker: str, since: str) -> list[dict]:
 def fetch(raw: Path, ticker: str, since: str, client: EdgarClient) -> int:
     folder = raw / "insiders" / ticker
     folder.mkdir(parents=True, exist_ok=True)
+    stamps_path = folder / "retrieved.json"  # accession -> when this copy was fetched
+    stamps = json.loads(stamps_path.read_text()) if stamps_path.exists() else {}
     added = 0
     for f in filings(raw, ticker, since):
         out = folder / f"{f['accession']}.xml"
@@ -43,7 +46,9 @@ def fetch(raw: Path, ticker: str, since: str, client: EdgarClient) -> int:
         url = ARCHIVE.format(cik=int(f["cik"]), accession=f["accession"].replace("-", ""),
                              document=f["document"])
         out.write_bytes(client.get(url))
+        stamps[f["accession"]] = datetime.now(UTC).isoformat(timespec="seconds")
         added += 1
+    stamps_path.write_text(json.dumps(stamps))
     return added
 
 
