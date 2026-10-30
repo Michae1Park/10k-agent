@@ -64,15 +64,11 @@ Window: **filings made from 2023-01-01 through the day before the as-of date**.
 
 | Text | Source | Used by |
 | --- | --- | --- |
-| Risk factors | 10-K Item 1A; 10-Q risk-factor updates | Ask, Research, debates (§3), events (§8) |
-| MD&A | 10-K, 10-Q | Ask, Research, debates, events |
-| Management commentary | Earnings release and shareholder letter | Ask, Research, debates, events |
+| Risk factors | 10-K Item 1A; 10-Q risk-factor updates | Ask, Research, Report |
+| MD&A | 10-K, 10-Q | Ask, Research, Report |
+| Management commentary | Earnings release and shareholder letter | Ask, Research, Report |
 | Business description | 10-K Item 1 | Ask, Research |
 | Executive pay, equity plans | DEF 14A | Ask, Research |
-
-- Ask and Research find passages with the same search tool; Report reads them in its events and debates steps.
-- Search is keyword plus dense, reranked, and bound to the as-of date. Each risk factor is its own chunk.
-- Note prose is written from registered facts, not from raw text.
 
 ### 1.4 Not available (free-data limits)
 
@@ -147,6 +143,8 @@ Window: **filings made from 2023-01-01 through the day before the as-of date**.
 | **Report** | Ticker + as-of + type (`update` or `initiation`) | A 10-section draft note, a model-change workbook (`.xlsx`) and an evidence and exception log | Target: under 30 min per company |
 
 Ask and Research both answer questions. Ask retrieves what was reported; Research computes something new (an estimate, scenario or valuation) by running the model.
+
+When a comparison needs a KPI that some of the companies do not report (§1.5), Ask and Research say which companies lack it, never fill the gap with an estimate, and offer the closest metric all of them report (for example, GAAP diluted EPS in place of adjusted EPS). Where definitions differ between companies, they say so.
 
 ### 2.1 Ask mode: example question per category
 
