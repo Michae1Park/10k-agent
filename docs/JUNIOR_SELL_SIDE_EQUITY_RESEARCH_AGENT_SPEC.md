@@ -385,6 +385,40 @@ Note rules:
 - `update` is 3–5 pages after each quarter; `initiation` adds a business overview, industry and competition, and a model appendix, with the same ten sections.
 - Build sections 1–5 first; sections 6–10 follow once the model and extraction tests pass.
 
+**How a report is filled**
+
+Report mode is a fixed pipeline, not an open agent loop. It uses the same tools and data as Ask and Research (model, valuation, filings search, KPIs), but it does not start Ask or Research runs. Code computes every number. The LLM interprets and writes.
+
+| Section | Built by | Inputs |
+| --- | --- | --- |
+| 2.1, 2.2, 4.1–4.3, 5, 9 | Code | Model, guidance, revisions, checks |
+| 2.3 Quality of the quarter | Bounded research | KPI, cash-flow and reconciliation facts; release and 10-Q text |
+| 3 Drivers and debates | Bounded research, one per scenario driver | Driver trend, management commentary, risk factors |
+| 4 Why estimates changed | Bounded research | Revision bridge, guidance changes, events |
+| 6 Valuation | Code, plus a justification of the target multiple | Comps, DCF, peer facts |
+| 7 Risks | Code sensitivities, plus bounded research | Scenario runs, new risk-factor text |
+| 8 Catalysts | Bounded research | Events, filings text only (no calendar data) |
+| 1 Executive summary | Written last | The finished sections |
+| 10 Senior analyst review | Written last | Open exceptions, issues and decisions from all sections |
+
+Requirements:
+
+1. **Fixed fact set per section.** Each section lists the model cells, KPIs and filing passages it may use before it runs. The LLM never decides what data exists.
+2. **Bounded research for judgment sections.** Sections 2.3, 3, 4, 6, 7 and 8 each get one run with the Research toolset and a call budget. A run does not plan, split into sub-questions or start other runs. Its output is a short conclusion plus the ids it cited.
+3. **Number trace.** Every figure in LLM text must trace to the model or an evidence-log row. Research output becomes facts first. Untraced sentences get one repair turn, then are dropped and logged.
+4. **Sections 1 and 10 are written last.** They summarize the finished sections. Section 1 carries the rating, price target and takeaways. Section 10 lists the decisions needed and the open issues. Neither adds a new number or claim.
+5. **Consistency check before export.** Code runs these checks; an LLM only explains a failure:
+   - the rating matches the return thresholds in §3.3
+   - every number in Section 1 equals the same number in its section table
+   - every debated driver appears in the Section 7 sensitivities
+   - a guidance change in the events appears in 2.2
+   - every open issue is in Section 10
+6. **Flag, don't rewrite.** A failed check becomes an exception row. Sections 1 and 10 get one repair turn, since the pipeline wrote them. Other sections are never rewritten silently.
+7. **Degrade, don't stop.** If a research run fails or hits its budget, the section reads "failed check: reason" and the run continues. A model-integrity failure still stops the run.
+8. **Time.** Target under 30 minutes per company. Each section has a call and token budget, and the budgets sum to well under that target.
+
+Not required: a planner, multi-step decomposition of sections, or an agent that coordinates other agents.
+
 ---
 
 ## 3. How it works
