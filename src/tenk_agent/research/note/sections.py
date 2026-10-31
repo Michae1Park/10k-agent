@@ -303,8 +303,7 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
     buy = add("Buy threshold return", ctx["rating"]["buy"] * 100, "percent", "research.yaml")
     sell = add("Sell threshold return", ctx["rating"]["sell"] * 100, "percent", "research.yaml")
     s9.blocks.append(f"Rating definitions: Buy ≥ {buy.text()} 12-month return, Sell ≤ "
-                     f"{sell.text()}, Hold between. A draft for education and testing, not "
-                     "investment advice.")
+                     f"{sell.text()}, Hold between.")
     sections.append(s9)
 
     # 10 ----------------------------------------------------------------------------------

@@ -148,8 +148,7 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
             exceptions += fill(built, facts, llm)
     header = (f"# {ctx['name']} ({ticker}) · Earnings update · {period}\n\nAs of {as_of} · "
               "Status: DRAFT for senior analyst review · Prepared by: research agent  \n"
-              "For education and testing. Not investment advice. No rating or PT is approved "
-              "until the responsible analyst confirms it.")
+              "No rating or PT is approved until the responsible analyst confirms it.")
     note_md = note_sections.markdown(built, header)
     blocks = [b for s in built for b in s.blocks if isinstance(b, str) and b.strip()]
     slots = [{"key": b.key, "text": b.text, "facts": b.facts} for s in built for b in s.blocks
