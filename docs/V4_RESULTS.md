@@ -44,7 +44,7 @@ Guidance: companies beat their own guided midpoint 43 times in 44. Extraction ab
 | ABNB | $183.22 | $96.76 | −47.2% | Sell | Sell |
 | DASH | $231.74 | $111.98 | −51.7% | Sell | Sell |
 
-Drafts for education and testing, not investment advice. Read the limits before reading these.
+Drafts for senior analyst review. Read the limits before reading these.
 
 ## Example report
 

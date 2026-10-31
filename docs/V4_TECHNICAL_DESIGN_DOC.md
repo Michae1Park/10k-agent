@@ -18,7 +18,7 @@ The spec says *what* to build; this doc says *how*, and how it plugs into V0–V
 | **Time** | FY2023–2025, static | Q1 2023 → latest filed; **every run has an as-of date** |
 | **Numbers** | Reported, or calculator over reported | + deterministic three-statement model, forecasts, valuation |
 | **LLM role** | Finds, calculates, cites | Extracts KPIs, proposes assumptions, writes prose. **Never outputs a forecast number** |
-| **D-001** | No prices, forecasts, advice | Allowed; ratings are drafts labeled "education and testing, not investment advice". A new decision entry supersedes D-001 in V4.0a |
+| **D-001** | No prices, forecasts, advice | Allowed; ratings are drafts pending senior analyst approval. A new decision entry supersedes D-001 in V4.0a |
 
 **Reused as is or extended**
 
@@ -248,19 +248,19 @@ Full GAAP detail stays in the data pack; a fixed condensed layout lets one engin
 |---|---|
 | Operating build | Per template: volume, price, gross bookings, take rate, revenue by segment |
 | Income | Revenue · adj. EBITDA (margin on GB or revenue, by segment where reported) · SBC · D&A · other adjustments (0) · **GAAP operating income** = adj. EBITDA − SBC − D&A − other · interest and other (non-operating gains 0) · tax (trailing effective rate, bounded 10–30%) · NI · diluted shares (trailing-4Q average quarterly change) · EPS |
-| Cash flow | NI + D&A + SBC + Δ working capital = OCF · capex (% revenue) · **FCF = OCF − capex** · buybacks (trailing-4Q $) · debt (flat unless 10-K maturities) |
-| Balance (~15 lines) | cash (plug) · ST investments · receivables · other current · PP&E · goodwill + intangibles · other · payables · accrued · deferred revenue / merchant bookings · debt · leases · other · equity |
+| Cash flow | NI + D&A + SBC = OCF (Δ working capital 0 in forecasts) · capex (% revenue) · **FCF = OCF − capex** · buybacks (trailing-4Q $) · debt (flat unless 10-K maturities) |
+| Balance (condensed) | cash · other assets · total assets · total liabilities · redeemable NCI · total equity |
 
-Working-capital lines hold their same-quarter-last-year ratio to GB or revenue, so travel prepayment seasonality carries over. Equity rolls with NI + SBC − buybacks. History must balance from XBRL (the "other" lines absorb the remainder); the forecast balances by construction.
+Timing is simplified: every company is modeled as if an order executes at once and the take rate applies in the same quarter. Travel prepayment (deferred merchant bookings) is not modeled; the lag sits inside the take rate, and forecast working capital change is 0. History must tie to the XBRL totals (other assets is the remainder); in the forecast, cash rolls with FCF less buybacks.
 
 ### 5.3 Templates (YAML node definitions, data not code)
 
 | Template | Companies | Revenue build |
 |---|---|---|
-| `marketplace` | BKNG, EXPE, ABNB | GB = room nights (ABNB: nights and experiences) × ADR; revenue = GB × take rate; deferred merchant bookings follow GB |
-| `segments` | UBER | Per segment (Mobility, Delivery, Freight): GB (trips × GB per trip where disclosed) × take rate; adj. EBITDA = margin × GB; corporate cost % revenue; totals are sums |
-| `orders` | DASH, LYFT, CART | DASH: orders × AOV = GOV; revenue = GOV × net revenue margin. LYFT: rides × GB per ride; revenue = GB × take rate. CART: orders × AOV = GTV; transaction and ads revenue each as % GTV |
-| `trip` | TRIP | Viator: booking value × take rate. Tripadvisor brand: traffic × revenue per visitor if disclosed, else revenue growth. TheFork: revenue growth |
+| `marketplace` | BKNG, EXPE, ABNB | GB = room nights (ABNB: nights and experiences) × ADR; revenue = GB × take rate |
+| `segments` | UBER | Per segment (Mobility, Delivery, Freight): GB grown on its own faded y/y rate × segment take rate; revenue is the sum; adj. EBITDA = revenue − costs as a share of total GB (segment EBITDA stopped in 2026Q1) |
+| `orders` | DASH, LYFT, CART | DASH: orders × AOV = GOV; revenue = GOV × net revenue margin. LYFT: rides × GB per ride; revenue = GB × take rate. CART: orders × AOV = GTV; revenue = GTV × take rate (transaction and ads revenue not split in the model) |
+| `trip` | TRIP | No volume KPI is disclosed: revenue grows on one faded rate and adj. EBITDA is a margin on revenue. No numeric guidance |
 
 If a volume KPI isn't disclosed, the template falls back to a growth driver one level up and logs an exception.
 
@@ -747,7 +747,7 @@ The 10-K count includes the FY2022 10-K filed in early 2023. The 15 releases are
 1. **No dimensional facts in company facts:** fact fields are only `accn, end, filed, form, fp, frame, fy, start, val`. The inline XBRL has them: UBER's Q2 2026 10-Q has 664 of 1,274 facts with dimensions, including `us-gaap:Revenues` by `uber:MobilityMember`/`DeliveryMember`/`FreightMember`.
 2. **10-Q cash flows are year-to-date only:** UBER and BKNG operating cash flow comes as 89–90, 180–181 and 272–273 day durations, with no three-month Q2 or Q3 fact. Income-statement items come as both three-month and year-to-date, sharing an end date (confirms the id change in §4.5).
 3. **Operating KPIs are untagged:** no gross bookings, trips or room-nights concept in either filing's XBRL. "Gross Bookings" appears 48 times in UBER's 10-Q text only.
-4. **New: company facts drops company-specific concepts.** It holds only `dei`, `us-gaap`, `srt`, `ecd`, `ffd`. Concepts such as `bkng:DeferredMerchantBookings` (needed by the `marketplace` template) and `uber:PlatformParticipantDirectTransactionCosts` exist only in the inline XBRL. **Change:** `facts/ixbrl.py` reads every company-specific fact, not just dimensional ones.
+4. **New: company facts drops company-specific concepts.** It holds only `dei`, `us-gaap`, `srt`, `ecd`, `ffd`. Concepts such as `bkng:DeferredMerchantBookings` and `uber:PlatformParticipantDirectTransactionCosts` exist only in the inline XBRL. **Change:** `facts/ixbrl.py` reads every company-specific fact, not just dimensional ones.
 
 ### 17.4 Numeric guidance (from the latest release; the full 14-quarter survey runs with the V4.1 extractor)
 
