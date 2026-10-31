@@ -383,6 +383,7 @@ Note rules:
 - Never fill a gap with an estimate shown as fact; never resolve a conflict silently.
 - Estimates read "2027E", actuals "2025A"; label periods once as "Q2 2026 (Apr–Jun)".
 - `update` is 3–5 pages after each quarter; `initiation` adds a business overview, industry and competition, and a model appendix, with the same ten sections.
+- An `update` takes its "old" estimates from the latest earlier report for the same ticker (the latest version with an earlier as-of date). Section 4 and the workbook Summary compare against it. If none exists, the run is flagged "initial draft (no prior run)" and Section 4 shows no old values.
 - Build sections 1–5 first; sections 6–10 follow once the model and extraction tests pass.
 
 **How a report is filled**
