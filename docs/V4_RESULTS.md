@@ -44,7 +44,7 @@ Guidance: companies beat their own guided midpoint 43 times in 44. Extraction ab
 | ABNB | local only | local only | local only | local only | local only |
 | DASH | local only | local only | local only | local only | local only |
 
-Drafts for education and testing, not investment advice. Read the limits before reading these.
+Drafts for senior analyst review. Read the limits before reading these.
 
 ## Example report
 

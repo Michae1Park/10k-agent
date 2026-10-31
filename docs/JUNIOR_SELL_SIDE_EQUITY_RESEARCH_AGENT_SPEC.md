@@ -2,7 +2,7 @@
 
 > **Status:** §1 matches the build; §2 onward is the original request. Not built: `initiation` reports. The workbook has a Revisions tab and no Bridge or DCF tab. See [D-038](DECISIONS.md#d-038), the [design doc](V4_TECHNICAL_DESIGN_DOC.md) and the [results](V4_RESULTS.md).
 
-A portfolio project: one agent covers eight US travel and mobility companies using only free, public data. It answers questions, runs the analyst loop on demand (model, forecast, value) and writes a draft sell-side note. A human reviews every rating and price target. All output is for education and testing, not investment advice.
+A portfolio project: one agent covers eight US travel and mobility companies using only free, public data. It answers questions, runs the analyst loop on demand (model, forecast, value) and writes a draft sell-side note. A human reviews every rating and price target.
 
 Three modes (details in §2):
 
@@ -185,8 +185,7 @@ A report run hands the senior analyst **three artifacts**. The split lets the se
 ```text
 UBER TECHNOLOGIES (UBER)  ·  Earnings update  ·  Q2 2026 (Apr–Jun)
 As of 2026-08-06  ·  Status: DRAFT for senior analyst review  ·  Prepared by: research agent
-For education and testing. Not investment advice. No rating or PT is approved until the
-responsible analyst confirms it.
+No rating or PT is approved until the responsible analyst confirms it.
 
 1. EXECUTIVE SUMMARY
    Draft rating: Buy    Price: $80.00    12-month PT: $95.00    Return: +18.8%
@@ -246,9 +245,10 @@ responsible analyst confirms it.
 
    3.2 Can Mobility sustain high-teens growth?
    Bull: trips +16% with rising bookings per trip.  Bear: growth fades as comps get harder;
-   our default fade (x0.90 per quarter) already takes it to about 13% by Q4 2027E.
-   Hypothesis: 15% for 2027E. Sensitivity: each 1 pt of Mobility bookings growth moves
-   2027E EBITDA by about $0.06B (0.6%).
+   our default fade (x0.90 per quarter) already takes it to about 9% by Q4 2027E.
+   Hypothesis: 15% for 2027E, an analyst override of the default fade (which gives about
+   11% for 2027E), because trips are growing +16% with rising bookings per trip.
+   Sensitivity: each 1 pt of Mobility bookings growth moves 2027E EBITDA by about $0.06B (0.6%).
    Trigger: Mobility bookings growth below 14% for two quarters challenges the thesis.
    Data gap: NYC TLC covers NYC only, so it is a directional check, not proof.
 
@@ -302,7 +302,7 @@ responsible analyst confirms it.
    DCF: 10 years (3 modeled, 7 faded), WACC and terminal growth in the workbook; terminal value
    share of EV shown. Grid: price per share vs. WACC x terminal growth.
    Scenario   PT     Key assumptions                                   Weight
-   Bear       $70    Take rate -75 bps vs. base; Mobility growth 12%; 16x   25%
+   Bear       $70    Take rate -75 bps vs. base; Mobility growth 11% (default fade); 16x   25%
    Base       $95    Table 4.1 estimates; 19x                           50%
    Bull       $120   Mobility growth 20%; Delivery margin +100 bps; 22x     25%
    Probability-weighted: $95 (0.25 x 70 + 0.5 x 95 + 0.25 x 120). Return +18.8% → Buy (≥ +15%).
@@ -323,11 +323,10 @@ responsible analyst confirms it.
 
 9. SOURCES, ASSUMPTIONS, DISCLOSURES
    Data as of 2026-08-06: 10-Q (filed ...), 8-K Ex. 99.1 (filed ...), Tiingo prices, FRED DGS10.
-   Key assumptions (analyst-imposed): take rate 26.8% flat; growth fade 0.90; terminal growth 3%.
+   Key assumptions (analyst-imposed): take rate 26.8% flat; Mobility growth 15% in 2027E (overrides the 0.90 fade); terminal growth 3%.
    Full register: workbook tab "Assumptions". Source for each figure: evidence log.
    Open issues: 5 (1 warning, 1 data gap, 3 information); see log X-01 to X-05.
    Rating definitions: Buy ≥ +15% 12-month return, Sell ≤ -10%, Hold between.
-   Draft for education and testing, not investment advice.
 
 10. SENIOR ANALYST REVIEW
    Decisions
@@ -425,30 +424,32 @@ Not required: a planner, multi-step decomposition of sections, or an agent that 
 ## 3. How it works
 
 ```text
-Data pack  →  Model  →  Forecast  →  Valuation + rating  →  Note
-(code+LLM)   (code)     (code)        (code)                 (LLM, number-traced)
+Data pack  →  Model  →  Assumptions  →  Forecast  →  Valuation + rating  →  Note
+(code+LLM)   (code)     (LLM proposes,   (code)       (code)                 (LLM reasons and writes,
+                         code bounds)                                          number-traced)
 ```
 
-Forecast numbers come from deterministic code. The LLM extracts KPIs, proposes assumptions with a rationale, and writes text.
+Every number comes from deterministic code, and the rating is a threshold rule on the price-target return (§3.3). The LLM extracts KPIs, proposes assumptions with a rationale and confidence, reasons over filings text and tool results (drivers, risks, debates such as autonomous vehicles and take rate), and writes the note. Its conclusions reach the model only as bounded scenario inputs that code runs.
 
 ### 3.1 Model (per company, quarterly, three statements)
 
 Operating KPIs drive revenue, revenue drives costs and profit, profit drives cash flow and balance sheet.
 
 ```text
-Gross bookings = volume x price     (users x orders x AOV; room nights x ADR; trips x fare)
+Gross bookings = volume x price     (orders x AOV; room nights x ADR; rides x fare)
 Revenue        = Gross bookings x take rate
 EPS            = Net income / diluted shares
 FCF            = Operating cash flow - capex
 Assets         = Liabilities + equity       (must balance, or the model fails)
 ```
 
-- **Travel:** customers prepay, so model deferred merchant bookings; revenue lags bookings.
-- **Uber:** model gross bookings and take rate per segment (Mobility, Delivery, Freight) and sum.
-- **TripAdvisor:** Viator uses the bookings equations; the Tripadvisor brand is traffic x revenue per visitor.
-- **Instacart:** transaction fee and advertising each as a share of GTV.
+- **Timing (simplification):** every company is modeled as Uber or Instacart is: an order executes at once and the take rate is applied in the same quarter. Travel customers actually prepay, so revenue lags bookings (deferred merchant bookings). That lag is not modeled; it sits inside the take rate. Known limitation: the balance sheet has no deferred-bookings line, forecast working capital change is 0, and cash flow misses the prepayment float.
+- **BKNG, EXPE, ABNB:** room nights (ABNB: nights and experiences) x gross bookings per night.
+- **Uber:** gross bookings grow by segment (Mobility, Delivery, Freight), each x its own take rate; adjusted EBITDA is a margin on total gross bookings.
+- **DoorDash, Lyft, Instacart:** orders or rides x value per unit, x one take rate. Instacart's transaction and advertising revenue are reported but not modeled separately.
+- **TripAdvisor:** no volume KPI, so revenue grows on one faded rate and adjusted EBITDA is a margin on revenue.
 - Take rate is always computed from reported revenue and reported gross bookings.
-- Forecast columns are formulas only; assumptions sit in one input block; quarters sum to years; SBC is shown separately.
+- Forecast columns are formulas only; assumptions sit in one input block; quarters sum to years; SBC is shown separately; the balance sheet is condensed (cash, total assets, liabilities, equity).
 
 ### 3.2 Forecast
 
@@ -461,6 +462,14 @@ Assets         = Liabilities + equity       (must balance, or the model fails)
 | Variance flag | Versus guidance midpoint: over 2% on revenue or 5% on adjusted EBITDA needs a written reason |
 | Outside inputs | BTS, NYC TLC, FRED |
 | Horizon | Quarterly through Q4 2027E; annual 2026E to 2028E |
+
+| Symbol | Meaning |
+| --- | --- |
+| `Driver(q)` | Forecast value of one operating driver (trips, bookings per trip, take rate) in quarter q |
+| `q-4` | The same quarter one year earlier |
+| `g` | Year-over-year growth rate of the driver |
+| `g(t)`, `g(t+1)` | The growth rate in quarter t and in the next quarter |
+| `d` | Fade factor: each quarter's growth is `d` times the previous quarter's (default 0.90). Example: 16.0% → 14.4% → 13.0% → 11.7% |
 
 ### 3.3 Valuation and rating
 
@@ -505,7 +514,7 @@ Ask and Research modes also get a gold question set (about 80 questions across t
 - **Held-out set:** report quarters released after the LLM's training cutoff separately.
 - **Reporting:** medians and ranges by company, plus a paired Wilcoxon test.
 
-**Ablations** (same backtest, two versions): LLM vs rule-based extraction; fixed vs fitted decay; guidance midpoint vs high end; with vs without free cross-checks.
+**Ablations** (same backtest, two versions): LLM vs rule-based extraction; fixed vs fitted decay; guidance midpoint vs high end; with vs without free cross-checks; LLM proposer vs defaults (a switch, `proposer.method`).
 
 **What to publish:** a results table for the five layers, backtest chart by company, one full example note. Also state the limits: small sample, no paid data, NYC-only trips, possible leakage.
 
@@ -523,11 +532,15 @@ Each step passes its tests before the next.
 
 Start with a pilot of one company per sector (BKNG and UBER) before scaling to eight.
 
-## 8. To verify before building
+## 8. Pre-build checks and decisions (all resolved)
 
-- [ ] Each ticker, listing status, and that all eight file 10-K and 10-Q
-- [ ] Fiscal year-ends and exact KPI definitions in the latest 10-K and release
-- [ ] Earnings release dates per backtest quarter, and which companies give numeric guidance (TripAdvisor especially)
-- [ ] One company end to end on EDGAR: company-facts API, filing dates, current rate and User-Agent rules
-- [ ] Each free dataset is available and permitted for this use (BTS, NYC TLC, FRED, Tiingo)
-- [ ] Defaults: scenario weights, 60/40 valuation weights, rating thresholds, pass bars, the single ERP
+Findings are in the [design doc](V4_TECHNICAL_DESIGN_DOC.md) §17.
+
+- [x] Each ticker, listing status, and that all eight file 10-K and 10-Q (`tenk companies verify`)
+- [x] Fiscal year-ends (all December) and KPI definitions in the latest release (§1.5)
+- [x] Earnings release dates per backtest quarter, and which companies give numeric guidance (TripAdvisor gives none: its guidance baseline is "n/a")
+- [x] One company end to end on EDGAR: company-facts API, filing dates, rate limit and User-Agent
+- [x] Each free dataset is available and permitted. Stooq, TSA and Google Trends dropped; Tiingo is internal use only (§1.4)
+- [x] Defaults signed off in `research.yaml`: scenario weights 25/50/25, valuation weights 60/40, rating thresholds (Buy +15%, Sell -10%), the single ERP
+- [x] Guidance anchor `mid`, though `high` scored better in the backtest (p = 0.011); `high` stays an ablation
+- [x] Proposer `defaults` (LLM proposer off), since the LLM proposer did not beat it in the backtest; `llm` stays a switch and an ablation

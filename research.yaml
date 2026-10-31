@@ -7,7 +7,7 @@ forecast:
   fade_bounds: [0.75, 1.0]   # the proposer may move d only within these
   guidance_point: mid        # mid | high (ablation): the anchor within a guided range
                              # high scored better in the V4.4 backtest (p = 0.011); mid kept
-                             # by the user's decision pending a human review (2026-10-28)
+                             # by the user's decision (signed off)
   ratio_bounds:              # a forecast ratio stays within its last-8-quarter min/max ± this
     take_rate: 0.005         # 50 bps (§7.3)
     margin: 0.02             # 200 bps for EBITDA margins

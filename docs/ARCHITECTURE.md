@@ -64,7 +64,7 @@ Spec: [JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md](JUNIOR_SELL_SIDE_EQUITY_R
 | Every run has an as-of date; it sees only inputs filed strictly before it | `AsOf` (`asof.py`); every dated `Store` read takes it; a leak test |
 | The LLM never outputs a forecast, valuation or rating number | Deterministic code computes them; the LLM extracts KPIs, proposes bounded assumptions and writes prose |
 | Every figure in a note traces to the evidence log | Number trace after writing; one repair turn, then any sentence that still holds an untraced figure is dropped and logged |
-| Ratings and price targets are drafts | Saved as `draft`; `tenk research approve` marks a version reviewed; labeled "not investment advice" |
+| Ratings and price targets are drafts | Saved as `draft`; `tenk research approve` marks a version reviewed; senior analyst approval required |
 
 **Modes.**
 
