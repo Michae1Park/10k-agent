@@ -277,21 +277,21 @@ The design doc was restructured on 2026-11-01. Bare "§n" references in this log
 | Old § | Topic | Now (design doc) |
 |---|---|---|
 | 3 | As-of rule | §2.5 |
-| 4.1–4.3 | Companies, acquisition, store | §3 |
+| 4.1–4.3 | Companies, acquisition, store | §3.2–3.3 |
 | 4.4 | Text over new forms | §3.4 |
-| 4.5 | Structured facts | §3.5 |
+| 4.5 | Structured facts | §3.3 |
 | 4.6 | KPI and guidance extraction | §6 |
-| 5 | Model engine | §7.3–7.4 |
-| 6.1 | Forecast | §7.5 |
-| 6.2 | Valuation | §7.7 |
+| 5 | Model engine | §7.3 |
+| 6.1 | Forecast | §7.3 |
+| 6.2 | Valuation | §7.3 |
 | 7 | Tools | §5.2 |
-| 7.3 | Proposer | §7.6 |
-| 8 | Context management | §5.5 |
+| 7.3 | Proposer | §7.3 |
+| 8 | Context management | §5.3 |
 | 9 | Report pipeline | §8 |
 | 10 | Number trace, evidence log | §9 |
 | 11 | Outputs | §10 |
 | 12 | New technical problems | §13 |
-| 13 | Evaluation and backtest | §11 |
+| 13 | Evaluation and backtest | §11.3 |
 | 14 | Code layout, config, CLI | Appendix |
 | 14.1, 15, 17 | Migration, build order, findings | this log, §2, §1, §3 |
 | 16 | Decisions | [DECISIONS.md](DECISIONS.md) D-040 to D-044 |
