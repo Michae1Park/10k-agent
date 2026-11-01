@@ -70,3 +70,21 @@ def test_first_falls_back_when_an_input_is_missing():
         "=IFERROR(IF(COUNT(B12,F10)=2,B12/F10,Assumptions!$C$4),Assumptions!$C$4)")
     assert to_excel(parse("first(gb[-9], tr)"), CELLS) == "=F11"  # a before the first column
     assert parse("first(gb, tr)").lines == {"gb", "tr"}
+
+
+def test_fyp_sums_the_previous_years_quarters():
+    expr = parse("fyp(revenue) * @fade")
+    reader = Readers(line=lambda n, k: None, fy=lambda n: None,
+                     assumption=lambda n: {"fade": 0.9}.get(n), fy_prev=lambda n: 400.0)
+    assert evaluate(expr, reader) == pytest.approx(360.0)
+    cells = Cells(cell=CELLS.cell, fy=CELLS.fy, assumption=CELLS.assumption,
+                  fy_prev=lambda n: f"B{ROWS[n]}:E{ROWS[n]}")
+    assert to_excel(expr, cells) == "=SUM(B14:E14)*Assumptions!$C$4"
+    assert expr.lines == {"revenue"} and expr.same_period == set()
+
+
+def test_first_counts_a_year_range_as_four_cells():
+    cells = Cells(cell=CELLS.cell, fy=CELLS.fy, assumption=CELLS.assumption,
+                  fy_prev=lambda n: f"B{ROWS[n]}:E{ROWS[n]}")
+    formula = to_excel(parse("first(fyp(gb) * 2, gb)"), cells)
+    assert formula == "=IFERROR(IF(COUNT(B10:E10)=4,SUM(B10:E10)*2,F10),F10)"

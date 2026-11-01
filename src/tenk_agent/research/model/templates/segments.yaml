@@ -9,11 +9,14 @@ lines:
   mapcs:                   {kind: input, source: "kpi:mapcs", unit: count millions, fy: none,
                             label: monthly active platform consumers}
   gross_bookings_mobility: {kind: input, source: "kpi:gross_bookings.mobility", unit: USD millions,
-                            forecast: "gross_bookings_mobility[-4] * (1 + gb_g_mobility)"}
+                            forecast_first: "gross_bookings_mobility[-4] * (1 + gb_g_mobility)",
+                            forecast: "first(fyp(gross_bookings_mobility) * (1 + gb_g_mobility) * @gross_bookings_mobility.season, gross_bookings_mobility[-4] * (1 + gb_g_mobility))"}
   gross_bookings_delivery: {kind: input, source: "kpi:gross_bookings.delivery", unit: USD millions,
-                            forecast: "gross_bookings_delivery[-4] * (1 + gb_g_delivery)"}
+                            forecast_first: "gross_bookings_delivery[-4] * (1 + gb_g_delivery)",
+                            forecast: "first(fyp(gross_bookings_delivery) * (1 + gb_g_delivery) * @gross_bookings_delivery.season, gross_bookings_delivery[-4] * (1 + gb_g_delivery))"}
   gross_bookings_freight:  {kind: input, source: "kpi:gross_bookings.freight", unit: USD millions,
-                            forecast: "gross_bookings_freight[-4] * (1 + gb_g_freight)"}
+                            forecast_first: "gross_bookings_freight[-4] * (1 + gb_g_freight)",
+                            forecast: "first(fyp(gross_bookings_freight) * (1 + gb_g_freight) * @gross_bookings_freight.season, gross_bookings_freight[-4] * (1 + gb_g_freight))"}
   gross_bookings:          {kind: input, source: "kpi:gross_bookings", unit: USD millions,
                             forecast: "gross_bookings_mobility + gross_bookings_delivery + gross_bookings_freight"}
   gross_bookings_per_trip: {kind: formula, expr: "(gross_bookings_mobility + gross_bookings_delivery) / trips",

@@ -189,3 +189,25 @@ def test_revenue_bridge_adds_up():
     assert b["from_gross_value"] + b["from_take_rate"] == pytest.approx(b["revenue_variance"])
     assert b["of_which_volume"] + b["of_which_value_per_unit"] == pytest.approx(
         b["from_gross_value"])
+
+
+def test_later_quarters_split_last_years_total_by_seasonal_share(templates):
+    m = model()
+    shares, years = fc.seasonal_shares(m, "volume")
+    assert years == ["2024", "2025"]  # 2026 is incomplete: fewer than three years, all used
+    assert shares[3] == pytest.approx((12 / 42 + 13 / 46) / 2)
+    assert m.assumptions["volume.s4"] == pytest.approx(shares[3])
+    g = m.value("volume_g", "2026Q4")
+    assert m.value("volume", "2026Q4") == pytest.approx(46 * (1 + g) * shares[3])
+    assert m.value("volume", "2026Q3") == pytest.approx(12 * 1.1)  # first quarter: q-4 rule
+
+
+def test_seasonal_shares_use_the_latest_three_complete_years(templates):
+    class Fake:
+        history = [f"{y}Q{i}" for y in range(2021, 2026) for i in (1, 2, 3, 4)]
+
+        def value(self, line, q):
+            return {"2021": 10.0, "2022": 20.0}.get(q[:4], 1.0) * (2 if q.endswith("Q4") else 1)
+
+    shares, years = fc.seasonal_shares(Fake(), "x")
+    assert years == ["2023", "2024", "2025"] and shares[3] == pytest.approx(0.4)

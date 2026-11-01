@@ -21,7 +21,7 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from tenk_agent.research.model.dsl import Cells, to_excel
-from tenk_agent.research.model.graph import Model, expr_for
+from tenk_agent.research.model.graph import Model, expr_for, season
 
 BLUE, BLACK = Font(color="0000FF"), Font(color="000000")
 HEADER = Font(bold=True)
@@ -106,8 +106,8 @@ def _cells(model: Model, rows: dict[str, int], column_of: dict[str, int],
     def ref(name: str, column: str) -> str:
         return f"{get_column_letter(column_of[column])}{rows[name]}"
 
-    def year_range(name: str, column: str) -> str | None:
-        year = column[2:] if column.startswith("FY") else column[:4]
+    def year_range(name: str, column: str, back: int = 0) -> str | None:
+        year = int(column[2:] if column.startswith("FY") else column[:4]) - back
         quarters = [f"{year}Q{i}" for i in (1, 2, 3, 4)]
         if not all(q in column_of for q in quarters):
             return None
@@ -134,7 +134,8 @@ def formula(model: Model, line, column: str, cells) -> str:
         return ref(name, model.quarters[index - lag])
 
     return to_excel(expr, Cells(cell, lambda name: year_range(name, column),
-                                lambda name: assumptions[name]))
+                                lambda name: assumptions[season(name, column)],
+                                lambda name: year_range(name, column, back=1)))
 
 
 def parity(model: Model, path: Path) -> tuple[int, list[str]]:

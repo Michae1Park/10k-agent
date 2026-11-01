@@ -1,12 +1,15 @@
 """S5 forecast (V4 design doc §6.1): history model → forecast quarters to research.yaml's horizon.
 
-Per driver, never per total: a growth driver x = x[-4] × (1 + g), g starting at its last y/y
-and fading by d each quarter; a ratio (take rate, margin) = its same quarter last year plus a
-fading shift, kept within its last-8-quarter min/max ± a band. The assumptions those rules read
-(`@name` in the templates) get their defaults here, from the history; the proposer (V4.4, LLM
-or defaults) may move them within bounds. Then each guidance anchor in the template solves one
-assumption so the first forecast quarter hits the guided midpoint (bookings, then revenue, then
-EBITDA). An anchor the bounds keep from reaching its target is logged, never forced.
+Per driver, never per total: a growth driver x = x[-4] × (1 + g) in the first forecast quarter
+(the one guidance anchors), then last fiscal year's total × (1 + g) × the quarter's seasonal
+share (spec §3.2: the mean share of that quarter over the latest three complete fiscal years of
+history, fewer where fewer exist, logged); g starts at its last y/y and fades by d each quarter;
+a ratio (take rate, margin) = its same quarter last year plus a fading shift, kept within its
+last-8-quarter min/max ± a band. The assumptions those rules read (`@name` in the templates) get
+their defaults here, from the history; the proposer (V4.4, LLM or defaults) may move them within
+bounds. Then each guidance anchor in the template solves one assumption so the first forecast
+quarter hits the guided midpoint (bookings, then revenue, then EBITDA). An anchor the bounds
+keep from reaching its target is logged, never forced.
 
 Scenarios (§6.1): bear and bull move each of the template's `scenarios` drivers by ∓/±
 shock_sigma × σ, σ the standard deviation of that driver's line over the history (a growth
@@ -94,6 +97,14 @@ def forecast(store: Store, ticker: str, settings: dict | None = None,
         result.exceptions += [{"severity": "info", "item": f"assumption {k} = {v:.4g} "
                                f"(default {defaults.get(k, float('nan')):.4g})"}
                               for k, v in overrides.items()]
+    for name in sorted(n for n in referenced(model) if n.endswith(".season")):
+        line = name[:-len(".season")]
+        _, years = seasonal_shares(model, line)
+        if len(years) < SHARE_YEARS:
+            result.exceptions.append({
+                "severity": "info",
+                "item": f"seasonal share of {line} from {len(years)} complete fiscal year(s) "
+                        f"({', '.join(years) or 'none: even shares'}), not {SHARE_YEARS}"})
     result.exceptions.append({"severity": "info", "item": "working capital held at 0 in the "
                               "forecast; interest and other non-operating items 0 (§5.2)"})
     return result
@@ -169,10 +180,39 @@ def default_assumptions(model: Model, settings: dict) -> dict[str, float]:
              for r, kind in ((template.get("forecast") or {}).get("ratios") or {}).items()}
     out: dict[str, float] = {}
     for name in sorted(referenced(model)):
+        if name.endswith(".season"):  # @x.season → the four shares @x.s1…@x.s4
+            out |= {f"{name[:-len('season')]}s{i}": v
+                    for i, v in enumerate(seasonal_shares(model, name[:-len(".season")])[0], 1)}
+            continue
         value = _default(model, name, f, bands)
         if value is not None:
             out[name] = value
     return out
+
+
+SHARE_YEARS = 3  # spec §3.2: the 3-year average seasonal share
+
+
+def seasonal_shares(model: Model, line: str) -> tuple[list[float], list[str]]:
+    """Each quarter's mean share of its fiscal year over the latest SHARE_YEARS complete years
+    of history (all four quarters reported), and the years used. No complete year: an even
+    0.25 each (the q-4 rule then carries the forecast where last year is incomplete)."""
+    history = set(model.history)
+    years = sorted({q[:4] for q in history}, reverse=True)
+    used, shares = [], [[], [], [], []]
+    for year in years:
+        values = [model.value(line, f"{year}Q{i}") if f"{year}Q{i}" in history else None
+                  for i in (1, 2, 3, 4)]
+        if None in values or not sum(values):
+            continue
+        for i, v in enumerate(values):
+            shares[i].append(v / sum(values))
+        used.append(year)
+        if len(used) == SHARE_YEARS:
+            break
+    if not used:
+        return [0.25] * 4, []
+    return [sum(x) / len(x) for x in shares], sorted(used)
 
 
 def _default(model: Model, name: str, f: dict, bands: dict) -> float | None:

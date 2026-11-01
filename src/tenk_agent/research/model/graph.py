@@ -17,9 +17,13 @@ forecast quarters uses `fy_forecast` for a line whose reported FY is an input (E
 
 A template's `forecast:` section is shorthand, expanded here into ordinary lines (so the workbook
 shows every formula):
-  growth: [x, …]          x = x[-4] × (1 + x_g) (x[-8] × (1 + x_g)² where last year's quarter is
-                          missing: ABNB's 2025 GBV); x_g = x / x[-4] − 1 in history, @x_g.g0 in
-                          the first forecast quarter, then x_g[-1] × @fade
+  growth: [x, …]          first forecast quarter (the one guidance anchors): x = x[-4] × (1 + x_g)
+                          (x[-8] × (1 + x_g)² where last year's quarter is missing: ABNB's 2025
+                          GBV); later quarters: x = fyp(x) × (1 + x_g) × @x.season, last fiscal
+                          year's total grown and split by the quarter's seasonal share (spec
+                          §3.2; @x.season reads @x.s1…@x.s4 by the column's quarter), or the
+                          q-4 rule where last year isn't complete. x_g = x / x[-4] − 1 in
+                          history, @x_g.g0 in the first forecast quarter, then x_g[-1] × @fade
   ratios: {r: band, …}    r = clamp(r[-4] + r_shift, @r.lo, @r.hi) (r[-8] where r[-4] is missing);
                           r_shift = r − r[-4] in history, @r.shift0 first, then r_shift[-1] ×
                           @fade until the change is lapped (four forecast quarters), then 0: a
@@ -134,10 +138,26 @@ def load_template(name: str, ticker: str) -> tuple[list[Line], dict]:
     return lines, template
 
 
+def seasonal(line: str, first: str, later: str) -> dict:
+    """A level driver's forecast (module docstring): q-4 in the first forecast quarter, then
+    last year's total × (1 + growth) × the quarter's seasonal share, else q-4."""
+    q4 = f"first({line}[-4], {line}[-8] * (1 + {first})) * (1 + {first})"
+    return {"forecast_first": q4,
+            "forecast": f"first(fyp({line}) * (1 + {later}) * @{line}.season, "
+                        f"first({line}[-4], {line}[-8] * (1 + {later})) * (1 + {later}))"}
+
+
+def season(name: str, column: str) -> str:
+    """@x.season in a quarter column → @x.s<quarter> (the seasonal share of that quarter)."""
+    if name.endswith(".season") and not column.startswith("FY"):
+        return f"{name[:-len('season')]}s{column[5]}"
+    return name
+
+
 def _expand_forecast(specs: dict, rules: dict) -> None:
     """Growth drivers and ratios (see the module docstring) into lines, in place."""
     for x in rules.get("growth", []):
-        specs[x] = dict(specs[x], forecast=f"first({x}[-4], {x}[-8] * (1 + {x}_g)) * (1 + {x}_g)")
+        specs[x] = dict(specs[x], **seasonal(x, f"{x}_g", f"{x}_g"))
         specs[f"{x}_g"] = {"kind": "formula", "expr": f"{x} / {x}[-4] - 1", "unit": "fraction",
                            "forecast_first": f"@{x}_g.g0", "forecast": f"{x}_g[-1] * @fade",
                            "statement": specs[x].get("statement", "operating"), "fy": "none",
@@ -320,11 +340,13 @@ def _formula(model: Model, line: Line, column: str, expr: Expr | None = None) ->
             return None
         return model.value(name, model.quarters[index - lag])
 
-    def read_fy(name: str):
-        year = column[2:] if fiscal else column[:4]
+    def read_year(name: str, year: int):
         values = [model.value(name, f"{year}Q{i}") for i in (1, 2, 3, 4)]
         return None if None in values else sum(values)
 
+    year = int(column[2:] if fiscal else column[:4])
     # A formula stays a formula when an input is missing: blank, never 0
-    readers = Readers(read_line, read_fy, model.assumptions.get)
+    readers = Readers(read_line, lambda name: read_year(name, year),
+                      lambda name: model.assumptions.get(season(name, column)),
+                      lambda name: read_year(name, year - 1))
     return Cell(evaluate(expr or line.expr, readers), "formula")

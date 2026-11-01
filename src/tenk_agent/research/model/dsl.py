@@ -3,6 +3,8 @@
   gross_bookings * take_rate          arithmetic over lines of the same period
   trips[-4] * (1 + trips_g)           a line k quarters back (an Excel cell k quarter columns left)
   fy(revenue)                         the fiscal year's four quarters summed (FY columns)
+  fyp(revenue)                        the previous fiscal year's four quarters summed (a quarter
+                                      column: the seasonal-share forecast, design doc §6.1)
   min(a, b) · max(a, b) · if_(c, a, b)
   first(a, b)                         a, or b where a can't be computed (an input missing, a zero
                                       divisor); Excel: IFERROR(IF(COUNT(a's cells)=n, a, b), b)
@@ -16,13 +18,14 @@ what Python did (the parity test, tests/test_model_workbook.py).
 import ast
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 FUNCTIONS = {"min": "MIN", "max": "MAX", "if_": "IF", "abs": "ABS"}
 OPERATORS = {ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/", ast.Pow: "^"}
 COMPARE = {ast.Lt: "<", ast.LtE: "<=", ast.Gt: ">", ast.GtE: ">=", ast.Eq: "=", ast.NotEq: "<>"}
 BINARY = {ast.Add: lambda a, b: a + b, ast.Sub: lambda a, b: a - b,
           ast.Mult: lambda a, b: a * b, ast.Div: lambda a, b: a / b, ast.Pow: lambda a, b: a**b}
+YEAR = ("fy", "fyp")  # functions over a fiscal year's four quarters of one line
 ASSUMPTION = re.compile(r"@([A-Za-z_][\w.]*)")
 
 
@@ -39,7 +42,7 @@ class Expr:
     def lines(self) -> set[str]:
         """The lines it reads (same period or lagged), for ordering the graph."""
         return {n.id for n in ast.walk(self.tree) if isinstance(n, ast.Name)
-                and n.id not in (*FUNCTIONS, "fy", "first") and not n.id.startswith("A__")}
+                and n.id not in (*FUNCTIONS, *YEAR, "first") and not n.id.startswith("A__")}
 
     @property
     def same_period(self) -> set[str]:
@@ -51,7 +54,7 @@ class Expr:
             if isinstance(node, ast.Subscript):
                 walk(node.value, True)
                 return
-            if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "fy":
+            if isinstance(node, ast.Call) and getattr(node.func, "id", "") in YEAR:
                 return
             if isinstance(node, ast.Name) and not lagged and node.id in self.lines:
                 out.add(node.id)
@@ -88,10 +91,10 @@ def _check(node: ast.AST, text: str) -> None:
         raise DslError(f"{text!r}: only numbers")
     if isinstance(node, ast.Call):
         name = getattr(node.func, "id", None)
-        if name not in (*FUNCTIONS, "fy", "first") or node.keywords:
+        if name not in (*FUNCTIONS, *YEAR, "first") or node.keywords:
             raise DslError(f"{text!r}: unknown function {name!r}")
-        if name == "fy" and (len(node.args) != 1 or not isinstance(node.args[0], ast.Name)):
-            raise DslError(f"{text!r}: fy() takes one line")
+        if name in YEAR and (len(node.args) != 1 or not isinstance(node.args[0], ast.Name)):
+            raise DslError(f"{text!r}: {name}() takes one line")
         if name == "first" and len(node.args) != 2:
             raise DslError(f"{text!r}: first(a, b)")
         if name == "if_" and len(node.args) != 3:
@@ -105,12 +108,14 @@ def _check(node: ast.AST, text: str) -> None:
 
 
 # Readers: how an evaluator looks a line up. line(name, lag) → value; fy(name) → the year's sum;
-# assumption(name) → value. The graph supplies them per period.
+# fy_prev(name) → the previous year's sum; assumption(name) → value. The graph supplies them per
+# period.
 @dataclass
 class Readers:
     line: Callable[[str, int], float | None]
     fy: Callable[[str], float | None]
     assumption: Callable[[str], float | None]
+    fy_prev: Callable[[str], float | None] = field(default=lambda name: None)
 
 
 def evaluate(expr: Expr, read: Readers) -> float | None:
@@ -150,6 +155,8 @@ def _eval(node, read: Readers) -> float:
     name = node.func.id
     if name == "fy":
         return _need(read.fy(node.args[0].id))
+    if name == "fyp":
+        return _need(read.fy_prev(node.args[0].id))
     if name == "if_":
         return _eval(node.args[1] if _eval(node.args[0], read) else node.args[2], read)
     if name == "first":
@@ -167,12 +174,14 @@ def _need(value):
     return float(value)
 
 
-# Excel: cell(name, lag) → "C12"; fy(name) → "C12:F12"; assumption(name) → "Assumptions!$C$4".
+# Excel: cell(name, lag) → "C12"; fy(name) → "C12:F12"; fy_prev(name) → the previous year's
+# range; assumption(name) → "Assumptions!$C$4".
 @dataclass
 class Cells:
     cell: Callable[[str, int], str | None]
     fy: Callable[[str], str | None]
     assumption: Callable[[str], str]
+    fy_prev: Callable[[str], str | None] = field(default=lambda name: None)
 
 
 def to_excel(expr: Expr, cells: Cells) -> str | None:
@@ -203,6 +212,8 @@ def _xl(node, cells: Cells, top: bool = False) -> str:
     name = node.func.id
     if name == "fy":
         return f"SUM({_ref(cells.fy(node.args[0].id))})"
+    if name == "fyp":
+        return f"SUM({_ref(cells.fy_prev(node.args[0].id))})"
     if name == "first":
         try:
             b = _xl(node.args[1], cells, top=True)
@@ -213,19 +224,27 @@ def _xl(node, cells: Cells, top: bool = False) -> str:
         except _Missing:  # a reads before the first column: Python falls back to b as well
             return b
         refs = _refs(node.args[0], cells)
-        return f"IFERROR(IF(COUNT({','.join(refs)})={len(refs)},{a},{b}),{b})"
+        count = sum(4 if ":" in x else 1 for x in refs)  # a year range holds four cells
+        return f"IFERROR(IF(COUNT({','.join(refs)})={count},{a},{b}),{b})"
     return f"{FUNCTIONS[name]}({','.join(_xl(a, cells, top=True) for a in node.args)})"
 
 
 def _refs(node, cells: Cells) -> list[str]:
-    """The cells an expression reads (lines and assumptions), for first()'s COUNT."""
+    """The cells an expression reads (lines, year ranges and assumptions), for first()'s COUNT."""
     out = []
+    in_year = {id(a) for n in ast.walk(node) if isinstance(n, ast.Call)
+               and getattr(n.func, "id", "") in YEAR for a in n.args}
     for n in ast.walk(node):
-        if isinstance(n, ast.Subscript):
+        if isinstance(n, ast.Call) and getattr(n.func, "id", "") in YEAR:
+            year = cells.fy if n.func.id == "fy" else cells.fy_prev
+            out.append(_ref(year(n.args[0].id)))
+        elif id(n) in in_year:
+            continue
+        elif isinstance(n, ast.Subscript):
             out.append(cells.cell(n.value.id, n.slice.operand.value))
         elif isinstance(n, ast.Name) and n.id.startswith("A__"):
             out.append(cells.assumption(n.id[3:].replace("__", ".")))
-        elif isinstance(n, ast.Name) and n.id not in (*FUNCTIONS, "fy", "first") and not any(
+        elif isinstance(n, ast.Name) and n.id not in (*FUNCTIONS, *YEAR, "first") and not any(
                 isinstance(p, ast.Subscript) and p.value is n for p in ast.walk(node)):
             out.append(cells.cell(n.id, 0))
     return list(dict.fromkeys(out))
