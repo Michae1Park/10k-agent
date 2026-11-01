@@ -265,8 +265,9 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
     (folder / "exceptions.json").write_text(json.dumps(numbered, indent=1))
     from tenk_agent.research.export import report as export
 
-    workbook_path, parity = export.workbook(folder, model, f, valuation, results, facts,
-                                            numbered, revisions, settings)
+    workbook_path, parity = export.workbook(
+        folder, model, f, valuation, results, facts, numbered, revisions, settings,
+        parent_model.data if parent_model else None, parent["id"] if parent else None)
     export.pdf(folder / "note.md", folder / "note.pdf")
     inputs = hashlib.sha256(json.dumps(model.assumptions, sort_keys=True).encode()).hexdigest()
     version = store.add_model_version(ticker, as_of, parent["id"] if parent else None,

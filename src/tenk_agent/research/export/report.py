@@ -1,8 +1,16 @@
 """S11 export (V4 design doc §11): the report's workbook and the note's PDF.
 
 The workbook is the Model tab and Assumptions tab (research/export/workbook.py, checked for
-parity with LibreOffice) plus Summary, Scenarios, Valuation, Revisions, Checks and Log (the
-evidence and exception rows). The PDF is the note's Markdown printed with headless Chrome.
+parity with LibreOffice) plus Summary, Scenarios, Valuation, DCF, Revisions, Model (prior),
+Checks and Log (the evidence and exception rows), the tabs of spec §2.3. The PDF is the note's
+Markdown printed with headless Chrome.
+
+DCF (spec §2.3): the base case's unlevered free cash flows (blue values from the model) with
+live formulas for each discount factor, present value, the terminal value, EV, the terminal
+value's share of EV and the value per share, so a changed WACC or growth recalculates; then the
+price-per-share grid over WACC × terminal growth (values: each grid point refades the annual
+years toward its growth, research/valuation.py). Model (prior): the parent version's lines and
+values as it saved them, or "initial draft (no prior run)".
 """
 
 import html
@@ -16,7 +24,8 @@ from tenk_agent.research.forecast import scenario_summary, scenarios
 
 
 def workbook(folder: Path, model, f, valuation: dict, checks, facts, exceptions, revisions,
-             settings) -> tuple[Path, str]:
+             settings, prior: dict | None = None, prior_id: str | None = None
+             ) -> tuple[Path, str]:
     path = model_tab.write(model, folder / "workbook.xlsx")
     checked, differ = model_tab.parity(model, path)
     book = load_workbook(path)
@@ -47,6 +56,8 @@ def workbook(folder: Path, model, f, valuation: dict, checks, facts, exceptions,
         *[[f"{k}", x] for k, x in v["cost_of_capital"].items()],
         *[[f"{n} {k}", x] for n, s in v["scenarios"].items() for k, x in s.items()],
         *[[f"DCF per share, WACC|g {k}", x] for k, x in v["dcf_grid"].items()]])
+    dcf_tab(book, valuation)
+    prior_tab(book, prior, prior_id)
     sheet("Revisions", ["line", "old", "new", "type", "confidence"],
           [[r["label"], r["old"], r["new"], r["type"], r["confidence"]] for r in revisions])
     sheet("Checks", ["check", "status", "tested", "failures", "skipped"],
@@ -56,6 +67,83 @@ def workbook(folder: Path, model, f, valuation: dict, checks, facts, exceptions,
           + [[x["id"], "exception", x["severity"], x["item"], ""] for x in exceptions])
     book.save(path)
     return path, f"{checked - len(differ)}/{checked}"
+
+
+def dcf_tab(book, v: dict) -> None:
+    from openpyxl.comments import Comment
+
+    ws = book.create_sheet("DCF")
+    d = v["dcf_base"]
+    blue, bold = model_tab.BLUE, model_tab.HEADER
+    ws.column_dimensions["A"].width = 34
+    inputs = [("WACC", d["wacc"], "0.00%"), ("terminal growth", d["terminal_growth"], "0.00%"),
+              ("net debt (USD millions)", v["net_debt"], "#,##0"),
+              ("diluted shares (millions)", v["shares"], "#,##0.0"),
+              ("terminal year (years from the as-of)", d["terminal_t"], "0.000"),
+              ("last annual UFCF (USD millions)", d["last_annual"], "#,##0")]
+    ws.append(["Base-case DCF as of " + v["as_of"]])
+    ws["A1"].font = bold
+    for i, (label, value, fmt) in enumerate(inputs, start=2):
+        ws.cell(i, 1, label)
+        c = ws.cell(i, 2, value)
+        c.font, c.number_format = blue, fmt
+    wacc, g, debt, shares, t_last, last = (f"$B${i}" for i in range(2, 8))
+    head = 9
+    for col, text in enumerate(["period", "years from as-of (mid-period)", "UFCF (USD millions)",
+                                "discount factor", "present value"], start=1):
+        ws.cell(head, col, text).font = bold
+    first = head + 1
+    for i, (period, t, cf) in enumerate(d["flows"], start=first):
+        ws.cell(i, 1, period)
+        ws.cell(i, 2, t).font = blue
+        c = ws.cell(i, 3, cf)
+        c.font, c.number_format = blue, "#,##0"
+        if i == first:
+            c.comment = Comment("from the model: adj. EBITDA - SBC - tax on EBIT - capex "
+                                "(quarters); annual years grow toward the terminal growth",
+                                "model")
+        ws.cell(i, 4, f"=1/(1+{wacc})^B{i}").number_format = "0.0000"
+        ws.cell(i, 5, f"=C{i}*D{i}").number_format = "#,##0"
+    end = first + len(d["flows"]) - 1
+    rows = [("explicit-period PV", f"=SUM(E{first}:E{end})", "#,##0"),
+            ("terminal value (PV)", f"={last}*(1+{g})/({wacc}-{g})/(1+{wacc})^{t_last}", "#,##0"),
+            ("EV (USD millions)", "=B{0}+B{1}", "#,##0"),
+            ("terminal value share of EV", "=B{1}/B{2}", "0.0%"),
+            ("DCF value per share (USD)", f"=(B{{2}}-{debt})/{shares}", "$#,##0.00")]
+    top = end + 2
+    for i, (label, formula, fmt) in enumerate(rows):
+        ws.cell(top + i, 1, label).font = bold if i >= 2 else None
+        cell = ws.cell(top + i, 2, formula.format(top, top + 1, top + 2))
+        cell.number_format = fmt
+    grid_top = top + len(rows) + 1
+    ws.cell(grid_top, 1, "Price per share: WACC (rows) × terminal growth (columns)").font = bold
+    waccs = sorted({float(k.split("|")[0]) for k in v["dcf_grid"]})
+    growths = sorted({float(k.split("|")[1]) for k in v["dcf_grid"]})
+    for j, gr in enumerate(growths, start=2):
+        ws.cell(grid_top + 1, j, gr).number_format = "0.0%"
+    for i, w in enumerate(waccs, start=grid_top + 2):
+        ws.cell(i, 1, w).number_format = "0.00%"
+        for j, gr in enumerate(growths, start=2):
+            c = ws.cell(i, j, v["dcf_grid"][f"{w:.4f}|{gr:.4f}"])
+            c.number_format = "$#,##0.00"
+
+
+def prior_tab(book, prior: dict | None, prior_id: str | None) -> None:
+    ws = book.create_sheet("Model (prior)")
+    if not prior:
+        ws.append(["initial draft (no prior run)"])
+        return
+    columns = prior["columns"]
+    ws.append([f"{prior_id} as of {prior['as_of']} (values as saved; that version's workbook "
+               "holds its formulas)"])
+    ws.append(["line", "unit", *columns])
+    for c in ws[2]:
+        c.font = model_tab.HEADER
+    ws.column_dimensions["A"].width = 44
+    for line in prior["lines"]:
+        ws.append([line.get("label") or line["name"], line["unit"],
+                   *[(prior["cells"].get(f"{line['name']}|{c}") or {}).get("value")
+                     for c in columns]])
 
 
 def pdf(markdown_path: Path, out: Path) -> Path:

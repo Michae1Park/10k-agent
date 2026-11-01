@@ -2,7 +2,7 @@
 
 **Status:** Built through V4.7 (§17 is the build log; results in [V4_RESULTS.md](V4_RESULTS.md)). Sections 1–16 are the design as planned; where the build differs, the section says so. Settled items are in [DECISIONS.md](DECISIONS.md).
 **Updated:** 2026-10-29 · **Spec:** [JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md). "Spec §n" is the spec's section; a bare "§n" is a section of this doc.
-**Not built** (spec items, checked 2026-11-01; each also noted in its section): bounded research runs for note sections 2.3, 4, 6, 7 and 8 (§9); the workbook DCF and Model (prior) tabs and the `initiation` report type (§11).
+**Not built** (spec items, checked 2026-11-01; each also noted in its section): bounded research runs for note sections 2.3, 4, 6, 7 and 8 (§9); the `initiation` report type (§11).
 **Not to be confused with** the retired V4 in `archive/` (D-034).
 
 The spec says *what* to build; this doc says *how*, and how it plugs into V0–V3.
@@ -312,7 +312,7 @@ g(t+1)            = g(t) × d                d = 0.90 per quarter (fixed; "fitte
 - **As built:** later quarters use the seasonal share (`research/forecast.py` `seasonal_shares`, `graph.seasonal`); a full-year-only guide anchors the FY column instead of being split by share: an anchor with `period: fy` solves its driver so the fiscal year hits the guide (ABNB's FY adj. EBITDA margin); quarterly anchors run first and keep their drivers. Backtested 2026-11-01 (§17.13): next-quarter results unchanged; year-ahead main KPI MAPE 4.18% → 4.38% with the fixed fade.
 - **Variance flag:** vs guidance midpoint, over 2% (revenue) or 5% (adj. EBITDA) needs a written reason (from the proposer's rationale); none = exception.
 - **Horizon:** quarterly to Q4 2027E; annual 2026E–2028E; DCF years 4–10 faded.
-- **Scenarios:** bear/base/bull (25/50/25) vary the 2–3 `scenario_drivers`. Default shock ±1σ of the driver's y/y change over history; the proposer may move it within [0.5σ, 2σ].
+- **Scenarios:** bear/base/bull (25/50/25) vary the 2–3 `scenario_drivers`. Shock ±1σ of the driver's y/y change over history (`scenarios.shock_sigma`).
 - **Outside data** (BTS, TLC, FRED) is context for the proposer and note; as a forecast input it is the "with vs without cross-checks" ablation.
 
 ### 6.2 Valuation (`research/valuation.py`)
@@ -377,7 +377,7 @@ One bounded LLM run per company per report. For each key driver it returns:
  "evidence": ["UBER-2026Q2-ER-EX99-005", "kpi:UBER:take_rate.mobility:2026Q2"]}
 ```
 
-Code bounds every driver (take rate within the 8-quarter min/max ± 50 bps; `d` in [0.75, 1.0]; growth anchored to guidance where it exists). Out-of-bounds = clipped and logged. Evidence ids must resolve (§10). `proposer.method: llm | defaults` is the ablation switch (spec §6; `defaults` signed off, spec §8).
+Code bounds every driver (take rate within the 8-quarter min/max ± 50 bps; `d` in [0.75, 1.0]; a growth start within its last-8-quarter range ± 5 points; a driver a guidance anchor solves is not proposable). Out-of-bounds = clipped and logged. Evidence ids must resolve (§10). `proposer.method: llm | defaults` is the ablation switch (spec §6; `defaults` signed off, spec §8).
 
 ### 7.4 Zoom: `search_filings`
 
@@ -513,7 +513,7 @@ Directory: `output/reports/<TICKER>/<as_of>/`; each run is saved as a version (`
 | File | Built by | Notes |
 |---|---|---|
 | `note.md`, `note.pdf` | `research/note/`, then headless Chrome (`evaluation/render.py`) | `update` (3–5 pages) or `initiation` (+ business overview, industry and competition, model appendix; same ten sections). **Not built:** `initiation` |
-| `workbook.xlsx` | `research/export/workbook.py` (Model, Assumptions, parity) and `export/report.py` (other tabs); openpyxl | Spec §2.3 tabs: Summary, Assumptions, Model, Model (prior), Scenarios, Valuation, DCF, Checks, Log; blue/black/green styles. Built as well: Revisions (old vs new). **Not built:** Model (prior), DCF |
+| `workbook.xlsx` | `research/export/workbook.py` (Model, Assumptions, parity) and `export/report.py` (other tabs); openpyxl | Spec §2.3 tabs: Summary, Assumptions, Model, Model (prior), Scenarios, Valuation, DCF, Checks, Log; blue/black/green styles. Built as well: Revisions (old vs new). DCF: base-case UFCF with live discount, terminal value, EV, terminal share and per-share formulas, plus the WACC × growth grid. Model (prior): the parent version's values, or "initial draft (no prior run)" |
 | `model.json`, `valuation.json`, `revisions.json`, `events.json`, `debates.json`, `facts.json`, `exceptions.json` | steps | Machine-readable; `research_report` and `model:…:v<n>:…` ids read them |
 | `note.json`, `report.json` | S10, S11 | Prose slots and the trace; the run's summary (version, rating, PT, parity) |
 
@@ -593,7 +593,7 @@ src/tenk_agent/
                  propose.py forecast.py valuation.py (also --all relative ratings) pipeline.py (S1–S11, revisions)
                  model/ (dsl.py graph.py history.py checks.py templates/: statements segments marketplace
                          orders trip)
-                 note/ (facts.py sections.py trace.py write.py)
+                 note/ (facts.py sections.py trace.py write.py consistency.py)
                  export/ (workbook.py: Model, Assumptions, parity · report.py: other tabs, PDF)
   agent/         tools.py (groups, tool sets) loop.py sec.py
   evaluation/    extraction.py backtest.py note_eval.py (+ the V0–V3 modules)
@@ -667,7 +667,7 @@ Each becomes a DECISIONS.md entry when built. Rows 1–11 fill gaps in the spec;
 | 1 | As-of boundary | Strictly before D (§3), as the spec says |
 | 2 | Seasonality | Current quarter from the guidance midpoint; later quarters from a faded annual driver split by the 3-year average seasonal share (fewer years when fewer exist), as spec §3.2 says |
 | 3 | Fade | `d` per quarter (spec example "×0.90 per quarter"); per year in DCF years 4–10 |
-| 4 | Scenario multiples, shocks | Base ±15% (from the example); ±1σ driver shock, proposer within [0.5σ, 2σ] |
+| 4 | Scenario multiples, shocks | Base ±15% (from the example); ±1σ driver shock |
 | 5 | WACC | All-equity below 10% debt weight, else weighted (the example treats UBER as all-equity) |
 | 6 | EV | Debt − cash and ST investments; stakes and leases not counted, flagged |
 | 7 | 12-month PT | Blended value, no roll-forward |
@@ -799,7 +799,7 @@ Fixes between runs: equal current/prior values pass the column check; releases t
 
 ### 17.11 V4.2 Ask gold runs (2026-10-28)
 
-Data: `tenk build --stage kpis` loads the extraction of all 117 releases (`v4.2-releases-all`, gate still 98.5% / 100%) as 1,002 KPI and 227 guidance rows. Tool set `ask` (§7.1): `search_filings` (periods, forms), `calculator`, `financials`, `company_kpis`, `guidance`, `filings`, `market_data`; prompt `prompts/ask.md`; `kpi:`, `guide:`, `q:`, `px:`, `macro:` ids resolve and verify (§10.1). Not built at this phase: `crosscheck` (added in V4.7, §17.16) and `research_report` (still not built; questions on saved reports must decline).
+Data: `tenk build --stage kpis` loads the extraction of all 117 releases (`v4.2-releases-all`, gate still 98.5% / 100%) as 1,002 KPI and 227 guidance rows. Tool set `ask` (§7.1): `search_filings` (periods, forms), `calculator`, `financials`, `company_kpis`, `guidance`, `filings`, `market_data`; prompt `prompts/ask.md`; `kpi:`, `guide:`, `q:`, `px:`, `macro:` ids resolve and verify (§10.1). Not built at this phase: `crosscheck` (added in V4.7, §17.16) and `research_report` (added later, §7.1; until then questions on saved reports declined).
 
 Gold: `evaluation/gold/ask-gold.jsonl`, 79 questions (`experiments/v4/draft_ask_gold.py`). 54 numeric ones take values from the extraction labels or XBRL quarters (calculations computed from them); 25 written by hand: 12 filing text, 10 declines (our estimates, forecasts, advice, cross-check data, two as-of leaks, a future quarter, a company outside the corpus), 3 false premises. Every evidence quote is checked in its filing at the question's as-of. **Not yet reviewed by a person** (`verified_by: null`). Runner `experiments/v4/ask_run.py` (Qwen3.6-27B, judge gpt-oss-20b): *correct and verified* = correct, and every expected number stated by a verified or calculated claim.
 

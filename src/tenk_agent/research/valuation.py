@@ -173,9 +173,9 @@ def dcf(model: Model, as_of: str, wacc: float, growth: float, tax_rate: float, v
             raise ValueError(f"{model.ticker} {q}: UFCF needs adj. EBITDA, SBC and EBIT")
         year, n = int(q[:4]), int(q[5])
         mid = date(year, 3 * n - 1, 15)
-        flows.append(((mid - start).days / 365.25, value))
+        flows.append(((mid - start).days / 365.25, value, q))
     last_year = int(model.forecast[-1][:4])
-    annual = sum(v_ for _, v_ in flows[-4:])
+    annual = sum(f_[1] for f_ in flows[-4:])
     rev = [model.value("revenue", f"FY{y}") for y in (last_year - 1, last_year)]
     g = rev[1] / rev[0] - 1 if None not in rev and rev[0] else growth
     t_last = flows[-1][0]
@@ -183,11 +183,13 @@ def dcf(model: Model, as_of: str, wacc: float, growth: float, tax_rate: float, v
         g = growth + (g - growth) * v["annual_fade"]  # fade toward the terminal growth
         annual *= 1 + g
         t_last += 1
-        flows.append((t_last - 0.375, annual))  # mid-year of the next forecast year
-    explicit = sum(cf / (1 + wacc) ** t for t, cf in flows)
+        last_year += 1
+        flows.append((t_last - 0.375, annual, f"FY{last_year}"))  # mid-year of the next year
+    explicit = sum(cf / (1 + wacc) ** t for t, cf, _ in flows)
     terminal = annual * (1 + growth) / (wacc - growth) / (1 + wacc) ** t_last
     return {"ev": explicit + terminal, "terminal_share": terminal / (explicit + terminal),
-            "years": len(flows)}
+            "years": len(flows), "flows": [[p, t, cf] for t, cf, p in flows],
+            "terminal": terminal, "terminal_t": t_last, "last_annual": annual}
 
 
 # --- Valuation -----------------------------------------------------------------------------
@@ -269,6 +271,7 @@ def value(store: Store, f: Forecast, settings: dict, peer_cache: dict | None = N
                   capital["wacc"] + v["wacc_grid_step"])
         for g in v["terminal_growth_grid"]
     }
+    base_dcf = dcf(base, model.as_of, capital["wacc"], v["terminal_growth"], tax, v)
     result = {
         "ticker": model.ticker, "as_of": model.as_of, "price": m.price,
         "price_date": m.price_date, "shares": m.shares, "market_cap": m.market_cap,
@@ -276,6 +279,11 @@ def value(store: Store, f: Forecast, settings: dict, peer_cache: dict | None = N
         "refs": m.refs, "cost_of_capital": capital, "peer_multiples": peer,
         "multiples_2027e": shown, "scenarios": out_scenarios, "price_target": pt,
         "return": ret, "rating": rating, "dcf_grid": grid, "exceptions": exceptions,
+        "dcf_base": {"wacc": capital["wacc"], "terminal_growth": v["terminal_growth"],
+                     "tax_rate": tax, "flows": base_dcf["flows"],
+                     "terminal_t": base_dcf["terminal_t"], "last_annual": base_dcf["last_annual"],
+                     "terminal": base_dcf["terminal"], "ev": base_dcf["ev"],
+                     "terminal_share": base_dcf["terminal_share"]},
     }
     result["inputs_hash"] = hashlib.sha256(json.dumps(
         {"assumptions": model.assumptions, "market": m.refs, "price": m.price,

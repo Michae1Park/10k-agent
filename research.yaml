@@ -17,7 +17,6 @@ forecast:
 scenarios:
   weights: {bear: 0.25, base: 0.50, bull: 0.25}
   shock_sigma: 1.0           # ±1σ of the driver's y/y change over history
-  shock_sigma_bounds: [0.5, 2.0]
 
 proposer:
   method: defaults           # defaults | llm (ablation, §13.2)

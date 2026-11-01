@@ -1,6 +1,6 @@
 # Junior Sell-Side Equity Research Agent: Spec
 
-> **Status:** §1 matches the build; §2 onward is the original request. Not built: `initiation` reports. The workbook has no DCF tab. See [D-038](DECISIONS.md#d-038), the [design doc](V4_TECHNICAL_DESIGN_DOC.md) and the [results](V4_RESULTS.md).
+> **Status:** §1 matches the build; §2 onward is the original request. Not built: `initiation` reports. See [D-038](DECISIONS.md#d-038), the [design doc](V4_TECHNICAL_DESIGN_DOC.md) and the [results](V4_RESULTS.md).
 
 A portfolio project: one agent covers eight US travel and mobility companies using only free, public data. It answers questions, runs the analyst loop on demand (model, forecast, value) and writes a draft sell-side note. A human reviews every rating and price target.
 
