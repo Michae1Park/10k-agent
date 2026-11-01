@@ -27,7 +27,7 @@ from tenk_agent.store import ChunkRecord, Store
 
 REGISTRY = Path(__file__).with_name("kpis.yaml")
 PROMPT = PROMPTS / "extract.md"
-MAX_CHARS = 40_000  # ~10k tokens of release text: the 12k input budget (§5.5) less the registry
+MAX_CHARS = 40_000  # ~10k tokens of release text: the 12k input budget (§5.3) less the registry
 
 
 def registry() -> dict:

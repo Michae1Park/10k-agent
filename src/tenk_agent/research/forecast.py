@@ -1,4 +1,4 @@
-"""S5 forecast (V4 design doc §7.5): history model → forecast quarters to research.yaml's horizon.
+"""S5 forecast (V4 design doc §7.3): history model → forecast quarters to research.yaml's horizon.
 
 Per driver, never per total: a growth driver x = x[-4] × (1 + g) in the first forecast quarter
 (the one guidance anchors), then last fiscal year's total × (1 + g) × the quarter's seasonal
@@ -11,7 +11,7 @@ bounds. Then each guidance anchor in the template solves one assumption so the f
 quarter hits the guided midpoint (bookings, then revenue, then EBITDA). An anchor the bounds
 keep from reaching its target is logged, never forced.
 
-Scenarios (§7.5): bear and bull move each of the template's `scenarios` drivers by ∓/±
+Scenarios (§7.3): bear and bull move each of the template's `scenarios` drivers by ∓/±
 shock_sigma × σ, σ the standard deviation of that driver's line over the history (a growth
 rate's y/y values, a ratio's y/y changes), from the anchored base; weights from research.yaml.
 
@@ -220,7 +220,7 @@ def _default(model: Model, name: str, f: dict, bands: dict) -> float | None:
     if name == "fade":
         if f["fade"] != "fitted":
             return f["fade"]
-        # fitted (ablation, §11.4): the median quarter-to-quarter ratio of the growth drivers'
+        # fitted (ablation, §11.3): the median quarter-to-quarter ratio of the growth drivers'
         # y/y rates over the last 8 quarters, within fade_bounds
         ratios = []
         for line in (x.name for x in model.lines if x.name.endswith("_g")):

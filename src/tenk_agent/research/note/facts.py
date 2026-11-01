@@ -1,4 +1,4 @@
-"""Facts: every figure the note can show, registered once with its source (design doc §9.5).
+"""Facts: every figure the note can show, registered once with its source (design doc §9.3).
 
 Code computes and formats every number; the writer only places facts (by F-id) and writes
 prose around them. The facts become the evidence log (E-rows), and the number trace

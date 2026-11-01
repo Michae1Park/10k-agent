@@ -1,4 +1,4 @@
-"""S4 assumption proposer (V4 design doc §7.6): the LLM's only influence on the numbers.
+"""S4 assumption proposer (V4 design doc §7.3): the LLM's only influence on the numbers.
 
 A bounded sub-agent (the Ask tools, prompts/propose.md, research.yaml `proposer.budget`) sees a
 driver table: each proposable assumption with its history, default and bounds. It returns
@@ -9,7 +9,7 @@ proposals {driver, value, basis, confidence, rationale, evidence}. Code then
     change: ± the ratio's 8-quarter range plus its band; fade: research.yaml fade_bounds) and
     logs the clip;
   - keeps a proposal only if at least one evidence id resolves at the as-of (research/refs.py).
-`proposer.method: defaults` skips the LLM: no overrides (the ablation, §11.4).
+`proposer.method: defaults` skips the LLM: no overrides (the ablation, §11.3).
 """
 
 import re
@@ -65,7 +65,7 @@ def _history(model: Model, line: str) -> list[float]:
 
 def driver_view(model: Model, bounds: dict[str, tuple[float, float]], anchored: dict[str, float],
                 fade_bounds: tuple[float, float]) -> str:
-    """The driver table the proposer reads (§5.5: a view, not the data pack)."""
+    """The driver table the proposer reads (§5.3: a view, not the data pack)."""
     quarters = model.history[-8:]
     rows = [f"Company {model.ticker}, model as of {model.as_of}; history {quarters[0]}–"
             f"{quarters[-1]}; first forecast quarter {model.forecast[0]}.", "",

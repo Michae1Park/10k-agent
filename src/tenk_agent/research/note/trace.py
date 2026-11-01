@@ -1,4 +1,4 @@
-"""Number trace and lint (design doc §9.5): every number in the note's text must be a fact.
+"""Number trace and lint (design doc §9.3): every number in the note's text must be a fact.
 
 A number traces when it equals a fact's value at the precision it is written, after units
 ("$9.7B" traces to 9,712 USD millions; "+3.2%" to 3.21 percent). Years, quarters, section and

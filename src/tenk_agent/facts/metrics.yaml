@@ -1,4 +1,4 @@
-# Core financial lines (V4 design doc §3.5, §7.3): each metric's XBRL concepts in priority order
+# Core financial lines (V4 design doc §3.3, §7.3): each metric's XBRL concepts in priority order
 # (the first with a value for a period wins), and its kind:
 #   flow       a duration; quarters derived from year-to-date facts (Q2 = H1 − Q1, Q4 = FY − 9M)
 #   instant    a balance at the period end
