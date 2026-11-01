@@ -12,9 +12,16 @@
   S7  value      code       comps, DCF, PTs, rating, sensitivities    → valuation.json
   S8  revise     code       against the parent version                → revisions.json
   S9  debates    sub-agents one per scenario driver                   → debates.json
-  S10 write      LLM        prose slots from facts; number trace; one repair → note.json
+                            (then section 7's sensitivities, every debated driver included)
+  S10 write      LLM        prose slots from facts; number trace; one repair → note.json;
+                            consistency check (research/note/consistency.py), one repair turn
+                            for the takeaways; section 10 written last, by exception X-ids
   S11 export     code       note.md, note.pdf, workbook.xlsx (Model, Assumptions, Summary,
                             Scenarios, Valuation, Checks, Log), parity, lint of the whole note
+
+Budgets (spec §2.3 requirement 8): research.yaml `budgets` gives each LLM step its calls and
+tokens (events, debate, section) and the run's target minutes; report.json records each step's
+seconds, LLM calls and tokens, and a run over the target is an exception.
 
 LLM steps save their output; --resume reuses what a previous run saved (a resumable report).
 Code steps are cheap and always rerun. Each report is saved as a model version (draft) with its
@@ -25,6 +32,7 @@ S10's prose (code-only drafts and tests).
 import argparse
 import hashlib
 import json
+import time
 from dataclasses import asdict
 from datetime import date, timedelta
 from pathlib import Path
@@ -46,6 +54,48 @@ from tenk_agent.store import Store
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / "output" / "reports"
+
+
+class Meter:
+    """The LLM, counting calls and tokens per step (report.json `timing`)."""
+
+    def __init__(self, llm):
+        self.llm, self.step, self.usage = llm, "", {}
+
+    def complete(self, *args, **kwargs):
+        reply = self.llm.complete(*args, **kwargs)
+        u = self.usage.setdefault(self.step, {"calls": 0, "input_tokens": 0,
+                                              "output_tokens": 0})
+        u["calls"] += 1
+        u["input_tokens"] += getattr(reply, "input_tokens", 0) or 0
+        u["output_tokens"] += getattr(reply, "output_tokens", 0) or 0
+        return reply
+
+    def __getattr__(self, name):
+        return getattr(self.llm, name)
+
+
+class Clock:
+    """Seconds per step, and LLM usage from the Meter."""
+
+    def __init__(self, meter: Meter | None):
+        self.meter, self.start, self.steps = meter, time.perf_counter(), {}
+        self._last, self._name = self.start, None
+
+    def step(self, name: str) -> None:
+        now = time.perf_counter()
+        if self._name:
+            self.steps[self._name] = round(self.steps.get(self._name, 0) + now - self._last, 1)
+        self._name, self._last = name, now
+        if self.meter:
+            self.meter.step = name
+
+    def summary(self) -> dict:
+        self.step("")
+        total = round(time.perf_counter() - self.start, 1)
+        usage = self.meter.usage if self.meter else {}
+        return {"seconds": total, "steps": {k: {"seconds": v} | usage.get(k, {})
+                                            for k, v in self.steps.items() if k}}
 
 
 class SavedModel:
@@ -74,8 +124,9 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
     llm = None
     if llm_steps:
         config = settings["proposer"]
-        llm = get_model(config["model"], base_url=config.get("base_url"), thinking=False)
-    budget = settings["proposer"]["budget"]
+        llm = Meter(get_model(config["model"], base_url=config.get("base_url"), thinking=False))
+    clock = Clock(llm)
+    budgets = budgets_of(settings)
     exceptions: list[dict] = []
 
     def saved(name: str, make):
@@ -91,8 +142,10 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
 
     by_period = releases(store, ticker)
     period = max(by_period)
-    events = saved("events.json", lambda: _events(llm, store, search, ticker, period, budget)
-                   if llm_steps else [])
+    clock.step("S2 events")
+    events = saved("events.json", lambda: _events(llm, store, search, ticker, period,
+                                                  budgets["events"]) if llm_steps else [])
+    clock.step("S3-S5 model and forecast")
     if not llm_steps:
         settings = dict(settings, proposer=dict(settings["proposer"], method="defaults"))
     f = forecast_with_proposer(store, ticker, settings, search)
@@ -104,6 +157,7 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
     exceptions += layer2.exceptions(model, results) + f.exceptions
 
     # S6–S7: peers and valuation (the book caches the peers' default models)
+    clock.step("S6-S7 peers and valuation")
     book = Book(store, settings)
     book.forecasts[ticker] = f
     valuation = book.valuation(ticker)
@@ -112,27 +166,31 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
         failed = [f"{c.name}: {c.failures}" for c in results if c.status == "fail"]
         raise RuntimeError(f"valuation check failed: {failed}")
     exceptions += [{"severity": "info", "item": e} for e in valuation["exceptions"]]
-    sensitivities = _sensitivities(book, ticker)
 
     # S8: revisions against the parent version
+    clock.step("S8 revisions")
     parents = store.model_versions(ticker)
     parent = parents[-1] if parents else None
     parent_model = (SavedModel(json.loads((Path(parent["path"]) / "model.json").read_text()))
                     if parent else None)
     revisions = _revisions(model, parent, parent_model)
 
-    # S9: debates, one per scenario driver
+    # S9: debates, one per scenario driver; then the sensitivities, with each debated driver
+    clock.step("S9 debates")
     _, template = load_template(model.template, ticker)
     if llm_steps:
         from tenk_agent.research.subagents import debate
 
         debates = saved("debates.json", lambda: [d for d in (
-            debate(llm, store, search, ticker, drv, model.assumptions[drv], budget)
+            debate(llm, store, search, ticker, drv, model.assumptions[drv], budgets["debate"])
             for drv in template.get("scenarios") or [] if drv in model.assumptions) if d])
     else:
         debates = []
+    clock.step("S7 sensitivities")
+    sensitivities = _sensitivities(book, ticker, [d["driver"] for d in debates])
 
     # S10: the note
+    clock.step("S10 write")
     facts = Facts()
     prior, prior_ref = _prior(book, ticker, by_period, period, parent, parent_model)
     ctx = context(store, f, valuation, events, debates, revisions, results, exceptions,
@@ -149,12 +207,31 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
                     if isinstance(b, note_sections.Slot):
                         b.text = texts.get(b.key, "")
         else:
-            exceptions += fill(built, facts, llm)
+            exceptions += fill(built, facts, llm, budgets["section"]["max_tokens"])
+
+    # Consistency check (spec §2.3 requirement 5): code checks; a failure is an exception row;
+    # the takeaways (section 1) get one repair turn, other sections are never rewritten
+    from tenk_agent.research.note import consistency
+
+    def consistent():
+        return consistency.check(built, facts, valuation, settings["valuation"]["rating"],
+                                 debates, sensitivities, events)
+
+    found = consistent()
+    s1_failed = next(r for r in found if r.name == "section1_numbers").failures
+    if s1_failed and llm_steps:
+        from tenk_agent.research.note.write import repair
+
+        repair(built[0], "takeaways", facts, llm, s1_failed, budgets["section"]["max_tokens"])
+        found = consistent()
+    exceptions += consistency.as_exceptions(found)
     header = (f"# {ctx['name']} ({ticker}) · Earnings update · {period}\n\nAs of {as_of} · "
               "Status: DRAFT for senior analyst review · Prepared by: research agent  \n"
               "No rating or PT is approved until the responsible analyst confirms it.")
     note_md = note_sections.markdown(built, header)
-    blocks = [b for s in built for b in s.blocks if isinstance(b, str) and b.strip()]
+    s10 = next(s for s in built if s.number == 10)
+    blocks = [b for s in built if s is not s10 for b in s.blocks
+              if isinstance(b, str) and b.strip()]
     slots = [{"key": b.key, "text": b.text, "facts": b.facts} for s in built for b in s.blocks
              if isinstance(b, note_sections.Slot) and b.text]
     untraced = lint(note_md, facts, blocks, slots)
@@ -167,8 +244,19 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
          "blocks": blocks, "slot_facts": slots},
         indent=1))
 
-    # S11: export, version, logs
+    # S11: export, version, logs; section 10 last, listing the numbered open issues
+    clock.step("S11 export")
+    elapsed = time.perf_counter() - clock.start
+    if elapsed > budgets["run_minutes"] * 60:
+        exceptions.append({"severity": "warning", "item": f"run time over the target of "
+                           f"{budgets['run_minutes']} minutes (see report.json timing)"})
     numbered = [{"id": f"X-{i:02d}", **x} for i, x in enumerate(exceptions, 1)]
+    s10.blocks = note_sections.review_blocks(numbered)
+    issues = consistency.open_issues(s10, numbered)
+    if not issues.ok:  # by construction it passes; a failure is logged, never hidden
+        numbered += [{"id": f"X-{len(numbered) + i:02d}", **x}
+                     for i, x in enumerate(consistency.as_exceptions([issues]), 1)]
+    note_md = note_sections.markdown(built, header)
     (folder / "note.md").write_text(note_md + _logs(facts, numbered))
     (folder / "model.json").write_text(json.dumps(model.to_json(), indent=1))
     (folder / "valuation.json").write_text(json.dumps(valuation, indent=1, sort_keys=True))
@@ -187,7 +275,8 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
                "parent": parent["id"] if parent else None, "rating": valuation["rating"],
                "price_target": valuation["price_target"], "sections": len(built),
                "facts": len(facts.items), "untraced": len(untraced), "exceptions": len(numbered),
-               "parity": parity, "folder": str(folder)}
+               "consistency": {r.name: r.ok for r in found} | {"open_issues": issues.ok},
+               "parity": parity, "folder": str(folder), "timing": clock.summary()}
     (folder / "report.json").write_text(json.dumps(summary, indent=1))
     return summary
 
@@ -262,8 +351,18 @@ def _revisions(model, parent, parent_model) -> list[dict]:
     return out
 
 
-def _sensitivities(book: Book, ticker: str) -> list[dict]:
-    """Section 7: the 2027E adj. EBITDA and PT effect of a take-rate, growth and cost move."""
+def budgets_of(settings: dict) -> dict:
+    """research.yaml `budgets`; a step without one uses the proposer's (older knob files)."""
+    default = settings["proposer"]["budget"]
+    given = settings.get("budgets") or {}
+    return {"events": given.get("events", default), "debate": given.get("debate", default),
+            "section": given.get("section", {"max_tokens": 1500}),
+            "run_minutes": given.get("run_minutes", 30)}
+
+
+def _sensitivities(book: Book, ticker: str, debated: list[str] = ()) -> list[dict]:
+    """Section 7: the 2027E adj. EBITDA and PT effect of a take-rate, growth and cost move, and
+    of a move in each debated driver (spec §2.3: every debated driver has a sensitivity)."""
     f = book.base(ticker)
     base = f.model
     names = sorted(base.assumptions)
@@ -276,6 +375,14 @@ def _sensitivities(book: Book, ticker: str) -> list[dict]:
                                 (cost, 0.005, "costs as a share of gross bookings")):
         if driver:
             picks.append((driver, delta, what))
+    for driver in debated:
+        if driver in base.assumptions and driver not in {p[0] for p in picks}:
+            line = driver.rsplit(".", 1)[0].replace("_", " ")
+            if driver.endswith(".g0"):
+                picks.append((driver, -0.01, f"debated: {line}"))
+            elif driver.endswith(".shift0"):
+                picks.append((driver, 0.005 if line.startswith("cost") else -0.005,
+                              f"debated: {line}"))
     base_val = book.valuation(ticker)
     year = sorted({c for c in base.columns if c.startswith("FY")})[-1]
     out = []

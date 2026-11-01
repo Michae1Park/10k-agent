@@ -21,6 +21,7 @@ NAMES = {"revenue": "Revenue", "adj_ebitda": "Adj. EBITDA", "gross_bookings": "G
          "adj_ebitda_margin": "Adj. EBITDA margin", "take_rate": "Take rate", "sbc": "SBC",
          "operating_income": "GAAP operating income", "shares_diluted": "Diluted shares",
          "trips": "Trips"}
+NO_GUIDANCE = "No numeric guidance for the coming quarter."
 
 
 @dataclass
@@ -147,7 +148,7 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
         grows.append(fact_row(label, [mid, ours, var]))
         beat_facts += [f.id for f in (mid, ours, var) if f]
     s2.blocks.append(table(["Guided line", "Midpoint", "Our forecast", "Var. vs mid"], grows)
-                     if grows else "No numeric guidance for the coming quarter.")
+                     if grows else NO_GUIDANCE)
     s2.blocks.append("2.3 Quality of the quarter")
     yago = model.quarters[model.quarters.index(last) - 4]
     qrows, quality_facts = [], []
@@ -252,6 +253,8 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
     w_d = add("DCF weight", ctx["valuation_weights"]["dcf"], "weight", "research.yaml")
     s6.blocks.append(f"Method: {w_m.text()} EV/EBITDA + {w_d.text()} DCF (a DCF with a "
                      f"non-positive EV is left out); WACC {wacc.text()}, β {beta.text()}.")
+    s6.blocks.append(f"Probability-weighted price target: {pt.text()}; return {ret.text()} "
+                     f"→ {rating.text()}.")
     s6.blocks.append(Slot("valuation", "In two to four sentences, justify the target multiple "
                           "against the peers and say what the DCF adds. Use only these facts.",
                           val_facts + [f.id for f in prow if f]))
@@ -311,17 +314,32 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
     sections.append(s9)
 
     # 10 ----------------------------------------------------------------------------------
-    s10 = Section(10, TITLES[9])
-    decisions = [x["item"] for x in ctx["exceptions"] if x["severity"] in ("warning", "error")]
-    s10.blocks.append("Status: DRAFT. Decisions needed:" if decisions else "Status: DRAFT.")
-    s10.blocks += [f"{i}. {d}" for i, d in enumerate(decisions[:8], 1)]
-    s10.blocks.append("Reviewer: ______  Approve rating ☐  Approve PT ☐  Approve estimates ☐")
+    s10 = Section(10, TITLES[9], review_blocks(ctx["exceptions"]))
     sections.append(s10)
 
     s1.blocks.append(Slot("takeaways", "Write four bullet takeaways (Beat, Outlook, Estimates, "
                           "Valuation), one line each, then one 'Thesis (hypothesis):' line. "
                           "Use only these facts.", takeaway_facts + val_facts[:6]))
     return sections
+
+
+def review_blocks(exceptions: list[dict]) -> list[str]:
+    """Section 10 (spec §2.3 requirement 4), written last: the decisions and every open issue
+    (warnings and errors) by its X-id; the rows themselves are in the exception log. Before
+    the log is numbered (`id` missing) it lists the issue count only."""
+    open_ = [x for x in exceptions if x["severity"] in ("warning", "error")]
+    ids = [x["id"] for x in open_ if "id" in x]
+    issues = (f"Resolve open issues {', '.join(ids)} (exception log)." if ids else
+              "No open warnings or errors." if not open_ else "Resolve the open issues in the "
+              "exception log.")
+    return ["Status: DRAFT. Decisions needed:",
+            "1. Approve or amend the reading of the quarter (section 2.3).",
+            "2. Approve or reject the estimate changes (section 4).",
+            f"3. {issues}",
+            "4. Approve the valuation method, target multiple and scenario weights (section 6).",
+            "5. Confirm the rating and price target.",
+            "6. Approve the note for distribution.",
+            "Reviewer: ______  Approve rating ☐  Approve PT ☐  Approve estimates ☐"]
 
 
 def markdown(sections: list[Section], header: str) -> str:

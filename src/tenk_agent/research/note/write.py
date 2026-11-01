@@ -45,6 +45,25 @@ def fill(sections: list[Section], facts: Facts, llm, max_tokens: int = 1500) -> 
     return exceptions
 
 
+def repair(section: Section, key: str, facts: Facts, llm, failures: list[str],
+           max_tokens: int = 1500) -> None:
+    """One repair turn for a slot the consistency check failed (spec §2.3 requirement 6:
+    sections 1 and 10 only): the writer sees its text and the failures and rewrites it; the
+    number trace then runs as for any slot."""
+    block = next((b for b in section.blocks if isinstance(b, Slot) and b.key == key), None)
+    if block is None or not block.text:
+        return
+    listing = "\n".join(f"{f.id} | {f.label} | {f.text()} | {f.source}"
+                         for i in block.facts if (f := facts.get(i)))
+    messages = [{"role": "user", "content": f"{block.instruction}\n\nFacts:\n{listing}"},
+                {"role": "assistant", "content": f'{{"text": {block.text!r}}}'},
+                {"role": "user", "content": "The consistency check failed: "
+                 + "; ".join(failures) + ". Rewrite so every figure is one the facts print, "
+                 "written exactly as printed."}]
+    text = _ask(llm, messages, PROMPT.read_text(), max_tokens) or block.text
+    block.text = _drop_untraced(text, _slot_facts(facts, block), key)
+
+
 def _drop_untraced(text: str, slot_facts: Facts, key: str) -> str:
     """The text without the sentences whose figures still fail the trace."""
     sentences = re.split(r"(?<=[.!?])\s+", text)

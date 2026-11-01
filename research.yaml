@@ -25,6 +25,12 @@ proposer:
   base_url: http://localhost:8001/v1
   budget: {max_calls: 10, max_context: 16000, max_tokens: 3000}
 
+budgets:                     # spec §2.3 requirement 8: each LLM step's calls and tokens
+  events: {max_calls: 8, max_context: 16000, max_tokens: 3000}   # S2, one run
+  debate: {max_calls: 8, max_context: 16000, max_tokens: 3000}   # S9, one run per driver
+  section: {max_tokens: 1500}  # S10, per prose slot: one call, plus one repair turn
+  run_minutes: 30              # target per company (spec §2); report.json records the time
+
 valuation:                   # research/valuation.py (§6.2)
   weights: {multiple: 0.6, dcf: 0.4}
   target_year: 2027          # the multiple's EBITDA year (2027E)

@@ -115,3 +115,57 @@ def test_writer_drops_sentences_still_untraced_after_repair(facts):
     exceptions = fill([section], facts, Writer())
     assert slot.text == "EBITDA is $9.7B. PT $95.00."
     assert len(exceptions) == 1 and "'20%'" in exceptions[0]["item"]
+
+
+def _consistency_note(takeaways="PT $120.00, return +20.0%.", s6="Probability-weighted price "
+                      "target: $120.00; return +20.0% → Buy.", s2="| Revenue | $1.0B |"):
+    from tenk_agent.research.note.facts import Facts
+    from tenk_agent.research.note.sections import Section, Slot
+
+    facts = Facts()
+    pt = facts.add("12-month price target", 120.0, "USD", "model:X")
+    ret = facts.add("Implied return", 20.0, "percent", "model:X")
+    facts.add("Draft rating", "Buy", "text", "model:X")
+    s1 = Section(1, "Executive summary", [f"| Buy | {pt.text()} | {ret.text()} |",
+                                           Slot("takeaways", "", [pt.id, ret.id], takeaways)])
+    return [s1, Section(2, "Earnings results", [s2]), Section(6, "Valuation", [s6])], facts
+
+
+def test_consistency_passes_a_consistent_note():
+    from tenk_agent.research.note import consistency
+
+    sections, facts = _consistency_note()
+    results = consistency.check(sections, facts, {"rating": "Buy", "return": 0.2},
+                                {"buy": 0.15, "sell": -0.10}, [{"driver": "take_rate.shift0"}],
+                                [{"driver": "take_rate.shift0"}], [])
+    assert all(r.ok for r in results), [r.failures for r in results]
+
+
+def test_consistency_catches_each_inconsistency():
+    from tenk_agent.research.note import consistency
+    from tenk_agent.research.note.sections import NO_GUIDANCE
+
+    sections, facts = _consistency_note(takeaways="PT $130.00.", s6="no price target here",
+                                        s2=NO_GUIDANCE)
+    results = {r.name: r for r in consistency.check(
+        sections, facts, {"rating": "Hold", "return": 0.2}, {"buy": 0.15, "sell": -0.10},
+        [{"driver": "volume_g.g0"}], [{"driver": "take_rate.shift0"}],
+        [{"type": "guidance", "summary": "raised the outlook"}])}
+    assert not results["rating_thresholds"].ok  # +20% is a Buy, not a Hold
+    assert any("$130.00" in f for f in results["section1_numbers"].failures)
+    assert any("section 6" in f for f in results["section1_numbers"].failures)
+    assert not results["debated_drivers"].ok and not results["guidance_in_2_2"].ok
+    rows = consistency.as_exceptions(list(results.values()))
+    assert rows and all(x["severity"] == "error" for x in rows)
+
+
+def test_section_10_lists_every_open_issue_by_id():
+    from tenk_agent.research.note import consistency
+    from tenk_agent.research.note.sections import Section, review_blocks
+
+    numbered = [{"id": f"X-{i:02d}", "severity": s, "item": "x"}
+                for i, s in enumerate(["info", "warning", "error", "warning"] * 4, 1)]
+    s10 = Section(10, "Senior analyst review", review_blocks(numbered))
+    assert consistency.open_issues(s10, numbered).ok  # all 12 listed, no cap
+    s10.blocks = review_blocks(numbered[:4])
+    assert not consistency.open_issues(s10, numbered).ok

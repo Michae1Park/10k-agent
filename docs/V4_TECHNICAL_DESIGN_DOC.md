@@ -2,7 +2,7 @@
 
 **Status:** Built through V4.7 (§17 is the build log; results in [V4_RESULTS.md](V4_RESULTS.md)). Sections 1–16 are the design as planned; where the build differs, the section says so. Settled items are in [DECISIONS.md](DECISIONS.md).
 **Updated:** 2026-10-29 · **Spec:** [JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md). "Spec §n" is the spec's section; a bare "§n" is a section of this doc.
-**Not built** (spec items, checked 2026-11-01; each also noted in its section): bounded research runs for note sections 2.3, 4, 6, 7 and 8, and the pre-export consistency check (§9); per-section call and token budgets and a recorded run time (§8, §9); the workbook DCF and Model (prior) tabs and the `initiation` report type (§11).
+**Not built** (spec items, checked 2026-11-01; each also noted in its section): bounded research runs for note sections 2.3, 4, 6, 7 and 8 (§9); the workbook DCF and Model (prior) tabs and the `initiation` report type (§11).
 **Not to be confused with** the retired V4 in `archive/` (D-034).
 
 The spec says *what* to build; this doc says *how*, and how it plugs into V0–V3.
@@ -408,7 +408,7 @@ Qwen3.6-27B serves a 32k window (I-003). One report touches 14 quarters, several
 | Detail by id | Views carry ids; tools fetch the chunk, fact or KPI behind one. Nothing is preloaded "just in case" |
 | Bounded research runs | Each agentic step is a fresh `Agent` with its own tool groups, `max_calls`, `max_context`; it returns JSON, not its transcript |
 | Numbers never pass through prose | The note writer gets pre-formatted facts with ids (§10.2) and never computes |
-| Budgets are config | In `research.yaml`: each LLM step's `{max_calls, max_context, max_tokens}` (as built: one `proposer.budget`, shared by the proposer, events and debates) |
+| Budgets are config | `research.yaml` `budgets`: `{max_calls, max_context, max_tokens}` for events and each debate, `max_tokens` per prose slot (one call plus one repair), `run_minutes`; the proposer keeps `proposer.budget` |
 
 **Budgets (32k window)**
 
@@ -421,7 +421,7 @@ Qwen3.6-27B serves a 32k window (I-003). One report touches 14 quarters, several
 | Section writer, per section | ≤ 8k | that section's fact list, tables as text, relevant events/debates |
 | Ask / Research question | 20k (`agent.max_context`) | as V3 |
 
-Per-section call and token budgets sum to well under the 30-minute target per company (spec §2.3 requirement 8). **Not built:** per-section budgets and a recorded run time to check the target.
+Per-section call and token budgets sum to well under the 30-minute target per company (spec §2.3 requirement 8). `report.json` `timing` records each step's seconds, LLM calls and tokens; a run over `run_minutes` is a warning exception.
 
 **Memory across runs**, as-of safe: a run reads only versions with `as_of < D`.
 - **Prior model version** (`parent_id`): the latest version for the ticker with an earlier as-of; its estimates, assumptions and rationale → note section 4 and the Summary tab (old vs new; no driver bridge, spec §2.3). None → the run is flagged "initial draft (no prior run)" and section 4 shows no old values (spec §2.3).
@@ -451,7 +451,7 @@ S11 export    code       note.md/.pdf, workbook.xlsx (+ Log), parity check; save
 
 **Report filling (spec §2.3).** Code builds 2.1, 2.2, 4.1–4.3, 5 and 9. Each section lists its fixed fact set before it runs; the LLM never decides what data exists. A research run does not plan, split into sub-questions or start other runs. Before export, code checks: the rating matches the §6.2 thresholds; every number in section 1 equals its section table; every debated driver is in the section 7 sensitivities; a guidance change in the events appears in 2.2; every open issue is in section 10. An LLM only explains a failure. A failed check becomes an exception row; sections 1 and 10 get one repair turn, others are never rewritten silently. A failed or over-budget research run makes its section read "failed check: reason" and the run continues; a model-integrity failure stops it.
 
-**As built:** S9 has only the per-driver debates; sections 2.3, 4, 6, 7 and 8 are tool-less LLM calls over facts (S2 events feed them), and the consistency check is not built.
+**As built:** S9 has only the per-driver debates; sections 2.3, 4, 6, 7 and 8 are tool-less LLM calls over facts (S2 events feed them). The consistency check is built (`research/note/consistency.py`): the five checks above, a failure is an `error` exception and is in `report.json` `consistency`; the takeaways get one repair turn; section 7 adds a sensitivity row for every debated driver; section 6 prints the probability-weighted PT, return and rating; section 10 is written last and lists every open warning and error by X-id.
 
 **Runner (`research/pipeline.py`)**
 - **Resume:** `--resume` reuses the saved LLM outputs (`events.json`, `debates.json`, the note's prose slots), so a crash (I-001) or a rerun repeats only code steps.
