@@ -2,7 +2,6 @@
   <title id="svgtitle">Research model tools</title>
   <desc id="svgdesc">Zoom of the Research-mode model tools. run_scenario validates overrides against the driver list and bounds, copies the base model into a session-local run, reruns forecast, checks and valuation as code, and returns changed lines, price target and rating against base with a scratch model id; it never creates a model version. compare_peers builds or reuses cached default models for the eight companies at the same as-of and returns a table. variance_review compares the prior model version with the actuals by driver and returns the bridge by sequential substitution.</desc>
   <style>
-    .plan { stroke-dasharray: 6 4; }
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
       .panel { fill: #151c24; stroke: #3a4753; }
@@ -114,7 +113,7 @@
   <path class="edge" d="M 452 486.0 L 484 486.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <path class="edge" d="M 674 486.0 L 706 486.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <path class="edge" d="M 896 486.0 L 928 486.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <text class="sub" x="40" y="604" text-anchor="start" font-size="12.5" fill="#4a5a68">All of these tools are planned (V4.5). Each is bound to the run's AsOf, never raises, and returns citable ids.</text>
+  <text class="sub" x="40" y="604" text-anchor="start" font-size="12.5" fill="#4a5a68">Built in V4.5, Research tool set only. Each is bound to the run's AsOf, never raises, and returns citable ids.</text>
   <rect class="work" x="40" y="628" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="sub" x="74" y="640" font-size="12.5" fill="#4a5a68">code</text>
   <rect class="llm" x="190" y="628" width="26" height="14" rx="3" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>

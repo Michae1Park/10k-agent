@@ -532,7 +532,7 @@ Start with a pilot of one company per sector (BKNG and UBER) before scaling to e
 
 ## 8. Pre-build checks and decisions (all resolved)
 
-Findings are in the [design doc](V4_TECHNICAL_DESIGN_DOC.md) §17.
+Findings are in the [build log](V4_BUILD_LOG.md) §3.
 
 - [x] Each ticker, listing status, and that all eight file 10-K and 10-Q (`tenk companies verify`)
 - [x] Fiscal year-ends (all December) and KPI definitions in the latest release (§1.5)

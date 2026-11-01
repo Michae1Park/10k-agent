@@ -1,8 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="950" viewBox="0 0 1180 950" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
   <title id="svgtitle">V4 data pipeline</title>
-  <desc id="svgdesc">Zoom of the V4 build. Fetch pulls filings, XBRL company facts, prices, macro and equity risk premium into a raw cache stamped with retrieved_at. Four lanes then run offline. Text: blocks, form-aware Item labels, validation, parent-child chunks, embeddings. Structured facts: company facts and inline XBRL merge into a facts table, which derives quarters and runs checks. Extraction: release chunks and the KPI registry go to one LLM call, code validates quotes and values, rows land in kpis and guidance. Market: prices, macro and ERP are dated by when each became public, with cross-checks planned. All lanes write one SQLite file.</desc>
+  <desc id="svgdesc">Zoom of the V4 build. Fetch pulls filings, XBRL company facts, prices, macro and equity risk premium into a raw cache stamped with retrieved_at. Four lanes then run offline. Text: blocks, form-aware Item labels, validation, parent-child chunks, embeddings. Structured facts: company facts and inline XBRL merge into a facts table, which derives quarters and runs checks. Extraction: release chunks and the KPI registry go to one LLM call, code validates quotes and values, rows land in kpis and guidance. Market: prices, macro and ERP are dated by when each became public, with the BTS and NYC TLC cross-checks. All lanes write one SQLite file.</desc>
   <style>
-    .plan { stroke-dasharray: 6 4; }
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
       .panel { fill: #151c24; stroke: #3a4753; }
@@ -31,7 +30,7 @@
   <text class="name" x="170.0" y="84" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">EDGAR submissions</text>
   <text class="sub" x="170.0" y="106" text-anchor="middle" font-size="13" fill="#4a5a68">10-K, 10-Q: one per form, period</text>
   <text class="sub" x="170.0" y="124" text-anchor="middle" font-size="13" fill="#4a5a68">8-K Item 2.02 → its EX-99 files</text>
-  <text class="sub" x="170.0" y="142" text-anchor="middle" font-size="13" fill="#4a5a68">S-1 (CART) · DEF 14A</text>
+  <text class="sub" x="170.0" y="142" text-anchor="middle" font-size="13" fill="#4a5a68">DEF 14A (proxies)</text>
   <path class="edge" d="M 170 158 L 170 184" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <rect class="ext" x="320" y="58" width="260" height="100" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
   <text class="name" x="450.0" y="84" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">XBRL company facts</text>
@@ -43,10 +42,10 @@
   <text class="sub" x="730.0" y="106" text-anchor="middle" font-size="13" fill="#4a5a68">prices, macro vintages, ERP</text>
   <text class="sub" x="730.0" y="124" text-anchor="middle" font-size="13" fill="#4a5a68">raw/prices and raw/macro</text>
   <path class="edge" d="M 730 158 L 730 184" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <rect class="ext plan" x="880" y="58" width="260" height="100" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
+  <rect class="ext" x="880" y="58" width="260" height="100" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
   <text class="name" x="1010.0" y="84" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">BTS · NYC TLC · Form 4</text>
   <text class="sub" x="1010.0" y="106" text-anchor="middle" font-size="13" fill="#4a5a68">cross-checks, insiders</text>
-  <text class="sub" x="1010.0" y="124" text-anchor="middle" font-size="13" fill="#4a5a68">V4.7</text>
+  <text class="sub" x="1010.0" y="124" text-anchor="middle" font-size="13" fill="#4a5a68">raw/crosscheck</text>
   <path class="edge" d="M 1010 158 L 1010 184" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <rect class="work" x="40" y="184" width="1100" height="46" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="590.0" y="210" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Raw cache</text>
@@ -132,10 +131,10 @@
   <text class="name" x="447.0" y="700" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">ALFRED · ERP</text>
   <text class="sub" x="447.0" y="722" text-anchor="middle" font-size="13" fill="#4a5a68">CPI, sentiment vintages</text>
   <text class="sub" x="447.0" y="740" text-anchor="middle" font-size="13" fill="#4a5a68">ERP published day 3</text>
-  <rect class="work plan" x="554" y="674" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <rect class="work" x="554" y="674" width="170" height="100" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="639.0" y="700" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Cross-checks</text>
   <text class="sub" x="639.0" y="722" text-anchor="middle" font-size="13" fill="#4a5a68">BTS, NYC TLC</text>
-  <text class="sub" x="639.0" y="740" text-anchor="middle" font-size="13" fill="#4a5a68">V4.7</text>
+  <text class="sub" x="639.0" y="740" text-anchor="middle" font-size="13" fill="#4a5a68">cc: ids</text>
   <rect class="gate" x="746" y="674" width="170" height="100" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
   <text class="name" x="831.0" y="700" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Dated by release</text>
   <text class="sub" x="831.0" y="722" text-anchor="middle" font-size="13" fill="#4a5a68">close visible next open</text>
@@ -167,7 +166,7 @@
   <path class="edge" d="M 1134 352.0 L 1134 828" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <rect class="sink" x="40" y="828" width="1100" height="72" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
   <text class="name" x="590.0" y="854" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">One SQLite file (D-005)</text>
-  <text class="sub" x="590.0" y="876" text-anchor="middle" font-size="13" fill="#4a5a68">chunks · children · FTS5 · vectors · facts · quarters · kpis · guidance · market · exceptions</text>
+  <text class="sub" x="590.0" y="876" text-anchor="middle" font-size="13" fill="#4a5a68">chunks · children · FTS5 · vectors · facts · kpis · guidance · market · insider_tx · model_versions</text>
   <rect class="work" x="40" y="924" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="sub" x="74" y="936" font-size="12.5" fill="#4a5a68">code</text>
   <rect class="llm" x="190" y="924" width="26" height="14" rx="3" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
@@ -176,6 +175,4 @@
   <text class="sub" x="374" y="936" font-size="12.5" fill="#4a5a68">store</text>
   <rect class="gate" x="490" y="924" width="26" height="14" rx="3" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
   <text class="sub" x="524" y="936" font-size="12.5" fill="#4a5a68">date or check</text>
-  <rect class=" plan" x="640" y="924" width="26" height="14" rx="3" fill="none" stroke="#5a6b7a" stroke-width="1.5"/>
-  <text class="sub" x="674" y="936" font-size="12.5" fill="#4a5a68">planned</text>
 </svg>

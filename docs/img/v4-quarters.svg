@@ -2,7 +2,6 @@
   <title id="svgtitle">Quarters and the financials tool</title>
   <desc id="svgdesc">Zoom of the quarter derivation. 10-Q three-month, half-year and nine-month facts and the 10-K full-year fact become one value per quarter: Q1 direct, Q2 direct or H1 minus Q1, Q3 direct or 9M minus H1, Q4 as FY minus 9M. For each period the newest fact visible at the as-of date is used. Checks run, results land in the quarters table, and the financials tool returns the value with its citable id and derivation.</desc>
   <style>
-    .plan { stroke-dasharray: 6 4; }
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
       .panel { fill: #151c24; stroke: #3a4753; }
@@ -64,7 +63,7 @@
   <rect class="gate" x="40" y="274" width="1100" height="82" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
   <text class="name" x="590.0" y="300" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Per metric and period, use the newest fact visible at the as-of date</text>
   <text class="sub" x="590.0" y="322" text-anchor="middle" font-size="13" fill="#4a5a68">a restatement counts once it is filed; before that the original stands · balance-sheet items are instants (the balance at quarter end)</text>
-  <text class="sub" x="590.0" y="340" text-anchor="middle" font-size="13" fill="#4a5a68">EPS and share counts do not add up, so only their direct facts are kept (Q4 EPS comes from the release, V4.1)</text>
+  <text class="sub" x="590.0" y="340" text-anchor="middle" font-size="13" fill="#4a5a68">EPS and share counts do not add up, so only their direct facts are kept (Q4 EPS comes from the release)</text>
   <path class="edge" d="M 170 234 L 170 274" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <path class="edge" d="M 450 234 L 450 274" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <path class="edge" d="M 730 234 L 730 274" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>

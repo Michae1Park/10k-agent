@@ -2,7 +2,6 @@
   <title id="svgtitle">search_filings in V4</title>
   <desc id="svgdesc">Zoom of the search_filings tool in V4. Arguments are query, companies, periods, forms and k, bound to the run as-of date. Companies and periods come from the arguments or else the query; no company is an error; no period means the latest filing of each form visible at the as-of date. One sub-question per company and filing. Each sub-question runs a keyword search and a dense search, both filtered by company, form, period and filed before the as-of date inside the store, fused with reciprocal rank fusion, children swapped for parents, reranked by a cross-encoder. A round-robin merge returns k chunks with id, form, period and filing date. No LLM.</desc>
   <style>
-    .plan { stroke-dasharray: 6 4; }
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
       .panel { fill: #151c24; stroke: #3a4753; }
@@ -30,7 +29,7 @@
   <text class="sub" x="165.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">query · k</text>
   <text class="sub" x="165.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">companies · periods · forms</text>
   <text class="sub" x="165.0" y="114" text-anchor="middle" font-size="13" fill="#4a5a68">the model cannot pass an as-of</text>
-  <rect class="work plan" x="330" y="30" width="300" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <rect class="work" x="330" y="30" width="300" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="480.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Resolve slots</text>
   <text class="sub" x="480.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">companies: arguments, else the query</text>
   <text class="sub" x="480.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">no company: error asking for one</text>
@@ -108,6 +107,4 @@
   <text class="sub" x="374" y="676" font-size="12.5" fill="#4a5a68">store</text>
   <rect class="gate" x="490" y="664" width="26" height="14" rx="3" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
   <text class="sub" x="524" y="676" font-size="12.5" fill="#4a5a68">date or check</text>
-  <rect class=" plan" x="640" y="664" width="26" height="14" rx="3" fill="none" stroke="#5a6b7a" stroke-width="1.5"/>
-  <text class="sub" x="674" y="676" font-size="12.5" fill="#4a5a68">planned</text>
 </svg>

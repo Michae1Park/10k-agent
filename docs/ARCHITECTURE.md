@@ -55,7 +55,7 @@ Evaluation does not run this check; it reads the statuses (below). An unknown ch
 
 ## V4: research agent
 
-Spec: [JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md). Design and build log: [V4_TECHNICAL_DESIGN_DOC.md](V4_TECHNICAL_DESIGN_DOC.md). Results: [V4_RESULTS.md](V4_RESULTS.md). Scope: [D-038](DECISIONS.md#d-038).
+Spec: [JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md). Design: [V4_TECHNICAL_DESIGN_DOC.md](V4_TECHNICAL_DESIGN_DOC.md). Build log: [V4_BUILD_LOG.md](V4_BUILD_LOG.md). Results: [V4_RESULTS.md](V4_RESULTS.md). Scope: [D-038](DECISIONS.md#d-038).
 
 **Corpus** (`companies.yaml`, data in `data/v4/`). BKNG, EXPE, ABNB, TRIP (travel) and UBER, LYFT, DASH, CART (mobility and delivery). Sources: 10-K, 10-Q, 8-K Item 2.02 releases, XBRL, Form 4, Tiingo prices, FRED macro, Damodaran ERP, NYC TLC and BTS cross-checks. From Q1 2023 on.
 
@@ -140,5 +140,5 @@ Evaluation never runs the pipeline, including the claim check. It takes the pipe
 | Why it is this way, known issues | [DECISIONS.md](DECISIONS.md) |
 | How well it works | [experiments/](../experiments/README.md) (V0–V3), [V4_RESULTS.md](V4_RESULTS.md) |
 | The V4 model equations and parameters | [FINANCIAL_MODELING.md](FINANCIAL_MODELING.md) |
-| The V4 research agent | [spec](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md), [design](V4_TECHNICAL_DESIGN_DOC.md) |
+| The V4 research agent | [spec](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md), [design](V4_TECHNICAL_DESIGN_DOC.md), [build log](V4_BUILD_LOG.md) |
 | To contribute | [CONTRIBUTING.md](../CONTRIBUTING.md) |

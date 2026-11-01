@@ -2,7 +2,6 @@
   <title id="svgtitle">Model, forecast and valuation</title>
   <desc id="svgdesc">Zoom of steps S3 to S7 of the report. S3 builds the model: history from quarters, KPIs and facts plus a company template become a ModelGraph in a small formula language, evaluated in Python to model.json with an Excel formula copy, then layer-2 checks. S4 and S5: guidance anchors the drivers, a bounded LLM proposer suggests assumptions that code clips, drivers roll forward from the same quarter last year with a fading growth rate, three scenarios, checks again. S6 and S7: peers get default models at the same as-of, then market cap and EV, a multiple price target and a DCF, blended and probability weighted, then the rating.</desc>
   <style>
-    .plan { stroke-dasharray: 6 4; }
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
       .panel { fill: #151c24; stroke: #3a4753; }
@@ -82,7 +81,7 @@
   <text class="name" x="1023.0" y="274" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Scenarios</text>
   <text class="sub" x="1023.0" y="296" text-anchor="middle" font-size="13" fill="#4a5a68">bear / base / bull 25/50/25</text>
   <text class="sub" x="1023.0" y="314" text-anchor="middle" font-size="13" fill="#4a5a68">2–3 drivers, ±1σ of y/y</text>
-  <text class="sub" x="1023.0" y="332" text-anchor="middle" font-size="13" fill="#4a5a68">checks again; variance flags</text>
+  <text class="sub" x="1023.0" y="332" text-anchor="middle" font-size="13" fill="#4a5a68">layer-2 checks again</text>
   <path class="edge" d="M 230 302.0 L 262 302.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <path class="edge" d="M 452 302.0 L 484 302.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <path class="edge" d="M 674 302.0 L 706 302.0" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>

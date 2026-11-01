@@ -2,7 +2,6 @@
   <title id="svgtitle">KPI and guidance extraction</title>
   <desc id="svgdesc">Zoom of the layer-1 extractor. One LLM call per release takes the release chunks, tables first within a character budget, and the company registry entry, and returns KPI and guidance rows with a chunk id and verbatim quote. Code validates each row: the chunk id was given, the quote occurs verbatim, the value is in the quote, the metric is in the registry. Failures get one repair turn that shows the chunk text, then become exception rows, never stored values. Passing rows land in kpis and guidance. Afterwards values are reconciled with XBRL where the filing wins, recast releases create a new definition version, and the gold labels grade the result.</desc>
   <style>
-    .plan { stroke-dasharray: 6 4; }
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
       .panel { fill: #151c24; stroke: #3a4753; }
@@ -91,7 +90,7 @@
   <text class="sub" x="970.0" y="444" text-anchor="middle" font-size="13" fill="#4a5a68">written before the extractor ran</text>
   <text class="sub" x="970.0" y="462" text-anchor="middle" font-size="13" fill="#4a5a68">pass bar: ≥ 98% exact, 100% on</text>
   <text class="sub" x="970.0" y="480" text-anchor="middle" font-size="13" fill="#4a5a68">revenue, EPS, main KPI</text>
-  <text class="sub" x="970.0" y="498" text-anchor="middle" font-size="13" fill="#4a5a68">V4.1: 98.5% exact, 100% critical</text>
+  <text class="sub" x="970.0" y="498" text-anchor="middle" font-size="13" fill="#4a5a68">gold: 98.5% exact, 100% critical</text>
   <rect class="work" x="40" y="596" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="sub" x="74" y="608" font-size="12.5" fill="#4a5a68">code</text>
   <rect class="llm" x="190" y="596" width="26" height="14" rx="3" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
