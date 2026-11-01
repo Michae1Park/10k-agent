@@ -35,7 +35,7 @@ Three modes (details in §2):
 - Peers for comps: the other companies in the same sector.
 - Instacart (legal name Maplebear Inc.) IPO'd on 2023-09-19:
   - Data starts at Q3 2023: 12 releases, 9 10-Qs, 3 10-Ks.
-  - About 4 backtest points.
+  - 6 backtest points, like the others (its Q4 2024 release onward).
   - Its S-1 is not fetched.
 
 ### 1.2 Data sources
@@ -506,7 +506,7 @@ Ask and Research modes also get a gold question set (about 80 questions across t
 ## 6. Backtest
 
 - **Point-in-time rule:** at each as-of date, use only filings EDGAR had accepted before it.
-- **Walk-forward:** for each quarter from the Q4 2024 releases onward, set the as-of date just after the earnings release, run the full pipeline, forecast next quarter, move forward one quarter. About 6 forecasts per company (about 4 for Instacart), roughly 45 per metric.
+- **Walk-forward:** for each quarter from the Q4 2024 releases onward, set the as-of date just after the earnings release, run the full pipeline, forecast next quarter, move forward one quarter. 6 forecasts per company, Instacart included: 48 per metric.
 - **Metrics:** MAPE, bias (positive means forecasts too high), and guidance call (does revenue land above or below the guidance midpoint).
 - **Baselines:** seasonal naive (same quarter last year x latest YoY growth), guidance midpoint, and a plain LLM with no tools.
 - **Held-out set:** report quarters released after the LLM's training cutoff separately.
