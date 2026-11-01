@@ -135,7 +135,7 @@ def _score_one(db, ticker, period, release, by_period, store, f) -> list[Row]:
             pack.get(spec.fallback, {}).get(target) if spec.fallback else None)
         if point is None:
             continue
-        guided = [a for a in f.anchors if a.line == line]
+        guided = [a for a in f.anchors if a.line == line and a.target_period == target]
         rows.append(Row(ticker, as_of, period, target, line, kpi, point.value,
                         model.value(line, target), _seasonal_naive(model, line, target),
                         guided[0].target if guided else None,

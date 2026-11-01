@@ -2,7 +2,7 @@
 
 **Status:** Built through V4.7 (§17 is the build log; results in [V4_RESULTS.md](V4_RESULTS.md)). Sections 1–16 are the design as planned; where the build differs, the section says so. Settled items are in [DECISIONS.md](DECISIONS.md).
 **Updated:** 2026-10-29 · **Spec:** [JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md). "Spec §n" is the spec's section; a bare "§n" is a section of this doc.
-**Not built** (checked 2026-11-01; each is repeated as an as-built note in its section): spreading full-year-only guidance into quarters (§6.1); DEF 14A text is fetched but not loaded into the corpus (§4.2); the `research_report` tool (§7.1); per-step checkpoints, inputs hash, trace and `run.json` (§9); the `wacc_gt_g`, `weights` and `bridge_ties` checks (§5.4); the `exceptions`, `estimates`, `prices`, `macro` and `crosscheck` tables (§4.3); `research.budgets`, `tool_timeout_s` and `report.type` (§8, §14); bounded research runs for sections 2.3, 4, 6, 7 and 8 (only events and the per-driver debates exist) and the pre-export consistency check (§9).
+**Not built** (checked 2026-11-01; each is repeated as an as-built note in its section): DEF 14A text is fetched but not loaded into the corpus (§4.2); the `research_report` tool (§7.1); per-step checkpoints, inputs hash, trace and `run.json` (§9); the `exceptions`, `estimates`, `prices`, `macro` and `crosscheck` tables (§4.3); `research.budgets`, `tool_timeout_s` and `report.type` (§8, §14); bounded research runs for sections 2.3, 4, 6, 7 and 8 (only events and the per-driver debates exist) and the pre-export consistency check (§9).
 **Not to be confused with** the retired V4 in `archive/` (D-034).
 
 The spec says *what* to build; this doc says *how*, and how it plugs into V0–V3.
@@ -281,7 +281,7 @@ Run after building the model and again after forecasting. **Any FAIL stops the r
 | `segments_sum` | segment GB and EBITDA sum to reported totals |
 | `no_future_input` | every input has `filed < as_of` |
 | `formula_only` | forecast cells are formulas |
-| `wacc_gt_g` · `weights` · `bridge_ties` | WACC > terminal growth · scenario weights sum to 1 · revision bridge sums to Summary deltas. **Not built** as checks; only the first eight rows run |
+| `wacc_gt_g` · `weights` | WACC > terminal growth · scenario and valuation weights each sum to 1. Valuation checks: Report runs them after S7 and stops on a FAIL (`checks.valuation_checks`); the backtest stops before valuation |
 
 ---
 
@@ -308,9 +308,9 @@ share(q)          = mean share of quarter q in its fiscal year over the last 3 c
 g(t+1)            = g(t) × d                d = 0.90 per quarter (fixed; "fitted" is an ablation)
 ```
 
-- **Anchor:** guided metrics start at the midpoint (`guidance_point: mid`; `high` is an ablation). Drivers are solved so the guided total is hit: GB growth from a GB guide, then margin from an EBITDA guide. Full-year-only guidance is spread into quarters by the same seasonal share.
+- **Anchor:** guided metrics start at the midpoint (`guidance_point: mid`; `high` is an ablation). Drivers are solved so the guided total is hit: GB growth from a GB guide, then margin from an EBITDA guide. Full-year-only guidance anchors the fiscal-year column (see as built).
 - **Seasonal share** sets the quarterly pattern of every later quarter, so one unusual quarter does not repeat a year later. Shares apply to level drivers (volume, price per unit, segment bookings, TRIP revenue); each is an assumption `x.s1`…`x.s4` on the Assumptions tab, and the formula is `fyp(x) × (1 + x_g) × x.s<q>` (`fyp`: last fiscal year's four quarters). Where last year is incomplete (a missing quarter), the quarter falls back to the q-4 rule. Ratios (take rate, cost share) have no share of a year: they stay at the same quarter last year plus a faded change (§5.3). Reported quarters of the current year are kept as reported; the year's FY column is the sum of its quarters.
-- **As built:** later quarters use the seasonal share (`research/forecast.py` `seasonal_shares`, `graph.seasonal`); spreading full-year-only guidance is not built (anchors are quarterly only). Not yet backtested: the §17.13 results use the earlier q-4 rule.
+- **As built:** later quarters use the seasonal share (`research/forecast.py` `seasonal_shares`, `graph.seasonal`); a full-year-only guide anchors the FY column instead of being split by share: an anchor with `period: fy` solves its driver so the fiscal year hits the guide (ABNB's FY adj. EBITDA margin); quarterly anchors run first and keep their drivers. Not yet backtested: the §17.13 results use the earlier q-4 rule.
 - **Variance flag:** vs guidance midpoint, over 2% (revenue) or 5% (adj. EBITDA) needs a written reason (from the proposer's rationale); none = exception.
 - **Horizon:** quarterly to Q4 2027E; annual 2026E–2028E; DCF years 4–10 faded.
 - **Scenarios:** bear/base/bull (25/50/25) vary the 2–3 `scenario_drivers`. Default shock ±1σ of the driver's y/y change over history; the proposer may move it within [0.5σ, 2σ].
@@ -427,7 +427,7 @@ Per-section call and token budgets sum to well under the 30-minute target per co
 Over budget, `views.py` drops the oldest quarters first, then low-priority columns, and says so in the view header.
 
 **Memory across runs** (the analyst who remembers last quarter), all as-of safe: a run reads only versions with `as_of < D`.
-- **Prior model version** (`parent_id`): the latest version for the ticker with an earlier as-of; its estimates, assumptions and rationale → note section 4, Summary and Bridge tabs. None → the run is flagged "initial draft (no prior run)" and section 4 shows no old values (spec §2.3).
+- **Prior model version** (`parent_id`): the latest version for the ticker with an earlier as-of; its estimates, assumptions and rationale → note section 4 and the Summary tab (old vs new; no driver bridge, spec §2.3). None → the run is flagged "initial draft (no prior run)" and section 4 shows no old values (spec §2.3).
 - **Rolling event log** `events.json` per company: each run appends ≤ 300 tokens per event (segment or definition changes, M&A, buybacks, guidance habits); the next run reads these, not old documents.
 - **Open exceptions** from the parent version are re-checked and resolved or carried forward.
 
@@ -447,7 +447,7 @@ S4  propose   LLM run    bounded assumptions with rationale (§7.3)             
 S5  forecast  code       drivers, anchor, scenarios, layer-2 checks again                → estimates.json
 S6  peers     code       S1, S3, S5 per peer, defaults, cached                            → peers/<T>/
 S7  value     code       comps, DCF, grid, PTs, ratings, sensitivities                   → valuation.json
-S8  revise    code       vs parent version: Summary, bridge, types, confidence           → revisions.json
+S8  revise    code       vs parent version: old vs new, type, confidence (no driver bridge) → revisions.json
 S9  research  LLM runs   one bounded run per judgment section: 2.3, 3 (one per scenario  → research.json
                          driver: bull, bear, hypothesis, trigger, gap), 4, 6 (multiple
                          justification), 7, 8; conclusion + cited ids, which become facts
@@ -525,12 +525,12 @@ Step S10: how a number gets into the note.
 
 Directory: `output/reports/<TICKER>/<as_of>/`; each run is saved as a version (`UBER:v1`, `UBER:v2`, …) in `model_versions`, with its parent.
 
-**As built (V4.6):** the files below differ from the plan. Written: `note.md`, `note.pdf`, `note.json`, `workbook.xlsx`, `model.json`, `valuation.json`, `revisions.json`, `events.json`, `debates.json`, `facts.json`, `exceptions.json`, `report.json`. Workbook tabs: Model, Assumptions (`export/workbook.py`) and Summary, Scenarios, Valuation, Revisions, Checks, Log (`export/report.py`); no README, Bridge, Model (prior) or DCF tab yet. The layer-2 results are in the workbook Checks tab; `checks.json` is written only by the `model/history.py` runner. The PDF is printed by headless Chrome through `evaluation/render.py`, not LibreOffice. Only the `update` report type exists; `initiation` and `--public` are not built.
+**As built (V4.6):** the files below differ from the plan. Written: `note.md`, `note.pdf`, `note.json`, `workbook.xlsx`, `model.json`, `valuation.json`, `revisions.json`, `events.json`, `debates.json`, `facts.json`, `exceptions.json`, `report.json`. Workbook tabs: Model, Assumptions (`export/workbook.py`) and Summary, Scenarios, Valuation, Revisions, Checks, Log (`export/report.py`); no Model (prior) or DCF tab yet (the Bridge tab was dropped from the spec). The layer-2 results are in the workbook Checks tab; `checks.json` is written only by the `model/history.py` runner. The PDF is printed by headless Chrome through `evaluation/render.py`, not LibreOffice. Only the `update` report type exists; `initiation` and `--public` are not built.
 
 | File | Built by | Notes |
 |---|---|---|
 | `note.md`, `note.pdf` | `research/note/` render, then a headless browser (`evaluation/render.py`) | `update` (3–5 pages) or `initiation` (+ business overview, industry and competition, model appendix; same ten sections) |
-| `workbook.xlsx` | `research/export/workbook.py` (openpyxl, new dependency) | Planned tabs (spec §2.3): Summary, Bridge, Assumptions, Model, Model (prior), Scenarios, Valuation, DCF, Checks, Log (as built: see above); blue/black/green styles; layout of `docs/EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx` |
+| `workbook.xlsx` | `research/export/workbook.py` (openpyxl, new dependency) | Planned tabs (spec §2.3): Summary, Assumptions, Model, Model (prior), Scenarios, Valuation, DCF, Checks, Log (as built: see above); blue/black/green styles; layout of `docs/EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx` |
 | `model.json`, `estimates.json`, `valuation.json`, `revisions.json`, `assumptions.json`, `events.json`, `debates.json`, `checks.json`, `evidence.json` | steps | Machine-readable; Ask and Research cite these |
 | `trace.jsonl`, `run.json` | runner | Time, tokens |
 
@@ -554,7 +554,7 @@ Directory: `output/reports/<TICKER>/<as_of>/`; each run is saved as a version (`
 | **Instacart starts at Q3 2023** | Walk-forward needs 4 lags | data starts at Q3 2023; seasonal share uses whatever years exist, with an exception; about 4 backtest points (spec §6). As built: 6, since releases from Q4 2024 onward already have four lags |
 | **Two evaluators of one model** | Workbook must be live | Single DSL, LibreOffice parity test (§5.1, §11) |
 | **Peers at the same as-of** | Comps and relative rating depend on other models | S6 with caching; `--all` for relative rating |
-| **Revision bridge attribution** | Order-dependent | Sequential substitution in a fixed order: (1) actuals, (2) guidance, (3) each assumption in register order; interactions go to the later step, documented in the Bridge tab. Type: *timing* if the next-year effect is < 20% of this year's, *recurring* if > 80%, else *mixed*. Confidence by horizon: actuals High; current quarter and FY, FY+1 Medium; FY+2 Low |
+| **Revision type and confidence** | Spec §2.3 asks for old vs new only, not a driver bridge | Type: *timing* if the next-year effect is < 20% of this year's, *recurring* if > 80%, else *mixed*. Confidence by horizon: actuals High; current quarter and FY, FY+1 Medium; FY+2 Low |
 | **Long runs, crash-prone CPU, shared GPU** | Minutes × 8 × backtest | Checkpointed steps, `--resume`, `taskset`, CPU embedder (§9) |
 | **Determinism with an LLM in the loop** | Layer 4 needs identical output | Valuation is code on saved artifacts; same inputs hash = same output. LLM steps at temperature 0, cached by prompt hash, so a rerun replays them |
 | **Release time vs filing date** | After-close acceptance (after 17:30 ET) gets the next day's EDGAR date | Use `filing_date` (conservative); backtest as-of = day after `accepted_at` (ET) |

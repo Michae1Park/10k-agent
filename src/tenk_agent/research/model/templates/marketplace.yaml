@@ -40,6 +40,9 @@ anchors:
   - {guide: adj_ebitda, line: adj_ebitda, basis: level, solve: cost_to_gb.shift0}
   - {guide: adj_ebitda_growth, line: adj_ebitda, basis: growth_yoy,
      solve: cost_to_gb.shift0}
+  # full-year-only guides, after the quarterly ones (ABNB guides its FY adj. EBITDA margin)
+  - {guide: adj_ebitda_margin, line: adj_ebitda_margin, basis: margin, period: fy,
+     solve: cost_to_gb.shift0}
 
 sums: {}
 

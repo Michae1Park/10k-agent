@@ -1,6 +1,6 @@
 # Junior Sell-Side Equity Research Agent: Spec
 
-> **Status:** §1 matches the build; §2 onward is the original request. Not built: `initiation` reports. The workbook has a Revisions tab and no Bridge or DCF tab. See [D-038](DECISIONS.md#d-038), the [design doc](V4_TECHNICAL_DESIGN_DOC.md) and the [results](V4_RESULTS.md).
+> **Status:** §1 matches the build; §2 onward is the original request. Not built: `initiation` reports. The workbook has no DCF tab. See [D-038](DECISIONS.md#d-038), the [design doc](V4_TECHNICAL_DESIGN_DOC.md) and the [results](V4_RESULTS.md).
 
 A portfolio project: one agent covers eight US travel and mobility companies using only free, public data. It answers questions, runs the analyst loop on demand (model, forecast, value) and writes a draft sell-side note. A human reviews every rating and price target.
 
@@ -175,7 +175,7 @@ A report run hands the senior analyst **three artifacts**. The split lets the se
 | Artifact | Reader's question | Contents |
 | --- | --- | --- |
 | **Research report** (the note) | What happened, what do we change, what do you decide? | 10 sections. Sections 1–5 are the core automated deliverable. Sections 6–10 add valuation, risk, catalysts and review controls |
-| **Model-change workbook** (`.xlsx`) | Exactly what moved in the model? | Old vs. new estimates, drivers, formula outputs, revision bridge, scenarios, valuation, integrity checks |
+| **Model-change workbook** (`.xlsx`) | Exactly what moved in the model? | Old vs. new estimates, drivers, formula outputs, scenarios, valuation, integrity checks |
 | **Evidence and exception log** | Where does this come from, and what is not settled? | One row per material figure or claim with its source, plus every discrepancy, data gap and failed check. Delivered as the `Log` tab of the workbook |
 
 *Illustrative. Every figure below is invented to show the format; real numbers come from the model. The invented figures reconcile with each other, except that the FY2026E revenue ($51.0B) is below what Q2's run-rate implies.* The example workbook, [`EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx`](EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx), reproduces the figures in sections 2, 4, 6 and 7 of the note with live formulas.
@@ -267,11 +267,10 @@ No rating or PT is approved until the responsible analyst confirms it.
    2027E adj. EBITDA ($B)     9.4    9.7    +3.2%    Analyst assumption     Recurring     Medium
    2028E adj. EBITDA ($B)     11.0   11.4   +3.6%    Analyst assumption     Recurring     Low
 
-   4.2 Bridge ($B)            Q2 beat   Q3 Delivery   Q4 Delivery   Total
-   2026E adj. EBITDA          +0.10     +0.08         +0.12         +0.30  (8.6 → 8.9)
-                              Mobility growth   Delivery margin   Opex leverage   Total
-   2027E adj. EBITDA          +0.15             +0.10             +0.05           +0.30  (9.4 → 9.7)
-   Full driver bridge for all years: model-change workbook, tab "Bridge".
+   4.2 Why they changed
+   2026E: the Q2 beat, then a higher Delivery margin in Q3 and Q4.
+   2027E: faster Mobility growth, Delivery margin and opex leverage.
+   Old vs. new estimates for every line: model-change workbook, tab "Summary".
 
    4.3 Integrity checks (layer 2)
    [pass] Balance sheet balances        [pass] Quarters sum to years    [pass] Q4 ties to 10-K
@@ -349,7 +348,6 @@ Example file: [`EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx`](EXAMPLE_UBER_Q
 | Tab | Contents |
 | --- | --- |
 | Summary | Old vs. new estimates, change in $ and %, source of change, type, confidence (old value is the denominator) |
-| Bridge | Each revision split by driver and source type (reported, guidance, analyst assumption), tied back to Summary |
 | Assumptions | Every assumption with value, basis (reported, derived or analyst-imposed), confidence, variables affected, last updated |
 | Model | Three statements by quarter, formulas only; the prior version kept as a separate tab |
 | Scenarios | Bear, base, bull, weights, probability-weighted value, one-at-a-time sensitivities |
@@ -394,7 +392,7 @@ Report mode is a fixed pipeline, not an open agent loop. It uses the same tools 
 | 2.1, 2.2, 4.1–4.3, 5, 9 | Code | Model, guidance, revisions, checks |
 | 2.3 Quality of the quarter | Bounded research | KPI, cash-flow and reconciliation facts; release and 10-Q text |
 | 3 Drivers and debates | Bounded research, one per scenario driver | Driver trend, management commentary, risk factors |
-| 4 Why estimates changed | Bounded research | Revision bridge, guidance changes, events |
+| 4 Why estimates changed | Bounded research | Old vs. new estimates, guidance changes, events |
 | 6 Valuation | Code, plus a justification of the target multiple | Comps, DCF, peer facts |
 | 7 Risks | Code sensitivities, plus bounded research | Scenario runs, new risk-factor text |
 | 8 Catalysts | Bounded research | Events, filings text only (no calendar data) |

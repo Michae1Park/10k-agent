@@ -107,6 +107,10 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
     book = Book(store, settings)
     book.forecasts[ticker] = f
     valuation = book.valuation(ticker)
+    results += layer2.valuation_checks(valuation, settings)
+    if any(c.status == "fail" for c in results):
+        failed = [f"{c.name}: {c.failures}" for c in results if c.status == "fail"]
+        raise RuntimeError(f"valuation check failed: {failed}")
     exceptions += [{"severity": "info", "item": e} for e in valuation["exceptions"]]
     sensitivities = _sensitivities(book, ticker)
 

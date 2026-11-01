@@ -284,42 +284,54 @@ def _last(model: Model, line: str, default: float) -> float:
 
 def anchor(model: Model, pack, store: Store, anchors: list[dict], settings: dict,
            result: Forecast) -> list[Anchor]:
-    """Solve each anchored assumption so the first forecast quarter hits the guide."""
+    """Solve each anchored assumption so the first forecast quarter hits the guide; an anchor
+    with `period: fy` uses the guide for the first forecast quarter's fiscal year and solves
+    the FY column (a full-year-only guide: ABNB's adj. EBITDA margin). Template order sets
+    priority: quarterly anchors come first, and a driver already solved is not moved again."""
     if not model.forecast:
         return []
     first = model.forecast[0]
-    guides = _guides(store, model.ticker, first)
+    fiscal_year = f"FY{first[:4]}"
+    guides = {"quarter": _guides(store, model.ticker, first),
+              "fy": _guides(store, model.ticker, fiscal_year)}
     point = settings["forecast"]["guidance_point"]
     out, solved = [], set()
     for spec in anchors:
-        guide = guides.get(spec["guide"])
+        period = spec.get("period", "quarter")
+        column = fiscal_year if period == "fy" else first
+        if column not in model.columns:
+            continue
+        guide = guides[period].get(spec["guide"])
         if guide is None:
             continue
         if spec["solve"] in solved:  # a level and a growth guide of one metric: the first wins
             result.exceptions.append({"severity": "info", "item": f"anchor {spec['guide']} "
-                                      f"{first} not used: {spec['solve']} already anchored"})
+                                      f"{column} not used: {spec['solve']} already anchored"})
             continue
         solved.add(spec["solve"])
         mid = guide["high"] if point == "high" and guide["high"] is not None else (
             guide["low"] if guide["high"] is None else (guide["low"] + guide["high"]) / 2)
         if spec["basis"] == "growth_yoy":
-            prior = model.value(spec["line"], model.quarters[model.quarters.index(first) - 4])
+            prior = model.value(spec["line"], f"FY{int(first[:4]) - 1}" if period == "fy"
+                                else model.quarters[model.quarters.index(first) - 4])
             if prior is None:
                 continue
             target = prior * (1 + mid / 100)
+        elif spec["basis"] == "margin":  # guided in percent, the line is a fraction
+            target = mid / 100
         else:
             target = mid
         before = model.assumptions[spec["solve"]]
-        after, reached = _solve(model, pack, spec["solve"], spec["line"], first, target)
-        out.append(Anchor(spec["guide"], spec["line"], first, target, spec["solve"], before,
+        after, reached = _solve(model, pack, spec["solve"], spec["line"], column, target)
+        out.append(Anchor(spec["guide"], spec["line"], column, target, spec["solve"], before,
                           after, reached, guide["issued_in"],
-                          f"guide:{model.ticker}:{spec['guide']}:{first}"))
+                          f"guide:{model.ticker}:{spec['guide']}:{column}"))
         if not reached:
-            got = model.value(spec["line"], first)
+            got = model.value(spec["line"], column)
             result.exceptions.append({
                 "severity": "warning",
-                "item": f"anchor {spec['guide']} {first}: target {target:,.1f} not reached "
-                        f"({spec['line']} {'blank' if got is None else f'{got:,.1f}'})"})
+                "item": f"anchor {spec['guide']} {column}: target {target:,.4g} not reached "
+                        f"({spec['line']} {'blank' if got is None else f'{got:,.4g}'})"})
     return out
 
 
@@ -406,7 +418,7 @@ def main() -> None:
         status = f"FAIL {[c.name for c in bad]}" if bad else "pass"
         print(f"{ticker} → {folder}  checks {status}  parity {checked - len(differ)}/{checked}")
         for a in f.anchors:
-            print(f"  anchor {a.guide:<24} {a.target_period} target {a.target:>10,.1f} "
+            print(f"  anchor {a.guide:<24} {a.target_period} target {a.target:>10,.4g} "
                   f"{a.solve} {a.before:+.4f} → {a.after:+.4f}"
                   f"{'' if a.reached else '  NOT REACHED'}")
         failed |= bool(bad) or bool(differ)

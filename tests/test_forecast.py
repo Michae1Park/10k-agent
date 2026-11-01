@@ -211,3 +211,48 @@ def test_seasonal_shares_use_the_latest_three_complete_years(templates):
 
     shares, years = fc.seasonal_shares(Fake(), "x")
     assert years == ["2023", "2024", "2025"] and shares[3] == pytest.approx(0.4)
+
+
+def test_a_full_year_guide_anchors_the_fiscal_year_column(templates):
+    class Store:
+        def guidance(self, ticker):
+            return [{"metric": "take_rate_fy", "segment": "total", "target_period": "FY2026",
+                     "low": 10.2, "high": None, "issued_in": "2026Q2"}]
+
+    spec = {"guide": "take_rate_fy", "line": "take_rate", "basis": "margin", "period": "fy",
+            "solve": "take_rate.shift0"}
+    m = model()
+    result = fc.Forecast(m, pack(), dict(m.assumptions))
+    anchors = fc.anchor(m, pack(), Store(), [spec], SETTINGS, result)
+    assert anchors[0].target_period == "FY2026" and anchors[0].reached
+    assert m.value("take_rate", "FY2026") == pytest.approx(0.102, rel=1e-3)
+
+
+def test_a_quarterly_anchor_keeps_its_driver_from_a_full_year_guide(templates):
+    class Store:
+        def guidance(self, ticker):
+            return [{"metric": "revenue", "segment": "total", "target_period": "2026Q3",
+                     "low": 130.0, "high": 134.0, "issued_in": "2026Q2"},
+                    {"metric": "take_rate_fy", "segment": "total", "target_period": "FY2026",
+                     "low": 10.4, "high": None, "issued_in": "2026Q2"}]
+
+    fy = {"guide": "take_rate_fy", "line": "take_rate", "basis": "margin", "period": "fy",
+          "solve": "take_rate.shift0"}
+    m = model()
+    result = fc.Forecast(m, pack(), dict(m.assumptions))
+    anchors = fc.anchor(m, pack(), Store(), TEMPLATE["anchors"] + [fy], SETTINGS, result)
+    assert [a.target_period for a in anchors] == ["2026Q3"]
+    assert m.value("revenue", "2026Q3") == pytest.approx(132.0)
+    assert any("already anchored" in e["item"] for e in result.exceptions)
+
+
+def test_valuation_checks_stop_on_wacc_below_growth_or_bad_weights():
+    from tenk_agent.research.model import checks as layer2
+
+    settings = {"valuation": {"terminal_growth": 0.03, "weights": {"multiple": 0.6, "dcf": 0.4}},
+                "scenarios": {"weights": {"bear": 0.25, "base": 0.5, "bull": 0.25}}}
+    ok = layer2.valuation_checks({"cost_of_capital": {"wacc": 0.09}}, settings)
+    assert all(c.status == "pass" for c in ok)
+    assert layer2.wacc_gt_g({"cost_of_capital": {"wacc": 0.03}}, settings).status == "fail"
+    settings["scenarios"]["weights"]["bull"] = 0.3
+    assert layer2.weights(settings).status == "fail"

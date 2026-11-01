@@ -135,12 +135,16 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
     s2.blocks.append(f"2.2 Guidance for {first}")
     grows = []
     for a in ctx["anchors"]:
-        mid = add(f"{first} {a.guide} guidance midpoint", a.target, model.line(a.line).unit,
-                  a.guide_id, first)
-        ours = cell(a.line, first, f"{first} {NAMES.get(a.line, a.line)} our forecast")
-        var = add(f"{first} {a.guide} our forecast vs midpoint",
-                  pct(ours.value, a.target) if ours else None, "percent", "computed")
-        grows.append(fact_row(a.guide.replace("_", " "), [mid, ours, var]))
+        period = a.target_period  # the coming quarter, or its fiscal year (a full-year guide)
+        ratio = model.line(a.line).unit == "fraction"  # a margin guide: percent, var in points
+        mid = add(f"{period} {a.guide} guidance midpoint", a.target * 100 if ratio else a.target,
+                  "percent" if ratio else model.line(a.line).unit, a.guide_id, period)
+        ours = cell(a.line, period, f"{period} {NAMES.get(a.line, a.line)} our forecast")
+        var = add(f"{period} {a.guide} our forecast vs midpoint",
+                  (ours.value - mid.value if ratio else pct(ours.value, a.target))
+                  if ours and mid else None, "points" if ratio else "percent", "computed")
+        label = a.guide.replace("_", " ") + (f" ({period})" if period != first else "")
+        grows.append(fact_row(label, [mid, ours, var]))
         beat_facts += [f.id for f in (mid, ours, var) if f]
     s2.blocks.append(table(["Guided line", "Midpoint", "Our forecast", "Var. vs mid"], grows)
                      if grows else "No numeric guidance for the coming quarter.")

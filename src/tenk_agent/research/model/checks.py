@@ -15,7 +15,11 @@ with no forecast quarter.
 
 A check that has nothing to test in a period (an input missing) skips it and counts the skip;
 the skips and the model's other gaps are listed as exceptions, never hidden.
-V4.4–V4.5 add wacc_gt_g, weights and bridge_ties.
+
+Valuation checks (Report, after S7; any FAIL stops the run as well):
+  wacc_gt_g        the WACC (one for all scenarios) exceeds the terminal growth, which a
+                   Gordon terminal value needs
+  weights          scenario weights and the multiple/DCF valuation weights each sum to 1
 """
 
 from dataclasses import asdict, dataclass, field
@@ -210,3 +214,23 @@ def formula_only(model: Model) -> Check:
 
 def to_json(checks: list[Check]) -> list[dict]:
     return [asdict(c) for c in checks]
+
+
+def wacc_gt_g(valuation: dict, settings: dict) -> Check:
+    g = settings["valuation"]["terminal_growth"]
+    wacc = valuation["cost_of_capital"]["wacc"]
+    failures = [] if wacc > g else [f"WACC {wacc:.2%} <= terminal growth {g:.2%}"]
+    return _result("wacc_gt_g", 1, failures, [])
+
+
+def weights(settings: dict) -> Check:
+    failures = []
+    for name, w in (("scenario", settings["scenarios"]["weights"]),
+                    ("valuation", settings["valuation"]["weights"])):
+        if abs(sum(w.values()) - 1) > 1e-9 or any(v < 0 for v in w.values()):
+            failures.append(f"{name} weights {w} do not sum to 1")
+    return _result("weights", 2, failures, [])
+
+
+def valuation_checks(valuation: dict, settings: dict) -> list[Check]:
+    return [wacc_gt_g(valuation, settings), weights(settings)]
