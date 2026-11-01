@@ -335,10 +335,10 @@ def test_tool_sets_are_built_from_groups_in_v3_order():
         "text": ("search_filings", "calculator"),
         "full": ("search_filings", "calculator", "xbrl_facts", "edgar_filings"),
         "ask": ("search_filings", "calculator", "financials", "company_kpis", "guidance",
-                "filings", "market_data", "crosscheck"),
+                "filings", "market_data", "crosscheck", "research_report"),
         "research": ("search_filings", "calculator", "financials", "company_kpis", "guidance",
-                     "filings", "market_data", "crosscheck", "model_view", "run_scenario",
-                     "compare_peers", "variance_review"),
+                     "filings", "market_data", "crosscheck", "research_report", "model_view",
+                     "run_scenario", "compare_peers", "variance_review"),
     }
     assert {t for tools in GROUPS.values() for t in tools} == set(TOOL_SETS["full"]) | set(
         TOOL_SETS["research"]
@@ -347,3 +347,42 @@ def test_tool_sets_are_built_from_groups_in_v3_order():
 
 def test_toolbox_sees_its_stores_asof(tools):
     assert tools.asof == tools.store.asof
+
+
+def test_research_report_returns_a_saved_version_made_before_the_asof(tmp_path):
+    from tenk_agent.asof import AsOf
+    from tenk_agent.research.refs import Resolver
+
+    make_store(tmp_path)
+    folder = tmp_path / "report"
+    folder.mkdir()
+    (folder / "model.json").write_text(json.dumps({
+        "forecast": ["2026Q3", "2026Q4", "2027Q1", "2027Q2", "2027Q3", "2027Q4"],
+        "columns": ["2026Q2", "2026Q3", "FY2026", "FY2027"],
+        "lines": [{"name": "revenue", "unit": "USD millions"},
+                  {"name": "adj_ebitda_margin", "unit": "fraction"}],
+        "cells": {"revenue|FY2027": {"value": 520000.0}, "revenue|FY2026": {"value": 480000.0},
+                  "adj_ebitda_margin|FY2027": {"value": 0.25}}}))
+    (folder / "valuation.json").write_text(json.dumps(
+        {"price": 200.0, "price_target": 240.0, "return": 0.2, "rating": "Buy"}))
+    writer = Store(tmp_path / "test.db", AsOf.of("2026-08-07"))
+    writer.enable_facts()
+    assert writer.add_model_version("AAPL", "2026-08-06", None, "h", str(folder)) == "AAPL:v1"
+
+    same_day = Toolbox(Store(tmp_path / "test.db", AsOf.of("2026-08-06")), None, None, "ask")
+    assert same_day.call("research_report", {"company": "AAPL"})["report"] is None
+
+    store = Store(tmp_path / "test.db", AsOf.of("2026-08-07"))
+    result = Toolbox(store, None, None, "ask").call(
+        "research_report", {"company": "Apple", "lines": ["revenue", "adj_ebitda_margin"]})
+    assert result["version"] == "AAPL:v1" and result["status"] == "draft"
+    assert result["valuation"]["rating"]["text"] == "Buy"
+    rows = {(r["line"], r["period"]): r for r in result["estimates"]}
+    assert rows[("revenue", "FY2027")]["value"] == 520000.0
+    assert rows[("adj_ebitda_margin", "FY2027")]["value"] == 25.0  # ratios in percent
+    ref = rows[("revenue", "FY2027")]["id"]
+    assert ref == "model:AAPL:2026-08-06:v1:revenue.FY2027"
+    resolver = Resolver(store)  # no model book: Ask's claim check resolves saved versions
+    assert resolver.resolve(ref).values[0]["value"] == 520000.0
+    assert resolver.resolve("model:AAPL:2026-08-06:v1:price_target").values[0]["value"] == 240
+    assert Resolver(same_day.store).resolve(ref) is None  # not yet saved at that as-of

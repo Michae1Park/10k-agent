@@ -2,7 +2,7 @@
 
 **Status:** Built through V4.7 (§17 is the build log; results in [V4_RESULTS.md](V4_RESULTS.md)). Sections 1–16 are the design as planned; where the build differs, the section says so. Settled items are in [DECISIONS.md](DECISIONS.md).
 **Updated:** 2026-10-29 · **Spec:** [JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md). "Spec §n" is the spec's section; a bare "§n" is a section of this doc.
-**Not built** (checked 2026-11-01; each is repeated as an as-built note in its section): DEF 14A text is fetched but not loaded into the corpus (§4.2); the `research_report` tool (§7.1); per-step checkpoints, inputs hash, trace and `run.json` (§9); the `exceptions`, `estimates`, `prices`, `macro` and `crosscheck` tables (§4.3); `research.budgets`, `tool_timeout_s` and `report.type` (§8, §14); bounded research runs for sections 2.3, 4, 6, 7 and 8 (only events and the per-driver debates exist) and the pre-export consistency check (§9).
+**Not built** (checked 2026-11-01; each is repeated as an as-built note in its section): per-step checkpoints, inputs hash, trace and `run.json` (§9); the `exceptions`, `estimates`, `prices`, `macro` and `crosscheck` tables (§4.3); `research.budgets`, `tool_timeout_s` and `report.type` (§8, §14); bounded research runs for sections 2.3, 4, 6, 7 and 8 (only events and the per-driver debates exist) and the pre-export consistency check (§9).
 **Not to be confused with** the retired V4 in `archive/` (D-034).
 
 The spec says *what* to build; this doc says *how*, and how it plugs into V0–V3.
@@ -137,7 +137,7 @@ UBER:
 
 Every raw file gets `retrieved_at` in `raw/manifest.json` (spec §1.2).
 
-**As built:** DEF 14A proxies are fetched and cached (`raw/filings/<T>/FY<year>-DEF14A/`) but `tenk build` does not chunk or load them: the database holds no DEF14A rows, so Ask and Research cannot search them yet.
+**As built:** the 31 DEF 14A proxies (FY2022–FY2025; CART from FY2023) are chunked by rules into one pseudo-Item `PROXY` (ids `UBER-FY2025-DEF14A-PROXY-012`) and searchable with `forms: [DEF14A]`, dated by their filing date. They were added with `tenk build --stage chunk --stage append`, which loads only filings the database lacks and keeps facts, KPIs, market data and saved versions; `--stage embed` then adds only the new vectors.
 
 ### 4.3 Store changes (same SQLite file, D-005)
 
@@ -354,7 +354,7 @@ All tools are bound to the run's `AsOf`, never raise, and return citable ids. V3
 | | `compare_peers` (metric, companies) | table across the eight at this as-of | | ✓ | |
 | | `variance_review` (company, period) | prior estimate vs actual by driver, with the bridge | | ✓ | |
 
-**As built:** 12 tools. `research_report` is not built, so Ask cannot cite saved estimates and questions about them decline; `xbrl_facts` and `edgar_filings` remain in V3 mode only.
+**As built:** all 13. `research_report` (company, optional lines, periods, `as_of`) returns the latest saved version made strictly before the run's as-of (or on or before `as_of`): forecast-year estimates, price, PT, return, rating and review status, each with a `model:<T>:<as_of>:v<n>:<line>.<period>` or `…:v<n>:<field>` id that the claim check resolves from the version's files (no model book, so Ask can cite it). `xbrl_facts` and `edgar_filings` remain in V3 mode only.
 
 Report's bounded research runs (§9) get the whole Research toolset with a call budget (spec §2.3 requirement 2); the last column shows which tools each run mostly needs.
 
@@ -653,7 +653,7 @@ src/tenk_agent/
 | Command | Does |
 |---|---|
 | `tenk companies verify [--file companies.yaml]` | Resolve CIKs, FYE, filing counts |
-| `tenk fetch [--forms 10-K 10-Q ER] [--market]` · `tenk build --stage chunk,load,embed,pages,facts,market,kpis` | Acquisition and build; `--market` fetches prices, macro and ERP only |
+| `tenk fetch [--forms 10-K 10-Q ER DEF14A] [--market]` · `tenk build --stage chunk,load,append,embed,pages,facts,market,kpis` (`append`: new filings into the existing database) | Acquisition and build; `--market` fetches prices, macro and ERP only |
 | `TENK_COMPANIES=companies.yaml tenk research report TICKER... --as-of D [--no-llm] [--resume]` | Report mode, S1–S11 (same as `python -m tenk_agent.research.pipeline TICKER D`) |
 | `tenk research approve TICKER:vN --by INITIALS` | Mark a saved version reviewed |
 | `python -m tenk_agent.research.valuation TICKER... AS_OF --all` | Valuation and relative ratings across the eight |

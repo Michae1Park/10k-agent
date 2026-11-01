@@ -7,11 +7,17 @@
   model:<T>:<as_of>:val-<version>:<field>        a valuation output (price_target, ev, …;
                                                  rating resolves to its text)
   model:<T>:<as_of>:var-<period>:<field>          variance_review's revenue bridge for a quarter
+  model:<T>:<as_of>:v<n>:<line>.<period>         a saved Report version (model_versions, V4.6):
+  model:<T>:<as_of>:v<n>:<field>                 its model.json line, or a valuation.json field;
+                                                 resolves only for a version saved strictly
+                                                 before the store's as-of (research_report)
 Ratios resolve, and the model tools show them, in percent.
-Saved versions (v1, v2, …) come with Report mode (V4.6).
 """
 
+import json
+import re
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from tenk_agent.research.forecast import Forecast, forecast, knobs
 from tenk_agent.research.model.graph import Model
@@ -78,27 +84,16 @@ class Book:
 
     def resolve(self, ticker: str, as_of: str, version: str, key: str) -> dict | None:
         """{value, unit} for a model: id, or None."""
+        if SAVED.fullmatch(version):
+            return saved_value(self.store, ticker, as_of, version, key)
         if as_of < self.as_of and version == "base":
             return self.at(as_of).resolve(ticker, as_of, version, key)
         if as_of != self.as_of:
             return None
+        if SAVED.fullmatch(version):
+            return saved_value(self.store, ticker, as_of, version, key)
         if version.startswith("val-"):
-            v = self.valuation(ticker, version[4:])
-            for where in (v, v["multiples_2027e"], v["scenarios"]["base"]):
-                if key in where:
-                    value = where[key]
-                    break
-            else:
-                return None
-            if key == "rating":
-                return {"text": value}
-            if not isinstance(value, int | float):
-                return None
-            if key in ("return", "fcf_yield"):  # fractions, written as percentages
-                return {"value": value * 100, "unit": "percent"}
-            unit = "USD" if key in ("price_target", "price", "dcf_pt", "multiple_pt") else (
-                "USD millions" if key in ("ev", "market_cap") else "")
-            return {"value": value, "unit": unit}
+            return valuation_field(self.valuation(ticker, version[4:]), key)
         if version.startswith("var-"):
             from tenk_agent.agent.tools import variance
 
@@ -115,3 +110,70 @@ class Book:
         if unit == "fraction":  # ratios are written as percentages
             return {"value": value * 100, "unit": "percent"}
         return {"value": value, "unit": unit}
+
+
+SAVED = re.compile(r"v\d+")  # a saved Report version's part of a model: id
+PERIOD = re.compile(r"\d{4}Q[1-4]|FY\d{4}")
+
+
+def valuation_field(v: dict, key: str) -> dict | None:
+    """{value, unit} (or {text} for the rating) of one valuation output."""
+    for where in (v, v.get("multiples_2027e") or {}, (v.get("scenarios") or {}).get("base") or {}):
+        if key in where:
+            value = where[key]
+            break
+    else:
+        return None
+    if key == "rating":
+        return {"text": value}
+    if not isinstance(value, int | float):
+        return None
+    if key in ("return", "fcf_yield"):  # fractions, written as percentages
+        return {"value": value * 100, "unit": "percent"}
+    unit = "USD" if key in ("price_target", "price", "dcf_pt", "multiple_pt") else (
+        "USD millions" if key in ("ev", "market_cap") else "")
+    return {"value": value, "unit": unit}
+
+
+def saved_version(store, ticker: str, as_of: str | None = None,
+                  version: str | None = None) -> dict | None:
+    """A saved version visible at the store's as-of: by id (and its as-of), or the latest made
+    on or before `as_of` (default: the latest visible). Adds its model.json and
+    valuation.json (`model`, `valuation`)."""
+    rows = store.model_versions(ticker)
+    if version:
+        rows = [r for r in rows if r["id"] == f"{ticker}:{version}"
+                and (as_of is None or r["as_of"] == as_of)]
+    elif as_of:
+        rows = [r for r in rows if r["as_of"] <= as_of]
+    if not rows:
+        return None
+    row = dict(rows[-1])
+    folder = Path(row["path"])
+    try:
+        row["model"] = json.loads((folder / "model.json").read_text())
+        row["valuation"] = json.loads((folder / "valuation.json").read_text())
+    except (OSError, ValueError):
+        return None
+    return row
+
+
+def saved_line(model: dict, line: str, period: str) -> dict | None:
+    unit = next((x["unit"] for x in model["lines"] if x["name"] == line), None)
+    cell = model["cells"].get(f"{line}|{period}")
+    if unit is None or not cell or cell.get("value") is None:
+        return None
+    if unit == "fraction":
+        return {"value": cell["value"] * 100, "unit": "percent"}
+    return {"value": cell["value"], "unit": unit}
+
+
+def saved_value(store, ticker: str, as_of: str, version: str, key: str) -> dict | None:
+    """A saved version's value for a model: id (no model book needed: Ask cites these)."""
+    row = saved_version(store, ticker, as_of, version)
+    if row is None:
+        return None
+    line, _, period = key.rpartition(".")
+    if line and PERIOD.fullmatch(period):
+        return saved_line(row["model"], line, period)
+    return valuation_field(row["valuation"], key)

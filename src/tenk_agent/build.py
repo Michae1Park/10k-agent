@@ -5,6 +5,9 @@
          filing in order. Cached: labels are reused, and each method's chunks while its
          settings match
   load   chunks → <out>/<method>.db, rebuilt from scratch; parent-child adds children
+  append like load, into the existing <method>.db: only filings it lacks (a newly fetched form,
+         such as the DEF 14A proxies); facts, KPIs, market data and model versions are kept.
+         Then `embed` adds only the new vectors
   embed  vectors for every chunk (and child). Stop vLLM first, or set retrieval.device: cpu
   pages  each chunk's pages, written into an already built <method>.db in place
   facts  V4: XBRL company facts and inline facts of every 10-K and 10-Q into <method>.db
@@ -32,7 +35,7 @@ from tenk_agent.retrieval.embeddings import get_embedder
 from tenk_agent.retrieval.index import add_pages, embed_corpus, load
 from tenk_agent.store import Store
 
-STAGES = ("chunk", "load", "embed", "pages", "facts", "market", "kpis")
+STAGES = ("chunk", "load", "append", "embed", "pages", "facts", "market", "kpis")
 KPIS = Path("output/extraction/v4.8-releases-all/extractions.json")  # v4.3 + adj. EPS, TRIP, CART
 
 
@@ -104,8 +107,9 @@ def chunk_one(filing: Path, target: Path, settings: dict, methods) -> None:
 # --- load, embed, pages --------------------------------------------------------------------
 
 
-def load_db(method: str, filings: list[Path], out: Path) -> Path:
-    """<out>/<method>.db from each filing's document and chunks-<method>.json."""
+def load_db(method: str, filings: list[Path], out: Path, append: bool = False) -> Path:
+    """<out>/<method>.db from each filing's document and chunks-<method>.json (`append`: into
+    the existing database, new filings only)."""
     path = out / f"{method}.db"
     rows = []
     for filing in filings:
@@ -117,7 +121,7 @@ def load_db(method: str, filings: list[Path], out: Path) -> Path:
                 json.loads((source / f"chunks-{method}.json").read_text()),
             )
         )
-    counts = load(path, rows)
+    counts = load(path, rows, append=append)
     print(f"{method}: {len(filings)} filings, {counts} → {path}")
     return path
 
@@ -193,6 +197,9 @@ def build(filings: list[Path], out: Path, settings: dict, methods, stages, jobs:
     if "load" in stages:
         for method in methods:
             load_db(method, filings, out)
+    if "append" in stages:
+        for method in methods:
+            load_db(method, filings, out, append=True)
     if "embed" in stages:
         for method in methods:
             embed_db(method, out, settings["retrieval"])

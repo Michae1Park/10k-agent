@@ -8,6 +8,7 @@ Which tool:
 - filings: which filings exist and when they were filed.
 - market_data: closing share prices and macro series (DGS10 is the 10-year Treasury yield).
 - calculator: arithmetic on reported figures.
+- research_report: our saved research reports (estimates, price target, rating, review status) as published on their date; model_view is today's model, research_report what we last published.
 - model_view: our model of a company: history and forecast lines (quarters, 2026E, 2027E) and the assumptions behind them, each marked default or anchored to guidance.
 - run_scenario: rerun a model with changed drivers ("what if the take rate falls 50 bps"); returns the changed lines and the price target and rating against the base.
 - compare_peers: one metric across companies from our models and valuations (2027E EV/EBITDA, margins, growth, price targets).

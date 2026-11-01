@@ -12,6 +12,8 @@ V4 tool set "ask" (design doc §7.1), every result as of the store's AsOf:
   filings          the corpus's 10-Ks, 10-Qs and releases, with filing dates
   market_data      closing prices and macro series
   crosscheck       outside series: NYC TLC trips (Uber, Lyft), BTS US airline passengers
+  research_report  our saved Report versions (made before the as-of): estimates, price target,
+                   rating and review status, each with a model:<T>:<as_of>:v<n>:… id
 
 V4 tool set "research" (§7.1) adds the model group, over the session's model book
 (research/book.py), every number cited by a model: id:
@@ -297,6 +299,29 @@ SPECS |= {
     ),
 }
 
+SPECS["research_report"] = ToolSpec(
+    "research_report",
+    "Our own published estimates: the latest saved research report on a company made before "
+    "today (or on or before a given date), with its estimates (2026E, 2027E, … and forecast "
+    "quarters), price target, rating and review status (draft = not yet approved by the "
+    "senior analyst). Use it for any question about our estimates, price target or rating. "
+    "Cite each figure by its id.",
+    {
+        "type": "object",
+        "properties": {
+            "company": COMPANY,
+            "lines": {"type": "array", "items": {"type": "string"},
+                      "description": "Model lines, e.g. revenue, adj_ebitda, eps_diluted "
+                      "(default: the main ones)"},
+            "periods": {**PERIODS, "description": "e.g. FY2027, 2026Q3 (default: the report's "
+                        "forecast fiscal years)"},
+            "as_of": {"type": "string", "description": "YYYY-MM-DD: the latest report made on or "
+                      "before it (default: the latest before today)"},
+        },
+        "required": ["company"],
+    },
+)
+
 SPECS["crosscheck"] = ToolSpec(
     "crosscheck",
     "Outside data that tests the companies' KPIs, monthly: NYC TLC high-volume for-hire trips "
@@ -329,13 +354,14 @@ GROUPS = {  # V4 §7.1; reports and model gain their tools in V4.5
     "sec": ("xbrl_facts", "edgar_filings"),  # V3's facts group
     "facts": ("financials", "company_kpis", "guidance", "filings"),
     "market": ("market_data", "crosscheck"),
+    "reports": ("research_report",),
     "model": ("model_view", "run_scenario", "compare_peers", "variance_review"),
 }
 GROUP_SETS = {
     "text": ("text", "calc"),
     "full": ("text", "calc", "sec"),
-    "ask": ("text", "calc", "facts", "market"),
-    "research": ("text", "calc", "facts", "market", "model"),
+    "ask": ("text", "calc", "facts", "market", "reports"),
+    "research": ("text", "calc", "facts", "market", "reports", "model"),
 }
 TOOL_SETS = {name: sum((GROUPS[g] for g in groups), ()) for name, groups in GROUP_SETS.items()}
 
@@ -601,6 +627,56 @@ class Toolbox:
                      for d, v in points]
         return {"series": series, "coverage": COVERAGE[series], "unit": "trips" if series ==
                 "tlc" else "passengers"} | _cap(rows)
+
+    # --- V4 saved reports (tool sets "ask" and "research") --------------------------------
+
+    def research_report(self, company: str, lines: list[str] | None = None,
+                        periods: list[str] | None = None, as_of: str | None = None) -> dict:
+        from tenk_agent.research.book import saved_line, saved_version, valuation_field
+
+        ticker = self._ticker(company)
+        row = saved_version(self.store, ticker, as_of)
+        visible = [{"version": r["id"], "as_of": r["as_of"], "status": r["status"]}
+                   for r in self.store.model_versions(ticker)]
+        if row is None:
+            return {"company": ticker, "report": None, "versions": visible,
+                    "note": f"no saved report on {ticker} made before {self.asof.date}"
+                            + (f" and on or before {as_of}" if as_of else "")}
+        model, version = row["model"], row["id"].split(":")[1]
+        prefix = f"model:{ticker}:{row['as_of']}:{version}"
+        names = lines or [n for n in ("revenue", "gross_bookings", "adj_ebitda",
+                                      "adj_ebitda_margin", "eps_diluted", "free_cash_flow")
+                          if any(x["name"] == n for x in model["lines"])]
+        forecast_years = sorted({f"FY{q[:4]}" for q in model["forecast"]})
+        wanted = periods or [c for c in model["columns"] if c in forecast_years]
+        estimates, unknown = [], []
+        for line in names:
+            if not any(x["name"] == line for x in model["lines"]):
+                unknown.append(line)
+                continue
+            for period in wanted:
+                found = saved_line(model, line, period)
+                if found:
+                    kind = "estimate" if period in model["forecast"] or (
+                        period in forecast_years) else "actual"
+                    estimates.append({"line": line, "period": period, "kind": kind, **found,
+                                      "id": f"{prefix}:{line}.{period}"})
+        valuation = {}
+        for key in ("price", "price_target", "return", "rating"):
+            found = valuation_field(row["valuation"], key)
+            if found:
+                valuation[key] = found | {"id": f"{prefix}:{key}"}
+        out = {"company": ticker, "version": row["id"], "as_of": row["as_of"],
+               "status": row["status"], "parent": row["parent_id"],
+               "note": "draft: not yet approved by the senior analyst"
+                       if row["status"] == "draft" else "reviewed by the senior analyst",
+               "valuation": valuation, "versions": visible,
+               "estimates": estimates[:ROWS]} | (
+                   {"omitted": len(estimates) - ROWS} if len(estimates) > ROWS else {})
+        if unknown:
+            out["unknown_lines"] = {"lines": unknown,
+                                    "valid": [x["name"] for x in model["lines"]][:60]}
+        return out
 
     # --- V4 model (tool set "research") ------------------------------------------------
 

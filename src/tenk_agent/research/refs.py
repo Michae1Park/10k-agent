@@ -157,7 +157,12 @@ class Resolver:
         return Resolved(ref, values=values, extra=row)
 
     def _model(self, ref: Ref, ticker: str, as_of: str, version: str, key: str):
-        found = self.book.resolve(ticker, as_of, version, key) if self.book else None
+        from tenk_agent.research.book import SAVED, saved_value
+
+        if SAVED.fullmatch(version):  # a saved Report version: from its files, no book
+            found = saved_value(self.store, ticker, as_of, version, key)
+        else:
+            found = self.book.resolve(ticker, as_of, version, key) if self.book else None
         if found and "value" not in found:  # a text output (a rating): citable, no number
             return Resolved(ref, extra=found)
         return Resolved(ref, values=[found | {"ticker": ticker}]) if found else None

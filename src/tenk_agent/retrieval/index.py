@@ -75,15 +75,22 @@ def chunk_ids(chunks: list[dict], prefix: str) -> list[tuple[str, int]]:
 # --- Load ----------------------------------------------------------------------------------
 
 
-def load(path: Path, filings: list[tuple[dict, dict, list[dict]]]) -> dict[str, int]:
+def load(path: Path, filings: list[tuple[dict, dict, list[dict]]],
+         append: bool = False) -> dict[str, int]:
     """A new database at `path` (any old one is deleted) from (metadata.json, document, chunks)
     per filing. Ticker and fiscal year come from metadata.json (the corpus folder), not the
-    cover tags, so ids match the gold sets. Parent-child chunks add their children."""
-    path.unlink(missing_ok=True)
+    cover tags, so ids match the gold sets. Parent-child chunks add their children.
+    `append`: keep the database and its other tables (facts, KPIs, market data, saved model
+    versions); add only the filings it doesn't hold yet (by accession number)."""
+    if not append:
+        path.unlink(missing_ok=True)
     store = Store(path)
+    if append:
+        held = {f.accession_no for f in store.filings()}
+        filings = [f for f in filings if f[0]["accession_no"] not in held]
     if any(c.get("children") for _, _, chunks in filings for c in chunks):
         store.enable_children()
-    counts = {"chunks": 0, "children": 0}
+    counts = {"filings": len(filings), "chunks": 0, "children": 0}
     for meta, document, chunks in filings:
         ticker, year = meta["ticker"], meta["fiscal_year"]
         company = company_by_ticker(ticker)
