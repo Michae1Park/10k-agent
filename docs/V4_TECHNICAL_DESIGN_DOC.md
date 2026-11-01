@@ -511,7 +511,7 @@ ratios                   same quarter last year + a shift that holds until lappe
 - Where last year is missing a quarter, that quarter falls back to the q-4 rule. Reported quarters of the current year stay as reported.
 - **Scenarios:** bear/base/bull (25/50/25) move each template `scenarios` driver by ∓/± `shock_sigma` × σ (σ of the driver's history).
 - **Horizon:** quarterly to 2027Q4; annual 2026E–2028E; DCF years beyond fade per year.
-- Outside data (BTS, TLC, FRED) is context for the proposer and the note, not a forecast input.
+- Outside data (BTS, TLC, FRED) is context for the proposer and the note, not a forecast input (spec §3.2 lists them as inputs; §13.1).
 
 ### 7.6 Proposer
 
@@ -692,13 +692,13 @@ Layer 5's "100% traced" therefore means: tables by construction, prose by `trace
 | Tab | Contents | Code |
 |---|---|---|
 | Model | lines × quarters and FY; inputs blue with provenance, formulas black, links to assumptions green | `export/workbook.py` |
-| Assumptions | every assumption: value, basis, default, bounds | `export/workbook.py` |
+| Assumptions | every assumption: name and value (the cells the Model tab's formulas link to); basis, confidence, variables affected and last updated are not built (§13.1) | `export/workbook.py` |
 | Summary | rating, price, PT, return, market cap, EV, net debt, shares, WACC, parity | `export/report.py` |
 | Scenarios | bear, base and bull values by line and year | 〃 |
-| Valuation | peer multiples, median, cost of capital, scenario PTs, DCF grid | 〃 |
+| Valuation | peer multiples, median, cost of capital, scenario PTs, DCF grid (the EV-to-equity bridge and rating are on Summary; spec §2.3 puts them here, §13.3) | 〃 |
 | DCF | base-case UFCF with live discount, terminal value, EV, terminal share and per-share formulas; WACC × growth price grid | 〃 |
 | Revisions | old vs new, type, confidence | 〃 |
-| Model (prior) | the parent version's values, or "initial draft (no prior run)" | 〃 |
+| Model (prior) | the parent version's values as saved (its own workbook holds the formulas), or "initial draft (no prior run)" | 〃 |
 | Checks | layer-2 results, one row per check | 〃 |
 | Log | evidence and exception rows | 〃 |
 
@@ -828,6 +828,13 @@ One debate per scenario driver (`gb_g_mobility.g0`, …) returns bull, bear, hyp
 | `ixbrl:`, `E-` and `X-` ids resolving in the claim check | §9.2 | parse only |
 | Cross-check ablation | spec §6 | not run: no target-quarter data is public at the forecast date |
 | Human sample of the note rubric; human review of the Ask and Research gold sets | §11 | not done |
+| Debates (and any section research run) with the **Research** toolset | spec §2.3 req. 2 | S9 debates use the `ask` set: no model tools, so a debate cannot run a scenario or quote a sensitivity itself (§5.2) |
+| DCF with 3 modeled years (2026E–2028E), then 7 faded | spec §3.3, §3.2 | the model's quarters end at 2027Q4; 2028 onward is faded in the DCF (§7.7) |
+| BTS, NYC TLC and FRED as forecast inputs | spec §3.2 | context for the proposer and the note only; FRED's DGS10 enters the discount rate (§7.5) |
+| Held-out quarters (released after the LLM's training cutoff) reported separately | spec §6 | not reported: the cutoff is unpublished (D-043) |
+| ~384 extraction labels (12 fields × 4 quarters × 8 companies) | spec §5 layer 1 | 337 labels (§6.4) |
+| Section 10 gets a repair turn on a failed consistency check | spec §2.3 req. 6 | section 10 is written by code from the exception log, so only the takeaways (section 1) are repaired (§8.5) |
+| Assumptions tab: basis, confidence, variables affected, last updated | spec §2.3 | name and value only (§10.2) |
 
 Working list with effort estimates: [tmp_inconsistencies.md](tmp_inconsistencies.md).
 
@@ -846,6 +853,17 @@ Working list with effort estimates: [tmp_inconsistencies.md](tmp_inconsistencies
 | **Long runs on a crash-prone CPU and a shared GPU** | `--resume`, `taskset -c 16-31` (I-001), CPU embedder (I-002) |
 | **Determinism with an LLM** | Valuation is code; LLM steps at temperature 0; `--resume` replays them |
 | **Data licensing** | Tiingo internal use only; Stooq, TSA and Google Trends dropped |
+
+### 13.3 Deliberate differences from the spec
+
+Built differently on purpose; each keeps the spec's intent.
+
+| Spec | Design | Why |
+|---|---|---|
+| §3.1: Uber's adj. EBITDA is a margin on total gross bookings | revenue − costs held as a share of total GB (§7.3) | with a plain margin on GB, a take-rate cut left EBITDA unchanged ([build log §3.13](V4_BUILD_LOG.md#313-v44-exit-forecast-and-backtest-2026-10-28)) |
+| §2.3: Valuation tab holds the EV-to-equity bridge and rating | they are on the Summary tab (§10.2) | one headline tab for the reviewer; Valuation keeps the peers and DCF detail |
+| §2.3: the prior model kept as a separate tab | Model (prior) holds the parent's values, not formulas (§10.2) | the parent version's own workbook keeps its live formulas |
+| §3.2: later quarters by the seasonal share | a full-year-only guide anchors the FY column (§7.5) | ABNB guides only a full-year margin |
 
 ---
 

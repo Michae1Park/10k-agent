@@ -27,10 +27,17 @@ Spec vs. design doc vs. build, checked 2026-11-01. Mirrored in design doc §13.1
 | 10 | Non-operating item exception | Doc §13.2: any of the last 4 quarters over 10% of NI | Only "forecast 0" is built | S (~1 h) |
 | — | Bounded research runs for sections 2.3, 4, 6, 7, 8 | Spec §2.3 req. 2; doc §8.4 | 2.3 and 6 are single LLM calls without tools; 4, 7, 8 have no LLM text; only section 3 debates are tool-using runs | L (~1–2 days) |
 | — | `initiation` report type | Spec §2, §2.3 | `update` only | L (~2–3 days) |
+| 11 | Assumptions tab columns | Spec §2.3: value, basis, confidence, variables affected, last updated | Name and value only (`export/workbook.py:87`) | S (~1 h) |
+| 12 | Debates with the Research toolset | Spec §2.3 req. 2 | S9 sub-agents use the `ask` set (`research/subagents.py`) | S (~1 h) + an LLM rerun to check |
+| 13 | DCF: 3 modeled years | Spec §3.3 (3 modeled, 7 faded), §3.2 annual to 2028E | Model ends 2027Q4; 2028 faded in the DCF | M (~2–3 h): extend `forecast.horizon` to 2028Q4 and recheck parity and backtest |
+| 14 | Outside data as forecast inputs | Spec §3.2: BTS, NYC TLC, FRED | Context only | Decide: build, or record as a deliberate difference |
+| 15 | Held-out quarter set | Spec §6 | Not reported (D-043) | Decided; spec could note it |
+| 16 | Extraction gold size | Spec §5: ~384 labels | 337 | Decide: add labels, or note the count in the spec |
+| 17 | Section 10 repair turn | Spec §2.3 req. 6 | Section 10 is code-written; no repair | Likely note only |
 
-## Not checked in detail
+## Deliberate differences (design §13.3)
 
-- Assumptions tab columns (spec §2.3: value, basis, confidence, variables affected, last updated).
+Uber EBITDA as revenue − GB-share costs; bridge and rating on Summary; Model (prior) as values; FY anchor for full-year-only guidance.
 
 ## Already fixed this session
 
