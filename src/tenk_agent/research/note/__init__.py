@@ -1,1 +1,1 @@
-"""The research note (V4 design doc §10): facts, sections, number trace, rendering."""
+"""The research note (V4 design doc §9): facts, sections, number trace, rendering."""

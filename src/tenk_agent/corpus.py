@@ -1,4 +1,4 @@
-"""The corpus: companies and fiscal years from a companies file (design doc §14.1).
+"""The corpus: companies and fiscal years from a companies file (V4 build log §2).
 
 $TENK_COMPANIES names the file, default companies-v3.yaml: the V0–V3 corpus (D-001),
 8 companies × fiscal years 2023–2025. companies.yaml is the V4 coverage (D-038). A relative

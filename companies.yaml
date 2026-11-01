@@ -1,4 +1,4 @@
-# V4 coverage (docs/V4_TECHNICAL_DESIGN_DOC.md §4.1), pinned per experiment like config.yaml.
+# V4 coverage (docs/V4_TECHNICAL_DESIGN_DOC.md §3.2), pinned per experiment like config.yaml.
 # cik and verified are written by `tenk companies verify` from SEC data, never typed.
 # fiscal_years: null = every period up to the as-of date, from window.since.
 

@@ -1,10 +1,10 @@
-"""What each SEC form looks like to the preprocessor (V4 design doc §4.4): its Items in order,
+"""What each SEC form looks like to the preprocessor (V4 design doc §3.4): its Items in order,
 where the financial statements live, and the names shown in chunk headers and citations.
 
   10-K     Items once each; the LLM structure agent labels it (V0)
   10-Q     Items repeat per Part, so keys carry it: I.1 … I.4, II.1 … II.6; labeled by rules
   release  an 8-K's EX-99 exhibits (form "ER"): no Items, one pseudo-Item per exhibit
-           (EX99, EX99.2, …); labeled by rules (design doc §4.4)
+           (EX99, EX99.2, …); labeled by rules (design doc §3.4)
   proxy    a DEF 14A (form "DEF14A"): no Items, one pseudo-Item (PROXY) over the whole
            document; labeled by the release rules
 """

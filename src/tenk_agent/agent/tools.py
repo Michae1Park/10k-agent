@@ -5,7 +5,7 @@
   xbrl_facts       SEC XBRL company facts for one concept and 10-K            (tool set "full")
   edgar_filings    live EDGAR filing metadata: which filings exist, when      (tool set "full")
 
-V4 tool set "ask" (design doc §7.1), every result as of the store's AsOf:
+V4 tool set "ask" (design doc §5.2), every result as of the store's AsOf:
   financials       derived quarters and full years of a core line (facts/quarters.py)
   company_kpis     release KPIs (facts/extract.py), with their source chunks
   guidance         release guidance, with the actual where the target period has reported
@@ -15,7 +15,7 @@ V4 tool set "ask" (design doc §7.1), every result as of the store's AsOf:
   research_report  our saved Report versions (made before the as-of): estimates, price target,
                    rating and review status, each with a model:<T>:<as_of>:v<n>:… id
 
-V4 tool set "research" (§7.1) adds the model group, over the session's model book
+V4 tool set "research" (§5.2) adds the model group, over the session's model book
 (research/book.py), every number cited by a model: id:
   model_view       history and forecast lines, the assumption register and guidance anchors
   run_scenario     overrides to the drivers → changed lines, price target and rating vs base
@@ -25,7 +25,7 @@ V4 tool set "research" (§7.1) adds the model group, over the session's model bo
 Tools never raise: a bad call returns {"error": ...} for the model to read and recover from.
 The tool set ("text" or "full") is the V3 ablation (experiments/V3_AGENT.md).
 
-V4 (design doc §7.1): tools come in groups, and a tool set is a list of groups, so no single
+V4 (design doc §5.2): tools come in groups, and a tool set is a list of groups, so no single
 context gets every tool. A Toolbox sees what its store's AsOf sees; no tool takes an as-of.
 """
 
@@ -348,7 +348,7 @@ COVERAGE = {
            "three months after the month (publish dates estimated).",
 }
 
-GROUPS = {  # V4 §7.1; reports and model gain their tools in V4.5
+GROUPS = {  # V4 §5.2; reports and model gain their tools in V4.5
     "text": ("search_filings",),
     "calc": ("calculator",),
     "sec": ("xbrl_facts", "edgar_filings"),  # V3's facts group

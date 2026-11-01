@@ -1,4 +1,4 @@
-"""The workbook (V4 design doc §11): V4.3 writes the Model tab from a built model.
+"""The workbook (V4 design doc §10): V4.3 writes the Model tab from a built model.
 
 Rows are the model's lines, grouped by statement; columns its quarters and FY columns. Inputs
 are values in blue with their source id as a cell note; every other cell is a live formula in

@@ -1,4 +1,4 @@
-"""S11 export (V4 design doc §11): the report's workbook and the note's PDF.
+"""S11 export (V4 design doc §10): the report's workbook and the note's PDF.
 
 The workbook is the Model tab and Assumptions tab (research/export/workbook.py, checked for
 parity with LibreOffice) plus Summary, Scenarios, Valuation, DCF, Revisions, Model (prior),

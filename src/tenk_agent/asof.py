@@ -1,4 +1,4 @@
-"""The as-of rule (V4 design doc §3): a run sees the world at the market open of its as-of date.
+"""The as-of rule (V4 design doc §2.5): a run sees the world at the market open of its as-of date.
 
 Data is visible when it became public strictly before that date. This module is the only place
 that compares dates for visibility; everything else asks an AsOf.

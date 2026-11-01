@@ -1,4 +1,4 @@
-"""S3 model, history only (V4 design doc §9, V4.3): data pack → model → layer-2 checks.
+"""S3 model, history only (V4 design doc §8, V4.3): data pack → model → layer-2 checks.
 
   taskset -c 16-31 uv run python -m tenk_agent.research.model.history UBER 2026-09-01
 
@@ -19,7 +19,7 @@ from tenk_agent.research.model import checks as layer2
 from tenk_agent.research.model.graph import Model, build, load_template
 from tenk_agent.store import Store
 
-TEMPLATE_OF = {  # design doc §5.3
+TEMPLATE_OF = {  # design doc §7.3
     "UBER": "segments",
     "BKNG": "marketplace", "EXPE": "marketplace", "ABNB": "marketplace",
     "DASH": "orders", "LYFT": "orders", "CART": "orders",

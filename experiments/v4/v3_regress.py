@@ -1,4 +1,4 @@
-"""V3 byte identity for the V4 migration (design doc §14.1): one hash per part, compared with
+"""V3 byte identity for the V4 migration (V4 build log §2): one hash per part, compared with
 v3_baseline.txt after every change to shared code.
 
   blocks, documents   re-derived from each V3 filing's cached LLM labels

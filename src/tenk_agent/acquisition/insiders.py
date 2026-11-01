@@ -1,4 +1,4 @@
-"""Form 4 insider transactions (V4 design doc §4.2, V4.7): dilution context only.
+"""Form 4 insider transactions (V4 design doc §3.3, V4.7): dilution context only.
 
   taskset -c 16-31 uv run python -m tenk_agent.acquisition.insiders [TICKERS] [--since 2023-01-01]
 

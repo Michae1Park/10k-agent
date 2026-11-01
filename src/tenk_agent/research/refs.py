@@ -1,4 +1,4 @@
-"""One reference grammar (V4 design doc §10.1): parse, format and resolve any citable id.
+"""One reference grammar (V4 design doc §9.2): parse, format and resolve any citable id.
 
   chunk        UBER-2026Q2-ER-EX99-005 · AAPL-FY2025-8-107       text, from the store
   accession    0001543151-26-000032                              filing metadata (EDGAR cache)
@@ -115,7 +115,7 @@ class Resolver:
             return Resolved(ref, filing=filing) if filing else None
         if ref.kind in DATA and self.store.has_facts():
             return getattr(self, f"_{ref.kind}")(ref, *ref.parts)
-        return None  # kinds whose data isn't built yet (§15)
+        return None  # kinds whose data isn't built yet (§13.1)
 
     def _stored_filing(self, accession: str) -> dict | None:
         """V4 Ask has no SEC cache: a filing in the store, if filed before the as-of, in the

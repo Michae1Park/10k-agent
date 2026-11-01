@@ -1,4 +1,4 @@
-"""Rules-based KPI extraction (design doc §13.2 ablation: `extract.method: rules`).
+"""Rules-based KPI extraction (design doc §11.4 ablation: `extract.method: rules`).
 
 A label-pattern table-row matcher over the registry, no LLM: for each KPI label (kpis.yaml), the
 first release table row whose first cell starts with it; the reported quarter's column is the

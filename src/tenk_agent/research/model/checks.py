@@ -1,4 +1,4 @@
-"""Layer-2 integrity checks on a built model (V4 design doc §5.4). Any FAIL stops the run.
+"""Layer-2 integrity checks on a built model (V4 design doc §7.4). Any FAIL stops the run.
 
   balance          assets = liabilities + mezzanine + equity, and assets = the reported
                    liabilities-and-equity total, every period, within $1M

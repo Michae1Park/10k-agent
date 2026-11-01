@@ -1,4 +1,4 @@
-# Operating build by segment (V4 design doc §5.3): Uber. Per segment, gross bookings × take
+# Operating build by segment (V4 design doc §7.3): Uber. Per segment, gross bookings × take
 # rate = revenue and adjusted EBITDA as a margin on gross bookings; corporate costs separate;
 # totals are the reported ones, and the checks require the segments to sum to them.
 
@@ -46,7 +46,7 @@ lines:
 
   # Forecast: each segment's bookings grow on its own rate (faded), shifted by one common
   # @gb_g_adj that the gross-bookings anchor solves; segment take rates as ratios; adj. EBITDA
-  # as a margin on total gross bookings (segment EBITDA stopped in 2026Q1, §17.12)
+  # as a margin on total gross bookings (segment EBITDA stopped in 2026Q1, build log §3.12)
   gb_g_mobility:  {kind: formula, expr: "gross_bookings_mobility / gross_bookings_mobility[-4] - 1",
                    unit: fraction, fy: none, label: Mobility gross bookings growth y/y,
                    forecast_first: "@gb_g_mobility.g0 + @gb_g_adj",
@@ -72,7 +72,7 @@ forecast:
   ratios: {take_rate_mobility: take_rate, take_rate_delivery: take_rate,
            take_rate_freight: take_rate, cost_to_gb: margin}
 
-# Scenario drivers (design §6.1): bear/bull move each by ∓/±σ of its history
+# Scenario drivers (design §7.5): bear/bull move each by ∓/±σ of its history
 scenarios: [gb_g_mobility.g0, gb_g_delivery.g0, take_rate_mobility.shift0]
 
 anchors:

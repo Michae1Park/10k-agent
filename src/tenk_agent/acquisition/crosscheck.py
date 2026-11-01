@@ -1,4 +1,4 @@
-"""Cross-check data (V4 design doc §4.2, V4.7): outside series that test the companies' KPIs.
+"""Cross-check data (V4 design doc §3.3, V4.7): outside series that test the companies' KPIs.
 
   taskset -c 16-31 uv run python -m tenk_agent.acquisition.crosscheck [--since 2023-01]
 
@@ -26,7 +26,7 @@ BTS = ("https://data.bts.gov/resource/crem-w557.json?$select=date,"
        "u_s_airline_traffic_total_non_seasonally_adjusted,"
        "u_s_airline_traffic_domestic_non_seasonally_adjusted,"
        "u_s_airline_traffic_international_non_seasonally_adjusted&$order=date&$limit=5000")
-LICENSES = {"HV0003": "UBER", "HV0005": "LYFT"}  # confirmed on the first file (design §17.5)
+LICENSES = {"HV0003": "UBER", "HV0005": "LYFT"}  # confirmed on the first file (V4 build log §3.5)
 BTS_LAG_DAYS = 90
 AGENT = "tenk-agent research (crosscheck fetch)"
 

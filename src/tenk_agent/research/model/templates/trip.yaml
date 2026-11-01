@@ -1,4 +1,4 @@
-# Tripadvisor (V4 design doc §5.3), by segment. Its segments changed: Tripadvisor brand, Viator
+# Tripadvisor (V4 design doc §7.3), by segment. Its segments changed: Tripadvisor brand, Viator
 # and TheFork through 2025Q3; Experiences and Hotels & Other (with TheFork) from 2025Q4; TheFork
 # held for sale and reported as discontinued from 2026Q2. No volume KPI is disclosed, so the
 # build is segment revenue and adjusted EBITDA; forecasts grow revenue (V4.4).
@@ -33,7 +33,7 @@ forecast:
   growth: [revenue]
   ratios: {adj_ebitda_margin: margin}
 
-# Scenario drivers (design §6.1): bear/bull move each by ∓/±σ of its history
+# Scenario drivers (design §7.5): bear/bull move each by ∓/±σ of its history
 scenarios: [revenue_g.g0, adj_ebitda_margin.shift0]
 
 anchors: []  # TRIP gives no numeric guidance

@@ -1,4 +1,4 @@
-"""Quarters from XBRL facts (V4 design doc §4.5): one value per metric and quarter, as of a date.
+"""Quarters from XBRL facts (V4 design doc §3.5): one value per metric and quarter, as of a date.
 
 10-Q cash flows are reported year to date, so quarters are built by duration length:
 
@@ -12,7 +12,7 @@ don't add up, so only their direct facts are kept. Each value uses, per period, 
 visible at the store's AsOf (a restatement once it is filed, the original before), and records
 its inputs' fact ids. December fiscal years only (companies.yaml, all eight).
 
-Checks (layer 2, §5.4): `ytd_consistency` (a direct three-month Q2/Q3 equals its year-to-date
+Checks (layer 2, §7.4): `ytd_consistency` (a direct three-month Q2/Q3 equals its year-to-date
 difference) and `q4_ties` (Q1 + Q2 + Q3 + Q4 = FY). A recast (TRIP's Q2 2026 10-Q re-reports
 2025 on a new basis) leaves a year's periods on two bases until every one is re-reported; a
 check that fails in a year with a restated period reads `restated` (an exception for the log,

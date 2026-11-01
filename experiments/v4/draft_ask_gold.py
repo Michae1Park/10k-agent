@@ -3,12 +3,12 @@
   taskset -c 16-31 uv run python experiments/v4/draft_ask_gold.py
 
 Number questions take their values from the extraction gold (evaluation/gold/extraction-gold.jsonl,
-cross-checked in design doc §17.9-17.10) or from the XBRL quarters, never typed by hand; a
+cross-checked in V4 build log §3.9–3.10) or from the XBRL quarters, never typed by hand; a
 calculated answer (growth, margin, beat or miss) is computed here from those labels. Text and
 decline questions are written below with verbatim evidence; every evidence quote is checked to
 appear in a chunk of the named filing visible at the question's as-of, or the script stops.
 
-Format: the V3 gold fields, with `period`, `form` and `as_of` (design doc §13.1). Categories are
+Format: the V3 gold fields, with `period`, `form` and `as_of` (design doc §11.3). Categories are
 spec §2.1's; `kind` is figure, calculation, comparison, text or decline.
 """
 
@@ -230,7 +230,7 @@ for t, metric, issued, target in (
     where = ("above" if actual["value"] > high["value"] else
              "below" if actual["value"] < low["value"] else "within")
     # The actual and the bound it crossed (both bounds when it lands within); the unbeaten bound
-    # need not be claimed (gold change after run 3, design doc §17.11)
+    # need not be claimed (gold change after run 3, V4 build log §3.11)
     bounds = {"above": [high], "below": [low], "within": [low, high]}[where]
     add(f"{t.lower()}-{metric.replace('_', '-')}-vs-guide-{target.lower()}",
         f"Did {NAMES[t]}'s {nice(target)} {metric.replace('_', ' ').replace('adj ', 'adjusted ')} "

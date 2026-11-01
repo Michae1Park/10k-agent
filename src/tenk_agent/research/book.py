@@ -2,7 +2,7 @@
 
   model:<T>:<as_of>:base:<line>.<period>        the default forecast at the as-of (anchored to
                                                  guidance); rebuilt on demand, so always citable
-  model:<T>:<as_of>:scratch-<n>:<line>.<period>  a run_scenario run in this session (design §7.2:
+  model:<T>:<as_of>:scratch-<n>:<line>.<period>  a run_scenario run in this session (design §5.2:
                                                  scratch runs are not versions)
   model:<T>:<as_of>:val-<version>:<field>        a valuation output (price_target, ev, …;
                                                  rating resolves to its text)

@@ -1,4 +1,4 @@
-"""KPI and guidance extraction from earnings releases (V4 design doc §4.6), layer 1.
+"""KPI and guidance extraction from earnings releases (V4 design doc §6), layer 1.
 
 One LLM call per release: the release's chunks (tables first, within a character budget) and
 the company's registry (kpis.yaml) in; KPI and guidance rows, each with a verbatim quote, out.
@@ -27,7 +27,7 @@ from tenk_agent.store import ChunkRecord, Store
 
 REGISTRY = Path(__file__).with_name("kpis.yaml")
 PROMPT = PROMPTS / "extract.md"
-MAX_CHARS = 40_000  # ~10k tokens of release text: the 12k input budget (§8) less the registry
+MAX_CHARS = 40_000  # ~10k tokens of release text: the 12k input budget (§5.5) less the registry
 
 
 def registry() -> dict:
