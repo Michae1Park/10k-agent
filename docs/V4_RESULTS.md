@@ -1,6 +1,6 @@
 # V4 results: junior sell-side research agent
 
-Eight online marketplaces (UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP), Q1 2023 to Q2 2026, every input read as of a date (filed strictly before it). Local model Qwen3.6-27B (FP8, vLLM); judge gpt-oss-20b. Bars were frozen before the first run of each phase (design doc §13.1); a miss is reported as a miss. Build log and every decision: `docs/V4_TECHNICAL_DESIGN_DOC.md` §17.
+Eight online marketplaces (UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP), Q4 2022 to Q2 2026 (filings from 2023-01-01), every input read as of a date (filed strictly before it). Local model Qwen3.6-27B (FP8, vLLM); judge gpt-oss-20b. Bars were frozen before the first run of each phase (design doc §13.1); a miss is reported as a miss. Build log and every decision: `docs/V4_TECHNICAL_DESIGN_DOC.md` §17.
 
 ## Results by layer
 
@@ -71,4 +71,4 @@ UBER, earnings update after Q2 2026, as of 2026-08-06: [note (Markdown)](example
 
 ## Roll-out: UBER end to end (2026-10-28)
 
-`TENK_COMPANIES=companies.yaml tenk research report UBER --as-of 2026-08-06` (then `tenk research approve UBER:v2 --by <initials>` after review) ran all eleven steps on the Qwen 27B: 6 events, 3 debates, ten sections, saved as `UBER:v2` (draft), rating and PT local only, workbook parity 750/750, 59/59 seeded errors caught (`--seeds 30`), 0 untraced figures. The first run (`UBER:v1`) kept one figure the writer could not trace ("20% constant currency", X-19, error), so that note was not 100% traced. The writer now drops any sentence that still holds an untraced figure after its repair turn (`c7cd3f4`); on the re-run Qwen wrote the same "20%" again, the sentence was dropped and logged as X-18 (warning), and the note is 100% traced. The rubric was not re-scored on v2. The example files above are this run.
+`TENK_COMPANIES=companies.yaml tenk research report UBER --as-of 2026-08-06` (then `tenk research approve UBER:v2 --by <initials>` after review) ran all eleven steps on the Qwen 27B: 6 events, 3 debates, ten sections, saved as `UBER:v2` (draft), rating and PT local only, workbook parity 750/750, 59/59 seeded errors caught (`--seeds 30`; the layer-5 table's 60/60 is the earlier scoring run), 0 untraced figures. The first run (`UBER:v1`) kept one figure the writer could not trace ("20% constant currency", X-19, error), so that note was not 100% traced. The writer now drops any sentence that still holds an untraced figure after its repair turn (`c7cd3f4`); on the re-run Qwen wrote the same "20%" again, the sentence was dropped and logged as X-18 (warning), and the note is 100% traced. The rubric was not re-scored on v2. The example files above are this run.

@@ -2,6 +2,7 @@
 
 **Status:** Built through V4.7 (§17 is the build log; results in [V4_RESULTS.md](V4_RESULTS.md)). Sections 1–16 are the design as planned; where the build differs, the section says so. Settled items are in [DECISIONS.md](DECISIONS.md).
 **Updated:** 2026-10-29 · **Spec:** [JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md). "Spec §n" is the spec's section; a bare "§n" is a section of this doc.
+**Not built** (checked 2026-11-01; each is repeated as an as-built note in its section): the seasonal-share forecast for later quarters (§6.1); DEF 14A text is fetched but not loaded into the corpus (§4.2); the `research_report` tool (§7.1); per-step checkpoints, inputs hash, trace and `run.json` (§9); the `wacc_gt_g`, `weights` and `bridge_ties` checks (§5.4); the `exceptions`, `estimates`, `prices`, `macro` and `crosscheck` tables (§4.3); `research.budgets`, `tool_timeout_s` and `report.type` (§8, §14); bounded research runs for sections 2.3, 4, 6, 7 and 8 (only events and the per-driver debates exist) and the pre-export consistency check (§9).
 **Not to be confused with** the retired V4 in `archive/` (D-034).
 
 The spec says *what* to build; this doc says *how*, and how it plugs into V0–V3.
@@ -15,7 +16,7 @@ The spec says *what* to build; this doc says *how*, and how it plugs into V0–V
 | **Job** | Cited answers about 10-Ks | Three modes: **Ask**, **Research**, **Report** (§2) |
 | **Companies** | 8 megacaps | BKNG, EXPE, ABNB, TRIP · UBER, LYFT, DASH, CART |
 | **Sources** | 10-K HTML, XBRL company facts, EDGAR metadata | + 10-Q, 8-K 2.02 Ex. 99.1, DEF 14A, Form 4, Tiingo, FRED, Damodaran, BTS, NYC TLC |
-| **Time** | FY2023–2025, static | Q1 2023 → latest filed; **every run has an as-of date** |
+| **Time** | FY2023–2025, static | Q4 2022 → latest filed; **every run has an as-of date** |
 | **Numbers** | Reported, or calculator over reported | + deterministic three-statement model, forecasts, valuation |
 | **LLM role** | Finds, calculates, cites | Extracts KPIs, proposes assumptions, writes prose. **Never outputs a forecast number** |
 | **D-001** | No prices, forecasts, advice | Allowed; ratings are drafts pending senior analyst approval. A new decision entry supersedes D-001 in V4.0a |
@@ -27,7 +28,7 @@ The spec says *what* to build; this doc says *how*, and how it plugs into V0–V
 | EDGAR client, SEC cache, offline mode | `acquisition/edgar.py`, `agent/sec.py` | Any form; same cache-then-offline pattern for every new source |
 | Parse → parent-child chunks → hybrid search | `preprocess/`, `chunking/`, `retrieval/` | 10-Qs and releases; form-aware Items; as-of filter |
 | Claim check | `generation/verify.py` | Becomes a resolver over all source kinds (§10) |
-| Agent loop, budget, repair turn, "tools never raise" | `agent/loop.py`, `agent/tools.py` | Ask and Research as is; also the bounded sub-agents in Report mode |
+| Agent loop, budget, repair turn, "tools never raise" | `agent/loop.py`, `agent/tools.py` | Ask and Research as is; also the bounded research runs in Report mode |
 | `Model.complete` (vLLM / Claude) | `models.py` | Unchanged |
 | Gold sets, judge, reports | `evaluation/` | New gold sets and metrics (MAPE, bias, guidance call) |
 
@@ -38,10 +39,10 @@ The old gold sets don't transfer (different companies); the pattern does.
 ## 2. Architecture
 
 <p align="center">
-  <img src="img/v4-architecture.svg" alt="V4 architecture. Sources (EDGAR, Tiingo, FRED and Damodaran, BTS, TLC and Form 4) are fetched into a raw cache and built offline along four paths: text, structured facts, LLM KPI and guidance extraction, market data. All land in one SQLite file read only through the AsOf filter. Ask and Research are agents whose answers pass a claim check that resolves every cited id; Report is a checkpointed pipeline of eleven steps, S1 to S11, with the LLM only in S2, S4, S9 and S10. Report writes a note, a workbook and saved model versions that Ask and Research can cite. Evaluation grades extraction, model integrity, forecast, valuation and the note. Solid boxes are built (V4.0 to V4.1); dashed boxes are planned." width="100%">
+  <img src="img/v4-architecture.svg" alt="V4 architecture. Sources (EDGAR, Tiingo, FRED and Damodaran, BTS, TLC and Form 4) are fetched into a raw cache and built offline along four paths: text, structured facts, LLM KPI and guidance extraction, market data. All land in one SQLite file read only through the AsOf filter. Ask and Research are agents whose answers pass a claim check that resolves every cited id; Report is a checkpointed pipeline of eleven steps, S1 to S11, with the LLM only in S2, S4, S9 and S10. Report writes a note, a workbook and saved model versions that Ask and Research can cite. Evaluation grades extraction, model integrity, forecast, valuation and the note. All boxes are built (V4.0 to V4.7)." width="100%">
 </p>
 
-Solid boxes are built (V4.0–V4.1); dashed ones are planned (V4.2 on). Pink steps call the LLM; everything else is code.
+All boxes are built (V4.0–V4.7). Pink steps call the LLM; everything else is code.
 
 The same picture in text:
 
@@ -61,7 +62,7 @@ The same picture in text:
 |---|---|---|---|
 | **Ask** | Agent picks tools (V3) | Calculator over reported figures only | chunks, facts, KPIs, prices, macro, **saved** report values |
 | **Research** | Agent picks tools | Yes, only by calling model tools (code) | the above + `model:` refs to its own run |
-| **Report** | Code runs the steps; LLM calls are leaf tasks | Only the model engine | everything, via the evidence log |
+| **Report** | Code runs the steps; LLM calls are leaf tasks; it does not start Ask or Research runs (spec §2.3) | Only the model engine | everything, via the evidence log |
 
 Ask vs Research is a tool-set difference (`Toolbox(mode=...)`), not a second agent. Report is not an agent loop (§9).
 
@@ -77,12 +78,12 @@ The central invariant: every leak is a backtest bug.
 |---|---|---|
 | Filings (any form), their chunks, facts, KPIs | `filing_date < D` | `filed` |
 | Tiingo price | `date < D` (as-of 2026-08-06 uses the 08-05 close, as in the spec's example) | `date` |
-| FRED | observation `date < D` and, for revised series (CPI, sentiment, food-service sales), ALFRED `realtime_start < D`; DGS10 and the USD index are not revised | `date`, `realtime_start` |
+| FRED | observation `date < D` and, for revised series (CPI, sentiment, restaurant sales RSFSDP), ALFRED `realtime_start < D`; DGS10 and the USD index are not revised | `date`, `realtime_start` |
 | Damodaran ERP | latest file published `< D` | `published` |
-| BTS, TLC | publish date `< D` (TLC lags ~2 months, BTS ~3): store publish date, not data month | `published` |
+| BTS, TLC | publish date `< D` (TLC lags ~2 months; BTS publish date estimated as month end + 90 days): store publish date, not data month | `published` |
 | Our reports, model versions | `as_of < D` | `as_of` |
 
-The spec's header says "on or before", §6 says "accepted before". We use **strictly before**: it matches the example and is safest for backtests. It is one function, so flipping it is a one-line change.
+The spec says **strictly before** (§1.2). It matches the example and is safest for backtests. It is one function, so flipping it is a one-line change.
 
 **Enforcement**
 - `asof.py` holds `AsOf` with `.sees(d)`, `.sql(alias, column)`, `.latest(rows)`. Nothing else compares dates.
@@ -100,7 +101,7 @@ The spec's header says "on or before", §6 says "accepted before". We use **stri
   <img src="img/v4-data-pipeline.svg" alt="The V4 build: fetch into a raw cache, then four lanes (text, structured facts, KPI extraction, market data) into one SQLite file" width="100%">
 </p>
 
-The build, zoomed in from §2: one lane per kind of data, all dated by when they became public. Sections 4.2 to 4.6 give each part; the dashed box is planned (V4.7).
+The build, zoomed in from §2: one lane per kind of data, all dated by when they became public. Sections 4.2 to 4.6 give each part.
 
 ### 4.1 Companies move to config
 
@@ -112,7 +113,7 @@ UBER:
   cik: null              # filled by `tenk companies verify` from SEC company_tickers.json, never typed
   aliases: [Uber, Uber Eats, Uber Freight]
   sector: mobility       # peers = same sector
-  ipo: null              # CART: 2023-09-19, earlier periods from the S-1
+  ipo: null              # CART: 2023-09-19; data starts at Q3 2023
   template: segments     # §5.3
   main_kpi: gross_bookings
   segments: [mobility, delivery, freight]
@@ -127,7 +128,6 @@ UBER:
 |---|---|---|---|
 | 10-K, 10-Q | `acquisition/edgar.py` | One filing per (form, period); amendments ignored. `(fy, fp)` per accession from any company-facts row with that `accn` (generalizes `fiscal_years_by_accession`; keeps D-004) | `raw/filings/<T>/<period>-<form>/` |
 | 8-K releases | same | Submissions rows with `form=="8-K"` and `"2.02" in items`; the filing index `<acc>-index.htm` gives every `EX-99.*` (99.1 release; 99.2 letter where used). Period from the release text, cross-checked against the next 10-Q; mismatch = fetch error | `.../<period>-ER/` |
-| S-1 (CART) | same | 2023 S-1/424B4; pre-IPO quarters, extracted like a release | `raw/filings/CART/S1/` |
 | DEF 14A | `acquisition/filings.py` | Submissions rows with `form` in `DEF 14A`, `DEFC14A`; the first each year (later ones are special meetings), keyed to the prior fiscal year. Form `DEF14A`, one pseudo-Item `PROXY`, labeled by the release rules; chunked text only | `.../FY<year>-DEF14A/` |
 | Form 4 | `acquisition/insiders.py` | XML → `insider_tx` (V4.7; dilution context only) | |
 | XBRL company facts | `acquisition/edgar.py` | Unchanged; refreshed each fetch, facts keep their `filed` date | `raw/edgar/<T>/companyfacts.json` |
@@ -136,6 +136,8 @@ UBER:
 | Cross-checks | `acquisition/crosscheck.py` | BTS T-100, NYC TLC by license (Uber/Lyft codes to verify). TLC Parquet is large: aggregate to trips per month per license at fetch (V4.7) | `raw/crosscheck/` |
 
 Every raw file gets `retrieved_at` in `raw/manifest.json` (spec §1.2).
+
+**As built:** DEF 14A proxies are fetched and cached (`raw/filings/<T>/FY<year>-DEF14A/`) but `tenk build` does not chunk or load them: the database holds no DEF14A rows, so Ask and Research cannot search them yet.
 
 ### 4.3 Store changes (same SQLite file, D-005)
 
@@ -152,14 +154,16 @@ INDEX chunks_filter (ticker, filed, form, fiscal_year, item)
 
 | New table | Holds | As-of column | Filled by |
 |---|---|---|---|
-| `facts` | ticker, taxonomy, concept, dims (JSON; `{}` = consolidated), period start/end, value, unit, accession, form, fy, fp | `filed` | `facts/xbrl.py`, `facts/ixbrl.py` |
-| `quarters` | metric, fy, quarter, value, unit, derivation (`direct`/`ytd_diff`/`fy_minus_9m`), input fact ids | `filed` (max of inputs) | `facts/quarters.py` |
+| `facts` | ticker, taxonomy, concept, dims (JSON; `{}` = consolidated), period start/end, value, unit, accession, form, fy, fp | `filed` | `facts/xbrl.py` (company facts and inline XBRL) |
+| `quarters` (derived on read, not stored) | metric, fy, quarter, value, unit, derivation (`direct`/`ytd_diff`/`fy_minus_9m`), input fact ids | `filed` (max of inputs) | `facts/quarters.py` |
 | `kpis` | metric, segment, period, value, unit, `definition_version`, source chunk, quote, method (`llm`/`rules`) | `filed` | `facts/extract.py` |
 | `guidance` | metric, target period, low, high, basis (`level`/`growth_yoy`/`margin`), source chunk, quote, issued-in | `filed` | `facts/extract.py` |
 | `prices`, `macro`, `crosscheck` | per source (§4.2) | `date` / `realtime_start` / `published` | acquisition |
 | `model_versions` | id, ticker, as_of, parent_id, inputs_hash, status (`draft`/`reviewed`), path | `as_of` | `research/pipeline.py` |
 | `estimates` | version, metric, period, scenario, value (lets Ask cite "our 2027E" by SQL) | via version | pipeline |
 | `exceptions` | version, `X-` id, severity, item, treatment, status | via version | every step |
+
+**As built:** prices, macro, ERP and cross-checks share one `market` table (series key, date, value, published); there are no `estimates` or `exceptions` tables (estimates live in each version's `model.json`, exceptions in `exceptions.json`). The DB also has `insider_tx`, `sections`, `meta`.
 
 ### 4.4 Text pipeline over new forms
 
@@ -176,8 +180,8 @@ V0 assumes a 10-K (`blocks.py` asserts `DocumentType == "10-K"`; `validation.ITE
 
 Three XBRL facts shape the design (verified in V4.0a):
 
-1. **Company facts has no dimensional facts**, so segment revenue, segment adjusted EBITDA and geography are missing. They are in the filing's inline XBRL (`ix:nonFraction` whose context carries `xbrldi:explicitMember`). `facts/ixbrl.py` parses the HTML we already download; `blocks.py` already unwraps iXBRL.
-2. **10-Q cash flows are year-to-date.** `facts/quarters.py` builds quarters by duration length: ~90 days direct; ~180 / ~270 days by difference (Q2 = H1 − Q1, Q3 = 9M − H1); Q4 = FY − 9M (spec §1.5). Balance-sheet items are instants and need no derivation.
+1. **Company facts has no dimensional facts**, so segment revenue, segment adjusted EBITDA and geography are missing. They are in the filing's inline XBRL (`ix:nonFraction` whose context carries `xbrldi:explicitMember`). `facts/xbrl.py` also parses the HTML we already download; `blocks.py` already unwraps iXBRL.
+2. **10-Q cash flows are year-to-date.** `facts/quarters.py` builds quarters by duration length: ~90 days direct; ~180 / ~270 days by difference (Q2 = H1 − Q1, Q3 = 9M − H1); Q4 = FY − 9M (spec §1.6). Balance-sheet items are instants and need no derivation.
 3. **Operating KPIs are mostly untagged** (gross bookings, trips, room nights, GOV, GTV, MAPCs): they come from release text (§4.6).
 
 **Citable ids.** `xbrl:<T>:<tax>:<concept>:<accession>:<end>` is ambiguous for 10-Qs (3-month and 6-month facts share an end date). Part 6 becomes `<start>/<end>` for durations and stays `<end>` for instants: still six colon-parts, one change in `SecData.xbrl_fact`. Dimensional facts get `ixbrl:<accession>:<fact id>`.
@@ -190,7 +194,7 @@ Quarters from XBRL (`facts/quarters.py`), and where the `financials` tool (§7.1
 
 ### 4.6 KPI and guidance extraction (layer 1)
 
-**Registry** `facts/kpis.yaml`: per company, each KPI's key, unit, segments, label patterns, definition version. Seeded from spec §1.4, checked against the latest 10-K and release.
+**Registry** `facts/kpis.yaml`: per company, each KPI's key, unit, segments, label patterns, definition version. Seeded from spec §1.5, checked against the latest 10-K and release.
 
 ```yaml
 UBER:
@@ -257,8 +261,8 @@ Timing is simplified: every company is modeled as if an order executes at once a
 
 | Template | Companies | Revenue build |
 |---|---|---|
-| `marketplace` | BKNG, EXPE, ABNB | GB = room nights (ABNB: nights and experiences) × ADR; revenue = GB × take rate |
-| `segments` | UBER | Per segment (Mobility, Delivery, Freight): GB grown on its own faded y/y rate × segment take rate; revenue is the sum; adj. EBITDA = revenue − costs as a share of total GB (segment EBITDA stopped in 2026Q1) |
+| `marketplace` | BKNG, EXPE, ABNB | GB = room nights (ABNB: nights and experiences) × gross bookings per night (spec §3.1; BKNG gives ADR only in a footnote); revenue = GB × take rate |
+| `segments` | UBER | Per segment (Mobility, Delivery, Freight): GB grown on its own faded y/y rate × segment take rate; revenue is the sum; adj. EBITDA is a margin on total GB (spec §3.1), built as revenue − costs held as a share of total GB so a take-rate change moves EBITDA (§17.13); segment EBITDA stopped in 2026Q1 |
 | `orders` | DASH, LYFT, CART | DASH: orders × AOV = GOV; revenue = GOV × net revenue margin. LYFT: rides × GB per ride; revenue = GB × take rate. CART: orders × AOV = GTV; revenue = GTV × take rate (transaction and ads revenue not split in the model) |
 | `trip` | TRIP | No volume KPI is disclosed: revenue grows on one faded rate and adj. EBITDA is a margin on revenue. No numeric guidance |
 
@@ -277,7 +281,7 @@ Run after building the model and again after forecasting. **Any FAIL stops the r
 | `segments_sum` | segment GB and EBITDA sum to reported totals |
 | `no_future_input` | every input has `filed < as_of` |
 | `formula_only` | forecast cells are formulas |
-| `wacc_gt_g` · `weights` · `bridge_ties` | WACC > terminal growth · scenario weights sum to 1 · revision bridge sums to Summary deltas |
+| `wacc_gt_g` · `weights` · `bridge_ties` | WACC > terminal growth · scenario weights sum to 1 · revision bridge sums to Summary deltas. **Not built** as checks; only the first eight rows run |
 
 ---
 
@@ -293,16 +297,20 @@ Report steps S3 to S7 (§9) in one view: the LLM proposes bounded assumptions (S
 
 ### 6.1 Forecast (`research/forecast.py`)
 
-Per driver, never per total:
+Per driver, never per total (spec §3.2):
 
 ```text
-Driver(q) = Driver(q-4) × (1 + g(q))      seasonality comes from q-4
-g(q+1)    = g(q) × d                       d = 0.90 per quarter (fixed; "fitted" is an ablation)
-g(first)  = y/y growth implied by the guidance midpoint (current quarter), else last reported y/y
+Current quarter:  anchored at the guidance midpoint; else Driver(q-4) × (1 + g), g = last reported y/y
+Later quarters:   Driver(year) = Driver(year-1) × (1 + g(year)), growth faded by d
+                  Driver(q)    = Driver(year) × share(q)
+share(q)          = mean share of quarter q in its fiscal year over the last 3 complete years
+                    (fewer years if fewer exist, e.g. CART: whatever is available, logged as an exception)
+g(t+1)            = g(t) × d                d = 0.90 per quarter (fixed; "fitted" is an ablation)
 ```
 
-- **Anchor:** guided metrics start at the midpoint (`guidance_point: mid`; `high` is an ablation). Drivers are solved so the guided total is hit: GB growth from a GB guide, then margin from an EBITDA guide.
-- **Seasonal share** (3-year mean share of each quarter) spreads **full-year-only guidance** into quarters and flags a quarter whose share drifts over 2 points. It does not replace the q-4 rule.
+- **Anchor:** guided metrics start at the midpoint (`guidance_point: mid`; `high` is an ablation). Drivers are solved so the guided total is hit: GB growth from a GB guide, then margin from an EBITDA guide. Full-year guidance is spread into quarters by the same seasonal share.
+- **Seasonal share** sets the quarterly pattern of every later quarter, so one unusual quarter does not repeat a year later. Shares are computed per driver; for ratios (take rate, margin) the share is replaced by the quarter's mean deviation from its fiscal-year average over the same years. The current quarter's actuals-to-date are kept, so a year's quarters still sum to the year.
+- **As built:** later quarters still use `Driver(q-4) × (1 + g)` per quarter; seasonal share only spreads full-year guidance. The change above is not yet built or backtested.
 - **Variance flag:** vs guidance midpoint, over 2% (revenue) or 5% (adj. EBITDA) needs a written reason (from the proposer's rationale); none = exception.
 - **Horizon:** quarterly to Q4 2027E; annual 2026E–2028E; DCF years 4–10 faded.
 - **Scenarios:** bear/base/bull (25/50/25) vary the 2–3 `scenario_drivers`. Default shock ±1σ of the driver's y/y change over history; the proposer may move it within [0.5σ, 2σ].
@@ -330,13 +338,13 @@ g(first)  = y/y growth implied by the guidance midpoint (current quarter), else 
 
 All tools are bound to the run's `AsOf`, never raise, and return citable ids. V3 had 4; V4 has 13, grouped so no single context gets all of them.
 
-| Group | Tool | Returns | Ask | Research | Report sub-agents |
+| Group | Tool | Returns | Ask | Research | Report runs |
 |---|---|---|:-:|:-:|---|
 | text | `search_filings` (query, companies, periods, forms, k) | chunks with id, form, period, filed | ✓ | ✓ | events, debates |
 | facts | `financials` (company, metric or concept, periods) | values from `quarters`/`facts` with id and derivation | ✓ | ✓ | proposer |
 | | `company_kpis` | KPI rows with source chunk ids | ✓ | ✓ | proposer, debates |
 | | `guidance` | low/high/basis, issued-in, prior guide vs actual | ✓ | ✓ | proposer |
-| | `edgar_filings` | filing metadata (as V3), as-of filtered | ✓ | ✓ | events |
+| | `filings` | filing metadata (as V3), as-of filtered | ✓ | ✓ | events |
 | market | `market_data` | prices, market cap, EV, macro, ERP | ✓ | ✓ | proposer |
 | | `crosscheck` | BTS/TLC aggregates with coverage notes | ✓ | ✓ | proposer, debates |
 | calc | `calculator` | as V3, reported figures only | ✓ | ✓ | |
@@ -345,6 +353,10 @@ All tools are bound to the run's `AsOf`, never raise, and return citable ids. V3
 | | `run_scenario` (overrides `{driver: value or delta}`) | changed lines, PT, rating vs base; a `model:` id | | ✓ | |
 | | `compare_peers` (metric, companies) | table across the eight at this as-of | | ✓ | |
 | | `variance_review` (company, period) | prior estimate vs actual by driver, with the bridge | | ✓ | |
+
+**As built:** 12 tools. `research_report` is not built, so Ask cannot cite saved estimates and questions about them decline; `xbrl_facts` and `edgar_filings` remain in V3 mode only.
+
+Report's bounded research runs (§9) get the whole Research toolset with a call budget (spec §2.3 requirement 2); the last column shows which tools each run mostly needs.
 
 `financials` replaces V3's `xbrl_facts`: any period, as-of filtered, metric names instead of concept lookup (`concept` still accepted).
 
@@ -358,7 +370,7 @@ All tools are bound to the run's `AsOf`, never raise, and return citable ids. V3
 
 ### 7.3 The assumption proposer: the LLM's only influence on numbers
 
-A bounded sub-agent per company per run. For each key driver it returns:
+One bounded LLM run per company per report. For each key driver it returns:
 
 ```json
 {"driver": "take_rate.mobility", "value": 0.268, "basis": "analyst-imposed", "confidence": "medium",
@@ -366,7 +378,7 @@ A bounded sub-agent per company per run. For each key driver it returns:
  "evidence": ["UBER-2026Q2-ER-EX99-005", "kpi:UBER:take_rate.mobility:2026Q2"]}
 ```
 
-Code bounds every driver (take rate within the 8-quarter min/max ± 50 bps; `d` in [0.75, 1.0]; growth anchored to guidance where it exists). Out-of-bounds = clipped and logged. Evidence ids must resolve (§10). `research.proposer: llm | defaults` is the ablation switch.
+Code bounds every driver (take rate within the 8-quarter min/max ± 50 bps; `d` in [0.75, 1.0]; growth anchored to guidance where it exists). Out-of-bounds = clipped and logged. Evidence ids must resolve (§10). `proposer.method: llm | defaults` is the ablation switch (spec §6; `defaults` signed off, spec §8).
 
 ### 7.4 Zoom: `search_filings`
 
@@ -382,7 +394,7 @@ The V1 retrieval, used by V3, with two changes: forms and periods become slots (
   <img src="img/v4-research-tools.svg" alt="run_scenario, compare_peers and variance_review: validate, rerun or reuse cached code runs, return tables with citable ids" width="100%">
 </p>
 
-The three tools that run model code for the agent (all planned, V4.5). None writes a `model_versions` row.
+The three tools that run model code for the agent (built in V4.5). None writes a `model_versions` row.
 
 ---
 
@@ -395,7 +407,7 @@ Qwen3.6-27B serves a 32k window (I-003). One report touches 14 quarters, several
 | State lives in files | Each step writes a typed, versioned artifact (`datapack.json`, `model.json`, `assumptions.json`, …); the next step reads it, not the previous chat |
 | Purpose-built views | `research/views.py` renders a token-budgeted view per LLM call: the proposer sees a driver table (12 quarters × drivers, ~1.5k tokens), not the data pack |
 | Detail by id | Views carry ids; tools fetch the chunk, fact or KPI behind one. Nothing is preloaded "just in case" |
-| Bounded sub-agents | Each agentic step is a fresh `Agent` with its own tool groups, `max_calls`, `max_context`; it returns JSON and its transcript goes to the trace only |
+| Bounded research runs | Each agentic step is a fresh `Agent` with its own tool groups, `max_calls`, `max_context`; it returns JSON and its transcript goes to the trace only |
 | Numbers never pass through prose | The note writer gets pre-formatted facts with ids (§10.2) and never computes |
 | Budgets are config | `research.budgets.<step>: {max_calls, max_context, max_tokens}`; the trace records tokens per step |
 
@@ -406,14 +418,16 @@ Qwen3.6-27B serves a 32k window (I-003). One report touches 14 quarters, several
 | KPI extraction, per release | ≤ 12k | release tables + one company's registry |
 | Event log, per quarter | ≤ 16k, ≤ 8 calls | prior event summary (≤ 1k) + search results |
 | Proposer, per company | ≤ 16k, ≤ 10 calls | driver view (≤ 2k) + guidance + event summary + tool results |
-| Debate, per scenario driver | ≤ 16k, ≤ 8 calls | driver evidence + searches |
+| Research run, per judgment section (2.3, 3 per scenario driver, 4, 6, 7, 8) | ≤ 16k, ≤ 8 calls | that section's fixed fact set + searches |
 | Section writer, per section | ≤ 8k | that section's fact list, tables as text, relevant events/debates |
 | Ask / Research question | 20k (`agent.max_context`) | as V3 |
+
+Per-section call and token budgets sum to well under the 30-minute target per company (spec §2.3 requirement 8).
 
 Over budget, `views.py` drops the oldest quarters first, then low-priority columns, and says so in the view header.
 
 **Memory across runs** (the analyst who remembers last quarter), all as-of safe: a run reads only versions with `as_of < D`.
-- **Prior model version** (`parent_id`): old estimates, assumptions and rationale → note section 4, Summary and Bridge tabs.
+- **Prior model version** (`parent_id`): the latest version for the ticker with an earlier as-of; its estimates, assumptions and rationale → note section 4, Summary and Bridge tabs. None → the run is flagged "initial draft (no prior run)" and section 4 shows no old values (spec §2.3).
 - **Rolling event log** `events.json` per company: each run appends ≤ 300 tokens per event (segment or definition changes, M&A, buybacks, guidance habits); the next run reads these, not old documents.
 - **Open exceptions** from the parent version are re-checked and resolved or carried forward.
 
@@ -427,23 +441,30 @@ A report is ~20–40 LLM calls and minutes of compute per company; `--all` is ei
 
 ```text
 S1  datapack  code       facts, quarters, KPIs, guidance, prices, macro, filings        → datapack.json
-S2  events    sub-agent  what changed this quarter (search, KPIs)                        → events.json
+S2  events    LLM run    what changed this quarter (search, KPIs)                        → events.json
 S3  model     code       history + layer-2 checks (FAIL stops)                           → model.json, checks.json
-S4  propose   sub-agent  bounded assumptions with rationale (§7.3)                       → assumptions.json
+S4  propose   LLM run    bounded assumptions with rationale (§7.3)                       → assumptions.json
 S5  forecast  code       drivers, anchor, scenarios, layer-2 checks again                → estimates.json
 S6  peers     code       S1, S3, S5 per peer, defaults, cached                            → peers/<T>/
 S7  value     code       comps, DCF, grid, PTs, ratings, sensitivities                   → valuation.json
 S8  revise    code       vs parent version: Summary, bridge, types, confidence           → revisions.json
-S9  debates   sub-agents one per scenario driver: bull, bear, hypothesis, trigger, gap   → debates.json
-S10 write     LLM        ten sections from facts + views; number trace; one repair       → note.json
+S9  research  LLM runs   one bounded run per judgment section: 2.3, 3 (one per scenario  → research.json
+                         driver: bull, bear, hypothesis, trigger, gap), 4, 6 (multiple
+                         justification), 7, 8; conclusion + cited ids, which become facts
+S10 write     LLM + code sections 2–9 from facts; then 1 and 10 last (no new numbers);     → note.json
+                         number trace, one repair; consistency check (below)
 S11 export    code       note.md/.pdf, workbook.xlsx (+ Log), parity check               → outputs
 ```
+
+**Report filling (spec §2.3).** Code builds 2.1, 2.2, 4.1–4.3, 5 and 9. Each section lists its fixed fact set before it runs; the LLM never decides what data exists. A research run does not plan, split into sub-questions or start other runs. Before export, code checks: the rating matches the §6.2 thresholds; every number in section 1 equals its section table; every debated driver is in the section 7 sensitivities; a guidance change in the events appears in 2.2; every open issue is in section 10. An LLM only explains a failure. A failed check becomes an exception row; sections 1 and 10 get one repair turn, others are never rewritten silently. A failed or over-budget research run makes its section read "failed check: reason" and the run continues; a model-integrity failure stops it.
+
+**As built:** S9 has only the per-driver debates; sections 2.3, 4, 6, 7 and 8 are tool-less LLM calls over facts (S2 events feed them), and the consistency check is not built. The runner is simpler than planned. `--resume` reuses the saved `events.json`, `debates.json` and the note's prose slots; there are no per-step `step.json` files or inputs hash, no `--from`, no process pool, no `trace.jsonl` or `run.json`, and no step-level token or time budgets (only `proposer.budget` in `research.yaml`). A layer-2 failure stops the run; an LLM-step failure degrades. The description below is the plan.
 
 **Runner (`research/pipeline.py`)**
 - **Checkpoints:** each step writes its artifact and `step.json` (inputs hash, status, seconds, tokens). A step whose inputs hash matches is skipped, so `--resume` continues after a crash (I-001) and `--from S7` reruns from valuation.
 - **Inputs hash:** sha256 of upstream artifact hashes + relevant knobs + prompt file hashes + model name. It doubles as the layer-4 determinism key.
 - **Failure policy:** a code-step failure stops the run with the failing check. An LLM-step failure (bad JSON after repair, budget hit) degrades: defaults replace proposals, a section reads "failed check: reason" (spec note rules), an exception row is written, and the run finishes so the reviewer sees what failed.
-- **Parallelism:** peers and `--all` companies run in a process pool under `taskset -c 16-31` (I-001); vLLM batches concurrent calls. The embedder runs on CPU (`retrieval.device: cpu`, I-002) and loads only if a sub-agent searches.
+- **Parallelism:** peers and `--all` companies run in a process pool under `taskset -c 16-31` (I-001); vLLM batches concurrent calls. The embedder runs on CPU (`retrieval.device: cpu`, I-002) and loads only if a research run searches.
 - **Trace:** `trace.jsonl` per run (every LLM and tool call: prompt hash, tokens, seconds, output); `run.json` sums time and tokens. Target < 30 min per company (spec §2).
 - **Backtest = the same runner in a loop** (§13.2), stopped after S8 (`report.type: none`).
 
@@ -485,7 +506,7 @@ The writer must use facts verbatim and mark them `{F-07}`. `research/trace.py` t
 3. lints the spec's note rules: no "pending"/"TBD"; gaps read "n/a: …" or "failed check: …"; any `E`-period number carries its "E";
 4. on failure, one repair turn with the violations; any sentence that still holds an untraced number is dropped and logged as an exception row.
 
-**Tables** (2.1, 2.2, 4.1, 4.2, 5, 6, 7) are rendered by code from artifacts and never pass through the LLM. Layer-5 "100% traced" therefore means: tables by construction, prose by `trace.py`.
+**Tables** (2.1, 2.2, 4.1–4.3, 5, 9, and the code parts of 6 and 7) are rendered by code from artifacts and never pass through the LLM. Layer-5 "100% traced" therefore means: tables by construction, prose by `trace.py`.
 
 <p align="center">
   <img src="img/v4-number-trace.svg" alt="Number trace: fact list from artifacts, writer marks facts, trace.py checks every number, one repair turn, failed-check section, tables rendered by code" width="100%">
@@ -504,18 +525,18 @@ Step S10: how a number gets into the note.
 
 Directory: `output/reports/<TICKER>/<as_of>/`; each run is saved as a version (`UBER:v1`, `UBER:v2`, …) in `model_versions`, with its parent.
 
-**As built (V4.6):** the files below differ from the plan. Written: `note.md`, `note.pdf`, `note.json`, `workbook.xlsx`, `model.json`, `checks.json`, `valuation.json`, `revisions.json`, `events.json`, `debates.json`, `facts.json`, `exceptions.json`, `report.json`. Workbook tabs: Model, Assumptions (`export/workbook.py`) and Summary, Scenarios, Valuation, Revisions, Checks, Log (`export/report.py`); no README, Bridge, Model (prior) or DCF tab yet. The PDF is printed by headless Chrome through `evaluation/render.py`, not LibreOffice. Only the `update` report type exists; `initiation` and `--public` are not built.
+**As built (V4.6):** the files below differ from the plan. Written: `note.md`, `note.pdf`, `note.json`, `workbook.xlsx`, `model.json`, `valuation.json`, `revisions.json`, `events.json`, `debates.json`, `facts.json`, `exceptions.json`, `report.json`. Workbook tabs: Model, Assumptions (`export/workbook.py`) and Summary, Scenarios, Valuation, Revisions, Checks, Log (`export/report.py`); no README, Bridge, Model (prior) or DCF tab yet. The layer-2 results are in the workbook Checks tab; `checks.json` is written only by the `model/history.py` runner. The PDF is printed by headless Chrome through `evaluation/render.py`, not LibreOffice. Only the `update` report type exists; `initiation` and `--public` are not built.
 
 | File | Built by | Notes |
 |---|---|---|
 | `note.md`, `note.pdf` | `research/note/` render, then a headless browser (`evaluation/render.py`) | `update` (3–5 pages) or `initiation` (+ business overview, industry and competition, model appendix; same ten sections) |
-| `workbook.xlsx` | `research/export/workbook.py` (openpyxl, new dependency) | Tabs: README, Summary, Bridge, Assumptions, Model, Model (prior), Scenarios, Valuation, DCF, Checks, Log; blue/black/green styles; layout of `docs/EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx` |
+| `workbook.xlsx` | `research/export/workbook.py` (openpyxl, new dependency) | Planned tabs (spec §2.3): Summary, Bridge, Assumptions, Model, Model (prior), Scenarios, Valuation, DCF, Checks, Log (as built: see above); blue/black/green styles; layout of `docs/EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx` |
 | `model.json`, `estimates.json`, `valuation.json`, `revisions.json`, `assumptions.json`, `events.json`, `debates.json`, `checks.json`, `evidence.json` | steps | Machine-readable; Ask and Research cite these |
 | `trace.jsonl`, `run.json` | runner | Time, tokens |
 
 - **Parity test:** after export, `soffice --headless --convert-to xlsx` recalculates; every formula cell is compared with `model.json` (1e-9 relative). A mismatch is a layer-2 FAIL.
 - **Publication rule (Tiingo licence, §17.5):** local outputs show every figure. A note or results file meant to leave the machine is exported with `--public`, which replaces each figure whose inputs include a `px:` ref (price, market cap, EV, 52-week range, return, PT, rating, multiples) with "n/a: price data licensed for personal use only"; the number trace (§10.2) finds them. No price data is committed: `data/` is gitignored.
-- **Review:** reports are written `draft`; `tenk report approve` sets `reviewed` (no number edits; amendments are a new version). Ask and Research show the status beside any cited estimate.
+- **Review:** reports are written `draft`; `tenk research approve TICKER:vN --by INITIALS` sets `reviewed` (no number edits; amendments are a new version). Ask and Research show the status beside any cited estimate.
 - **Note build order (spec §2.3):** sections 1–5 first, 6–10 once the model and extraction tests pass.
 
 ---
@@ -524,13 +545,13 @@ Directory: `output/reports/<TICKER>/<as_of>/`; each run is saved as a version (`
 
 | Problem | Why new | Handling |
 |---|---|---|
-| **LLM memory leaks into the backtest** | Qwen may know reported 2025 figures; the as-of filter can't hide weights | The LLM never outputs forecast numbers; proposals are bounded and guidance-anchored. Report **clean quarters** separately: results released after the checkpoint (2026-04-21) = Q1 and Q2 2026, ~2 per company (Q3 2026 isn't out). Before V4.4, probe the model with no tools for Q3–Q4 2025 figures. The no-tools LLM baseline measures the leak directly |
+| **LLM memory leaks into the backtest** | Qwen may know reported 2025 figures; the as-of filter can't hide weights | The LLM never outputs forecast numbers; proposals are bounded and guidance-anchored. The plan was to report **clean quarters** (released after the 2026-04-21 checkpoint) separately; the training cutoff is not published, so as built no quarter is called held out (§17.13, V4_RESULTS limits). The no-tools LLM baseline measures the leak directly (56% MAPE: no sign of memorized actuals) |
 | **Point-in-time data that changes** | Restatements, recast segments, FRED revisions, KPI redefinitions | Dated rows, `.latest()` under `AsOf`, `definition_version`, ALFRED vintages, restated history with an exception row |
 | **Segments missing from company facts** | V3 relied on that API | Inline XBRL parser; LLM fallback from release tables (§4.5) |
 | **Quarterly derivation** | V3 was annual | `quarters.py` + `q4_ties` check (§4.5) |
 | **10-Q Items repeat per Part** | V0 validator assumes once-each 10-K Items | `FormSpec`, `I.n`/`II.n` keys (§4.4) |
 | **Non-operating swings** (Uber's stake revaluations, valuation-allowance releases) | Distort GAAP EPS | Forecast 0; history shows reported EPS; exception when any of the last 4 quarters exceeds 10% of NI |
-| **Instacart starts at Q3 2023** | Walk-forward needs 4 lags | S-1 quarters as data; seasonal share uses what exists (≥ 2 years) with an exception; ~4 backtest points (spec §6) |
+| **Instacart starts at Q3 2023** | Walk-forward needs 4 lags | data starts at Q3 2023; seasonal share uses whatever years exist, with an exception; about 4 backtest points (spec §6). As built: 6, since releases from Q4 2024 onward already have four lags |
 | **Two evaluators of one model** | Workbook must be live | Single DSL, LibreOffice parity test (§5.1, §11) |
 | **Peers at the same as-of** | Comps and relative rating depend on other models | S6 with caching; `--all` for relative rating |
 | **Revision bridge attribution** | Order-dependent | Sequential substitution in a fixed order: (1) actuals, (2) guidance, (3) each assumption in register order; interactions go to the later step, documented in the Bridge tab. Type: *timing* if the next-year effect is < 20% of this year's, *recurring* if > 80%, else *mixed*. Confidence by horizon: actuals High; current quarter and FY, FY+1 Medium; FY+2 Low |
@@ -555,21 +576,21 @@ Pass bars frozen 2026-10-27 from spec §5; a miss is reported as a miss.
 | 3. Forecast | Walk-forward (§13.2) | `evaluation/backtest.py` | MAPE below seasonal-naive on revenue and main KPI; bias near zero, reported with sign |
 | 4. Valuation | Identical inputs → byte-identical `valuation.json`; monotonicity (higher WACC → lower PT) | `tests/test_valuation.py` | Identical; every target multiple inside the peer range or flagged |
 | 5. Note | Number trace, ten sections present, rubric (judge gpt-oss-20b + human sample), **seeded errors** (corrupt a fact or table; trace/lint must catch it) | `evaluation/note_eval.py` | 100% traced; rubric ≥ 4/5 |
-| Ask, Research | ~80 gold questions over the eight and the spec §2.1/§2.2 categories; Research golds check the `model:` ref and stated assumptions, not a fixed number. Gold format gains `period`, `form`, `as_of` | existing scoring + `model:` grading | Ask ≥ 85% correct and verified, 100% of cited claims resolve · Research ≥ 90% with a `model:` ref and stated assumptions, 100% of computed numbers from model tools |
+| Ask, Research | About 80 gold questions over the eight (spec §5; built: 79 Ask, 72 Research) and the spec §2.1/§2.2 categories; Research golds check the `model:` ref and stated assumptions, not a fixed number. Gold format gains `period`, `form`, `as_of` | existing scoring + `model:` grading | Ask ≥ 85% correct and verified, 100% of cited claims resolve · Research ≥ 90% with a `model:` ref and stated assumptions, 100% of computed numbers from model tools |
 
 ### 13.2 Backtest (`evaluation/backtest.py`)
 
 ```text
 for company in the eight:
-  for release from Q4 2024 onward:                         (~6 per company, ~4 for CART)
+  for release from Q4 2024 onward:                         (~6 per company, ~4 for CART; as built CART also has 6)
      D = day after the release's accepted_at (ET)
      run S1–S8 at D  →  forecast next quarter
      score vs the actual (read at a later as-of) and vs baselines
 ```
 
 - **Baselines:** seasonal naive (same quarter last year × latest y/y growth); guidance midpoint (n/a without numeric guidance); plain LLM with no tools.
-- **Metrics:** MAPE; bias (positive = too high); guidance call (above or below midpoint, and did we call it). Medians and ranges by company; paired Wilcoxon per baseline; clean quarters separate.
-- **Ablations** (spec §6): extraction LLM vs rules; fixed vs fitted `d`; guidance midpoint vs high end; with vs without cross-checks. Added here: proposer `llm` vs `defaults`; Qwen vs Claude on the LLM steps. The rules-based extractor is a label-pattern table-row matcher over the registry (`extract.method: llm | rules`).
+- **Metrics:** MAPE; bias (positive = too high); guidance call (above or below midpoint, and did we call it). Medians and ranges by company; paired Wilcoxon per baseline; quarters released after the LLM's training cutoff reported separately (spec §6 held-out set; as built none, the cutoff is unpublished, §12).
+- **Ablations** (spec §6): extraction LLM vs rules; fixed vs fitted `d`; guidance midpoint vs high end; with vs without cross-checks; proposer `llm` vs `defaults`. Added here: Qwen vs Claude on the LLM steps. The rules-based extractor is a label-pattern table-row matcher over the registry (`extract.method: llm | rules`).
 - **Long-horizon variant:** one run as of early February 2025 forecasting all of 2025.
 - **Output:** `evaluation/results/backtest-<label>/`: `report.md`, per-forecast CSV, chart by company.
 
@@ -582,10 +603,10 @@ src/tenk_agent/
   asof.py                  NEW  AsOf
   corpus.py                CHG  reads companies.yaml
   store.py                 CHG  new columns and tables; dated reads take asof
-  acquisition/             CHG  edgar.py (any form, 8-K exhibits, accepted_at, S-1) · NEW prices.py macro.py
+  acquisition/             CHG  edgar.py (any form, 8-K exhibits, accepted_at) · NEW prices.py macro.py
                                 crosscheck.py insiders.py (V4.7)
   preprocess/forms.py      NEW  FormSpec; validation.py reads it
-  facts/                   NEW  xbrl.py ixbrl.py quarters.py extract.py kpis.yaml
+  facts/                   NEW  xbrl.py quarters.py extract.py kpis.yaml
   research/                NEW  refs.py datapack.py events.py debates.py propose.py forecast.py
                                 valuation.py revisions.py views.py pipeline.py
                                 model/ (dsl.py graph.py templates/*.yaml checks.py)
@@ -602,7 +623,6 @@ src/tenk_agent/
                  Damodaran) crosscheck.py (TLC, BTS) insiders.py (Form 4)
   preprocess/    forms.py rules.py (rule-based Items for V4 filings, D-039) blocks.py structure.py validation.py
   facts/         xbrl.py quarters.py extract.py (LLM) rules.py (rules extractor, ablation) kpis.yaml metrics.yaml
-                 (no ixbrl.py)
   research/      refs.py book.py (model ids for Ask/Research) datapack.py subagents.py (events, debates)
                  propose.py forecast.py valuation.py (also --all relative ratings) pipeline.py (S1–S11, revisions)
                  model/ (dsl.py graph.py history.py checks.py templates/: statements segments marketplace
@@ -612,13 +632,9 @@ src/tenk_agent/
   agent/         tools.py (groups, tool sets) loop.py sec.py
   evaluation/    extraction.py backtest.py note_eval.py (+ the V0–V3 modules)
   prompts/       ask.md research.md extract.md propose.md events.md debates.md section.md (+ V3's)
-  agent/                   CHG  tools.py (groups, Toolbox(asof, mode)) · loop.py (sub-agent prompt, groups, budgets)
-  generation/verify.py     CHG  resolves ids through research/refs.py
-  evaluation/              NEW  extraction.py backtest.py note_eval.py
-  prompts/                 NEW  extract.md propose.md events.md debates.md section.md (+ schemas)
 ```
 
-**Config.** `config.yaml` keeps its per-stage sections and gains per-step `budgets`. `companies.yaml` (§4.1) and `research.yaml` (every §6 knob, proposer bounds, step budgets, report type) are pinned per experiment (D-019). New dependency: `openpyxl`. New secrets: `FRED_API_KEY`, `TIINGO_API_KEY` (`SEC_USER_AGENT` exists).
+**Config.** `config.yaml` keeps its per-stage sections and gains per-step `budgets`. `companies.yaml` (§4.1) and `research.yaml` (every §6 knob, proposer bounds, step budgets, report type) are pinned per experiment (D-019). New dependency: `openpyxl`. New secrets: `FRED_API_KEY`, `TIINGO_API_KEY` (`SEC_USER_AGENT` exists). **As built:** `research.yaml` has no `budgets`, `tool_timeout_s` or `report.type`; the only budget is `proposer.budget`.
 
 | Command | Does |
 |---|---|
@@ -628,7 +644,7 @@ src/tenk_agent/
 | `tenk tool NAME k=v --as-of D` | One tool by hand |
 | `tenk agent "..." --as-of D [--mode ask\|research]` | Ask / Research |
 | `tenk report TICKER --as-of D --type update\|initiation [--all] [--from S7] [--resume]` | Report |
-| `tenk report approve TICKER --as-of D --by INITIALS` | Mark reviewed |
+| `tenk research approve TICKER:vN --by INITIALS` | Mark reviewed |
 | `tenk backtest --companies ... --from DATE --to DATE [--label]` | Walk-forward |
 | `tenk eval extraction` · `tenk eval note` | Layers 1 and 5 |
 
@@ -678,7 +694,7 @@ Each phase passes its gate before the next (spec §7). Pilot BKNG + UBER (UBER i
 | Phase | Builds | Gate |
 |---|---|---|
 | **V4.0a Pre-flight** (spec §8) | `companies verify`; one company end to end on EDGAR (company facts, dates, rate limit); confirm the three §4.5 XBRL facts; release dates and numeric-guidance survey; dataset terms; D-001 successor entry | Findings written into this doc; `companies.yaml` filled |
-| **V4.0b Data** | Migration M1–M6 (§14.1), then `facts`/`ixbrl`/`quarters`, prices, macro, as-of search | V3 tests and V3 agent gold green; unit tests incl. a leak test (as-of before a filing → zero rows from it); Q4 ties on the pilot |
+| **V4.0b Data** | Migration M1–M6 (§14.1), then `facts`/`quarters`, prices, macro, as-of search | V3 tests and V3 agent gold green; unit tests incl. a leak test (as-of before a filing → zero rows from it); Q4 ties on the pilot |
 | **V4.1 Extraction** | Pilot hand labels first; extractor, registry, guidance | Layer 1 on the pilot, then all eight |
 | **V4.2 Ask** | Tool groups, `refs.py`, prompts, ask gold set | Ask gold bars |
 | **V4.3 Model** | DSL, graph, templates (`segments`, `marketplace` first), checks, workbook Model tab + parity test | Layer 2 on the pilot |
@@ -695,8 +711,8 @@ Each becomes a DECISIONS.md entry when built. Rows 1–11 fill gaps in the spec;
 
 | # | Item | Decision |
 |---|---|---|
-| 1 | As-of boundary | Strictly before D (§3); spec header says "on or before" |
-| 2 | Seasonality | q-4 rule is primary; seasonal share spreads full-year guidance and flags drift (spec lists both without combining them) |
+| 1 | As-of boundary | Strictly before D (§3), as the spec says |
+| 2 | Seasonality | Current quarter from the guidance midpoint; later quarters from a faded annual driver split by the 3-year average seasonal share (fewer years when fewer exist), as spec §3.2 says |
 | 3 | Fade | `d` per quarter (spec example "×0.90 per quarter"); per year in DCF years 4–10 |
 | 4 | Scenario multiples, shocks | Base ±15% (from the example); ±1σ driver shock, proposer within [0.5σ, 2σ] |
 | 5 | WACC | All-equity below 10% debt weight, else weighted (the example treats UBER as all-equity) |
@@ -711,9 +727,9 @@ Each becomes a DECISIONS.md entry when built. Rows 1–11 fill gaps in the spec;
 | 14 | Release preprocessing | Rules only, no structure agent unless the pilot shows bad headings |
 | 15 | PDF | Headless browser via `evaluation/render.py` (as built; LibreOffice was the plan); no new dependency |
 | 16 | Review | `draft` → `reviewed` via CLI; the human decides, the agent doesn't |
-| 17 | Clean backtest quarters | Q1–Q2 2026 (§12) |
+| 17 | Clean backtest quarters | Planned as Q1–Q2 2026 (§12); not used, since the training cutoff is unknown (§17.13) |
 
-**Settled earlier:** replace the corpus (V0–V3 results stay documented; code stays generic over the company list) · V3 stays runnable from `companies-v3.yaml` as the shared-code regression check (§14.1) · Ask/Research pass bars (§13.1) · the LLM proposes assumptions, code computes every number · Qwen3.6-27B local by default, Claude optional for comparison · both backtest designs (walk-forward main; one longer-horizon run) · both ratings, no consensus · CLI only, output under `output/` · Ask cites saved reports for estimates · Tiingo for prices, kept private (Stooq blocked; licence, §17.5, §11) · TSA and Google Trends dropped · one SQLite file (D-005) · ~80 gold questions.
+**Settled earlier:** replace the corpus (V0–V3 results stay documented; code stays generic over the company list) · V3 stays runnable from `companies-v3.yaml` as the shared-code regression check (§14.1) · Ask/Research pass bars (§13.1) · the LLM proposes assumptions, code computes every number · Qwen3.6-27B local by default, Claude optional for comparison · both backtest designs (walk-forward main; one longer-horizon run) · both ratings, no consensus · CLI only, output under `output/` · Ask cites saved reports for estimates · Tiingo for prices, kept private (Stooq blocked; licence, §17.5, §11) · TSA and Google Trends dropped · one SQLite file (D-005).
 
 **Parking lot:** earnings-day diff job (new release vs our estimate → draft section 2) · tool routing by question class · airline read-throughs (spec §4 excludes airline estimates, not their data) · async model tools for `--all`-sized Research questions.
 
@@ -734,7 +750,7 @@ Checked against live SEC and data-source endpoints; raw responses cached under `
 | 10-Q | 11 | 11 | 11 | 11 | 11 | 11 | 11 | 9 |
 | 8-K 2.02 | 15 | 15 | 15 | 15 | 15 | 15 | 15 | 12 |
 
-The 10-K count includes the FY2022 10-K filed in early 2023. The 15 releases are Q4 2022 to Q2 2026, so the 14 quarters in the window are all there; CART starts at Q3 2023 (12 = Q3 2023 to Q2 2026), as expected. Its legal name is Maplebear Inc. ABNB's older filings sit on a second submissions page, so counting needs every page, which `verify` and `fetch_company` already read.
+The 10-K count includes the FY2022 10-K filed in early 2023. The 15 releases are Q4 2022 to Q2 2026, so all 15 periods in the window are there; CART starts at Q3 2023 (12 = Q3 2023 to Q2 2026), as expected. Its legal name is Maplebear Inc. ABNB's older filings sit on a second submissions page, so counting needs every page, which `verify` and `fetch_company` already read.
 
 ### 17.2 EDGAR end to end (UBER, BKNG)
 
@@ -747,7 +763,7 @@ The 10-K count includes the FY2022 10-K filed in early 2023. The 15 releases are
 1. **No dimensional facts in company facts:** fact fields are only `accn, end, filed, form, fp, frame, fy, start, val`. The inline XBRL has them: UBER's Q2 2026 10-Q has 664 of 1,274 facts with dimensions, including `us-gaap:Revenues` by `uber:MobilityMember`/`DeliveryMember`/`FreightMember`.
 2. **10-Q cash flows are year-to-date only:** UBER and BKNG operating cash flow comes as 89–90, 180–181 and 272–273 day durations, with no three-month Q2 or Q3 fact. Income-statement items come as both three-month and year-to-date, sharing an end date (confirms the id change in §4.5).
 3. **Operating KPIs are untagged:** no gross bookings, trips or room-nights concept in either filing's XBRL. "Gross Bookings" appears 48 times in UBER's 10-Q text only.
-4. **New: company facts drops company-specific concepts.** It holds only `dei`, `us-gaap`, `srt`, `ecd`, `ffd`. Concepts such as `bkng:DeferredMerchantBookings` and `uber:PlatformParticipantDirectTransactionCosts` exist only in the inline XBRL. **Change:** `facts/ixbrl.py` reads every company-specific fact, not just dimensional ones.
+4. **New: company facts drops company-specific concepts.** It holds only `dei`, `us-gaap`, `srt`, `ecd`, `ffd`. Concepts such as `bkng:DeferredMerchantBookings` and `uber:PlatformParticipantDirectTransactionCosts` exist only in the inline XBRL. **Change:** `facts/xbrl.py` reads every company-specific fact, not just dimensional ones.
 
 ### 17.4 Numeric guidance (from the latest release; the full 14-quarter survey runs with the V4.1 extractor)
 
@@ -785,7 +801,7 @@ The 10-K count includes the FY2022 10-K filed in early 2023. The 15 releases are
 
 **Facts.** Company facts gave 44,223 facts and inline XBRL 71,571 more (dimensional and company-specific). Quarters are derived on read from facts under the store's AsOf (no stored quarters table, so nothing goes stale between as-ofs).
 - Within a fiscal year a metric uses **one concept**: mixing SBC's income-statement concept (three-month facts) with its cash-flow concept (year-to-date) broke the Q2 arithmetic by $3–6M.
-- Q4 ties and year-to-date consistency: **571 of 586 pass at as-of 2026-10-27, 0 fail**; 15 read `restated`, all TRIP. TRIP's Q2 2026 10-Q (filed 2026-08-06) recast 2025 (H1 revenue $927.0M → $828.5M), leaving Q1 and Q3 2025 and Q1 2026 on the old basis until re-reported. A check that fails in a year on two bases reads `restated` (logged as an exception, spec §1.5) instead of `fail`. At as-ofs before the recast (2026-08-06, 2025-05-01) every check passes.
+- Q4 ties and year-to-date consistency: **571 of 586 pass at as-of 2026-10-27, 0 fail**; 15 read `restated`, all TRIP. TRIP's Q2 2026 10-Q (filed 2026-08-06) recast 2025 (H1 revenue $927.0M → $828.5M), leaving Q1 and Q3 2025 and Q1 2026 on the old basis until re-reported. A check that fails in a year on two bases reads `restated` (logged as an exception, spec §1.6) instead of `fail`. At as-ofs before the recast (2026-08-06, 2025-05-01) every check passes.
 - Gaps to fill from inline XBRL or alternative concepts in V4.3: BKNG net income, ABNB diluted EPS, capex and D&A, LYFT capex, EXPE total liabilities. EPS and diluted shares have no Q4 (they don't add up); Q4 comes from the release (V4.1).
 
 **Market data.** As-of 2026-08-06 sees UBER's 2026-08-05 close (spec example). CPI January 2025 reads its first-published value before its 2026-02-13 revision and the revised value after. DGS10 is taken as published the day after its date (FRED's H.15 timing); Damodaran's monthly ERP three days after the month starts.
@@ -832,7 +848,7 @@ Fixes between runs: equal current/prior values pass the column check; releases t
 
 ### 17.11 V4.2 Ask gold runs (2026-10-28)
 
-Data: `tenk build --stage kpis` loads the extraction of all 117 releases (`v4.2-releases-all`, gate still 98.5% / 100%) as 1,002 KPI and 227 guidance rows. Tool set `ask` (§7.1): `search_filings` (periods, forms), `calculator`, `financials`, `company_kpis`, `guidance`, `filings`, `market_data`; prompt `prompts/ask.md`; `kpi:`, `guide:`, `q:`, `px:`, `macro:` ids resolve and verify (§10.1). Not built: `crosscheck`, `research_report` (questions on them must decline).
+Data: `tenk build --stage kpis` loads the extraction of all 117 releases (`v4.2-releases-all`, gate still 98.5% / 100%) as 1,002 KPI and 227 guidance rows. Tool set `ask` (§7.1): `search_filings` (periods, forms), `calculator`, `financials`, `company_kpis`, `guidance`, `filings`, `market_data`; prompt `prompts/ask.md`; `kpi:`, `guide:`, `q:`, `px:`, `macro:` ids resolve and verify (§10.1). Not built at this phase: `crosscheck` (added in V4.7, §17.16) and `research_report` (still not built; questions on saved reports must decline).
 
 Gold: `evaluation/gold/ask-gold.jsonl`, 79 questions (`experiments/v4/draft_ask_gold.py`). 54 numeric ones take values from the extraction labels or XBRL quarters (calculations computed from them); 25 written by hand: 12 filing text, 10 declines (our estimates, forecasts, advice, cross-check data, two as-of leaks, a future quarter, a company outside the corpus), 3 false premises. Every evidence quote is checked in its filing at the question's as-of. **Not yet reviewed by a person** (`verified_by: null`). Runner `experiments/v4/ask_run.py` (Qwen3.6-27B, judge gpt-oss-20b): *correct and verified* = correct, and every expected number stated by a verified or calculated claim.
 
