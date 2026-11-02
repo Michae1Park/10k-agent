@@ -517,7 +517,7 @@ UBER:
 | Metric and segment must be in the registry | The model can't invent KPIs *(new)* |
 | One repair turn showing the chunk text, then an exception row (data gap) | Fixed most misses (build log §3.10); never a guessed value (spec §2.3) |
 | GAAP diluted EPS only | Non-GAAP EPS was taken for GAAP (build log §3.10) |
-| Where a KPI is also an XBRL fact, the filing wins and the gap is logged | Spec §1.6 |
+| Where a KPI is also an XBRL fact, the filing should win and the gap be logged | Spec §1.6; **not built** (§13.1) |
 | A recast release gives prior periods a new `definition_version`; readers take the newest, the log keeps the old | Spec §1.6: restate history and note it |
 | Guidance keeps its basis; `forecast.anchor()` converts growth to a level via the year-ago actual | Releases guide in dollars, growth or margins (build log §3.4) |
 
@@ -1090,6 +1090,9 @@ One debate per scenario driver (`gb_g_mobility.g0`, …) returns bull, bear, hyp
 | ~384 extraction labels (12 fields × 4 quarters × 8 companies) | spec §5 layer 1 | 337 labels (§6.6) |
 | Section 10 gets a repair turn on a failed consistency check | spec §2.3 req. 6 | section 10 is written by code from the exception log, so only the takeaways (section 1) are repaired (§8.3) |
 | Assumptions tab: basis, confidence, variables affected, last updated | spec §2.3 | name and value only (§10.2) |
+| Release vs filing gap logged as an exception ("filing wins", spec example X-01) | spec §1.6, §2.3 | no comparison between release KPIs and XBRL facts; integrity checks cover Q4 ties and restatements only |
+| Secondary multiples (EV/(EBITDA − SBC), P/E, FCF yield) shown | spec §3.3 | computed in `valuation.json` `multiples_2027e`; not in note section 6 or the Valuation tab |
+| Section 7 columns: model driver and evidence; unquantified risks from new risk-factor text | spec §2.3 | risk, 2027E EBITDA change and PT impact for the scenario drivers only |
 
 Working list with effort estimates: [tmp_inconsistencies.md](tmp_inconsistencies.md).
 

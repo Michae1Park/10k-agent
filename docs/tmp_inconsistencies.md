@@ -1,6 +1,6 @@
 # Remaining inconsistencies (temporary)
 
-Spec vs. design doc vs. build, checked 2026-11-01. Mirrored in design doc §13.1. Delete this file once resolved.
+Spec vs. design doc vs. build, checked 2026-11-01; rechecked 2026-11-02 (#21–#24). Mirrored in design doc §13.1. Delete this file once resolved.
 
 ## Decisions taken
 
@@ -37,6 +37,10 @@ Spec vs. design doc vs. build, checked 2026-11-01. Mirrored in design doc §13.1
 | 18 | Parity mismatch should stop the run | Design §10.3 (D-041) | Recorded in `report.json`; the run continues | XS (~15 min) |
 | 19 | Revision type and source of change | Spec §2.3 table 4.1: source of change + type (recurring/mixed/timing), every changed line | `type` holds the source; three lines only (`pipeline.py:336`) | S (~1–2 h); pairs with #5 |
 | 20 | `approve` on an unknown version | Should error | Silently updates nothing (`store.py:522`) | XS (~10 min) |
+| 21 | Release vs filing gap | Spec §1.6 (filing wins, log the gap), example X-01; design §6.3 claimed it was built (corrected) | No release-KPI vs XBRL comparison anywhere | M (~2–3 h) |
+| 22 | Secondary multiples shown | Spec §3.3: EV/(EBITDA − SBC), P/E, FCF yield also shown | Computed in `valuation.json` (`valuation.py:263`); not in note §6 or the Valuation tab | XS (~30 min) |
+| 23 | Section 7 risk table | Spec §2.3: model driver and evidence columns; unquantified risks (regulation, AV) from risk-factor text | Risk, EBITDA change, PT impact for scenario drivers only (`note/sections.py:273`) | S (~1 h); text part pairs with the bounded-research item |
+| 24 | "No prior" wording | Spec, design §8.3, workbook: "initial draft (no prior run)" | Note says "initial draft (no prior version)" (`note/sections.py:99`, `:206`; example note) | XS (~5 min) + regenerate the example note |
 
 ## Deliberate differences (design §13.3)
 
