@@ -1,4 +1,4 @@
-# Operating KPIs per company (V4 design doc §6, spec §1.4): what the extractor looks for in
+# Operating KPIs per company (V4 design doc §7, spec §1.4): what the extractor looks for in
 # each earnings release. unit: the unit values are stored in. labels: how the release names it.
 # segments: segment keys ("total" = consolidated). definition_version: bumped when a company
 # redefines the KPI (a recast); stored with every value.

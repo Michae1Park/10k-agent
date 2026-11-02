@@ -1,5 +1,5 @@
-# Condensed statements (V4 design doc §7.3), the same for all eight companies; each template
-# adds its operating build and may replace a line by name. Forecast rules (V4.4, design §7.3):
+# Condensed statements (V4 design doc §8.3), the same for all eight companies; each template
+# adds its operating build and may replace a line by name. Forecast rules (V4.4, design §8.3):
 # revenue and adj. EBITDA come from the template's build; SBC, D&A and capex hold their
 # same-quarter-last-year share of revenue (the trailing four quarters' where that is missing); GAAP operating income = adj. EBITDA − SBC − D&A
 # (other adjustments 0); tax = @tax_rate (trailing, bounded) on positive operating income;

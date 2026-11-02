@@ -1,4 +1,4 @@
-"""The reference grammar (V4 design doc §10.1)."""
+"""The reference grammar (V4 design doc §10.2)."""
 
 import pytest
 

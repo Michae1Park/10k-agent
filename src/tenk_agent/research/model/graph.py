@@ -1,4 +1,4 @@
-"""The model graph (V4 design doc §7.3): lines × periods from a template, evaluated in Python.
+"""The model graph (V4 design doc §8.3): lines × periods from a template, evaluated in Python.
 
 A template (templates/*.yaml) lists lines; each is
   input       a reported series from the data pack (blue, with its source id)
@@ -30,7 +30,7 @@ shows every formula):
                           one-off change (UBER's UK move to agent) is not compounded into a
                           second year (band: research.yaml ratio_bounds)
 
-`templates/statements.yaml` (the condensed statements, §7.3) is read first, then the company's
+`templates/statements.yaml` (the condensed statements, §8.3) is read first, then the company's
 template (its operating build), whose lines may replace statement lines by name.
 """
 

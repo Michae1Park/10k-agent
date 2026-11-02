@@ -1,4 +1,4 @@
-# Operating build for travel marketplaces (V4 design doc §7.3): gross bookings = volume (room
+# Operating build for travel marketplaces (V4 design doc §8.3): gross bookings = volume (room
 # nights; Airbnb: nights and experiences) × gross bookings per unit; revenue = gross bookings ×
 # take rate. A company binds its own KPI names under `companies`.
 
@@ -25,8 +25,8 @@ forecast:
   ratios: {take_rate: take_rate, cost_to_gb: margin}
 
 # Guidance → the line it constrains and the assumption solved so the first forecast quarter
-# hits the guided midpoint (in order: bookings, then revenue, then EBITDA; design §7.3)
-# Scenario drivers (design §7.3): bear/bull move each by ∓/±σ of its history
+# hits the guided midpoint (in order: bookings, then revenue, then EBITDA; design §8.3)
+# Scenario drivers (design §8.3): bear/bull move each by ∓/±σ of its history
 scenarios: [volume_g.g0, gross_bookings_per_unit_g.g0, take_rate.shift0]
 
 anchors:

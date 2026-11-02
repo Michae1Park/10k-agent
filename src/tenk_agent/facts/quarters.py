@@ -1,4 +1,4 @@
-"""Quarters from XBRL facts (V4 design doc §3.3): one value per metric and quarter, as of a date.
+"""Quarters from XBRL facts (V4 design doc §4.3): one value per metric and quarter, as of a date.
 
 10-Q cash flows are reported year to date, so quarters are built by duration length:
 

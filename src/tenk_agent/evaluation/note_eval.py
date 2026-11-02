@@ -1,4 +1,4 @@
-"""Layer 5, note quality (V4 design doc §11.3): ten sections, number trace, seeded errors, rubric.
+"""Layer 5, note quality (V4 design doc §12.3): ten sections, number trace, seeded errors, rubric.
 
   taskset -c 16-31 uv run python -m tenk_agent.evaluation.note_eval output/reports/UBER/2026-08-06 …
   … --judge openai:openai/gpt-oss-20b --judge-url http://localhost:8002/v1

@@ -140,5 +140,5 @@ Evaluation never runs the pipeline, including the claim check. It takes the pipe
 | Why it is this way, known issues | [DECISIONS.md](DECISIONS.md) |
 | How well it works | [experiments/](../experiments/README.md) (V0–V3), [V4_RESULTS.md](V4_RESULTS.md) |
 | The V4 model equations and parameters | [FINANCIAL_MODELING.md](FINANCIAL_MODELING.md) |
-| The V4 research agent | [spec](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md), [design](V4_TECHNICAL_DESIGN_DOC.md), [build log](V4_BUILD_LOG.md) |
+| The V4 research agent | [spec](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md), [design](V4_TECHNICAL_DESIGN_DOC.md) and its [per-block companions](stages/) (`V4_*.md`), [build log](V4_BUILD_LOG.md) |
 | To contribute | [CONTRIBUTING.md](../CONTRIBUTING.md) |

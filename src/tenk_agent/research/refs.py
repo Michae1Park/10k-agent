@@ -1,4 +1,4 @@
-"""One reference grammar (V4 design doc §9.2): parse, format and resolve any citable id.
+"""One reference grammar (V4 design doc §10.2): parse, format and resolve any citable id.
 
   chunk        UBER-2026Q2-ER-EX99-005 · AAPL-FY2025-8-107       text, from the store
   accession    0001543151-26-000032                              filing metadata (EDGAR cache)

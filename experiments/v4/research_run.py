@@ -4,7 +4,7 @@
   taskset -c 16-31 uv run python experiments/v4/research_run.py --score
 
 Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and TENK_COMPANIES=companies.yaml.
-Bars, frozen 2026-10-27 (design doc §11.3):
+Bars, frozen 2026-10-27 (design doc §12.3):
   pass               ≥ 90%: a claim cites a model: id the question expects and verifies, the
                      answer lists its assumptions, and no numeric claim is unverified
   from_model         100%: every forward-looking numeric claim (2026Q3 on, 2026E, 2027E) cites

@@ -1,4 +1,4 @@
-"""Walk-forward backtest (V4 design doc §11.3), layer 3: forecast next quarter, score it later.
+"""Walk-forward backtest (V4 design doc §12.3), layer 3: forecast next quarter, score it later.
 
   taskset -c 16-31 uv run python -m tenk_agent.evaluation.backtest --label defaults [TICKERS]
 

@@ -1,4 +1,4 @@
-"""The as-of rule (V4 design doc §3): AsOf itself, the Store's filter, and the leak test."""
+"""The as-of rule (V4 design doc §2.5): AsOf itself, the Store's filter, and the leak test."""
 
 import re
 import sqlite3

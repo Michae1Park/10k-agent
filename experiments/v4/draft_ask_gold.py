@@ -8,7 +8,7 @@ calculated answer (growth, margin, beat or miss) is computed here from those lab
 decline questions are written below with verbatim evidence; every evidence quote is checked to
 appear in a chunk of the named filing visible at the question's as-of, or the script stops.
 
-Format: the V3 gold fields, with `period`, `form` and `as_of` (design doc §11.3). Categories are
+Format: the V3 gold fields, with `period`, `form` and `as_of` (design doc §12.3). Categories are
 spec §2.1's; `kind` is figure, calculation, comparison, text or decline.
 """
 

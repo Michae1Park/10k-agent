@@ -1,4 +1,4 @@
-"""KPI and guidance extraction from earnings releases (V4 design doc §6), layer 1.
+"""KPI and guidance extraction from earnings releases (V4 design doc §7), layer 1.
 
 One LLM call per release: the release's chunks (tables first, within a character budget) and
 the company's registry (kpis.yaml) in; KPI and guidance rows, each with a verbatim quote, out.

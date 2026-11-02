@@ -1,4 +1,4 @@
-"""S5 forecast (V4 design doc §7.3): history model → forecast quarters to research.yaml's horizon.
+"""S5 forecast (V4 design doc §8.3): history model → forecast quarters to research.yaml's horizon.
 
 Per driver, never per total: a growth driver x = x[-4] × (1 + g) in the first forecast quarter
 (the one guidance anchors), then last fiscal year's total × (1 + g) × the quarter's seasonal
@@ -11,7 +11,7 @@ bounds. Then each guidance anchor in the template solves one assumption so the f
 quarter hits the guided midpoint (bookings, then revenue, then EBITDA). An anchor the bounds
 keep from reaching its target is logged, never forced.
 
-Scenarios (§7.3): bear and bull move each of the template's `scenarios` drivers by ∓/±
+Scenarios (§8.3): bear and bull move each of the template's `scenarios` drivers by ∓/±
 shock_sigma × σ, σ the standard deviation of that driver's line over the history (a growth
 rate's y/y values, a ratio's y/y changes), from the anchored base; weights from research.yaml.
 
@@ -113,7 +113,7 @@ def forecast(store: Store, ticker: str, settings: dict | None = None,
                 "item": f"seasonal share of {line} from {len(years)} complete fiscal year(s) "
                         f"({', '.join(years) or 'none: even shares'}), not {SHARE_YEARS}"})
     result.exceptions.append({"severity": "info", "item": "working capital held at 0 in the "
-                              "forecast; interest and other non-operating items 0 (§7.3)"})
+                              "forecast; interest and other non-operating items 0 (§8.3)"})
     return result
 
 

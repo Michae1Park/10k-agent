@@ -1,4 +1,4 @@
-"""V4 market and macro data (design doc §3.3), each value with the date it became public.
+"""V4 market and macro data (design doc §4.3), each value with the date it became public.
 
   prices  Tiingo daily end-of-day per ticker and SPY (beta): close, split-adjusted close,
           volume. Public the evening of the trading day, so as-of D sees D-1's close.
@@ -29,7 +29,7 @@ ERP_URL = "https://pages.stern.nyu.edu/~adamodar/pc/implprem/ERPbymonth.xlsx"
 REVISED = ("CPIAUCSL", "UMCSENT", "RSFSDP")
 UNREVISED = ("DGS10", "DTWEXBGS")
 BENCHMARK = "SPY"
-START = WINDOW_START  # same window as the filings (spec §1.2); beta uses it too (spec §3.3)
+START = WINDOW_START  # same window as the filings (spec §1.2); beta uses it too (spec §4.3)
 ERP_COLUMN = "ERP (T12 m with sustainable payout)"
 ERP_DELAY = timedelta(days=3)
 

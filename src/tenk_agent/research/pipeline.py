@@ -1,4 +1,4 @@
-"""Report mode (V4 design doc §8): a resumable step graph, S1–S11, per company and as-of.
+"""Report mode (V4 design doc §9): a resumable step graph, S1–S11, per company and as-of.
 
   taskset -c 16-31 uv run python -m tenk_agent.research.pipeline UBER 2026-08-06 [--resume]
   taskset -c 16-31 uv run python -m tenk_agent.research.pipeline UBER 2026-08-06 --no-llm
