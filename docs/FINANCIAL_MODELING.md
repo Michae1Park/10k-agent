@@ -79,7 +79,7 @@ Forecast quarters, then annual years to year 10, growing at $g_y = g_T + 0.9\,(g
 
 $$K_e = r_f + \beta \cdot ERP \qquad WACC = \begin{cases} K_e & \frac{D}{D+E} < 10\% \\[2pt] \frac{E}{D+E}K_e + \frac{D}{D+E}K_d(1-t) & \text{otherwise}\end{cases}$$
 
-$\beta$ = 60 monthly returns vs SPY; $K_d = \text{interest}/\text{debt}$. If $EV_{DCF} \le 0$ (TRIP), the multiple alone is used.
+$\beta$ = monthly returns vs SPY since 2023 (fewer than 24: $\beta = 1$); $K_d = \text{interest}/\text{debt}$. If $EV_{DCF} \le 0$ (TRIP), the multiple alone is used.
 
 **Price target and rating**
 

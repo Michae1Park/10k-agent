@@ -12,9 +12,10 @@
   DCF             unlevered FCF = adj. EBITDA − SBC − tax on positive EBIT − capex (ΔNWC 0): the
                   model's forecast quarters, then years grown at the model's last annual revenue
                   growth fading by `annual_fade` a year, to `dcf_years`; Gordon terminal value;
-                  mid-period discounting from the as-of. Ke = DGS10 + β × ERP (β: 60 monthly
-                  returns vs SPY; one ERP, Damodaran's latest); WACC = Ke below a 10% debt
-                  share, else weighted with Kd = interest / debt after tax. Grid: WACC ± 1 pt ×
+                  mid-period discounting from the as-of. Ke = DGS10 + β × ERP (β: monthly
+                  returns vs SPY since the data window's start, 2023; one ERP, Damodaran's
+                  latest); WACC = Ke below a 10% debt share, else weighted with
+                  Kd = interest / debt after tax. Grid: WACC ± 1 pt ×
                   terminal growth 2.5–3.5%; the terminal value's share of EV
   price target    0.6 × multiple PT + 0.4 × DCF PT per scenario, 25/50/25 weighted; a DCF whose
                   EV is not positive (unlevered FCF negative over the horizon: TRIP's continuing
@@ -37,7 +38,7 @@ from pathlib import Path
 import yaml
 
 from tenk_agent.asof import AsOf
-from tenk_agent.corpus import companies_path
+from tenk_agent.corpus import WINDOW_START, companies_path
 from tenk_agent.research import datapack
 from tenk_agent.research.forecast import Forecast, forecast, knobs, scenarios
 from tenk_agent.research.model.graph import Model
@@ -117,8 +118,8 @@ def market(store: Store, model: Model) -> Market:
                    "cash": cash_id or "", "short_term_investments": sti_id or ""}, exceptions)
 
 
-def beta(store: Store, ticker: str, months: int) -> tuple[float | None, int]:
-    """OLS beta of monthly total returns (adjusted closes) against SPY."""
+def beta(store: Store, ticker: str, since: str = WINDOW_START) -> tuple[float | None, int]:
+    """OLS beta of monthly total returns (adjusted closes) against SPY, from `since` (spec §3.3)."""
     def monthly(name: str) -> dict[str, float]:
         out = {}
         for day, value in store.series(name):
@@ -126,7 +127,7 @@ def beta(store: Store, ticker: str, months: int) -> tuple[float | None, int]:
         return out
 
     stock, index = monthly(f"px:{ticker}:adj_close"), monthly("px:SPY:adj_close")
-    keys = sorted(set(stock) & set(index))[-(months + 1):]
+    keys = sorted(k for k in set(stock) & set(index) if k >= since[:7])
     r_s = [stock[b] / stock[a] - 1 for a, b in zip(keys, keys[1:], strict=False)]
     r_m = [index[b] / index[a] - 1 for a, b in zip(keys, keys[1:], strict=False)]
     if len(r_s) < 24:
@@ -137,7 +138,7 @@ def beta(store: Store, ticker: str, months: int) -> tuple[float | None, int]:
 def cost_of_capital(store: Store, ticker: str, m: Market, tax_rate: float, v: dict) -> dict:
     rf_day, rf = store.series("macro:DGS10")[-1]
     erp_day, erp = store.series("erp:damodaran")[-1]
-    b, months = beta(store, ticker, v["beta_months"])
+    b, months = beta(store, ticker)
     b = b if b is not None else 1.0
     ke = rf / 100 + b * erp
     weight = m.debt / (m.debt + m.market_cap) if m.debt else 0.0
@@ -223,6 +224,9 @@ def value(store: Store, f: Forecast, settings: dict, peer_cache: dict | None = N
                                 peer_markets if others else {model.ticker: m}, year)
     exceptions = list(m.exceptions) + (["no other company in the sector: own multiple"]
                                        if not others else [])
+    if capital["beta_months"] < 24:
+        exceptions.append(f"only {capital['beta_months']} monthly returns since 2023 (< 24): "
+                          "beta taken as 1.0")
     models = scenarios(f, settings)
     out_scenarios = {}
     for name, sm in models.items():

@@ -54,6 +54,5 @@ valuation:                   # research/valuation.py (§7.3)
   wacc_grid_step: 0.01       # ± 1 pt
   dcf_years: 10              # explicit years after the as-of
   annual_fade: 0.9           # growth fades by this each year after the model's horizon
-  beta_months: 60            # monthly returns vs SPY
   debt_weight_threshold: 0.10  # WACC = Ke below this debt share, else weighted with Kd
   rating: {buy: 0.15, sell: -0.10}

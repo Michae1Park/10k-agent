@@ -19,6 +19,8 @@ from pathlib import Path
 
 import httpx
 
+from tenk_agent.corpus import WINDOW_START
+
 log = logging.getLogger(__name__)
 
 TIINGO = "https://api.tiingo.com/tiingo/daily/{ticker}/prices"
@@ -27,7 +29,7 @@ ERP_URL = "https://pages.stern.nyu.edu/~adamodar/pc/implprem/ERPbymonth.xlsx"
 REVISED = ("CPIAUCSL", "UMCSENT", "RSFSDP")
 UNREVISED = ("DGS10", "DTWEXBGS")
 BENCHMARK = "SPY"
-START = "2018-01-01"  # five years of monthly returns before the first 2023 as-of (beta)
+START = WINDOW_START  # same window as the filings (spec §1.2); beta uses it too (spec §3.3)
 ERP_COLUMN = "ERP (T12 m with sustainable payout)"
 ERP_DELAY = timedelta(days=3)
 
