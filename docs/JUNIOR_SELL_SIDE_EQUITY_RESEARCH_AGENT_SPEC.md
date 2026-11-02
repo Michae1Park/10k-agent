@@ -1,6 +1,6 @@
 # Junior Sell-Side Equity Research Agent: Spec
 
-> **Status:** §1 matches the build; §2 onward is the original request. Not built: `initiation` reports. See [D-038](DECISIONS.md#d-038), the [design doc](V4_TECHNICAL_DESIGN_DOC.md) and the [results](V4_RESULTS.md).
+> **Status:** this spec is the reference; the build and the design doc follow it. Gaps are listed in the design doc §13. See [D-038](DECISIONS.md#d-038), the [design doc](V4_TECHNICAL_DESIGN_DOC.md) and the [results](V4_RESULTS.md).
 
 A portfolio project: one agent covers eight US travel and mobility companies using only free, public data. It answers questions, runs the analyst loop on demand (model, forecast, value) and writes a draft sell-side note. A human reviews every rating and price target.
 
@@ -10,7 +10,7 @@ Three modes (details in §2):
 | --- | --- | --- |
 | **Ask** | A question | A short cited answer from filed data |
 | **Research** | A question | An analytical answer from the model, forecast or valuation |
-| **Report** | A ticker | A draft note, a model-change workbook and an evidence log |
+| **Report** | A ticker, as-of and type | A draft note, a model-change workbook and an evidence log |
 
 **Every run takes an as-of date.** The agent sees only data published strictly before it, which is what makes backtesting possible (§6).
 
@@ -55,10 +55,10 @@ Window: **filings made from 2023-01-01 through the day before the as-of date**.
 | **DEF 14A** (EDGAR) | Annual proxy statement, text only (DEFC14A when contested) | First filed each year, 2023 to as-of; keyed to the fiscal year it reports on (FY2022 to FY2025; CART from FY2023) | Executive pay, equity plans and share requests: dilution context |
 | **Form 4** (EDGAR) | Insider transactions | 2023 to as-of | Dilution context |
 | **Daily prices** (Tiingo; internal use only, never published) | Daily close, adjusted close and volume per ticker, plus SPY | 2023 to as-of | Market cap, EV, beta, backtest prices |
-| **FRED / ALFRED** | 10-year Treasury (DGS10), CPI (CPIAUCSL), consumer sentiment (UMCSENT), USD index (DTWEXBGS), restaurant sales (RSFSDP); revised series use each value's first-published date | 2023 to as-of | Discount rate, demand and FX inputs |
+| **FRED / ALFRED** | 10-year Treasury (DGS10), CPI (CPIAUCSL), consumer sentiment (UMCSENT), USD index (DTWEXBGS), restaurant sales (RSFSDP); revised series use each value's first-published date | 2023 to as-of | Discount rate and demand inputs |
 | **Damodaran** | Implied equity risk premium | Latest before as-of | DCF |
-| **BTS** | Monthly US airline passengers (publish date estimated as month end + 90 days) | 2023 to as-of | Travel cross-check |
-| **NYC TLC** | Monthly high-volume for-hire trips per license (HV0003 Uber, HV0005 Lyft; ~2 months lag, NYC only) | 2023 to as-of | Uber vs Lyft trip cross-check |
+| **BTS** | Monthly US airline passengers (publish date estimated as month end + 90 days) | 2023 to as-of | Travel forecast input and cross-check |
+| **NYC TLC** | Monthly high-volume for-hire trips per license (HV0003 Uber, HV0005 Lyft; ~2 months lag, NYC only) | 2023 to as-of | Uber and Lyft forecast input; Uber vs Lyft trip cross-check |
 
 ### 1.3 Non-numerical data
 
@@ -76,7 +76,7 @@ Window: **filings made from 2023-01-01 through the day before the as-of date**.
 | --- | --- |
 | Consensus estimates (paid) | Benchmark against management guidance and baselines; optionally hand-record a dated figure |
 | Call transcripts | Use releases, shareholder letters and 10-Q text |
-| Paid alternative data (hotel occupancy, app usage, card spend) | BTS and NYC TLC as directional checks, with coverage limits stated |
+| Paid alternative data (hotel occupancy, app usage, card spend) | BTS and NYC TLC as forecast inputs and directional checks, with coverage limits stated |
 | **Stooq** prices | Dropped: a bot check blocks scripts; Tiingo replaces it |
 | **TSA**: daily US air passengers (2023 to as-of) | Dropped: the site blocks automated access (HTTP 403); BTS covers air traffic |
 | **Google Trends**: search interest (weak, noisy; 2023 to as-of) | Dropped: no official API, and unofficial clients break its terms |
@@ -170,15 +170,15 @@ When a comparison needs a KPI that some of the companies do not report (§1.5), 
 
 ### 2.3 Report mode: example output
 
-A report run hands the senior analyst **three artifacts**. The split lets the senior read the investment case without the audit trail, and still drill into any number.
+A report run hands the senior analyst **three artifacts in two files** (the log is a tab of the workbook). The split lets the senior read the investment case without the audit trail, and still drill into any number.
 
 | Artifact | Reader's question | Contents |
 | --- | --- | --- |
-| **Research report** (the note) | What happened, what do we change, what do you decide? | 10 sections. Sections 1–5 are the core automated deliverable. Sections 6–10 add valuation, risk, catalysts and review controls |
+| **Research report** (the note) | What happened, what do we change, what do you decide? | 10 sections: results, drivers, estimates and financials; valuation, risks, catalysts and review controls |
 | **Model-change workbook** (`.xlsx`) | Exactly what moved in the model? | Old vs. new estimates, drivers, formula outputs, scenarios, valuation, integrity checks |
 | **Evidence and exception log** | Where does this come from, and what is not settled? | One row per material figure or claim with its source, plus every discrepancy, data gap and failed check. Delivered as the `Log` tab of the workbook |
 
-*Illustrative. Every figure below is invented to show the format; real numbers come from the model. The invented figures reconcile with each other, except that the FY2026E revenue ($51.0B) is below what Q2's run-rate implies.* The example workbook, [`EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx`](EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx), reproduces the figures in sections 2, 4, 6 and 7 of the note with live formulas.
+*Illustrative. Every figure below is invented to show the format; real numbers come from the model. The invented figures reconcile with each other, except that the annual figures (FY2025A and FY2026E revenue and adj. EBITDA) do not match the quarterly run-rates that the Q2 and y/y figures imply.* The example workbook, [`EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx`](EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx), reproduces the figures in sections 2, 4, 6 and 7 of the note with live formulas.
 
 **The research report**
 
@@ -190,16 +190,17 @@ No rating or PT is approved until the responsible analyst confirms it.
 1. EXECUTIVE SUMMARY
    Draft rating: Buy    Price: $80.00    12-month PT: $95.00    Return: +18.8%
    Market cap: $165B    EV: $168B        52-week: $60–$90       Next earnings: 2026-11-05 (est.)
-   Rating / PT change: initial draft (no prior run)
+   Rating / PT change: none vs. the prior version (v1)
 
    Takeaways
    - Beat: gross bookings, revenue, adjusted EBITDA and trips all exceeded our estimates;
      bookings beat the top of the guidance range.
-   - Outlook: Q3 guidance implies bookings +6.5% and adj. EBITDA +7% on Q2. Our Q3 sits
-     slightly above the midpoint because we assume the take rate holds at 26.8%.
-   - Estimates: 2027E adj. EBITDA +3.2%, 2028E +3.6%, mostly Mobility growth and Delivery margin.
+   - Outlook: Q3 guidance implies bookings +6.5% and adj. EBITDA +8% on Q2. Our Q3 sits
+     slightly above the midpoint because we assume Mobility bookings growth holds near Q2's +17%
+     (an analyst override of the guidance anchor).
+   - Estimates: 2027E adj. EBITDA +3.2%, 2028E +3.6%, mostly Mobility growth and a lower cost share of bookings.
    - Valuation: 17.3x 2027E EV/EBITDA vs. a peer median of 19x; our 19x target needs justification.
-   Thesis (hypothesis): Mobility growth plus Delivery margin gains compound faster than the
+   Thesis (hypothesis): Mobility growth plus a falling cost share of bookings compound faster than the
    price implies. We have not shown the market is wrong; no consensus is available.
    Decisions needed: items 1–6 in Section 10.
 
@@ -207,14 +208,15 @@ No rating or PT is approved until the responsible analyst confirms it.
    2.1 Headline           Actual  Our est.  Var.   Guide mid  Var. vs mid  Y/Y    Consensus
    Gross bookings ($B)    48.1    47.5      +1.3%  47.0       +2.3%        +19%   n/a
    Revenue ($B)           12.9    12.6      +2.4%  n/a        n/a          +17%   n/a
-   Adj. EBITDA ($B)       2.1     2.0       +5.0%  2.0        +5.0%        +31%   n/a
+   Adj. EBITDA ($B)       2.08    2.0       +4.0%  2.0        +4.0%        +30%   n/a
    Trips (B)              3.4     3.3       +3.0%  n/a        n/a          +16%   n/a
    Consensus: no free source (see log X-03). Variances use unrounded model values.
 
    2.2 Guidance           Q3 guidance       Midpoint   Our forecast   Var. vs mid   Flag
    Gross bookings ($B)    50.5–52.0         51.25      51.8           +1.1%         ok (<2%)
    Adj. EBITDA ($B)       2.2–2.3           2.25       2.28           +1.3%         ok (<5%)
-   Prior-quarter guide was bookings 46.0–48.0 and EBITDA 1.9–2.1; both landed at or above the top.
+   Prior-quarter guide was bookings 46.0–48.0 and EBITDA 1.9–2.1; bookings landed above the top,
+   EBITDA near it.
 
    2.3 Quality of the quarter
    Conclusion: a high-quality beat. Growth is volume-led, cash backs the EBITDA, and nothing
@@ -225,8 +227,8 @@ No rating or PT is approved until the responsible analyst confirms it.
    Take rate              26.8%     27.2%     -40 bps
    Bookings mix ($B)      Mobility 24.5 (+17%) · Delivery 21.8 (+21%) · Freight 1.8 (+20%)
    Adj. EBITDA ($B)       Mobility 1.50 · Delivery 0.80 (3.7% of bookings, +40 bps y/y) ·
-                          Freight 0.02 · Corporate -0.22
-   Cash: operating cash flow 2.4, capex 0.1, FCF 2.3 (110% of adj. EBITDA); SBC 0.45.
+                          Freight 0.02 · Corporate -0.24
+   Cash: operating cash flow 2.4, capex 0.1, FCF 2.3 (111% of adj. EBITDA); SBC 0.45.
    - Growth: about 16 pts from trips, 3 pts from price. Take rate fell 40 bps, so revenue
      grew slower than bookings.
    - Margin: gains come from Delivery segment margin (recurring operating leverage per the
@@ -236,10 +238,10 @@ No rating or PT is approved until the responsible analyst confirms it.
 
 3. DRIVERS AND KEY DEBATES
    3.1 Driver              Latest evidence                          Model variable
-   Mobility growth         Bookings +17% y/y, trips +16%            Mobility trips, bookings per trip
-   Delivery profitability  3.7% of bookings, +40 bps y/y            Delivery EBITDA margin
+   Mobility growth         Bookings +17% y/y, trips +16%            Mobility bookings growth and fade
+   Cost efficiency         Delivery EBITDA 3.7% of bookings, +40 bps Cost share of gross bookings
    Take rate               26.8%, -40 bps y/y                       Take rate by segment
-   Operating leverage      Revenue +17% vs. EBITDA +31%             Opex growth
+   Operating leverage      Revenue +17% vs. EBITDA +30%             Cost share of gross bookings
    Autonomous vehicles     Partnerships named in 10-Q; terms not    Scenario only (see 3.3)
                            disclosed
 
@@ -268,8 +270,8 @@ No rating or PT is approved until the responsible analyst confirms it.
    2028E adj. EBITDA ($B)     11.0   11.4   +3.6%    Analyst assumption     Recurring     Low
 
    4.2 Why they changed
-   2026E: the Q2 beat, then a higher Delivery margin in Q3 and Q4.
-   2027E: faster Mobility growth, Delivery margin and opex leverage.
+   2026E: the Q2 beat, then a lower cost share of bookings in Q3 and Q4.
+   2027E: faster Mobility growth and a lower cost share of bookings.
    Old vs. new estimates for every line: model-change workbook, tab "Summary".
 
    4.3 Integrity checks (layer 2)
@@ -292,7 +294,7 @@ No rating or PT is approved until the responsible analyst confirms it.
    Segment bookings and EBITDA, GAAP-to-adjusted bridge and quarterly detail: workbook.
 
 6. VALUATION
-   Method: 60% EV/EBITDA ($88) + 40% DCF ($106) = $95.
+   Method, per scenario: 60% EV/EBITDA + 40% DCF. Base: 60% x $88 + 40% x $103 = $94.
    Comps (2027E EV/EBITDA): LYFT 13x · CART 19x · DASH 20x · median 19x · UBER now 17.3x.
    Only three peers, so the range is thin (X-04).
    Target multiple 19x = peer median, and a premium to UBER's current 17.3x. Justification:
@@ -302,15 +304,16 @@ No rating or PT is approved until the responsible analyst confirms it.
    share of EV shown. Grid: price per share vs. WACC x terminal growth.
    Scenario   PT     Key assumptions                                   Weight
    Bear       $70    Take rate -75 bps vs. base; Mobility growth 11% (default fade); 16x   25%
-   Base       $95    Table 4.1 estimates; 19x                           50%
-   Bull       $120   Mobility growth 20%; Delivery margin +100 bps; 22x     25%
-   Probability-weighted: $95 (0.25 x 70 + 0.5 x 95 + 0.25 x 120). Return +18.8% → Buy (≥ +15%).
+   Base       $94    Table 4.1 estimates; 19x                           50%
+   Bull       $122   Mobility growth 20%; cost share -25 bps; 22x       25%
+   Price target = probability-weighted: $95 (0.25 x 70 + 0.5 x 94 + 0.25 x 122).
+   Return +18.8% → Buy (≥ +15%).
 
 7. RISKS AND SENSITIVITY
    Risk                    Model driver             2027E adj. EBITDA   PT impact    Evidence
-   Take-rate compression   Revenue / bookings       -50 bps → -$0.7B    about -$7    Current: -40 bps y/y
-   Slower Mobility growth  Mobility trips, price    -1 pt → -$0.06B     about -$0.6  Hypothetical
-   Delivery margin         Delivery EBITDA margin   -50 bps → -$0.5B    about -$5    Hypothetical
+   Take-rate compression   Take rate by segment     -50 bps → -$1.1B    about -$10   Current: -40 bps y/y
+   Slower Mobility growth  Mobility bookings growth -1 pt → -$0.06B     about -$0.6  Hypothetical
+   Cost share              Costs / gross bookings   +25 bps → -$0.5B    about -$5    Hypothetical
    Regulation              Pricing, cost            Not quantified      n/a          New 10-Q risk factor
    AV competition          Long-term take rate      Scenario only       n/a          Qualitative only
    Probabilities beyond the 25/50/25 scenario weights are not assigned.
@@ -351,7 +354,7 @@ Example file: [`EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx`](EXAMPLE_UBER_Q
 | Assumptions | Every assumption with value, basis (reported, derived or analyst-imposed), confidence, variables affected, last updated |
 | Model | Three statements by quarter, formulas only; the prior version kept as a separate tab |
 | Scenarios | Bear, base, bull, weights, probability-weighted value, one-at-a-time sensitivities |
-| Valuation | Peers, EV-to-equity bridge, blended price target, rating |
+| Valuation | Peers, EV-to-equity bridge, probability-weighted price target, rating |
 | DCF | 10-year DCF, terminal value share of EV, WACC x terminal-growth grid |
 | Checks | Layer 2 results, one row per check; any FAIL blocks the note |
 | Log | Evidence and exception rows (below) |
@@ -381,7 +384,6 @@ Note rules:
 - Estimates read "2027E", actuals "2025A"; label periods once as "Q2 2026 (Apr–Jun)".
 - `update` is 3–5 pages after each quarter; `initiation` adds a business overview, industry and competition, and a model appendix, with the same ten sections.
 - An `update` takes its "old" estimates from the latest earlier report for the same ticker (the latest version with an earlier as-of date). Section 4 and the workbook Summary compare against it. If none exists, the run is flagged "initial draft (no prior run)" and Section 4 shows no old values.
-- Build sections 1–5 first; sections 6–10 follow once the model and extraction tests pass.
 
 **How a report is filled**
 
@@ -389,10 +391,10 @@ Report mode is a fixed pipeline, not an open agent loop. It uses the same tools 
 
 | Section | Built by | Inputs |
 | --- | --- | --- |
-| 2.1, 2.2, 4.1–4.3, 5, 9 | Code | Model, guidance, revisions, checks |
+| 2.1, 2.2, 4.1, 4.3, 5, 9 | Code | Model, guidance, revisions, checks |
 | 2.3 Quality of the quarter | Bounded research | KPI, cash-flow and reconciliation facts; release and 10-Q text |
 | 3 Drivers and debates | Bounded research, one per scenario driver | Driver trend, management commentary, risk factors |
-| 4 Why estimates changed | Bounded research | Old vs. new estimates, guidance changes, events |
+| 4.2 Why estimates changed | Bounded research | Old vs. new estimates, guidance changes, events |
 | 6 Valuation | Code, plus a justification of the target multiple | Comps, DCF, peer facts |
 | 7 Risks | Code sensitivities, plus bounded research | Scenario runs, new risk-factor text |
 | 8 Catalysts | Bounded research | Events, filings text only (no calendar data) |
@@ -402,7 +404,7 @@ Report mode is a fixed pipeline, not an open agent loop. It uses the same tools 
 Requirements:
 
 1. **Fixed fact set per section.** Each section lists the model cells, KPIs and filing passages it may use before it runs. The LLM never decides what data exists.
-2. **Bounded research for judgment sections.** Sections 2.3, 3, 4, 6, 7 and 8 each get one run with the Research toolset and a call budget. A run does not plan, split into sub-questions or start other runs. Its output is a short conclusion plus the ids it cited.
+2. **Bounded research for judgment sections.** Sections 2.3, 3, 4.2, 6, 7 and 8 each get one run with the Research toolset and a call budget. A run does not plan, split into sub-questions or start other runs. Its output is a short conclusion plus the ids it cited.
 3. **Number trace.** Every figure in LLM text must trace to the model or an evidence-log row. Research output becomes facts first. Untraced sentences get one repair turn, then are dropped and logged.
 4. **Sections 1 and 10 are written last.** They summarize the finished sections. Section 1 carries the rating, price target and takeaways. Section 10 lists the decisions needed and the open issues. Neither adds a new number or claim.
 5. **Consistency check before export.** Code runs these checks; an LLM only explains a failure:
@@ -423,11 +425,13 @@ Not required: a planner, multi-step decomposition of sections, or an agent that 
 
 ```text
 Data pack  →  Model  →  Assumptions  →  Forecast  →  Valuation + rating  →  Note
-(code+LLM)   (code)     (LLM proposes,   (code)       (code)                 (LLM reasons and writes,
-                         code bounds)                                          number-traced)
+(code+LLM)   (code)     (code defaults; (code)       (code)                 (LLM reasons and writes,
+                         optional LLM                                          number-traced)
+                         proposer, code
+                         bounds)
 ```
 
-Every number comes from deterministic code, and the rating is a threshold rule on the price-target return (§3.3). The LLM extracts KPIs, proposes assumptions with a rationale and confidence, reasons over filings text and tool results (drivers, risks, debates such as autonomous vehicles and take rate), and writes the note. Its conclusions reach the model only as bounded scenario inputs that code runs.
+Every number comes from deterministic code, and the rating is a threshold rule on the price-target return (§3.3). The LLM extracts KPIs, optionally proposes assumptions with a rationale and confidence (a switch, off by default; §7), reasons over filings text and tool results (drivers, risks, debates such as autonomous vehicles and take rate), and writes the note. Its conclusions reach the model only as bounded scenario inputs that code runs.
 
 ### 3.1 Model (per company, quarterly, three statements)
 
@@ -443,9 +447,9 @@ Assets         = Liabilities + equity       (must balance, or the model fails)
 
 - **Timing (simplification):** every company is modeled as Uber or Instacart is: an order executes at once and the take rate is applied in the same quarter. Travel customers actually prepay, so revenue lags bookings (deferred merchant bookings). That lag is not modeled; it sits inside the take rate. Known limitation: the balance sheet has no deferred-bookings line, forecast working capital change is 0, and cash flow misses the prepayment float.
 - **BKNG, EXPE, ABNB:** room nights (ABNB: nights and experiences) x gross bookings per night.
-- **Uber:** gross bookings grow by segment (Mobility, Delivery, Freight), each x its own take rate; adjusted EBITDA is a margin on total gross bookings.
+- **Uber:** gross bookings grow by segment (Mobility, Delivery, Freight), each x its own take rate; adjusted EBITDA = revenue - costs, with costs forecast as a fixed share of total gross bookings, so a take-rate change moves EBITDA.
 - **DoorDash, Lyft, Instacart:** orders or rides x value per unit, x one take rate. Instacart's transaction and advertising revenue are reported but not modeled separately.
-- **TripAdvisor:** no volume KPI, so revenue grows on one faded rate and adjusted EBITDA is a margin on revenue.
+- **TripAdvisor:** no volume KPI reported in enough quarters to model (§1.5), so revenue grows on one faded rate and adjusted EBITDA is a margin on revenue.
 - Take rate is always computed from reported revenue and reported gross bookings.
 - Forecast columns are formulas only; assumptions sit in one input block; quarters sum to years; SBC is shown separately; the balance sheet is condensed (cash, total assets, liabilities, equity).
 
@@ -453,13 +457,13 @@ Assets         = Liabilities + equity       (must balance, or the model fails)
 
 | Rule | Detail |
 | --- | --- |
-| Per driver, not per total | `Driver(q) = Driver(q-4) x (1 + g)`, so seasonality is automatic |
+| Per driver, not per total | First forecast quarter: `Driver(q) = Driver(q-4) x (1 + g)`. Later quarters: the driver's last full year grown at the faded rate, x the quarter's 3-year average seasonal share |
 | Growth fade | `g(t+1) = g(t) x d`, default `d = 0.90` |
-| Anchor | Current quarter starts at the guidance midpoint; later quarters use the 3-year average seasonal share |
+| Anchor | The first forecast quarter defaults to the guidance midpoint; an analyst override is allowed and is checked by the variance flag |
 | Scenarios | Bear / base / bull (25 / 50 / 25%) by varying the 2–3 key drivers |
-| Variance flag | Versus guidance midpoint: over 2% on revenue or 5% on adjusted EBITDA needs a written reason |
-| Outside inputs | BTS, NYC TLC, FRED |
-| Horizon | Quarterly through Q4 2027E; annual 2026E to 2028E |
+| Variance flag | Versus guidance midpoint: over 2% on revenue or the main KPI (gross bookings), or 5% on adjusted EBITDA, needs a written reason |
+| Outside inputs | BTS, NYC TLC, FRED: forecast inputs, and directional checks in the note |
+| Horizon | Quarterly through Q4 2028E; annual 2026E to 2028E |
 
 | Symbol | Meaning |
 | --- | --- |
@@ -474,10 +478,10 @@ Assets         = Liabilities + equity       (must balance, or the model fails)
 | Item | Default |
 | --- | --- |
 | Multiple method | EV / adjusted EBITDA on 2027E (also shown less SBC); P/E and FCF yield secondary. Computed by the agent from filings and prices |
-| DCF | 10 years (3 modeled, 7 faded), SBC treated as a cost, terminal growth 3.0%, beta from 5-year regression, one ERP for all eight |
-| Price target | `0.6 x multiple PT + 0.4 x DCF PT`; bear, base, bull and probability-weighted values also shown |
-| Rating (absolute) | Buy: 12-month return of +15% or more. Sell: -10% or less. Hold: between |
-| Rating (relative) | Rank the eight by expected return: top third Buy, bottom third Sell |
+| DCF | 10 years (3 modeled, 7 faded), SBC treated as a cost, terminal growth 3.0%, beta from a regression of monthly returns since 2023 (the data window), one ERP for all eight |
+| Price target | `0.6 x multiple PT + 0.4 x DCF PT` per scenario; the price target is the probability-weighted value (25/50/25), which sets the return and rating; bear, base and bull also shown |
+| Rating (absolute; the note's rating) | Buy: 12-month return of +15% or more. Sell: -10% or less. Hold: between |
+| Rating (relative; a coverage ranking only) | Rank the eight by expected return: top 3 Buy, middle 2 Hold, bottom 3 Sell |
 
 Every DCF includes a price-per-share grid against WACC and terminal growth.
 
@@ -505,32 +509,20 @@ Ask and Research modes also get a gold question set (about 80 questions across t
 
 ## 6. Backtest
 
-- **Point-in-time rule:** at each as-of date, use only filings EDGAR had accepted before it.
+- **Point-in-time rule:** at each as-of date, use only filings with a filing date before it; the as-of is the day after the release's EDGAR acceptance.
 - **Walk-forward:** for each quarter from the Q4 2024 releases onward, set the as-of date just after the earnings release, run the full pipeline, forecast next quarter, move forward one quarter. 6 forecasts per company, Instacart included: 48 per metric.
 - **Metrics:** MAPE, bias (positive means forecasts too high), and guidance call (does revenue land above or below the guidance midpoint).
 - **Baselines:** seasonal naive (same quarter last year x latest YoY growth), guidance midpoint, and a plain LLM with no tools.
 - **Held-out set:** report quarters released after the LLM's training cutoff separately.
 - **Reporting:** medians and ranges by company, plus a paired Wilcoxon test.
 
-**Ablations** (same backtest, two versions): LLM vs rule-based extraction; fixed vs fitted decay; guidance midpoint vs high end; with vs without free cross-checks; LLM proposer vs defaults (a switch, `proposer.method`).
+**Ablations** (same backtest, two versions): LLM vs rule-based extraction; fixed vs fitted decay; guidance midpoint vs high end; with vs without outside inputs (BTS, NYC TLC, FRED); LLM proposer vs defaults (a switch, `proposer.method`).
 
 **What to publish:** a results table for the five layers, backtest chart by company, one full example note. Also state the limits: small sample, no paid data, NYC-only trips, possible leakage.
 
 ---
 
-## 7. Build order
-
-Each step passes its tests before the next.
-
-1. Extraction from filings and releases (layer 1)
-2. Model and integrity tests (layer 2)
-3. Forecasting and backtest (layer 3)
-4. Valuation, rating, note (layers 4, 5)
-5. Results table and write-up
-
-Start with a pilot of one company per sector (BKNG and UBER) before scaling to eight.
-
-## 8. Pre-build checks and decisions (all resolved)
+## 7. Pre-build checks and decisions (all resolved)
 
 Findings are in the [build log](V4_BUILD_LOG.md) §3.
 
