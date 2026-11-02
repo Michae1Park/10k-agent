@@ -50,7 +50,7 @@ Linux or macOS, Python 3.12 + [uv](https://docs.astral.sh/uv/), a ~40 GB GPU for
 ```bash
 git clone <this repo> && cd 10k-agent
 uv sync --extra local --extra chunking
-export SEC_USER_AGENT="Your Name you@example.com"
+uv run tenk setup                                    # your own SEC, Tiingo, FRED credentials
 uv run tenk fetch                                    # 24 10-Ks from EDGAR (cached)
 scripts/serve_vllm.sh qwen3.6-27b-fp8                # the default model, other terminal
 taskset -c 16-31 uv run tenk build --stage chunk     # V0 on every filing (~35–60 min each)

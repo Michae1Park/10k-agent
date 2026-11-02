@@ -20,8 +20,10 @@ All commands run from the repo root.
 git clone <this repo> && cd 10k-agent
 uv sync --extra local --extra chunking     # Python deps + local embedder / reranker + the chunkers
 source .venv/bin/activate
-export SEC_USER_AGENT="Your Name you@example.com"    # SEC requires a contact
+uv run tenk setup        # type in your own SEC User-Agent, Tiingo and FRED keys → credentials.yaml (gitignored)
 ```
+
+Credentials are yours alone: `tenk setup` prompts for each and writes `credentials.yaml` (mode 600, gitignored; template [`credentials.example.yaml`](../credentials.example.yaml)). Environment variables `SEC_USER_AGENT`, `TIINGO_API_KEY` and `FRED_API_KEY` take precedence. A command that needs a missing one stops with an error naming it. Downloaded data (`data/`) and run outputs (`output/`) stay local and are never committed; Tiingo prices are for internal use only.
 
 Every setting is in [`config.yaml`](../config.yaml), one section per stage; `TENK_CONFIG=<file>` or `--config` uses another.
 

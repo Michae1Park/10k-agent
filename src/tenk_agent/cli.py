@@ -1,5 +1,6 @@
 """tenk: the V0–V2 pipeline from the command line. Settings: config.yaml (--config, TENK_CONFIG).
 
+tenk setup                     type in your own SEC, Tiingo and FRED credentials
 tenk fetch                     download the corpus filings from EDGAR (V4: 10-K, 10-Q, releases)
 tenk build                     V0 preprocess + chunk every filing, then V1's database + vectors
 tenk search "question"         V1: sub-questions and the top k chunks
@@ -17,12 +18,12 @@ tenk research approve T:vN --by X  V4: mark a report's model version reviewed
 import argparse
 import json
 import logging
-import os
 import sys
 from datetime import date
 from pathlib import Path
 
 from tenk_agent import config as config_file
+from tenk_agent import credentials
 from tenk_agent.corpus import COMPANIES, DATA_DIR, FISCAL_YEARS, WINDOW_START, company_by_ticker
 from tenk_agent.store import ChunkRecord, Store
 
@@ -38,13 +39,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", type=Path, help="default: $TENK_CONFIG or config.yaml")
     commands = parser.add_subparsers(dest="command", required=True)
 
+    commands.add_parser("setup", help="type in your own credentials (credentials.yaml)")
     fetch = commands.add_parser("fetch", help="download the corpus 10-Ks from EDGAR")
     fetch.add_argument("--tickers", nargs="*", help="subset of corpus tickers (default: all)")
     fetch.add_argument("--refresh", action="store_true", help="re-download cached files")
     fetch.add_argument("--forms", nargs="*", choices=("10-K", "10-Q", "ER", "DEF14A"),
                        help="V4 corpus: forms to fetch (default: all four)")
     fetch.add_argument("--market", action="store_true",
-                       help="V4 corpus: prices (TIINGO_API_KEY), macro (FRED_API_KEY) and ERP only")
+                       help="V4 corpus: prices (Tiingo), macro (FRED) and ERP only")
 
     build = commands.add_parser("build", help="V0 chunks of every filing → V1 database")
     stages = ("chunk", "load", "append", "embed", "pages", "facts", "market", "kpis")  # build.STAGES
@@ -123,6 +125,8 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     for noisy in ("httpx", "httpx2", "sentence_transformers", "anthropic", "openai"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
+    if args.command == "setup":
+        return credentials.setup()
     handlers = {
         "fetch": _fetch,
         "build": _build,
@@ -136,7 +140,11 @@ def main(argv: list[str] | None = None) -> int:
         "companies": _companies,
         "research": _research,
     }
-    return handlers[args.command](args, settings)
+    try:
+        return handlers[args.command](args, settings)
+    except credentials.MissingCredential as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
 
 
 # --- fetch, build ----------------------------------------------------------------------------
@@ -145,18 +153,15 @@ def main(argv: list[str] | None = None) -> int:
 def _fetch(args: argparse.Namespace, settings: dict) -> int:
     from tenk_agent.acquisition import fetch
 
-    user_agent = os.environ.get("SEC_USER_AGENT")
-    if not user_agent:
-        print("Set SEC_USER_AGENT, e.g. 'Name you@example.com'", file=sys.stderr)
-        return 2
+    user_agent = credentials.get("sec_user_agent")
     companies = [company_by_ticker(t) for t in args.tickers] if args.tickers else list(COMPANIES)
     if FISCAL_YEARS is None and args.market:  # V4: prices, macro, ERP
         from tenk_agent.acquisition import market
 
         raw = Path(DATA_DIR) / "raw"
         problems = market.fetch_prices([c.ticker for c in companies], raw,
-                                       os.environ["TIINGO_API_KEY"], args.refresh)
-        problems += market.fetch_macro(raw, os.environ["FRED_API_KEY"], args.refresh)
+                                       credentials.get("tiingo_api_key"), args.refresh)
+        problems += market.fetch_macro(raw, credentials.get("fred_api_key"), args.refresh)
         problems += market.fetch_erp(raw, args.refresh)
         for problem in problems:
             print(problem, file=sys.stderr)
@@ -214,10 +219,7 @@ def _research(args: argparse.Namespace, settings: dict) -> int:
 def _companies(args: argparse.Namespace, settings: dict) -> int:
     from tenk_agent.acquisition.companies import verify
 
-    user_agent = os.environ.get("SEC_USER_AGENT")
-    if not user_agent:
-        print("Set SEC_USER_AGENT, e.g. 'Name you@example.com'", file=sys.stderr)
-        return 2
+    user_agent = credentials.get("sec_user_agent")
     problems = verify(args.file, args.data_dir, user_agent, args.since, args.refresh)
     for problem in problems:
         print(problem, file=sys.stderr)

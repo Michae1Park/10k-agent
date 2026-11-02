@@ -961,9 +961,8 @@ def toolbox_from_settings(
     asof: AsOf | None = None,
 ) -> Toolbox:
     """The tools as the config's `agent:` section sets them. live: SEC requests not in the
-    cache go to EDGAR (needs SEC_USER_AGENT); otherwise offline. search: load V1's models.
-    asof: what the tools see (None: today, as in V3)."""
-    import os
+    cache go to EDGAR (needs your SEC User-Agent: `tenk setup`); otherwise offline. search:
+    load V1's models. asof: what the tools see (None: today, as in V3)."""
     from pathlib import Path
 
     from tenk_agent.acquisition.edgar import EdgarClient
@@ -972,9 +971,8 @@ def toolbox_from_settings(
     retriever = SubQuestionRetriever.from_settings(store, settings["retrieval"]) if search else None
     client = None
     if live:
-        user_agent = os.environ.get("SEC_USER_AGENT")
-        if not user_agent:
-            raise SecError("live SEC requests need SEC_USER_AGENT, e.g. 'Name you@example.com'")
-        client = EdgarClient(user_agent)
+        from tenk_agent import credentials
+
+        client = EdgarClient(credentials.get("sec_user_agent"))
     sec = SecData(Path(settings["data_dir"]) / "raw" / "edgar", client)
     return Toolbox(store, retriever, sec, tool_set)

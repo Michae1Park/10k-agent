@@ -12,14 +12,12 @@ quarter's net open-market and award shares, for the note's dilution context.
 
 import argparse
 import json
-import os
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 from pathlib import Path
 
 from tenk_agent.acquisition.edgar import EdgarClient
 from tenk_agent.asof import AsOf
-from tenk_agent.config import load_dotenv
 from tenk_agent.store import Store
 
 ARCHIVE = "https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/{document}"
@@ -105,8 +103,9 @@ def main() -> None:
     ap.add_argument("--data", type=Path, default=Path("data/v4"))
     ap.add_argument("--since", default="2023-01-01")
     args = ap.parse_args()
-    load_dotenv()
-    client = EdgarClient(os.environ["SEC_USER_AGENT"])
+    from tenk_agent import credentials
+
+    client = EdgarClient(credentials.get("sec_user_agent"))
     raw = args.data / "raw"
     for ticker in args.tickers:
         print(f"{ticker}: {fetch(raw, ticker, args.since, client)} Form 4s fetched")
