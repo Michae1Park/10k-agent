@@ -915,7 +915,7 @@ Data kinds resolve to `{value, unit, ticker}` in the row's own unit.
 | Assumptions | name and value (the cells the Model tab's formulas link to); basis, confidence, variables affected and last updated are not built (§13.1) |
 | Summary | rating, price, price date, PT, return, market cap, EV, net debt, shares, WACC, parity |
 | Scenarios | `scenario line`, year, value |
-| Valuation | peer multiples, median, cost of capital, scenario PTs, DCF grid (the bridge and rating are on Summary, §13.3) |
+| Valuation | peer multiples, median, cost of capital, scenario PTs, DCF grid (the bridge and rating are on Summary, §13.1) |
 | DCF | base-case UFCF with live discount, terminal value, EV, terminal share and per-share formulas; the WACC × growth grid |
 | Revisions | line, old, new, type, confidence |
 | Model (prior) | the parent's values as saved, or "initial draft (no prior run)" |
@@ -1076,7 +1076,13 @@ One debate per scenario driver (`gb_g_mobility.g0`, …) returns bull, bear, hyp
 |---|---|---|
 | Bounded research runs (Research tools, call budget) for note sections 2.3, 4.2, 6, 7, 8 | spec §2.3 req. 2 | 2.3 and 6 are single LLM calls over facts, without tools; 4.2, 7 and 8 have no LLM text. Only S9 debates are tool-using runs |
 | `initiation` report type | spec §2, §2.3 | `update` only |
-| Variance flag: over 2% (revenue) or 5% (adj. EBITDA) from the guide midpoint needs a written reason | spec §3.2 | `forecast.variance_flag` unused; no Flag column in 2.2 |
+| Variance flag: over 2% (revenue or gross bookings) or 5% (adj. EBITDA) from the guide midpoint, or an analyst override of the anchor, needs a written reason | spec §3.2 | `forecast.variance_flag` unused; no Flag column in 2.2 |
+| Relative rating: top 3 Buy, middle 2 Hold, bottom 3 Sell | spec §3.3 | `rank()` uses thirds: 2 / 4 / 2 for eight |
+| Outside data (BTS, NYC TLC, FRED) shown in the note as directional checks | spec §3.2 | used only as forecast inputs (§7.3); not in the note |
+| No-parent flag reads "initial draft (no prior run)" | spec §2.3 note rules | "(no prior version)" in sections 1 and 4 |
+| Bridge and rating on the Valuation tab | spec §2.3 | on the Summary tab (§10.2) |
+| Model (prior) tab with live formulas | spec §2.3 | the parent's values (§10.2) |
+| Later quarters by the seasonal share only | spec §3.2 | a full-year-only guide anchors the FY column (ABNB; §7.3) |
 | Consensus column ("n/a") and a "no consensus" exception | spec §2.3 | absent |
 | Evidence log fields: period, filing date, location, retrieval date, type, workbook cell | spec §2.3 | Log tab: id, kind, label, value, source |
 | Exception fields: treatment, status | spec §2.3 | id, severity (`info`, `warning`, `error`, as the spec now uses), item |
@@ -1117,16 +1123,6 @@ Working list with effort estimates: [tmp_inconsistencies.md](tmp_inconsistencies
 | **Long runs on a crash-prone CPU and a shared GPU** | `--resume`, `taskset -c 16-31` (I-001), CPU embedder (I-002) |
 | **Determinism with an LLM** | Valuation is code; LLM steps at temperature 0; `--resume` replays them |
 | **Data licensing** | Tiingo internal use only; Stooq, TSA and Google Trends dropped |
-
-### 13.3 Deliberate differences from the spec
-
-Built differently on purpose; each keeps the spec's intent.
-
-| Spec | Design | Why |
-|---|---|---|
-| §2.3: Valuation tab holds the EV-to-equity bridge and rating | they are on the Summary tab (§10.2) | one headline tab for the reviewer; Valuation keeps the peers and DCF detail |
-| §2.3: the prior model kept as a separate tab | Model (prior) holds the parent's values, not formulas (§10.2) | the parent version's own workbook keeps its live formulas |
-| §3.2: later quarters by the seasonal share | a full-year-only guide anchors the FY column (§7.3) | ABNB guides only a full-year margin |
 
 ---
 

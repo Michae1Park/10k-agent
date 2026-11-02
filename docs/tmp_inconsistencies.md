@@ -1,6 +1,6 @@
 # TODO: make the build and design doc match the spec (temporary)
 
-The spec is fixed; the build and design doc change to match it. Delete this file once done. Each finished item also comes out of design doc §13.1 / §13.3.
+The spec is fixed; the build and design doc change to match it. Delete this file once done. Each finished item also comes out of design doc §13.1.
 
 ## Quick (≤ 30 min)
 
@@ -24,14 +24,14 @@ The spec is fixed; the build and design doc change to match it. Delete this file
 - [ ] **#12** S9 debates use the Research toolset (spec §2.3 req. 2; `research/subagents.py`); rerun to check
 - [ ] **#23** Section 7: model driver and evidence columns; unquantified risks from risk-factor text (`note/sections.py:273`)
 - [ ] **#17** Section 10 gets one repair turn on a failed consistency check, like Section 1 (spec §2.3 req. 6)
-- [ ] **#27** Model (prior) tab keeps the prior version with live formulas, not values (spec §2.3 Model tab; design §13.3)
+- [ ] **#27** Model (prior) tab keeps the prior version with live formulas, not values (spec §2.3 Model tab; design §13.1)
 - [ ] **#33** Section 3.1 driver table: driver, latest evidence, model variable (spec §2.3 example; `note/sections.py`)
-- [ ] **#29** Later quarters from the seasonal share only (spec §3.2); drop the FY-column anchor for full-year-only guidance (ABNB; design §13.3)
+- [ ] **#29** Later quarters from the seasonal share only (spec §3.2); drop the FY-column anchor for full-year-only guidance (ABNB; design §13.1)
 
 ## Medium (2–4 h)
 
 - [ ] **#30** Update `EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx` to the revised spec example: adj. EBITDA 2.08 (+4.0%, +30% y/y), Corporate −0.24, DCF $103, base $94, bull $122 (cost share −25 bps), sensitivities take rate −$1.1B / about −$10 and cost share +25 bps
-- [ ] **#31** Design doc and build to the revised spec: probability-weighted PT drives the rating; relative rating 3/2/3; variance flag also on gross bookings; anchor override triggers the flag; "Rating / PT change" line vs the prior version; outside data shown as directional checks in the note
+- [ ] **#31** Relative rating 3/2/3 (`valuation.py` `rank`); variance flag also on gross bookings and on an anchor override (with #1); outside data shown as directional checks in the note
 
 - [ ] **#3** Evidence log fields: period, filing date, page or table, retrieval date, type, workbook cell (`export/report.py:65`)
 - [ ] **#21** Compare release KPIs with XBRL facts; filing wins, log the gap (spec §1.6, X-01)
