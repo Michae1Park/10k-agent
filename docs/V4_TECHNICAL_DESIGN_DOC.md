@@ -1,6 +1,6 @@
 # V4 technical design: a junior sell-side research agent
 
-**What this is:** the contract of the V4 build, as built: components, interfaces, rules, failure handling and constraints. **Spec** (what to build): [JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md](JUNIOR_SELL_SIDE_EQUITY_RESEARCH_AGENT_SPEC.md) ("spec §n"). **How each block works** (algorithms, implementation notes, tests): the companion docs in [stages/](stages/) (`V4_*.md`), listed per section. **Why** each choice: [DECISIONS.md](DECISIONS.md) (D-nnn). **History** (phase gates, findings, gold runs): [V4_BUILD_LOG.md](V4_BUILD_LOG.md) ("build log §n"). **Numbers:** [V4_RESULTS.md](V4_RESULTS.md). **Model equations:** [FINANCIAL_MODELING.md](FINANCIAL_MODELING.md).
+**What this is:** the contract of the V4 build, as built: components, interfaces, rules, failure handling and constraints. **Spec** (what to build): [V4_SPEC.md](V4_SPEC.md) ("spec §n"). **How each block works** (algorithms, implementation notes, tests): the companion docs in [stages/](stages/) (`V4_*.md`), listed per section. **Why** each choice: [DECISIONS.md](DECISIONS.md) (D-nnn). **History** (phase gates, findings, gold runs): [V4_BUILD_LOG.md](V4_BUILD_LOG.md) ("build log §n"). **Numbers:** [V4_RESULTS.md](V4_RESULTS.md). **Model equations:** [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md).
 **Updated:** 2026-11-02. A bare "§n" is a section of this doc. What is not built is listed once, in §13.1.
 
 **How to read it.** §2 is the map: every component and every interface between them. §3 is the tool catalog, the surface the agent sees. §4–§12 cover one block each, in the same five parts: **components → interfaces → rules (each with its reason) → failure handling → constraints**. Each interface is defined once, in the section that owns it; §2.3 only points there. A companion doc explains how the block meets its rules and never restates them; if the two disagree, this doc wins. One run followed across the interfaces with real payloads: [V4_WORKED_EXAMPLE.md](stages/V4_WORKED_EXAMPLE.md).
@@ -536,7 +536,7 @@ A row failing validation after repair → an exception row (data gap), never sto
 
 ## 8. Model engine and valuation
 
-How it works: [stages/V4_MODEL.md](stages/V4_MODEL.md). Equations: [FINANCIAL_MODELING.md](FINANCIAL_MODELING.md).
+How it works: [stages/V4_MODEL.md](stages/V4_MODEL.md). Equations: [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md).
 
 ### 8.1 Components
 
@@ -1043,6 +1043,7 @@ Working list with effort estimates: [tmp_inconsistencies.md](tmp_inconsistencies
 | **Release time vs filing date** | `filing_date` (conservative); backtest D = the day after acceptance |
 | **Long runs on a crash-prone CPU and a shared GPU** | `--resume`, `taskset -c 16-31` (I-001), CPU embedder (I-002) |
 | **Determinism with an LLM** | Valuation is code; LLM steps at temperature 0; `--resume` replays them |
+| **Filing text recall is unmeasured** (free-form `search_filings` queries in events and debates) | A missed acquisition or regulatory event is silent; no prompt names Item 1A or MD&A ([V4_AGENT.md](stages/V4_AGENT.md#filing-text-what-reaches-the-note)) |
 | **Data licensing** | Tiingo internal use only; Stooq, TSA and Google Trends dropped |
 
 ---

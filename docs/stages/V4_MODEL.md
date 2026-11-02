@@ -1,6 +1,6 @@
 # V4 · Model engine and valuation: how it works
 
-Companion to [design doc §8](../V4_TECHNICAL_DESIGN_DOC.md#8-model-engine-and-valuation), which holds the contract (templates, schemas, forecast rules, valuation, layer-2 checks). Equations and parameters: [FINANCIAL_MODELING.md](../FINANCIAL_MODELING.md). This doc does not restate the rules; where the two disagree, the design doc wins.
+Companion to [design doc §8](../V4_TECHNICAL_DESIGN_DOC.md#8-model-engine-and-valuation), which holds the contract (templates, schemas, forecast rules, valuation, layer-2 checks). Equations and parameters: [V4_FINANCIAL_MODELING.md](V4_FINANCIAL_MODELING.md). This doc does not restate the rules; where the two disagree, the design doc wins.
 
 ## Steps S3 to S7
 

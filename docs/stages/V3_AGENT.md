@@ -1,6 +1,6 @@
 # V3 · Agent: the model picks the tools, then answers with cited claims
 
-**Builds on** V1 (its search is now a tool) and V2 (the same answer format and claim check). **Code:** [`agent/`](../../src/tenk_agent/agent/), prompt [prompts/agent.md](../../src/tenk_agent/prompts/agent.md). **Design and results:** [experiments/V3_AGENT.md](../../experiments/V3_AGENT.md): 88.5% (10-K tools) and 87.2% (+ SEC data) of 78 questions right, against V2's 66.7% on the same model; 99.3% and 100% of numeric claims grounded. **Why these tools:** [D-036](../DECISIONS.md#d-036). Overview: [ARCHITECTURE.md](../ARCHITECTURE.md).
+**Builds on** V1 (its search is now a tool) and V2 (the same answer format and claim check). **Code:** [`agent/`](../../src/tenk_agent/agent/), prompt [prompts/agent.md](../../src/tenk_agent/prompts/agent.md). **Design and results:** [experiments/V3_AGENT.md](../../experiments/V3_AGENT.md): 88.5% (10-K tools) and 87.2% (+ SEC data) of 78 questions right, against V2's 66.7% on the same model; 99.3% and 100% of numeric claims grounded. **Why these tools:** [D-036](../DECISIONS.md#d-036). Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
 
 ## Commands
 

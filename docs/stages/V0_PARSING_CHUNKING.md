@@ -1,6 +1,6 @@
 # V0 · Parsing and chunking: 10-K HTML → structured document → chunks
 
-**Builds on** nothing: start here. **Code:** [`preprocess/`](../../src/tenk_agent/preprocess/), [`chunking/`](../../src/tenk_agent/chunking/), run over the corpus by [`build.py`](../../src/tenk_agent/build.py). **Design and results:** [experiments/V0_PARSING_CHUNKING.md](../../experiments/V0_PARSING_CHUNKING.md) (it names the rules D1–D8, V1–V7, A1–A5, C1–C10 and T1–T3 used below). **Run it:** [Getting started](../GETTING_STARTED.md#3-build-the-corpus). Overview: [ARCHITECTURE.md](../ARCHITECTURE.md).
+**Builds on** nothing: start here. **Code:** [`preprocess/`](../../src/tenk_agent/preprocess/), [`chunking/`](../../src/tenk_agent/chunking/), run over the corpus by [`build.py`](../../src/tenk_agent/build.py). **Design and results:** [experiments/V0_PARSING_CHUNKING.md](../../experiments/V0_PARSING_CHUNKING.md) (it names the rules D1–D8, V1–V7, A1–A5, C1–C10 and T1–T3 used below). **Run it:** [Getting started](../GETTING_STARTED.md#3-build-the-corpus). Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
 
 ## Data
 

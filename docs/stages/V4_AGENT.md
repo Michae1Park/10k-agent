@@ -33,6 +33,29 @@ question ─► model ──tool calls──► tools ─► model ─► … �
 
 `research/subagents.py` (S2 events, S9 debates) and `research/propose.py` (S4) run a bounded `Agent` with the `ask` tools, their own prompt and a `research.yaml` budget. Each returns JSON; an item is kept only if one of its evidence ids resolves at D. A debate's resolved evidence values are kept as `evidence_values` and become note facts.
 
+## Filing text: what reaches the note
+
+No prompt or code names a filing section (Item 1A, MD&A). Prompts give a *topic*; the LLM writes its own `search_filings` queries, guided only by the coverage table each prompt carries (latest filing per form, per company).
+
+| Step | Reads | Told what to look for | Who picks passages | Lands in |
+|---|---|---|---|---|
+| KPI and guidance extraction | earnings release | labels per company in `facts/kpis.yaml` | code (tables first, within a size budget) | numbers only |
+| S2 events | 10-K, 10-Q, release | event types listed in `events.md` | LLM, via `search_filings` | section 8 |
+| S9 debates | 10-K, 10-Q, release | "management's explanations and risk factors" (`debates.md`) | LLM, via `search_filings` | section 3 |
+| S4 proposer | 10-K, 10-Q, release | reasons to look for, in `propose.md` | LLM, via `search_filings` | assumptions (off by default) |
+| S10 note prose | nothing | its slot's facts | n/a | all prose |
+
+**Events.** Up to 8 per run, each with evidence ids. Section 8 prints only `catalyst`, `regulation` and `m&a`; `results`, `guidance`, `capital`, `definition_change`, `business_model` and `other` stay in `events.json`.
+
+**Risk factors** reach the note only through debate bull and bear lines; section 7 is code-computed shocks. Nothing measures recall (design §13.2).
+
+**Open questions.**
+
+| Question | Current view |
+|---|---|
+| Print the other event types? | Open. `results` and `guidance` overlap section 2 and `capital` section 9; `definition_change` and `business_model` look most worth showing, since they affect model inputs |
+| Query Item 1A and MD&A explicitly? | Hold off until a miss rate is measured |
+
 ## Tests
 
 `test_agent_loop.py`: tool results feed the next turn; calls past the budget error and force an answer; a non-JSON reply gets one retry; a repeated call errors and counts; a long conversation answers with tools off. `test_agent_tools.py` (21): calculator formula and errors; offline SEC data never fetches; a value matching a cited fact verifies; another company's fact doesn't. `test_ask.py`: guidance targets become period keys; data ids resolve at the store's as-of; claims verify against data rows; the prompt names the as-of and coverage. `test_forecast.py::proposals_are_bounded_anchors_kept_and_evidence_required`. Gold: Ask (79) and Research (72) ([V4_EVALUATION.md](V4_EVALUATION.md)).
