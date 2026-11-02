@@ -15,6 +15,9 @@ Scenarios (§7.3): bear and bull move each of the template's `scenarios` drivers
 shock_sigma × σ, σ the standard deviation of that driver's line over the history (a growth
 rate's y/y values, a ratio's y/y changes), from the anchored base; weights from research.yaml.
 
+Outside inputs (spec §3.2): research/outside.py moves mapped starting growth rates toward a
+nowcast from TLC, BTS or FRED series before the proposer and the anchors (`forecast.outside`).
+
   taskset -c 16-31 uv run python -m tenk_agent.research.forecast UBER BKNG 2026-09-01
 """
 
@@ -28,6 +31,7 @@ from pathlib import Path
 import yaml
 
 from tenk_agent.asof import AsOf
+from tenk_agent.research import outside
 from tenk_agent.research.model import checks as layer2
 from tenk_agent.research.model.graph import Model, build, evaluate_cells, load_template
 from tenk_agent.research.model.history import history, write
@@ -88,9 +92,12 @@ def forecast(store: Store, ticker: str, settings: dict | None = None,
     future = quarters_through(next_quarter(base.quarters[-1]), horizon)
     model = build(ticker, base.template, base.as_of, base.quarters, pack, future, {})
     defaults = default_assumptions(model, settings)
+    model.assumptions = dict(defaults)
+    evaluate_cells(model, pack)  # history growth lines, for the outside-input fit
+    defaults, outside_log = outside.adjust(model, store, defaults, settings)
     model.assumptions = defaults | (overrides or {})
     evaluate_cells(model, pack)
-    result = Forecast(model, pack, defaults)
+    result = Forecast(model, pack, defaults, exceptions=list(outside_log))
     _, template = load_template(model.template, ticker)
     result.anchors = anchor(model, pack, store, template.get("anchors") or [], settings, result)
     if overrides:
