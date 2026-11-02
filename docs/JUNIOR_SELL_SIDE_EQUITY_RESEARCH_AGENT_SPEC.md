@@ -324,7 +324,7 @@ No rating or PT is approved until the responsible analyst confirms it.
    Data as of 2026-08-06: 10-Q (filed ...), 8-K Ex. 99.1 (filed ...), Tiingo prices, FRED DGS10.
    Key assumptions (analyst-imposed): take rate 26.8% flat; Mobility growth 15% in 2027E (overrides the 0.90 fade); terminal growth 3%.
    Full register: workbook tab "Assumptions". Source for each figure: evidence log.
-   Open issues: 5 (1 warning, 1 data gap, 3 information); see log X-01 to X-05.
+   Open issues: 5 (2 warning, 3 info); see log X-01 to X-05.
    Rating definitions: Buy ≥ +15% 12-month return, Sell ≤ -10%, Hold between.
 
 10. SENIOR ANALYST REVIEW
@@ -361,17 +361,17 @@ Example file: [`EXAMPLE_UBER_Q2_2026_MODEL_CHANGE_WORKBOOK.xlsx`](EXAMPLE_UBER_Q
 | Part | Fields |
 | --- | --- |
 | Evidence | ID, figure or claim, value, source document, period, filing date, page or table, retrieval date, type (reported, derived, analyst-imposed) |
-| Exceptions | ID, severity (warning, data gap, information), description, treatment, status (open or resolved) |
+| Exceptions | ID, severity (info, warning, error; a data gap is a warning, an error is a failed check), description, treatment, status (open or resolved) |
 
 Example exception rows:
 
 | ID | Severity | Item | Treatment |
 | --- | --- | --- | --- |
-| X-01 | Warning | Q2 adj. EBITDA 2.1 (release) vs. 2.08 (10-Q) | Rounding; filing wins (§1.6) |
-| X-02 | Data gap | AV economics not disclosed | Scenario only, not a forecast |
-| X-03 | Information | No consensus source | Benchmark against guidance and baselines |
-| X-04 | Information | Three comps only | Flag thin range |
-| X-05 | Information | Next earnings date not announced | Mark "est." |
+| X-01 | warning | Q2 adj. EBITDA 2.1 (release) vs. 2.08 (10-Q) | Rounding; filing wins (§1.6) |
+| X-02 | warning | AV economics not disclosed | Scenario only, not a forecast |
+| X-03 | info | No consensus source | Benchmark against guidance and baselines |
+| X-04 | info | Three comps only | Flag thin range |
+| X-05 | info | Next earnings date not announced | Mark "est." |
 
 Note rules:
 - Each section opens with its conclusion, then the evidence.
