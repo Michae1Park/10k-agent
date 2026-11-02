@@ -547,6 +547,7 @@ A row failing validation after repair → an exception row (data gap), never sto
 | History (S3) | `research/model/history.py` | Fill inputs from the data pack |
 | Layer-2 checks | `research/model/checks.py` | Integrity checks; any FAIL stops |
 | Forecast and scenarios (S5) | `research/forecast.py` | Defaults, anchors, seasonal shares, fade, bear/base/bull |
+| Outside inputs (S5) | `research/outside.py` | Move mapped starting growth rates toward a nowcast from TLC, BTS or FRED (`forecast.outside`) |
 | Proposer (S4) | `research/propose.py` | Bounded LLM assumptions (`proposer.method`, default `defaults`) |
 | Valuation (S6–S7) | `research/valuation.py` | Peers, market cap and EV, multiple and DCF PTs, ratings |
 | Model book | `research/book.py` | Cached models per (ticker, as-of) |
@@ -650,6 +651,10 @@ ratios                   same quarter last year + a shift that holds until lappe
 | A full-year-only guide anchors the FY column | ABNB guides only a full-year margin (build log §3.13 seasonal-share run) |
 | An anchor the bounds stop is logged, never forced | Flag, don't hide (spec §2.3) |
 | Scenarios move each template driver by ±`shock_sigma` × σ of its history | Scales the shock to how much the driver has moved (D-042) |
+| Outside inputs: one starting growth rate per company (`forecast.outside.inputs`: BKNG, EXPE, ABNB volume and TRIP revenue ← BTS airline passengers; UBER Mobility bookings ← TLC HV0003; LYFT rides ← TLC HV0005; DASH orders ← FRED RSFSDP and order value ← CPI; CART order value ← CPI) | Spec §3.2 "Outside inputs" (D-045) |
+| The series enters at the lag it has at the as-of: x = its mean y/y over the 3 latest visible months; the fit regresses the driver's history y/y on x taken at the same lag before each quarter (≥ 6 quarters) | Most series lag the target quarter by 3–6 months; fitting at another lag would overstate the signal (D-045) |
+| g0 = (1 − w) × default + w × (a + b·x), w = 0.5 × R²; a slope ≤ 0 is not used | A weak or wrong-signed fit moves the forecast little or not at all (D-045) |
+| Applied before the proposer and anchors; an anchor on the same assumption overrides it | Management's guide wins for the guided quarter; the input still carries into later quarters through the fade (D-045) |
 
 **Proposer (S4):** may move only growth starts (`.g0`), ratio shifts (`.shift0`) and the fade, never one an anchor solves; clipped to the growth start's 8-quarter range ± 5 points, the ratio's range plus its band, and `fade_bounds` [0.75, 1.0]; kept only if one evidence id resolves.
 
@@ -697,6 +702,7 @@ ratios                   same quarter last year + a shift that holds until lappe
 | Fewer than 3 complete years for seasonal shares | Fewer years, logged |
 | Non-positive DCF | Left out of the PT, logged |
 | Proposer failure | Defaults |
+| Outside series too short, not visible, or slope ≤ 0 | That input is not used; an `info` exception says why |
 
 ### 7.5 Constraints
 
@@ -710,6 +716,7 @@ Forecast horizon 2027Q4 (DCF annual years beyond). Condensed statements; no defe
 | `test_model_graph.py` | checks pass on a consistent model and fail on a broken one (each check); `no_future_input` fails on a late filing; split basis; alternative part lists; temporary equity summed |
 | `test_model_workbook.py` | inputs blue, formulas black; parity with LibreOffice |
 | `test_forecast.py` | growth starts at last y/y and fades; ratios within bounds; shifts hold until lapped; seasonal shares from the latest three complete years; forecast cells are formulas; anchors hit the midpoint and log when out of bounds; proposals bounded with evidence; forecast parity |
+| `test_credentials_outside.py` | the outside-input fit and lag window; a missing, blank or placeholder credential raises an error naming it; `tenk fetch` without credentials exits 2; the example file holds only placeholders |
 | `test_valuation.py` | DCF falls as WACC rises; negative flows give a negative DCF; terminal share grows with g; relative ratings by thirds; deterministic rounding; market value |
 
 ---
@@ -996,7 +1003,7 @@ for company in the eight:
      score vs the actual as first reported, and vs the baselines
 ```
 
-**Metrics:** MAPE, bias (positive = too high), guidance call; medians and ranges by company; paired Wilcoxon per baseline. **Ablations** (spec §6): extraction LLM vs rules; fixed vs fitted fade; guidance mid vs high; proposer `llm` vs `defaults`; one long-horizon run from early February 2025. **Leakage probe:** every forecast's inputs were filed before D.
+**Metrics:** MAPE, bias (positive = too high), guidance call; medians and ranges by company; paired Wilcoxon per baseline. **Ablations** (spec §6): extraction LLM vs rules; fixed vs fitted fade; guidance mid vs high; proposer `llm` vs `defaults`; outside inputs on vs `"off"` (D-045); one long-horizon run from early February 2025. **Leakage probe:** every forecast's inputs were filed before D.
 
 ### 11.4 Failure handling
 
@@ -1071,7 +1078,7 @@ One debate per scenario driver (`gb_g_mobility.g0`, …) returns bull, bear, hyp
 | Variance flag: over 2% (revenue) or 5% (adj. EBITDA) from the guide midpoint needs a written reason | spec §3.2 | `forecast.variance_flag` unused; no Flag column in 2.2 |
 | Consensus column ("n/a") and a "no consensus" exception | spec §2.3 | absent |
 | Evidence log fields: period, filing date, location, retrieval date, type, workbook cell | spec §2.3 | Log tab: id, kind, label, value, source |
-| Exception fields: treatment, status; severities warning, data gap, information | spec §2.3 | id, severity (`info`, `warning`, `error`), item |
+| Exception fields: treatment, status | spec §2.3 | id, severity (`info`, `warning`, `error`, as the spec now uses), item |
 | Summary tab as old vs new with $ and % change and source of change | spec §2.3 | Summary is the valuation headline; old vs new is on Revisions |
 | Scenarios tab: weights, probability-weighted value, one-at-a-time sensitivities | spec §2.3 | values only |
 | Thin peer set exception (fewer than 4 peers) | spec example X-04 | not logged |
@@ -1081,11 +1088,9 @@ One debate per scenario driver (`gb_g_mobility.g0`, …) returns bull, bear, hyp
 | Parity mismatch as a layer-2 FAIL | §10.3, D-041 | recorded in `report.json`; the run continues |
 | Revision type (recurring, mixed, timing) and source of change as separate columns; revisions for every line | spec §2.3 table 4.1, Summary tab | `type` holds the source of change ("Reported + assumption" / "Assumption"); three lines only |
 | `tenk research approve` on an unknown version reports an error | §10.4 | the update silently matches nothing |
-| Cross-check ablation | spec §6 | not run: no target-quarter data is public at the forecast date |
 | Human sample of the note rubric; human review of the Ask and Research gold sets | §11 | not done |
 | Debates (and any section research run) with the **Research** toolset | spec §2.3 req. 2 | S9 debates use the `ask` set: no model tools, so a debate cannot run a scenario or quote a sensitivity itself (§5.2) |
 | DCF with 3 modeled years (2026E–2028E), then 7 faded | spec §3.3, §3.2 | the model's quarters end at 2027Q4; 2028 onward is faded in the DCF (§7.3) |
-| BTS, NYC TLC and FRED as forecast inputs | spec §3.2 | context for the proposer and the note only; FRED's DGS10 enters the discount rate |
 | Held-out quarters (released after the LLM's training cutoff) reported separately | spec §6 | not reported: the cutoff is unpublished (D-043) |
 | ~384 extraction labels (12 fields × 4 quarters × 8 companies) | spec §5 layer 1 | 337 labels (§6.6) |
 | Section 10 gets a repair turn on a failed consistency check | spec §2.3 req. 6 | section 10 is written by code from the exception log, so only the takeaways (section 1) are repaired (§8.3) |
@@ -1131,11 +1136,11 @@ Built differently on purpose; each keeps the spec's intent.
 |---|---|---|
 | `config.yaml` (`TENK_CONFIG`) | per-stage V0–V3 knobs: chunking; `retrieval` (embedder, reranker, candidates 40, `rrf_k` 60, k 8, device); `generation`; `agent` (`max_calls` 20, `max_turns` 20, `max_context` 20000, `result_chars` 16000) | per experiment (D-019) |
 | `companies.yaml` (`TENK_COMPANIES`) | coverage, `data_dir: data/v4`, window from 2023-01-01; per company CIK, sector, template, main KPI | per experiment |
-| `research.yaml` | `forecast` (horizon 2027Q4, fade 0.9, `fade_bounds` [0.75, 1.0], `guidance_point: mid`, `ratio_bounds` take rate 0.005 / margin 0.02, `tax_rate_bounds` [0.10, 0.30], `variance_flag`); `scenarios` (weights 25/50/25, `shock_sigma` 1.0); `proposer` (method, model, base_url, budget); `budgets` (events, debate, section, `run_minutes` 30); `valuation` (weights 0.6/0.4, target year 2027, scenario multiple 0.15, terminal growth 0.03 and grid 2.5–3.5%, WACC step 0.01, DCF years 10, annual fade 0.9, beta months 60, debt-weight threshold 0.10, rating thresholds +15% / −10%) | per experiment |
+| `research.yaml` | `forecast` (horizon 2027Q4, fade 0.9, `fade_bounds` [0.75, 1.0], `guidance_point: mid`, `ratio_bounds` take rate 0.005 / margin 0.02, `tax_rate_bounds` [0.10, 0.30], `variance_flag`, `outside` (method `nowcast` \| `"off"`, weight 0.5, `min_quarters` 6, inputs per company)); `scenarios` (weights 25/50/25, `shock_sigma` 1.0); `proposer` (method, model, base_url, budget); `budgets` (events, debate, section, `run_minutes` 30); `valuation` (weights 0.6/0.4, target year 2027, scenario multiple 0.15, terminal growth 0.03 and grid 2.5–3.5%, WACC step 0.01, DCF years 10, annual fade 0.9, beta months 60, debt-weight threshold 0.10, rating thresholds +15% / −10%) | per experiment |
 | `facts/kpis.yaml`, `facts/metrics.yaml` | the KPI registry (§6.2); XBRL concepts per metric | with the code |
 | `research/model/templates/*.yaml` | model templates (§7.2) | with the code |
 
-Secrets: `SEC_USER_AGENT`, `TIINGO_API_KEY`, `FRED_API_KEY`.
+Credentials: each user's own, typed in with `tenk setup` → `credentials.yaml` (mode 600, gitignored; template `credentials.example.yaml`). `SEC_USER_AGENT`, `TIINGO_API_KEY` and `FRED_API_KEY` in the environment (or `.env`) take precedence. A command that needs a missing, blank or placeholder credential stops with an error naming it (`credentials.py`). `data/` and `output/` are local only and never committed.
 
 ## Appendix B. CLI
 
@@ -1146,6 +1151,7 @@ Secrets: `SEC_USER_AGENT`, `TIINGO_API_KEY`, `FRED_API_KEY`.
 | `tenk build --stage chunk,load,append,embed,pages,facts,market,kpis` | build stages; `append` loads new filings into an existing database |
 | `TENK_COMPANIES=companies.yaml tenk research report TICKER… --as-of D [--no-llm] [--resume]` | Report mode (= `python -m tenk_agent.research.pipeline TICKER D`) |
 | `tenk research approve TICKER:vN --by INITIALS` | mark a version reviewed |
+| `tenk setup` | type in your own SEC User-Agent, Tiingo and FRED keys (`credentials.yaml`) |
 | `python -m tenk_agent.research.valuation TICKER… AS_OF [--all]` | valuation; `--all` adds relative ratings |
 | `python -m tenk_agent.research.forecast TICKER… AS_OF` · `python -m tenk_agent.research.model.history TICKER… AS_OF` | forecast or history models alone |
 | `python -m tenk_agent.evaluation.backtest [TICKER…] [--label] [--proposer defaults\|llm] [--long]` | backtest and ablations |

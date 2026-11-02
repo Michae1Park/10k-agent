@@ -20,18 +20,19 @@ Eight online marketplaces (UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP), Q4 2
 
 | Run (90 forecasts unless noted) | Revenue MAPE | Main KPI MAPE | Revenue / KPI bias | Wilcoxon p |
 |---|---|---|---|---|
-| **model, defaults** | **3.14%** | **2.30%** | −0.15% / −0.23% | 0.145 / 0.706 |
+| **model, defaults** (outside inputs on, D-045) | **3.15%** | **2.30%** | −0.15% / −0.23% | 0.176 / 0.930 |
 | seasonal naive | 3.77% | 2.58% | +0.64% / +0.17% | |
 | guidance midpoint (where guided: 13 revenue, 31 KPI) | 2.54% | 1.64% | | |
 | plain LLM, no tools | 56.3% (all) | | | |
 | ablation: guidance high end | 3.00% | 2.01% | +0.68% / +0.50% | **0.011 / 0.011** |
 | ablation: LLM proposer | 3.78% | 2.90% | +1.09% / +0.39% | 0.600 / 0.315 |
+| ablation: outside inputs off (the defaults before D-045) | 3.14% | 2.30% | −0.15% / −0.23% | 0.145 / 0.706 |
 | ablation: fitted fade | = defaults (next quarter uses only the starting rate) | | | |
 | long horizon (2025 from Feb 2025, 32), fixed / fitted fade | 4.07% / 3.36% | 4.38% / 3.65% | −1.15% / −1.53% (fixed) | naive 4.18% / 3.38% |
 
 Forecast rule (2026-11-01, spec §3.2): quarters after the first now take last year's total × (1 + growth) × the quarter's 3-year average seasonal share (fewer years where history is shorter); the first quarter keeps the anchored same-quarter-last-year rule, so the next-quarter rows above are unchanged (rerun as `backtest-all-seasonal`: identical). The long-horizon rows are the new rule (`backtest-all-long-seasonal`, `-long-fitted-seasonal`); on the old rule they were 4.03% / 3.29% revenue and 4.18% / 3.73% main KPI, so the seasonal share cost 0.2 points on the fixed-fade main KPI (EXPE, ABNB, BKNG most) and was mixed with the fitted fade.
 
-Guidance: companies beat their own guided midpoint 43 times in 44. Extraction ablation: rules 31.5% exact (KPIs 47.7%, guidance not attempted) vs the LLM's 98.5%. Cross-check ablation: not run, because at every forecast date no month of the target quarter's TLC (or BTS) data was public yet; these series confirm a reported quarter, they cannot forecast the next.
+Guidance: companies beat their own guided midpoint 43 times in 44. Extraction ablation: rules 31.5% exact (KPIs 47.7%, guidance not attempted) vs the LLM's 98.5%. Outside inputs (TLC, BTS, FRED; D-045): at every forecast date the series reach only 3–6 months before the end of the target quarter, so they enter as a lagged nowcast; next-quarter accuracy is unchanged, because most next quarters are guided and the anchor overrides the input, and many fits had too little history or a non-positive slope.
 
 ## Ratings, as of 2026-09-01 (`--all`)
 

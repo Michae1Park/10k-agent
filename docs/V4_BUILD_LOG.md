@@ -268,6 +268,11 @@ Built: the resumable S1–S11 pipeline (`research/pipeline.py`; LLM steps saved 
 
 Built: NYC TLC (44 months, HV0003 Uber and HV0005 Lyft confirmed) and BTS airline passengers (`acquisition/crosscheck.py`; `cc:` ids; `crosscheck` tool; as-of by publish date), Form 4 (`acquisition/insiders.py`; 8,418 transactions; dilution context in note section 9), the rules extractor and fitted-fade, guidance-high, LLM-proposer and long-horizon ablations, the no-tools LLM baseline, `--all` ratings. Results table, chart, example note and limits: **`docs/V4_RESULTS.md`**. Not run: Qwen vs Claude on the LLM steps (later dropped: not in the spec); the cross-check ablation (no target-quarter data is ever public at the forecast date); a human sample of the rubric.
 
+### 3.17 Outside forecast inputs (2026-11-02)
+
+Built `research/outside.py` (D-045). Backtest `outside-nowcast` vs `outside-off`: revenue MAPE 3.15% vs 3.14%, main KPI 2.30% vs 2.30%; the gate passes both ways. Over the 48 backtest as-ofs, 21 inputs applied, 18 had too few quarters for the fit (TLC starts 2023-01, so its y/y starts 2024-01), and 18 had a non-positive slope (NYC trips decelerated while Uber's and Lyft's grew). Found on the way: YAML reads an unquoted `off` as false, so the first ablation run silently kept the inputs on; `method: "off"` is now quoted and false also means off.
+
+
 ---
 
 ## Old design-doc section numbers

@@ -1,6 +1,6 @@
 # Remaining inconsistencies (temporary)
 
-Spec vs. design doc vs. build, checked 2026-11-01; rechecked 2026-11-02 (#21–#24). Mirrored in design doc §13.1. Delete this file once resolved.
+Spec vs. design doc vs. build, checked 2026-11-01; rechecked 2026-11-02 (#21–#25). Mirrored in design doc §13.1. Delete this file once resolved.
 
 ## Decisions taken
 
@@ -10,7 +10,9 @@ Spec vs. design doc vs. build, checked 2026-11-01; rechecked 2026-11-02 (#21–#
 | Carry open exceptions forward (§9.3) | Build (#9) |
 | Non-operating item exception (§13.2) | Build (#10) |
 | Summary tab layout | Merge old vs. new into Summary; headline moves to Valuation; drop the Revisions tab (#5) |
-| Exception severities | **Open.** Spec §2.3: warning, data gap, information. Build: `info`, `warning`, `error` (`pipeline.py:168`, `:238`, `:251`; `note/consistency.py`) |
+| Exception severities | Spec changed to `info`, `warning`, `error` as built (2026-11-02); a data gap is a `warning` |
+| Outside data as forecast inputs (#14) | Built (2026-11-02, D-045): `research/outside.py`, on by default; ablation `outside-off` |
+| Credentials | Each user's own via `tenk setup` → `credentials.yaml` (gitignored); missing one = explicit error. `data/`, `output/` never committed |
 
 ## To build
 
@@ -30,9 +32,8 @@ Spec vs. design doc vs. build, checked 2026-11-01; rechecked 2026-11-02 (#21–#
 | 11 | Assumptions tab columns | Spec §2.3: value, basis, confidence, variables affected, last updated | Name and value only (`export/workbook.py:87`) | S (~1 h) |
 | 12 | Debates with the Research toolset | Spec §2.3 req. 2 | S9 sub-agents use the `ask` set (`research/subagents.py`) | S (~1 h) + an LLM rerun to check |
 | 13 | DCF: 3 modeled years | Spec §3.3 (3 modeled, 7 faded), §3.2 annual to 2028E | Model ends 2027Q4; 2028 faded in the DCF | M (~2–3 h): extend `forecast.horizon` to 2028Q4 and recheck parity and backtest |
-| 14 | Outside data as forecast inputs | Spec §3.2: BTS, NYC TLC, FRED | Context only | Decide: build, or record as a deliberate difference |
 | 15 | Held-out quarter set | Spec §6 | Not reported (D-043) | Decided; spec could note it |
-| 16 | Extraction gold size | Spec §5: ~384 labels | 337 | Decide: add labels, or note the count in the spec |
+| 16 | Extraction gold size | Spec §5: ~384 = 12 fields × 4 quarters × 8 companies | 337: one label per value each release actually prints (7–14 per release; ABNB, TRIP print fewer fields, EXPE, LYFT more), not a fixed 12 | Decide: note the count and method in the spec (XS), or pad to 384 with more fields from the richer releases (M) |
 | 17 | Section 10 repair turn | Spec §2.3 req. 6 | Section 10 is code-written; no repair | Likely note only |
 | 18 | Parity mismatch should stop the run | Design §10.3 (D-041) | Recorded in `report.json`; the run continues | XS (~15 min) |
 | 19 | Revision type and source of change | Spec §2.3 table 4.1: source of change + type (recurring/mixed/timing), every changed line | `type` holds the source; three lines only (`pipeline.py:336`) | S (~1–2 h); pairs with #5 |
@@ -41,6 +42,7 @@ Spec vs. design doc vs. build, checked 2026-11-01; rechecked 2026-11-02 (#21–#
 | 22 | Secondary multiples shown | Spec §3.3: EV/(EBITDA − SBC), P/E, FCF yield also shown | Computed in `valuation.json` (`valuation.py:263`); not in note §6 or the Valuation tab | XS (~30 min) |
 | 23 | Section 7 risk table | Spec §2.3: model driver and evidence columns; unquantified risks (regulation, AV) from risk-factor text | Risk, EBITDA change, PT impact for scenario drivers only (`note/sections.py:273`) | S (~1 h); text part pairs with the bounded-research item |
 | 24 | "No prior" wording | Spec, design §8.3, workbook: "initial draft (no prior run)" | Note says "initial draft (no prior version)" (`note/sections.py:99`, `:206`; example note) | XS (~5 min) + regenerate the example note |
+| 25 | **Tiingo-derived prices already pushed** | D-044: prices never leave `data/` | `origin/v4` holds closing prices in `docs/examples/UBER-2026-08-06-note.*` (price, 52-week range) and `docs/V4_RESULTS.md` (ratings table); `tests/test_ask.py` has one AAPL close | Decide: redact going forward (S), and/or rewrite pushed history (force-push) |
 
 ## Deliberate differences (design §13.3)
 

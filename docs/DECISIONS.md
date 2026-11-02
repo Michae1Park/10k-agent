@@ -33,6 +33,7 @@ Why the project looks the way it does: decisions, and the issues found along the
 | [D-041](#d-041) | 2026-10-27 | V4 model: one YAML/DSL definition, two evaluators (Python is the source of truth; the workbook gets live formulas, checked by a LibreOffice parity test); condensed statements | Accepted |
 | [D-042](#d-042) | 2026-10-27 | V4 forecast and valuation defaults where the spec is silent: fade per quarter, seasonal share, scenario shocks and multiples, WACC, EV, no PT roll-forward, non-operating items 0, guidance handling, relative rating only with `--all`, no consensus | Accepted |
 | [D-043](#d-043) | 2026-10-27 | V4 evaluation: pass bars frozen before each phase; walk-forward backtest plus one long-horizon run; no held-out quarters (the LLM's cutoff is unpublished) | Accepted |
+| [D-045](#d-045) | 2026-11-02 | Outside data (TLC, BTS, FRED) feeds the forecast as a lag-consistent nowcast of one starting growth rate per company; each user types in their own credentials | Accepted |
 | [D-044](#d-044) | 2026-10-28 | V4 outputs and review: CLI only, files under `output/reports/`; drafts until `tenk research approve`; PDF by headless browser; Tiingo prices never leave `data/`; Ask cites saved reports for estimates | Accepted |
 
 ## Issues
@@ -143,6 +144,9 @@ The agent had a `get_section` tool (one 10-K Item in order, a page of chunks at 
 
 ### D-044
 **Outputs and review** ([design §10](V4_TECHNICAL_DESIGN_DOC.md#10-outputs-and-review)). V4 is CLI only; reports go to `output/reports/<TICKER>/<as_of>/` and are saved as model versions with their parent. Every version is a `draft` until `tenk research approve TICKER:vN --by INITIALS` marks it `reviewed`; amendments are a new version, never an edit. Ask and Research cite saved estimates (via `research_report`) with their review status. The note PDF is printed by headless Chrome (`evaluation/render.py`, already a dependency) instead of LibreOffice. Tiingo's licence is internal use only, so raw prices stay in `data/` (gitignored).
+
+### D-045
+**Outside forecast inputs and credentials** ([design §7.3](V4_TECHNICAL_DESIGN_DOC.md#73-rules-and-algorithms), [Appendix A](V4_TECHNICAL_DESIGN_DOC.md#appendix-a-config)). The spec lists BTS, NYC TLC and FRED as forecast inputs (§3.2); until now they were context only. Each company maps one starting growth rate to one series (two for DASH). At the as-of the series is known only up to its latest published month, usually 3–6 months before the end of the forecast quarter, so the regressor is the mean y/y of the 3 latest visible months and the fit uses that same lag for every history quarter. The prediction is blended with the default by 0.5 × R², and a non-positive slope is ignored (each mapping expects the driver to move with the series). Ablation (`experiments/v4/knobs/outside-off.yaml`, 48 next-quarter forecasts per metric): revenue MAPE 3.15% on vs 3.14% off, main KPI 2.30% both; most next quarters are guided, and the anchor overrides the input. Kept on by the user's decision; it moves the unguided drivers and the later quarters. Credentials: every user supplies their own through `tenk setup` (`credentials.yaml`, gitignored, template `credentials.example.yaml`); a missing one is an explicit error. `data/` and `output/` stay local (Tiingo is internal use only).
 
 ## Issue details
 
