@@ -53,6 +53,10 @@ The pipeline's **Claim check** block, opened up. Each claim the model returns is
 
 Evaluation does not run this check; it reads the statuses (below). An unknown chunk ID is added to the reason whatever the status. Unverified claims are shown to the user with the reason, not hidden.
 
+## Models
+
+Answers, the agent and the judge go through `Model.complete(messages)` (`src/tenk_agent/models.py`); providers (vLLM or any OpenAI-compatible server, the Anthropic SDK) translate one neutral message format ([D-013](../DECISIONS.md#d-013)). The V0 structure agent and agentic chunker call vLLM's OpenAI API directly, for schema-constrained decoding. V4 uses the same layer. Serving and choosing a model: [SERVING.md](../SERVING.md).
+
 ## Evaluation
 
 Evaluation never runs the pipeline, including the claim check. It takes the pipeline's output, the generated answer with its claim statuses and the chunks the model was shown, and grades it against the gold set. The only LLM in it is the judge, and only for text answers.
