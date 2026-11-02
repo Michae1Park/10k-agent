@@ -15,6 +15,18 @@ Companion to [design doc §12](../V4_TECHNICAL_DESIGN_DOC.md#12-evaluation), whi
 
 The judge (gpt-oss-20b) runs after vLLM releases the GPU. The leakage probe checks every forecast input's `filed` against D and stops the backtest on a miss.
 
+## The backtest
+
+```text
+for company in the eight:
+  for release from Q4 2024 onward:            6 per company, CART included: 48 per metric
+     D = the day after the release's EDGAR acceptance
+     run S1–S5 at D → forecast the next quarter
+     score vs the actual as first reported, and vs the baselines
+```
+
+**Metrics:** MAPE, bias (positive = too high), guidance call; medians and ranges by company; paired Wilcoxon per baseline. **Ablations** (spec §6): extraction LLM vs rules; fixed vs fitted fade; guidance mid vs high; proposer `llm` vs `defaults`; outside inputs on vs `"off"` (D-045); one long-horizon run from early February 2025. **Leakage probe:** every forecast's inputs were filed before D.
+
 ## Tests
 
 `test_extract.py::score_kpis_guidance_and_critical`; `test_evaluation.py` (gold validation and verification marking, retrieval metrics); `test_note.py::seeded_errors_are_caught`; `test_forecast.py::revenue_bridge_adds_up`.
