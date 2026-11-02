@@ -1,6 +1,6 @@
-# V4 · Agent runtime and tools: how they work
+# V4 · Agent and tools
 
-Companion to [design doc §3](../V4_TECHNICAL_DESIGN_DOC.md#3-tools) (tools) and [§6](../V4_TECHNICAL_DESIGN_DOC.md#6-agent-runtime) (agent runtime), which hold the contract. The V3 loop is described in [V3_AGENT.md](V3_AGENT.md). This doc does not restate the rules; where the two disagree, the design doc wins.
+How the agent loop, its tools and its sub-agents work. Rules live in the [design doc §3](../V4_TECHNICAL_DESIGN_DOC.md#3-tools) and [§6](../V4_TECHNICAL_DESIGN_DOC.md#6-agent-runtime); if this doc disagrees, the design doc wins. V3's loop: [V3_AGENT.md](V3_AGENT.md).
 
 ## The loop
 
@@ -8,54 +8,76 @@ Companion to [design doc §3](../V4_TECHNICAL_DESIGN_DOC.md#3-tools) (tools) and
 question ─► model ──tool calls──► tools ─► model ─► … ─► JSON answer ─► claim check
 ```
 
-`agent/loop.py` is a LangGraph graph: the model turn, a tool node, a budget guard and a final answer node. The first turn forces a tool call; a repeated identical call is answered with an error and still counts; past `max_calls`, or once the conversation reaches `max_context` tokens, one last turn runs with tools off. The reply is parsed with `models.parse_json`; a parse failure gets one "only the JSON" retry. The claim check then marks each claim (design §10.3).
+`agent/loop.py` (LangGraph) runs it:
 
-**Context management.** State lives in files, not chat. Each call gets a purpose-built view: the proposer a driver table, a section writer only its own facts, a debate one driver. Detail is fetched by id, never preloaded.
+| Situation | What happens |
+| --- | --- |
+| First turn | Must call a tool |
+| Same call repeated | Returns an error; still counts toward the budget |
+| Over `max_calls` or `max_context` tokens | One last turn with tools off |
+| Reply isn't valid JSON | One "only the JSON" retry |
+| Answer returned | The claim check verifies each claim ([V4_VERIFICATION.md](V4_VERIFICATION.md)) |
+
+**Context stays small.** State lives in files, not chat. Each call sees only what it needs (a debate sees one driver; a section writer sees only its facts) and fetches detail by id.
 
 ## Tools
 
-`agent/tools.py` holds `SPECS` (the JSON schemas the model sees), the groups of design §3.2 and one handler per tool. `Toolbox(tool_set=…)` exposes only the groups of its set. Every handler catches its own errors and returns `{"error": …}` with the valid choices.
+`agent/tools.py` holds the schemas the model sees and one handler per tool. A run only gets the tool groups of its set. A failing handler returns `{"error": …}` listing the valid choices, rather than crashing.
 
 <p align="center">
   <img src="../img/v4-research-tools.svg" alt="run_scenario, compare_peers and variance_review: validate, rerun or reuse cached code runs, return tables with citable ids" width="100%">
 </p>
 
-| Tool | How |
-|---|---|
-| `financials` | derived quarters (`facts/quarters.py`) and direct facts, as `q:` / `xbrl:` ids |
-| `research_report` | the latest `model_versions` row visible at D (or at `as_of`, which only narrows); reads the version's folder |
-| `model_view` | the model book's base model at the session's as-of |
-| `run_scenario` | validates names, clips to the proposer's bounds, reruns forecast and valuation, stores `scratch-n` in the book |
-| `compare_peers` | builds each peer with defaults on first use, then reads the cached models |
-| `variance_review` | the latest saved version before the quarter's release vs the reported actual, with a revenue bridge |
+| Tool | What it does |
+| --- | --- |
+| `financials` | Quarterly and annual figures, cited as `q:` / `xbrl:` ids |
+| `research_report` | The latest saved report visible at the as-of |
+| `model_view` | The base model at the session's as-of |
+| `run_scenario` | Reruns forecast and valuation with changed assumptions (clipped to bounds); saved as `scratch-n` |
+| `compare_peers` | Builds each peer's model on first use, then reuses it |
+| `variance_review` | The last forecast before a release vs the reported actual, with a revenue bridge |
 
 ## Sub-agents
 
-`research/subagents.py` (S2 events, S9 debates) and `research/propose.py` (S4) run a bounded `Agent` with the `ask` tools, their own prompt and a `research.yaml` budget. Each returns JSON; an item is kept only if one of its evidence ids resolves at D. A debate's resolved evidence values are kept as `evidence_values` and become note facts.
+Three Report steps hand a task to a small, budgeted agent with the `ask` tools:
+
+| Sub-agent | Task | Code |
+| --- | --- | --- |
+| Events (S2) | What happened this quarter | `research/subagents.py` |
+| Proposer (S4) | Suggest assumption changes (off by default) | `research/propose.py` |
+| Debates (S9) | Bull and bear case per scenario driver | `research/subagents.py` |
+
+Each returns JSON. **An item is kept only if one of its evidence ids resolves.** A debate's evidence values become facts the note can cite.
 
 ## Filing text: what reaches the note
 
-No prompt or code names a filing section (Item 1A, MD&A). Prompts give a *topic*; the LLM writes its own `search_filings` queries, guided only by the coverage table each prompt carries (latest filing per form, per company).
+No prompt names a filing section such as Item 1A. Prompts give a *topic*; the LLM writes its own `search_filings` queries.
 
-| Step | Reads | Told what to look for | Who picks passages | Lands in |
-|---|---|---|---|---|
-| KPI and guidance extraction | earnings release | labels per company in `facts/kpis.yaml` | code (tables first, within a size budget) | numbers only |
-| S2 events | 10-K, 10-Q, release | event types listed in `events.md` | LLM, via `search_filings` | section 8 |
-| S9 debates | 10-K, 10-Q, release | "management's explanations and risk factors" (`debates.md`) | LLM, via `search_filings` | section 3 |
-| S4 proposer | 10-K, 10-Q, release | reasons to look for, in `propose.md` | LLM, via `search_filings` | assumptions (off by default) |
-| S10 note prose | nothing | its slot's facts | n/a | all prose |
+| Step | Reads | Looks for | Ends up in |
+| --- | --- | --- | --- |
+| KPI extraction | Earnings release | Labels in `facts/kpis.yaml` (code picks passages) | Numbers only |
+| Events | 10-K, 10-Q, release | Event types in `events.md` | Note section 8 |
+| Debates | 10-K, 10-Q, release | Management's explanations, risk factors | Note section 3 |
+| Proposer | 10-K, 10-Q, release | Reasons listed in `propose.md` | Assumptions |
+| Note prose | Nothing | Only its own facts | All prose |
 
-**Events.** Up to 8 per run, each with evidence ids. Section 8 prints only `catalyst`, `regulation` and `m&a`; `results`, `guidance`, `capital`, `definition_change`, `business_model` and `other` stay in `events.json`.
+- **Events:** up to 8 per run. Section 8 prints only `catalyst`, `regulation` and `m&a`; other types stay in `events.json`.
+- **Risk factors** reach the note only via debate bull and bear lines. Section 7 is code-computed sensitivities. Recall is not measured.
 
-**Risk factors** reach the note only through debate bull and bear lines; section 7 is code-computed shocks. Nothing measures recall (design §13.2).
-
-**Open questions.**
+**Open questions**
 
 | Question | Current view |
-|---|---|
-| Print the other event types? | Open. `results` and `guidance` overlap section 2 and `capital` section 9; `definition_change` and `business_model` look most worth showing, since they affect model inputs |
-| Query Item 1A and MD&A explicitly? | Hold off until a miss rate is measured |
+| --- | --- |
+| Print other event types? | Open. `definition_change` and `business_model` look most useful, since they affect model inputs |
+| Query Item 1A and MD&A directly? | Wait until a miss rate is measured |
 
 ## Tests
 
-`test_agent_loop.py`: tool results feed the next turn; calls past the budget error and force an answer; a non-JSON reply gets one retry; a repeated call errors and counts; a long conversation answers with tools off. `test_agent_tools.py` (21): calculator formula and errors; offline SEC data never fetches; a value matching a cited fact verifies; another company's fact doesn't. `test_ask.py`: guidance targets become period keys; data ids resolve at the store's as-of; claims verify against data rows; the prompt names the as-of and coverage. `test_forecast.py::proposals_are_bounded_anchors_kept_and_evidence_required`. Gold: Ask (79) and Research (72) ([V4_EVALUATION.md](V4_EVALUATION.md)).
+| File | Checks |
+| --- | --- |
+| `test_agent_loop.py` | Tool results feed the next turn; budget, retry, repeat and long-context rules |
+| `test_agent_tools.py` | Calculator; offline data never fetches; cited values verify, other companies' don't |
+| `test_ask.py` | Guidance periods; ids resolve at the as-of; prompt names the as-of and coverage |
+| `test_forecast.py` | Proposals are bounded and need evidence |
+
+Gold sets: Ask (79) and Research (72), see [V4_EVALUATION.md](V4_EVALUATION.md).

@@ -1,6 +1,6 @@
-# V4 · Report pipeline: how it works
+# V4 · Report pipeline
 
-Companion to [design doc §9](../V4_TECHNICAL_DESIGN_DOC.md#9-report-pipeline), which holds the contract (steps, artifacts, rules, note sections, consistency check). This doc does not restate the rules; where the two disagree, the design doc wins.
+How a Report run turns a ticker and date into a note. Rules live in the [design doc §9](../V4_TECHNICAL_DESIGN_DOC.md#9-report-pipeline). For one run end to end, see [V4_WORKED_EXAMPLE.md](V4_WORKED_EXAMPLE.md).
 
 ## The runner
 
@@ -8,29 +8,46 @@ Companion to [design doc §9](../V4_TECHNICAL_DESIGN_DOC.md#9-report-pipeline), 
   <img src="../img/v4-report-runner.svg" alt="Report pipeline S1 to S11: code steps and LLM steps, the artifact each writes, which outputs --resume reuses, and the failure policy: integrity and valuation checks stop the run, LLM steps degrade" width="100%">
 </p>
 
-`research/pipeline.py` `run()` looks up the parent version, then runs S1–S11 in order, timing each step (seconds, LLM calls, tokens) into `report.json`. Code steps always rerun; with `--resume` the LLM outputs already in the folder (`events.json`, `debates.json`, prose slots) are reused. S11 writes the files and the `model_versions` row last, so a failed export saves no version.
+`research/pipeline.py` runs eleven fixed steps (S1–S11) in order and logs time, LLM calls and tokens per step to `report.json`.
 
-## The note
+- **Code steps always rerun.** With `--resume`, LLM outputs already in the folder are reused.
+- **The version is saved last.** A failed export saves nothing.
 
-`research/note/sections.py` builds the ten sections from the artifacts: code writes every table and fixed block; each prose slot (`takeaways`, `quality`, `valuation`) gets only its own facts. `write.py` makes one LLM call per slot, traces it ([V4_VERIFICATION.md](V4_VERIFICATION.md)), repairs once, and drops what stays untraced. Sections 1 and 10 are built last, after the consistency check numbers the exceptions.
+## Writing the note
 
-## The note's ten sections
+1. Code builds all ten sections: every table and fixed block.
+2. Three prose slots (`takeaways`, `quality`, `valuation`) each get one LLM call, seeing only their own facts.
+3. Each slot is traced ([V4_VERIFICATION.md](V4_VERIFICATION.md)), repaired once, and untraced sentences dropped.
+4. The consistency check runs and issues are numbered.
+5. Sections 1 and 10 are built last, so they can summarize everything.
+
+## The ten sections
 
 | Section | Built by | Content |
-|---|---|---|
-| 1 Executive summary | code + slot `takeaways`, **last** | price, PT, return, rating, change vs parent; takeaways from other sections' facts |
-| 2 Earnings results | code + slot `quality` | 2.1 actual vs estimate vs guide mid vs y/y; 2.2 guidance vs our forecast; 2.3 quality of the quarter |
-| 3 Drivers and debates | S9 | per scenario driver: bull, bear, hypothesis, trigger, gap |
-| 4 Estimate revisions | code | old vs new, change, type (source), confidence; 4.3 layer-2 results |
-| 5 Financial summary | code | annual 2024A–2028E |
-| 6 Valuation | code + slot `valuation` | comps, DCF, scenarios, weighted PT, return, rating; target multiple justification |
-| 7 Risks and sensitivity | code | sensitivity rows |
-| 8 Catalysts | code + S2 events | next earnings (estimated), events with ids |
-| 9 Sources, assumptions | code | sources by date, key assumptions, Form 4 context, rating definitions |
-| 10 Senior analyst review | code, **last** | decisions; every open warning and error by X-id |
+| --- | --- | --- |
+| 1 Executive summary | code + `takeaways`, last | Price, PT, return, rating, change vs last version |
+| 2 Earnings results | code + `quality` | Actual vs estimate vs guidance; guidance vs our forecast; quality of the quarter |
+| 3 Drivers and debates | debates | Per driver: bull, bear, hypothesis, trigger, gap |
+| 4 Estimate revisions | code | Old vs new, change, source, confidence; integrity results |
+| 5 Financial summary | code | Annual 2024A–2028E |
+| 6 Valuation | code + `valuation` | Comps, DCF, scenarios, PT, rating; multiple justification |
+| 7 Risks and sensitivity | code | Sensitivity rows |
+| 8 Catalysts | code + events | Next earnings date; events with sources |
+| 9 Sources, assumptions | code | Sources, key assumptions, insider context, rating definitions |
+| 10 Senior analyst review | code, last | Decisions; every open warning and error |
 
-**Consistency check** (before export; spec §2.3 req. 5): `rating_thresholds`, `section1_numbers`, `debated_drivers`, `guidance_in_2_2`, `open_issues` (run after numbering). Code checks; a failure is an `error` exception and is in `report.json` `consistency`; the takeaways get one repair; other sections are never rewritten (spec §2.3 req. 6).
+## Consistency check
+
+Runs before export. Code checks that:
+
+- the rating matches its thresholds;
+- section 1's numbers match the sections they come from;
+- every scenario driver was debated;
+- guidance appears in section 2.2;
+- every open issue is listed in section 10.
+
+A failure becomes an `error` issue. Only the takeaways get a repair; other sections are never rewritten.
 
 ## Tests
 
-`test_note.py` (13): number figures skip dates, periods and ids; true figures trace; seeded errors are caught; a table cell changed to another fact's value is caught; prose traces to its own slot only; the writer drops sentences still untraced after repair; consistency passes a consistent note and catches each inconsistency. Pipeline runs with `--no-llm` on all eight (build log §3.15). Layer 5: [V4_EVALUATION.md](V4_EVALUATION.md).
+`test_note.py`: true figures trace; seeded and swapped figures are caught; prose traces only to its own slot; untraced sentences are dropped; the consistency check catches each kind of mismatch. The pipeline also runs with `--no-llm` on all eight companies. Note scoring: [V4_EVALUATION.md](V4_EVALUATION.md).
