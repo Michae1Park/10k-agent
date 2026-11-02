@@ -36,6 +36,8 @@ Guidance: companies beat their own guided midpoint 43 times in 44. Extraction ab
 
 ## Ratings, as of 2026-09-01 (`--all`)
 
+Prices and every value derived from them are third-party market data and stay local ([D-046](DECISIONS.md#d-046)); run the valuation with your own credentials to see them.
+
 | | Price | 12-month PT | Return | Absolute | Relative |
 |---|---|---|---|---|---|
 | LYFT | local only | local only | local only | local only | local only |

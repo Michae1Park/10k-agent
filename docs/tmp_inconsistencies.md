@@ -13,6 +13,7 @@ Spec vs. design doc vs. build, checked 2026-11-01; rechecked 2026-11-02 (#21–#
 | Exception severities | Spec changed to `info`, `warning`, `error` as built (2026-11-02); a data gap is a `warning` |
 | Outside data as forecast inputs (#14) | Built (2026-11-02, D-045): `research/outside.py`, on by default; ablation `outside-off` |
 | Extraction gold size (#16) | Spec now states 337 labels and how they were chosen (2026-11-02) |
+| Market data in git (#25) | Removed from the public history (D-046, 2026-11-02): examples redacted in place, V4_RESULTS table redacted, fixtures synthetic; v4 rewritten and force-pushed |
 | Credentials | Each user's own via `tenk setup` → `credentials.yaml` (gitignored); missing one = explicit error. `data/`, `output/` never committed |
 
 ## To build
@@ -42,7 +43,6 @@ Spec vs. design doc vs. build, checked 2026-11-01; rechecked 2026-11-02 (#21–#
 | 22 | Secondary multiples shown | Spec §3.3: EV/(EBITDA − SBC), P/E, FCF yield also shown | Computed in `valuation.json` (`valuation.py:263`); not in note §6 or the Valuation tab | XS (~30 min) |
 | 23 | Section 7 risk table | Spec §2.3: model driver and evidence columns; unquantified risks (regulation, AV) from risk-factor text | Risk, EBITDA change, PT impact for scenario drivers only (`note/sections.py:273`) | S (~1 h); text part pairs with the bounded-research item |
 | 24 | "No prior" wording | Spec, design §8.3, workbook: "initial draft (no prior run)" | Note says "initial draft (no prior version)" (`note/sections.py:99`, `:206`; example note) | XS (~5 min) + regenerate the example note |
-| 25 | **Tiingo-derived prices already pushed** | D-044: prices never leave `data/` | `origin/v4` holds closing prices in `docs/examples/UBER-2026-08-06-note.*` (price, 52-week range) and `docs/V4_RESULTS.md` (ratings table); `tests/test_ask.py` has one AAPL close | Decide: redact going forward (S), and/or rewrite pushed history (force-push) |
 
 ## Deliberate differences (design §13.3)
 
