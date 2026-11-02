@@ -1074,7 +1074,7 @@ One debate per scenario driver (`gb_g_mobility.g0`, …) returns bull, bear, hyp
 
 | Item | Spec or design | Today |
 |---|---|---|
-| Bounded research runs (Research tools, call budget) for note sections 2.3, 4, 6, 7, 8 | spec §2.3 req. 2 | 2.3 and 6 are single LLM calls over facts, without tools; 4, 7 and 8 have no LLM text. Only S9 debates are tool-using runs |
+| Bounded research runs (Research tools, call budget) for note sections 2.3, 4.2, 6, 7, 8 | spec §2.3 req. 2 | 2.3 and 6 are single LLM calls over facts, without tools; 4.2, 7 and 8 have no LLM text. Only S9 debates are tool-using runs |
 | `initiation` report type | spec §2, §2.3 | `update` only |
 | Variance flag: over 2% (revenue) or 5% (adj. EBITDA) from the guide midpoint needs a written reason | spec §3.2 | `forecast.variance_flag` unused; no Flag column in 2.2 |
 | Consensus column ("n/a") and a "no consensus" exception | spec §2.3 | absent |
@@ -1097,6 +1097,7 @@ One debate per scenario driver (`gb_g_mobility.g0`, …) returns bull, bear, hyp
 | Assumptions tab: basis, confidence, variables affected, last updated | spec §2.3 | name and value only (§10.2) |
 | Release vs filing gap logged as an exception ("filing wins", spec example X-01) | spec §1.6, §2.3 | no comparison between release KPIs and XBRL facts; integrity checks cover Q4 ties and restatements only |
 | Secondary multiples (EV/(EBITDA − SBC), P/E, FCF yield) shown | spec §3.3 | computed in `valuation.json` `multiples_2027e`; not in note section 6 or the Valuation tab |
+| Section 3.1 driver table (driver, latest evidence, model variable) | spec §2.3 | not built; section 3 has the debates only |
 | Section 7 columns: model driver and evidence; unquantified risks from new risk-factor text | spec §2.3 | risk, 2027E EBITDA change and PT impact for the scenario drivers only |
 
 Working list with effort estimates: [tmp_inconsistencies.md](tmp_inconsistencies.md).

@@ -25,6 +25,7 @@ The spec is fixed; the build and design doc change to match it. Delete this file
 - [ ] **#23** Section 7: model driver and evidence columns; unquantified risks from risk-factor text (`note/sections.py:273`)
 - [ ] **#17** Section 10 gets one repair turn on a failed consistency check, like Section 1 (spec §2.3 req. 6)
 - [ ] **#27** Model (prior) tab keeps the prior version with live formulas, not values (spec §2.3 Model tab; design §13.3)
+- [ ] **#33** Section 3.1 driver table: driver, latest evidence, model variable (spec §2.3 example; `note/sections.py`)
 - [ ] **#29** Later quarters from the seasonal share only (spec §3.2); drop the FY-column anchor for full-year-only guidance (ABNB; design §13.3)
 
 ## Medium (2–4 h)
@@ -39,5 +40,5 @@ The spec is fixed; the build and design doc change to match it. Delete this file
 
 ## Large (days)
 
-- [ ] Bounded research runs for note sections 2.3, 4, 6, 7, 8 (spec §2.3 req. 2)
-- [ ] `initiation` report type (spec §2, §2.3)
+- [ ] Bounded research runs for note sections 2.3, 4.2, 6, 7, 8 (spec §2.3 req. 2)
+- [ ] `initiation` report type, and `type` as a Report input (spec §2, §2.3; design §1.1)
