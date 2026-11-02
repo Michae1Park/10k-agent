@@ -1,4 +1,4 @@
-"""`tenk companies verify`: check companies.yaml against SEC data (V4 spec §8, items 1–2).
+"""`tenk companies verify`: check companies.yaml against SEC data (V4 spec §7, items 1–2).
 
 Resolves each ticker's CIK from SEC's company_tickers.json and records what EDGAR's
 submissions say: legal name, exchanges, fiscal year-end, and how many 10-Ks, 10-Qs and

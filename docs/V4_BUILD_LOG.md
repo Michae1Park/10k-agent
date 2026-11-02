@@ -8,11 +8,11 @@ Section references of the form "§n" without "§3.n" point to the design doc **a
 
 ## 1. Build order and test gates
 
-Each phase passes its gate before the next (spec §7). Pilot BKNG + UBER (UBER is the widest template), then all eight.
+Each phase passes its gate before the next. Pilot BKNG + UBER (UBER is the widest template), then all eight.
 
 | Phase | Builds | Gate |
 |---|---|---|
-| **V4.0a Pre-flight** (spec §8) | `companies verify`; one company end to end on EDGAR (company facts, dates, rate limit); confirm the three §4.5 XBRL facts; release dates and numeric-guidance survey; dataset terms; D-001 successor entry | Findings written into this doc; `companies.yaml` filled |
+| **V4.0a Pre-flight** (spec §7) | `companies verify`; one company end to end on EDGAR (company facts, dates, rate limit); confirm the three §4.5 XBRL facts; release dates and numeric-guidance survey; dataset terms; D-001 successor entry | Findings written into this doc; `companies.yaml` filled |
 | **V4.0b Data** | Migration M1–M6 (§14.1), then `facts`/`quarters`, prices, macro, as-of search | V3 tests and V3 agent gold green; unit tests incl. a leak test (as-of before a filing → zero rows from it); Q4 ties on the pilot |
 | **V4.1 Extraction** | Pilot hand labels first; extractor, registry, guidance | Layer 1 on the pilot, then all eight |
 | **V4.2 Ask** | Tool groups, `refs.py`, prompts, ask gold set | Ask gold bars |
@@ -52,7 +52,7 @@ Today 15 modules assume 10-K only or `FISCAL_YEARS`: `cli.py`, `corpus.py`, `acq
 
 Checked against live SEC and data-source endpoints; raw responses cached under `data/v4/raw/`.
 
-### 3.1 Companies (spec §8 items 1–2)
+### 3.1 Companies (spec §7 items 1–2)
 
 `tenk companies verify` filled `companies.yaml`. All eight are listed (UBER on NYSE, the rest on Nasdaq) with a December year-end. Filings since 2023-01-01:
 
@@ -91,7 +91,7 @@ The 10-K count includes the FY2022 10-K filed in early 2023. The 15 releases are
 | DASH | Q3 marketplace GOV $33.0–34.0B, adj. EBITDA $950–1,100M; FY SBC, D&A | `level` |
 | CART | Q3 GTV $10.30–10.55B, adj. EBITDA | `level` |
 
-### 3.5 Other data sources (spec §8 item 5)
+### 3.5 Other data sources (spec §7 item 5)
 
 | Source | Reachable by script | Terms | Status |
 |---|---|---|---|

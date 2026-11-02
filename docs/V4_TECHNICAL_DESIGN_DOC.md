@@ -613,7 +613,7 @@ anchors: …   # guide name as each company prints it → the line it anchors
 | Template | Companies | Revenue build |
 |---|---|---|
 | `marketplace` | BKNG, EXPE, ABNB | room nights (ABNB: nights and experiences) × bookings per night = GB; revenue = GB × take rate |
-| `segments` | UBER | per segment: GB on its own faded growth × its take rate; revenue is the sum; adj. EBITDA = revenue − costs held as a share of total GB |
+| `segments` | UBER | per segment: GB on its own faded growth × its take rate; revenue is the sum; adj. EBITDA = revenue − costs, forecast as a fixed share of total GB |
 | `orders` | DASH, LYFT, CART | orders or rides × value per unit = GOV, GB or GTV; revenue = that × one take rate |
 | `trip` | TRIP | revenue on one faded rate; adj. EBITDA as a margin on revenue |
 
@@ -647,7 +647,7 @@ ratios                   same quarter last year + a shift that holds until lappe
 | A ratio's shift holds until lapped, then 0 | A one-off change is not compounded (build log §3.13) |
 | Ratios bounded to the 8-quarter range ± a band | A forecast ratio stays within what the company has shown *(new)* |
 | Anchors: a bracketing search solves one assumption per guide, in order bookings → revenue → EBITDA | Each guide is hit by its own driver, upstream first so later anchors see it *(new)* |
-| Midpoint, not the high end (`guidance_point: mid`) | Signed off before the backtest; `high` stays an ablation (spec §8) |
+| Midpoint, not the high end (`guidance_point: mid`) | Signed off before the backtest; `high` stays an ablation (spec §7) |
 | A full-year-only guide anchors the FY column | ABNB guides only a full-year margin (build log §3.13 seasonal-share run) |
 | An anchor the bounds stop is logged, never forced | Flag, don't hide (spec §2.3) |
 | Scenarios move each template driver by ±`shock_sigma` × σ of its history | Scales the shock to how much the driver has moved (D-042) |
@@ -660,7 +660,7 @@ ratios                   same quarter last year + a shift that holds until lappe
 
 | Rule | Reason |
 |---|---|
-| Default `defaults` (LLM proposer off) | It did not beat the defaults in the backtest (build log §3.13, spec §8) |
+| Default `defaults` (LLM proposer off) | It did not beat the defaults in the backtest (build log §3.13, spec §7) |
 | Not on anchored assumptions | The anchor runs after and would undo it (`propose.py`) |
 | The clip bounds | A proposal stays within what the history supports *(new)* |
 | Evidence must resolve | No unsupported proposal *(new)* |
@@ -672,7 +672,7 @@ ratios                   same quarter last year + a shift that holds until lappe
 | Market cap, EV | last close before D × latest diluted shares; EV = market cap + debt − cash and ST investments | D-042; leases, stakes, customer funds excluded and logged (D-042) |
 | Peers (S6) | same-sector companies, defaults, same as-of, cached | Spec §1.1; defaults (§5.3) |
 | Multiple PT | target × 2027E adj. EBITDA → EV − net debt → per share; target = peer median; bear/bull ∓/±15%; outside the peer range flagged | Spec §3.3; ±15% from the spec's example (D-042); flag per layer 4 |
-| DCF | UFCF = adj. EBITDA − SBC − tax on EBIT − capex; modeled quarters, then annual years fading toward g to 10 years; Gordon terminal at 3.0%; Ke = DGS10 + β × ERP (β: 60 monthly returns vs SPY); WACC = Ke below a 10% debt weight, else weighted | Spec §3.3 (SBC a cost, one ERP); the 10% rule from the spec's all-equity UBER (D-042) |
+| DCF | UFCF = adj. EBITDA − SBC − tax on EBIT − capex; modeled quarters, then annual years fading toward g to 10 years; Gordon terminal at 3.0%; Ke = DGS10 + β × ERP (β: monthly returns vs SPY since 2023, the data window; fewer than 24 → β = 1); WACC = Ke below a 10% debt weight, else weighted | Spec §3.3 (SBC a cost, one ERP); the 10% rule from the spec's all-equity UBER (D-042) |
 | Non-positive DCF EV | left out of the PT, logged | A negative DCF would set a negative PT (TRIP; build log §3.14) |
 | Price target | 0.6 × multiple + 0.4 × DCF per scenario; weighted 25/50/25; no roll-forward | Spec §3.3; no roll-forward (D-042) |
 | Rating | absolute: Buy ≥ +15%, Sell ≤ −10%; relative (`--all`): thirds | Spec §3.3; relative needs every model (D-042) |
@@ -701,6 +701,7 @@ ratios                   same quarter last year + a shift that holds until lappe
 | Anchor out of bounds | Logged, not forced |
 | Fewer than 3 complete years for seasonal shares | Fewer years, logged |
 | Non-positive DCF | Left out of the PT, logged |
+| Fewer than 24 monthly returns since 2023 (CART's early as-ofs) | β = 1 |
 | Proposer failure | Defaults |
 | Outside series too short, not visible, or slope ≤ 0 | That input is not used; an `info` exception says why |
 
@@ -1122,7 +1123,6 @@ Built differently on purpose; each keeps the spec's intent.
 
 | Spec | Design | Why |
 |---|---|---|
-| §3.1: Uber's adj. EBITDA is a margin on total gross bookings | revenue − costs held as a share of total GB (§7.3) | with a plain margin on GB, a take-rate cut left EBITDA unchanged ([build log §3.13](V4_BUILD_LOG.md#313-v44-exit-forecast-and-backtest-2026-10-28)) |
 | §2.3: Valuation tab holds the EV-to-equity bridge and rating | they are on the Summary tab (§10.2) | one headline tab for the reviewer; Valuation keeps the peers and DCF detail |
 | §2.3: the prior model kept as a separate tab | Model (prior) holds the parent's values, not formulas (§10.2) | the parent version's own workbook keeps its live formulas |
 | §3.2: later quarters by the seasonal share | a full-year-only guide anchors the FY column (§7.3) | ABNB guides only a full-year margin |
@@ -1135,7 +1135,7 @@ Built differently on purpose; each keeps the spec's intent.
 |---|---|---|
 | `config.yaml` (`TENK_CONFIG`) | per-stage V0–V3 knobs: chunking; `retrieval` (embedder, reranker, candidates 40, `rrf_k` 60, k 8, device); `generation`; `agent` (`max_calls` 20, `max_turns` 20, `max_context` 20000, `result_chars` 16000) | per experiment (D-019) |
 | `companies.yaml` (`TENK_COMPANIES`) | coverage, `data_dir: data/v4`, window from 2023-01-01; per company CIK, sector, template, main KPI | per experiment |
-| `research.yaml` | `forecast` (horizon 2027Q4, fade 0.9, `fade_bounds` [0.75, 1.0], `guidance_point: mid`, `ratio_bounds` take rate 0.005 / margin 0.02, `tax_rate_bounds` [0.10, 0.30], `variance_flag`, `outside` (method `nowcast` \| `"off"`, weight 0.5, `min_quarters` 6, inputs per company)); `scenarios` (weights 25/50/25, `shock_sigma` 1.0); `proposer` (method, model, base_url, budget); `budgets` (events, debate, section, `run_minutes` 30); `valuation` (weights 0.6/0.4, target year 2027, scenario multiple 0.15, terminal growth 0.03 and grid 2.5–3.5%, WACC step 0.01, DCF years 10, annual fade 0.9, beta months 60, debt-weight threshold 0.10, rating thresholds +15% / −10%) | per experiment |
+| `research.yaml` | `forecast` (horizon 2027Q4, fade 0.9, `fade_bounds` [0.75, 1.0], `guidance_point: mid`, `ratio_bounds` take rate 0.005 / margin 0.02, `tax_rate_bounds` [0.10, 0.30], `variance_flag`, `outside` (method `nowcast` \| `"off"`, weight 0.5, `min_quarters` 6, inputs per company)); `scenarios` (weights 25/50/25, `shock_sigma` 1.0); `proposer` (method, model, base_url, budget); `budgets` (events, debate, section, `run_minutes` 30); `valuation` (weights 0.6/0.4, target year 2027, scenario multiple 0.15, terminal growth 0.03 and grid 2.5–3.5%, WACC step 0.01, DCF years 10, annual fade 0.9, debt-weight threshold 0.10, rating thresholds +15% / −10%) | per experiment |
 | `facts/kpis.yaml`, `facts/metrics.yaml` | the KPI registry (§6.2); XBRL concepts per metric | with the code |
 | `research/model/templates/*.yaml` | model templates (§7.2) | with the code |
 
