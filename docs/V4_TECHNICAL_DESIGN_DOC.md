@@ -1092,7 +1092,6 @@ One debate per scenario driver (`gb_g_mobility.g0`, …) returns bull, bear, hyp
 | Debates (and any section research run) with the **Research** toolset | spec §2.3 req. 2 | S9 debates use the `ask` set: no model tools, so a debate cannot run a scenario or quote a sensitivity itself (§5.2) |
 | DCF with 3 modeled years (2026E–2028E), then 7 faded | spec §3.3, §3.2 | the model's quarters end at 2027Q4; 2028 onward is faded in the DCF (§7.3) |
 | Held-out quarters (released after the LLM's training cutoff) reported separately | spec §6 | not reported: the cutoff is unpublished (D-043) |
-| ~384 extraction labels (12 fields × 4 quarters × 8 companies) | spec §5 layer 1 | 337 labels (§6.6) |
 | Section 10 gets a repair turn on a failed consistency check | spec §2.3 req. 6 | section 10 is written by code from the exception log, so only the takeaways (section 1) are repaired (§8.3) |
 | Assumptions tab: basis, confidence, variables affected, last updated | spec §2.3 | name and value only (§10.2) |
 | Release vs filing gap logged as an exception ("filing wins", spec example X-01) | spec §1.6, §2.3 | no comparison between release KPIs and XBRL facts; integrity checks cover Q4 ties and restatements only |

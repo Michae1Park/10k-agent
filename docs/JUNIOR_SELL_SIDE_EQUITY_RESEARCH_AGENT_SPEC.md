@@ -495,7 +495,7 @@ Every DCF includes a price-per-share grid against WACC and terminal growth.
 
 | Layer | Test | Pass bar |
 | --- | --- | --- |
-| 1. Extraction | ~384 hand-labeled values (12 fields x 4 quarters x 8 companies) | 98% exact match; 100% on revenue, EPS and main KPI |
+| 1. Extraction | 337 hand-checked values from 32 releases (4 quarters x 8 companies): one label per value each release prints, 7–14 per release, since the companies report different fields (§1.5) | 98% exact match; 100% on revenue, EPS and main KPI |
 | 2. Model integrity | Automated checks: balance sheet balances, quarters sum to years, Q4 matches 10-K, take rate recomputes, no input dated after as-of | 100% pass; any failure blocks forecasting |
 | 3. Forecast accuracy | Walk-forward backtest (Section 6) | Lower MAPE than seasonal-naive on revenue and main KPI; bias near zero |
 | 4. Valuation | Re-run with identical inputs; sensitivity checks | Identical output; every target multiple inside the peer range or flagged |
