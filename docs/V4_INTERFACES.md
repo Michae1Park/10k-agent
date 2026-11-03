@@ -36,7 +36,7 @@ These hold for every interface below unless it says otherwise.
 | **Dates** | ISO `YYYY-MM-DD`; `accepted_at` is UTC |
 | **As-of columns** | Every Store row carries the date it became public (`filing_date`, `filed`, `published`, `as_of`). A run at D sees rows dated strictly before D ([design §2.5](V4_TECHNICAL_DESIGN_DOC.md#25-cross-cutting-rules)) |
 | **Units** | Each value carries its unit string. XBRL facts and `financials` rows are in whole USD; KPIs, guidance, model lines and valuation amounts in `USD millions`; counts in `count millions`; per-share in `USD per share` |
-| **Ratios** | Fractions in stored files (`model.json`, assumptions); **percent** in tool results and resolved ids (`"unit": "percent"`) |
+| **Ratios** | Ratio lines (take rate, margins): fractions in stored files (`model.json`); **percent** in tool results and resolved ids (`"unit": "percent"`). **Assumptions are fractions everywhere**, tool results included: `0.0847` = 8.47% ([§7 Assumptions](#assumptions)) |
 | **Rounding** | Tool results round numbers to 4 decimals; the calculator to 6 |
 | **Tool errors** | Tools never raise: `{"error": str, <choices>?: [str]}`, where `<choices>` names the valid values (`metrics`, `corpus`, `lines`, …) |
 | **Caps** | Tool tables hold at most the row cap (design Appendix A), latest kept, with `"omitted": n` |
@@ -170,6 +170,8 @@ Knobs: `config.yaml` `retrieval` (design Appendix A).
 *Called by the agent (and `tenk tool NAME key=value`); each tool fronts one block. What each computes: [design §7.2](V4_TECHNICAL_DESIGN_DOC.md#72-catalog).*
 
 Every tool: `company` = a ticker or name; `periods` = period keys, default the latest eight; results follow the Conventions (percent, 4 decimals, caps, error shape). Each block below gives the signature, then a checked example: `call` is the arguments, `result` what the tool returns.
+
+**Model tools** (`model_view`, `run_scenario`, `compare_peers`, `variance_review`) do not take financial figures. They read models the Model engine has already built: each company's base forecast at the as-of, with default assumptions and guidance anchors, built on first use ([design §7.3](V4_TECHNICAL_DESIGN_DOC.md#73-rules)). A caller sends names and selectors (company, line, metric, period). The only numbers a caller sends are assumption values in `run_scenario`. Assumption names, units and bounds: [§7 Assumptions](#assumptions).
 
 ### text · `search_filings`
 
@@ -330,10 +332,23 @@ model_view(company, lines?: [str], periods?: [period])
 
 ```text
 run_scenario(company, overrides?: {assumption: value}, deltas?: {assumption: delta})    # at least one
-→ {company, version: "scratch-<n>", changes: {assumption: value}, clipped_to_bounds: {assumption: value},
+→ {company, version: "scratch-<n>", changes: {assumption: value}, clipped_to_bounds: {assumption: [lo, hi]},
    rows: [{line, period, base, scenario, id, base_id}],
    price_target: {base, scenario, id, base_id}, rating: {base, scenario}}
+error: unknown driver or no change → {error, drivers: [str]}
 ```
+
+| Field | Meaning |
+|---|---|
+| `overrides` | The driver's new value |
+| `deltas` | Added to the driver's base value (see it with `model_view`) |
+| Values | Fractions ([§7 Assumptions](#assumptions)): a take rate 50 bps lower is a delta of `-0.005` |
+| Allowed drivers | Every `.g0` and `.shift0` with history, and `fade`. A driver anchored to guidance may be changed too: the scenario replaces the anchor |
+| `changes` | The final value of each changed driver, after clipping |
+| `clipped_to_bounds` | Each driver that was clipped, with its `[lo, hi]` |
+| `rows` | `revenue`, `adj_ebitda`, `eps_diluted`, `free_cash_flow` for the last two FY columns, base vs scenario |
+
+In the example, the base `take_rate_mobility.shift0` is `-0.0527` (the mobility take rate 5.27 points below the same quarter last year). The delta `+0.005` makes it `-0.0477`, inside its bounds, so nothing is clipped.
 
 ```json
 {"call": {"company": "UBER", "deltas": {"take_rate_mobility.shift0": 0.005}},
@@ -351,9 +366,26 @@ run_scenario(company, overrides?: {assumption: value}, deltas?: {assumption: del
 ### model · `compare_peers`
 
 ```text
-compare_peers(metric: str, companies?: [str], period?: period = FY2027)    # period: null for a valuation field
-→ {metric, period, rows: [{company, value, unit, id, assumptions: [{driver, value, source: default | guidance}]}]}
+compare_peers(metric: str, companies?: [str], period?: period = FY2027)
+→ {metric, period: period | null, rows: [{company, value, unit, id, assumptions: [{driver, value, source: default | guidance}]}]}
+error: unknown metric → {error, model_lines: [str], valuation: [str]} · unknown company → {error}
 ```
+
+**`metric`** is a valuation field or a model line:
+
+| `metric` | Value | `unit` | `period` |
+|---|---|---|---|
+| `ev_to_ebitda`, `ev_to_ebitda_less_sbc`, `pe` | 2027E multiple | `""` | ignored; `null` in the result |
+| `fcf_yield` | 2027E free-cash-flow yield | `percent` | ignored |
+| `price_target` | Scenario-weighted price target | `USD` | ignored |
+| `return` | Price target / price − 1 | `percent` | ignored |
+| `rating` | `Buy`, `Hold` or `Sell` (sorted last) | `""` | ignored |
+| `ev`, `market_cap` | Amount in USD millions | `""` | ignored |
+| Any model line: `revenue`, `adj_ebitda`, `adj_ebitda_margin`, `eps_diluted`, `free_cash_flow`, `take_rate`, … | The line in `period` | The line's unit (ratios in percent) | Default `FY2027` |
+
+- **Companies:** default all eight. Each value comes from that company's base model at the same as-of.
+- **Rows:** sorted ascending by value; non-numbers last.
+- **`assumptions`:** up to four `.g0` and `.shift0` drivers behind that company's model, as fractions. `guidance` means an anchor solved it. Templates differ, so driver names differ between companies (`volume_g.g0` for LYFT's `orders` template, `gb_g_mobility.g0` for UBER's `segments`).
 
 ```json
 {"call": {"metric": "ev_to_ebitda", "companies": ["UBER", "LYFT"]},
@@ -476,6 +508,26 @@ anchors:   [{guide: gross_bookings, line: gross_bookings, basis: level, solve: v
 | `anchors` | Each guide → the line it anchors and the assumption solved to hit it; template order sets priority |
 
 **DSL:** arithmetic; `x[-4]` (same quarter last year); `fy(x)`, `fyp(x)` (this and last fiscal year's sum); `min`, `max`, `if_`, `first`; `@name` = an assumption. Anything else is rejected.
+
+### Assumptions
+
+The forecast knobs a template names (`@name`), stored in `model.json` `assumptions` and shown by `model_view`. Each gets a default from history (S5); guidance anchors may then solve some of them. All are **fractions** unless marked.
+
+| Name | Meaning | Default | Bounds (`run_scenario`, proposer) |
+|---|---|---|---|
+| `<driver>_g.g0` (`volume_g.g0`, `gb_g_mobility.g0`, `trips_g.g0`) | The driver's y/y growth in the first forecast quarter; it fades by `fade` each quarter after | The driver's last reported y/y | Its last 8 quarters' range ± 0.05 |
+| `<ratio>.shift0` (`take_rate_mobility.shift0`, `cost_to_gb.shift0`) | The ratio's change vs the same quarter last year, held for 4 quarters, then 0 | The ratio's last y/y change | ± (its 8-quarter range + the ratio's band) |
+| `fade` | Growth multiplier per quarter: g(t+1) = g(t) × fade | 0.9 | 0.75–1.0 (`research.yaml`) |
+| `<line>.s1`–`.s4` | Each quarter's share of the fiscal year | 3-year mean | Fixed |
+| `<line>.ratio` (`capex`, `d_and_a`, `sbc`) | Share of revenue | Trailing 4 quarters | Fixed |
+| `<ratio>.lo`, `<ratio>.hi` | Clamps on a ratio line (not shown by tools) | 8-quarter range ± band | – |
+| `tax_rate` | Tax rate | Trailing 4 quarters, within 10–30% | Fixed |
+| `shares_last` | Last diluted shares (**count millions**) | Last reported | Fixed |
+| `share_change` | Quarterly change in share count | Trend over the last 5 quarters | Fixed |
+| `buybacks_q` | Buybacks per quarter (**USD millions**) | Trailing 4-quarter mean | Fixed |
+| `gb_g_adj` | Adjustment to gross-bookings growth that a bookings guide solves (UBER) | 0 | Fixed |
+
+"Fixed" means `run_scenario` rejects it. Example (UBER at 2026-08-06): `gb_g_mobility.g0` = 0.2199 (22% growth), `take_rate_mobility.shift0` = −0.0527, `cost_to_gb.shift0` = −0.0287, solved by `guide:UBER:adj_ebitda:2026Q3`.
 
 ## 8. Model and valuation files
 
