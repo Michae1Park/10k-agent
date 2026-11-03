@@ -254,7 +254,9 @@ SPECS |= {
         "change from the base (deltas). Returns the changed lines (2026E, 2027E), the price "
         "target and rating against the base, with ids. An unknown driver returns the valid ones."
         " Growth drivers (.g0) and take-rate or margin changes (.shift0) are fractions: a take "
-        "rate 50 bps lower is a delta of -0.005.",
+        "rate 50 bps lower is a delta of -0.005. Changing a driver that guidance anchors "
+        "replaces the anchor; overrode_anchor lists those, so say the scenario departs from "
+        "guidance.",
         {
             "type": "object",
             "properties": {
@@ -747,6 +749,7 @@ class Toolbox:
         return {
             "company": ticker, "version": version,
             "changes": {k: _round(v) for k, v in changes.items()}, "clipped_to_bounds": clipped,
+            "overrode_anchor": sorted(k for k in changes if k in {a.solve for a in f.anchors}),
             "rows": rows,
             "price_target": {"base": _round(val_base["price_target"]),
                              "scenario": _round(val["price_target"]),
@@ -772,7 +775,8 @@ class Toolbox:
                 value = v["multiples_2027e"].get(metric, v.get(metric))
                 ref = f"model:{t}:{self.book.as_of}:val-base:{metric}"
                 unit = "percent" if metric in ("return", "fcf_yield") else (
-                    "USD" if metric == "price_target" else "")
+                    "USD" if metric == "price_target" else
+                    "USD millions" if metric in ("ev", "market_cap") else "")
                 if unit == "percent" and value is not None:
                     value *= 100
             else:
@@ -785,12 +789,12 @@ class Toolbox:
                 value = _shown(m.value(metric, period), m.line(metric).unit)
                 ref = self.book.ref(t, "base", metric, period)
             f = self.book.base(t)
-            anchored = {a.solve for a in f.anchors}
+            anchored = {a.solve: a.guide_id for a in f.anchors}
             rows.append({"company": t, "value": _round(value) if not isinstance(value, str)
                          else value, "unit": unit, "id": ref,
                          "assumptions": [
                              {"driver": k, "value": _round(v),
-                              "source": "guidance" if k in anchored else "default"}
+                              "source": f"guidance {anchored[k]}" if k in anchored else "default"}
                              for k, v in sorted(f.model.assumptions.items())
                              if k.endswith((".g0", ".shift0"))][:4]})
         numeric = [r for r in rows if isinstance(r["value"], int | float)]
