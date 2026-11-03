@@ -10,12 +10,12 @@ The tool examples (§4) are checked against the code by `tests/test_interfaces.p
 |---|---|---|---|---|
 | 1 | [Raw cache](#1-raw-cache) | files | `tenk fetch` → `tenk build` | [design §3](V4_TECHNICAL_DESIGN_DOC.md#3-data-layer) |
 | 2 | [Store](#2-store) | SQLite + Python API | builders, Report → every reader | [design §3](V4_TECHNICAL_DESIGN_DOC.md#3-data-layer) |
-| 3 | [Search](#3-search) | call | Toolbox → Retrieval | [design §4](V4_TECHNICAL_DESIGN_DOC.md#4-retrieval) |
-| 4 | [Tool calls](#4-tool-calls) | JSON call | agent ↔ Toolbox | [design §7](V4_TECHNICAL_DESIGN_DOC.md#7-toolbox) |
+| 3 | [Search](#3-search) | call | Toolbox → Retrieval | [design §6](V4_TECHNICAL_DESIGN_DOC.md#6-retrieval) |
+| 4 | [Tool calls](#4-tool-calls) | JSON call | agent ↔ Toolbox | [design §5](V4_TECHNICAL_DESIGN_DOC.md#5-toolbox) |
 | 5 | [LLM calls](#5-llm-calls) | JSON reply | code ↔ model | [design §8](V4_TECHNICAL_DESIGN_DOC.md#8-agent-runtime) |
-| 6 | [Extraction rows](#6-extraction-rows) | JSON reply → rows | extractor → Store | [design §5](V4_TECHNICAL_DESIGN_DOC.md#5-extraction-layer-1) |
-| 7 | [Templates](#7-templates) | YAML | config → Model engine | [design §6](V4_TECHNICAL_DESIGN_DOC.md#6-model-engine-and-valuation) |
-| 8 | [Model and valuation files](#8-model-and-valuation-files) | Python calls, JSON files | Model engine → Report, tools, Export | [design §6](V4_TECHNICAL_DESIGN_DOC.md#6-model-engine-and-valuation) |
+| 6 | [Extraction rows](#6-extraction-rows) | JSON reply → rows | extractor → Store | [design §4](V4_TECHNICAL_DESIGN_DOC.md#4-extraction-layer-1) |
+| 7 | [Templates](#7-templates) | YAML | config → Model engine | [design §7](V4_TECHNICAL_DESIGN_DOC.md#7-model-engine-and-valuation) |
+| 8 | [Model and valuation files](#8-model-and-valuation-files) | Python calls, JSON files | Model engine → Report, tools, Export | [design §7](V4_TECHNICAL_DESIGN_DOC.md#7-model-engine-and-valuation) |
 | 9 | [Pipeline artifacts](#9-pipeline-artifacts) | JSON files | step → step | [design §9](V4_TECHNICAL_DESIGN_DOC.md#9-report-pipeline) |
 | 10 | [Reference ids](#10-reference-ids) | strings | everywhere | [design §10](V4_TECHNICAL_DESIGN_DOC.md#10-verification-and-number-trace) |
 | 11 | [Fact list and log](#11-fact-list-and-log) | JSON files | Report code → note writer, trace | [design §10](V4_TECHNICAL_DESIGN_DOC.md#10-verification-and-number-trace) |
@@ -168,11 +168,11 @@ Knobs: `config.yaml` `retrieval` (design Appendix A).
 
 ## 4. Tool calls
 
-*Called by the agent (and `tenk tool NAME key=value`); each tool fronts one block. What each computes: [design §7.2](V4_TECHNICAL_DESIGN_DOC.md#72-catalog).*
+*Called by the agent (and `tenk tool NAME key=value`); each tool fronts one block. What each computes: [design §5.2](V4_TECHNICAL_DESIGN_DOC.md#52-catalog).*
 
 Every tool: `company` = a ticker or name; `periods` = period keys, default the latest eight; results follow the Conventions (percent, 4 decimals, caps, error shape). Each block below gives the signature, then a checked example: `call` is the arguments, `result` what the tool returns.
 
-**Model tools** (`model_view`, `run_scenario`, `compare_peers`, `variance_review`) do not take financial figures. They read models the Model engine has already built: each company's base forecast at the as-of, with default assumptions and guidance anchors, built on first use ([design §7.3](V4_TECHNICAL_DESIGN_DOC.md#73-rules)). A caller sends names and selectors (company, line, metric, period). The only numbers a caller sends are assumption values in `run_scenario`. Assumption names, units and bounds: [§7 Assumptions](#assumptions).
+**Model tools** (`model_view`, `run_scenario`, `compare_peers`, `variance_review`) do not take financial figures. They read models the Model engine has already built: each company's base forecast at the as-of, with default assumptions and guidance anchors, built on first use ([design §5.3](V4_TECHNICAL_DESIGN_DOC.md#53-rules)). A caller sends names and selectors (company, line, metric, period). The only numbers a caller sends are assumption values in `run_scenario`. Assumption names, units and bounds: [§7 Assumptions](#assumptions).
 
 ### text · `search_filings`
 
@@ -533,7 +533,7 @@ anchors:   [{guide: gross_bookings, line: gross_bookings, basis: level, solve: v
 | `expr`, `forecast` | DSL: history formula; forecast formula |
 | `anchors` | Each guide → the line it anchors and the assumption solved to hit it; template order sets priority |
 
-**DSL:** arithmetic; `x[-4]` (same quarter last year); `fy(x)`, `fyp(x)` (this and last fiscal year's sum); `min`, `max`, `if_`, `first`; `@name` = an assumption. Anything else is rejected.
+**DSL:** arithmetic (`+ - * / **`) and comparisons; `x[-4]` (same quarter last year); `fy(x)`, `fyp(x)` (this and last fiscal year's sum); `min`, `max`, `abs`, `if_`, `first`; `@name` = an assumption. Anything else is rejected.
 
 ### Assumptions
 

@@ -140,7 +140,7 @@
   <g font-size="12.5">
     <rect class="work" x="814" y="768" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="780.5" fill="#132030">S1  datapack · facts, KPIs, guidance, prices</text>
     <rect class="llm" x="814" y="787" width="312" height="16" rx="3" fill="#fbe8f1" stroke="#b4538a"/><text class="name" x="822" y="799.5" fill="#132030">S2  events · what changed this quarter</text>
-    <rect class="work" x="814" y="806" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="818.5" fill="#132030">S3  model · history + checks (FAIL stops)</text>
+    <rect class="work" x="814" y="806" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="818.5" fill="#132030">S3  history · model + checks (FAIL stops)</text>
     <rect class="llm" x="814" y="825" width="312" height="16" rx="3" fill="#fbe8f1" stroke="#b4538a"/><text class="name" x="822" y="837.5" fill="#132030">S4  propose · bounded assumptions</text>
     <rect class="work" x="814" y="844" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="856.5" fill="#132030">S5  forecast · anchor to guidance, scenarios</text>
     <rect class="work" x="814" y="863" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="875.5" fill="#132030">S6  peers · S1, S3, S5 per peer, defaults</text>

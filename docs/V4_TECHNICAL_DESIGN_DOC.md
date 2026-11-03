@@ -10,7 +10,7 @@
 | Model equations | [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md) |
 | Results | [V4_RESULTS.md](V4_RESULTS.md) |
 
-**How to read it.** Top down: §1 is the scope; §2 gives the components, interfaces and cross-cutting rules. §3–§12 take one block each, in dependency order (§7, the Toolbox, is the agent's view of §3–§6 and §11). Each has three parts: **contract, rules, failure handling and limits.** §12 is evaluation; §13 is reliability. "Spec §n" is a section of the spec; a bare "§n" is a section of this doc.
+**How to read it.** Top down: §1 is the scope; §2 gives the components, interfaces and cross-cutting rules. §3–§12 take one block each, data first; §5, the Toolbox, is the agent's view of the blocks in §3, §4, §6, §7 and §11, so it refers ahead to §6 and §7. Each has three parts: **contract, rules, failure handling and limits.** §12 is evaluation; §13 is reliability. "Spec §n" is a section of the spec; a bare "§n" is a section of this doc.
 
 *Updated 2026-11-03.*
 
@@ -37,10 +37,10 @@ The system serves three entry points, each at an as-of date, over eight companie
 ### 2.1 Component map
 
 <p align="center">
-  <img src="img/v4-components.svg" alt="V4 component map. External sources feed Acquisition, which writes a raw cache. Text processing and Facts and extraction build the Store, one SQLite file read only through an AsOf filter. Retrieval and the Model engine read the Store. The Agent runtime (loop, toolbox, sub-agents) reaches Retrieval, the Store and the Model engine through tools. Ask and Research are agent runs; the Report pipeline runs fixed steps, calls the Model engine and bounded sub-agents, and its artifacts pass Verification and Export into a note, workbook and log. Saved versions go back to the Store. Evaluation reads gold sets and every layer's outputs. Components that call the LLM are marked." width="100%">
+  <img src="img/v4-components.svg" alt="V4 component map. External sources feed Acquisition, which writes a raw cache. Text processing and Facts build the Store, one SQLite file read only through an AsOf filter. Retrieval and the Model engine read the Store. The Agent runtime (loop, prompts, sub-agents) calls the Toolbox, which reaches Retrieval, the Store and the Model engine. Ask and Research are two modes of the Agent runtime; the Report pipeline runs fixed steps, calls the Model engine and bounded sub-agents, and its artifacts pass Verification and Export into a note, workbook and log. Saved versions go back to the Store. Evaluation reads gold sets and every layer's outputs. Components that call the LLM are marked." width="100%">
 </p>
 
-Boxes are components (§2.2); numbered arrows are interfaces (§2.3). Pink marks a component that calls the LLM.
+Green, pink and yellow boxes and the Evaluation panel are components (§2.2); purple boxes are data, blue ones are outside the system, grey Config is files. Numbered arrows are interfaces (§2.3). Pink marks a component that calls the LLM.
 
 ### 2.2 Components
 
@@ -50,10 +50,10 @@ Boxes are components (§2.2); numbered arrows are interfaces (§2.3). Pink marks
 | **Text processing** | Turns filings into Items, chunks and vectors (by rules) | | §3 |
 | **Facts** | Loads XBRL facts; derives quarters on read | | §3 |
 | **Store** | One SQLite file; every read filtered by the run's as-of | | §3 |
-| **Retrieval** | Hybrid search over chunks | | §4 |
-| **Extraction** | KPI and guidance rows from releases, each checked against a quote | ✓ | §5 |
-| **Model engine** | Model, checks, forecast, scenarios, valuation | | §6 |
-| **Toolbox** | The tools the agent calls: its view of the blocks above | | §7 |
+| **Extraction** | KPI and guidance rows from releases, each checked against a quote | ✓ | §4 |
+| **Toolbox** | The tools the agent calls: its view of the other blocks | | §5 |
+| **Retrieval** | Hybrid search over chunks | | §6 |
+| **Model engine** | Model, checks, forecast, scenarios, valuation | | §7 |
 | **Agent runtime** | The tool-calling loop, prompts and budgets: Ask, Research, sub-agents | ✓ | §8 |
 | **Report pipeline** | Steps S1–S11 per ticker and as-of; the note; versions | ✓ | §9 |
 | **Verification** | Ids, claim check, number trace, consistency check | | §10 |
@@ -70,12 +70,12 @@ One row per boundary. Each is stated in its section; the full schema is in [V4_I
 |---|---|---|---|---|
 | 1 | **Raw cache** | Acquisition → builders | §3.1 | [§1](V4_INTERFACES.md#1-raw-cache) |
 | 2 | **Store** | everything → SQLite | §3.1 | [§2](V4_INTERFACES.md#2-store) |
-| 3 | **Search** | Toolbox → Retrieval | §4.1 | [§3](V4_INTERFACES.md#3-search) |
-| 4 | **Tool calls** | agent ↔ Toolbox | §7 | [§4](V4_INTERFACES.md#4-tool-calls) |
+| 3 | **Search** | Toolbox → Retrieval | §6.1 | [§3](V4_INTERFACES.md#3-search) |
+| 4 | **Tool calls** | agent ↔ Toolbox | §5 | [§4](V4_INTERFACES.md#4-tool-calls) |
 | 5 | **LLM calls** | code ↔ model | §8.1 | [§5](V4_INTERFACES.md#5-llm-calls) |
-| 6 | **Extraction rows** | extractor → Store | §5.1 | [§6](V4_INTERFACES.md#6-extraction-rows) |
-| 7 | **Templates** | config → Model engine | §6.1 | [§7](V4_INTERFACES.md#7-templates) |
-| 8 | **Model and valuation files** | Model engine → Report, tools, Export | §6.1 | [§8](V4_INTERFACES.md#8-model-and-valuation-files) |
+| 6 | **Extraction rows** | extractor → Store | §4.1 | [§6](V4_INTERFACES.md#6-extraction-rows) |
+| 7 | **Templates** | config → Model engine | §7.1 | [§7](V4_INTERFACES.md#7-templates) |
+| 8 | **Model and valuation files** | Model engine → Report, tools, Export | §7.1 | [§8](V4_INTERFACES.md#8-model-and-valuation-files) |
 | 9 | **Pipeline artifacts** | step → step | §9.1 | [§9](V4_INTERFACES.md#9-pipeline-artifacts) |
 | 10 | **Reference ids** | everywhere | §10.1 | [§10](V4_INTERFACES.md#10-reference-ids) |
 | 11 | **Fact list** | Report code → note writer | §10.1 | [§11](V4_INTERFACES.md#11-fact-list-and-log) |
@@ -96,10 +96,11 @@ One row per boundary. Each is stated in its section; the full schema is in [V4_I
 | Mode | Who decides the steps | New numbers come from |
 |---|---|---|
 | **Ask** | The agent, with tool set `ask` | A calculator over reported figures |
-| **Research** | The agent, with tool set `research` (adds model tools) | Model tools only |
+| **Research** | The agent, with tool set `research` (adds model tools) | Model tools; the calculator only combines their results |
 | **Report** | Code: fixed steps S1–S11; LLM calls are leaf tasks | The Model engine only |
 
 - Ask and Research are one agent with two tool sets.
+- **Report steps S1–S11** (full table in §9.1): S1 data pack · S2 events · S3 history · S4 propose · S5 forecast · S6 peers · S7 value · S8 revise · S9 debates · S10 write · S11 export. The Model engine (§7) implements S1 and S3–S7; S4 is its optional LLM step.
 - Report is not an agent loop and never starts an Ask or Research run (spec §2.3). Only its sub-agents (S2, S4, S9) call tools.
 - Ask and Research read a saved report back through `research_report` and `model:…:v<n>` ids.
 
@@ -124,8 +125,8 @@ One row per boundary. Each is stated in its section; the full schema is in [V4_I
 
 **The no-LLM-numbers rule.** LLM output reaches the numbers only three ways:
 
-1. Extracted rows that code checks against a verbatim quote (§5.2).
-2. Bounded assumption proposals that code clips (§6.2).
+1. Extracted rows that code checks against a verbatim quote (§4.2).
+2. Bounded assumption proposals that code clips (§7.2).
 3. Prose in which every number is a marked fact (§10.2).
 
 Tables are always written by code (spec §3). This keeps valuation reruns byte-identical.
@@ -166,7 +167,7 @@ Code: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisiti
 | Filing HTML | – | Rule labels (Item and part headings, headings, tables, body) → Items → parent-child chunks (parents never cross a subsection; each table its own chunk) → FTS5 + embeddings over children → `chunks` |
 | EDGAR companyfacts | JSON per company | Consolidated us-gaap, dei, srt facts with their filing → `facts` |
 | Inline XBRL (filing HTML) | – | `ix:nonFraction` facts with dimensions or company concepts → `facts` |
-| Releases | release chunks (from the Filing HTML lane) | LLM extraction (§5) → `kpis`, `guidance` |
+| Releases | release chunks (from the Filing HTML lane) | LLM extraction (§4) → `kpis`, `guidance` |
 | Tiingo, FRED/ALFRED, Damodaran | Daily closes (tickers, SPY); macro with every vintage; monthly ERP | `market`, each row with its publish date (§2.5) |
 | BTS, NYC TLC | Monthly series; TLC trip files aggregated per license at fetch | `market` (`cc:` series) |
 | Form 4 | Insider filings | `insider_tx` |
@@ -202,53 +203,11 @@ Code: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisiti
 
 ---
 
-## 4. Retrieval
-
-How it works: [V4_RETRIEVAL.md](stages/V4_RETRIEVAL.md) and [V1_RETRIEVAL.md](stages/V1_RETRIEVAL.md). Schema: [V4_INTERFACES.md §3](V4_INTERFACES.md#3-search).
-
-### 4.1 Contract
-
-Find the chunks that answer a query, one search per company and filing, under the run's as-of. No LLM.
-
-Code (`retrieval/`): decomposer, searcher, index (Qwen3-Embedding-0.6B, FTS5), reranker (bge-reranker-v2-m3).
-
-| Interface | Contract |
-|---|---|
-| **Search** (3) | `search_filings(query, companies?, periods?, forms?, k = 8)` → the searches it ran, and up to k chunks with id, company, form, period, filing date and text |
-
-### 4.2 Rules and algorithm
-
-```text
-query → decompose: one sub-question per company (and filing slot)
-      → per sub-question, over child chunks filtered by company, period, form and as-of:
-          BM25 (FTS5) top N  +  dense (cosine) top N
-      → RRF fusion, score = Σ 1 / (k_rrf + rank) → top N → cross-encoder rerank
-      → each child swapped for its parent, best child first, each parent once
-      → round-robin merge → top k
-```
-
-- **Decomposition is rule-based:** companies come from the arguments, else from the tickers, names and aliases in the query. Each sub-question is rewritten to name only its company.
-- No period = the latest filing of each form at D.
-- The model sees parent chunks: a whole subsection or table, not a fragment.
-- **Merge:** each sub-question gets ⌈k / n⌉ places (at least 2). In every round the sub-question whose best chunk scored highest goes first; duplicates are dropped.
-
-### 4.3 Failure handling and limits
-
-| Case | Handling |
-|---|---|
-| No company, or an unknown one | Error listing the corpus |
-| Bad period key | Error |
-| No filing for a slot at that as-of | Fewer chunks, not an error |
-| GPU held by vLLM | Embedder and reranker run on CPU |
-| Size | k chunks per call (default 8), each a bounded parent |
-
----
-
-## 5. Extraction (layer 1)
+## 4. Extraction (layer 1)
 
 How it works: [V4_EXTRACTION.md](stages/V4_EXTRACTION.md). Schemas: [V4_INTERFACES.md §6](V4_INTERFACES.md#6-extraction-rows).
 
-### 5.1 Contract
+### 4.1 Contract
 
 Read KPIs and guidance from earnings releases into checked, quoted rows.
 
@@ -262,7 +221,7 @@ Code: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an 
 | **Reply** | KPI and guidance rows, each with value, unit, source chunk id and a verbatim quote |
 | **Extraction rows** (6) | Stored in `kpis` and `guidance` with period, filing date and definition version. Ids `kpi:<T>:<metric>[.<segment>]:<period>`, `guide:<T>:<metric>:<period>` |
 
-### 5.2 Rules
+### 4.2 Rules
 
 **Flow** (per release, `facts/extract.py`):
 
@@ -286,7 +245,7 @@ release chunks → order: tables first, then chunks naming the most registry lab
 - Guidance keeps its basis (level, growth or margin); the forecast converts it.
 - Where a KPI is also an XBRL fact, the filing wins and the gap is logged (spec §1.6). Not built yet.
 
-### 5.3 Failure handling and limits
+### 4.3 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -297,25 +256,283 @@ release chunks → order: tables first, then chunks naming the most registry lab
 
 ---
 
-## 6. Model engine and valuation
+## 5. Toolbox
 
-How it works: [V4_MODEL.md](stages/V4_MODEL.md). Equations: [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md). Schemas: [V4_INTERFACES.md §7–8](V4_INTERFACES.md#7-templates).
+How it works: [V4_AGENT.md](stages/V4_AGENT.md#tools). Arguments and result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls).
+
+### 5.1 Contract
+
+A tool is a function the agent calls with JSON arguments; it returns JSON with citable ids. The **Toolbox** (`agent/tools.py`) holds the schemas, runs the calls, and sees exactly what its store's as-of sees. Each tool is a thin front for one block (§3, §4, §6, §7, §11); the Toolbox adds no logic of its own.
+
+| Caller | Uses |
+|---|---|
+| Ask | tool set `ask` |
+| Research | tool set `research` |
+| Report sub-agents (S2 events, S4 proposer, S9 debates) | tool set `ask` |
+| Report code steps, builders, evaluation | their blocks directly, no tools |
+| A person | `tenk tool NAME key=value …` (`--list` prints the schemas) |
+
+| Group | Tools | `ask` | `research` |
+|---|---|:-:|:-:|
+| text | `search_filings` | ✓ | ✓ |
+| calc | `calculator` | ✓ | ✓ |
+| facts | `financials`, `company_kpis`, `guidance`, `filings` | ✓ | ✓ |
+| market | `market_data`, `crosscheck` | ✓ | ✓ |
+| reports | `research_report` | ✓ | ✓ |
+| model | `model_view`, `run_scenario`, `compare_peers`, `variance_review` | | ✓ |
+
+### 5.2 Catalog
+
+Every tool shares the same handling:
+
+- **Company:** a ticker or name, resolved against the corpus.
+- **Periods:** the periods asked for, else the latest eight, in order (FY after Q4).
+- **Caps:** a row cap (Appendix A), the latest kept, with `"omitted": n`.
+- **Values:** ratios shown in percent.
+- **Arguments:** object and array arguments written as JSON strings are parsed.
+
+Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model tools compute through the Model engine (§7); their equations are in [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md) (scenarios §4, valuation §5).
+
+#### text · `search_filings`
+
+Searches filing text (10-K, 10-Q, releases) for the passages that answer a query, for one or more companies.
+
+| | |
+|---|---|
+| **Consumes** | `chunks`, `children`, FTS5 and vectors (Store) |
+| **Does** | Resolves companies (`["all"]` = every company with a filing), checks the period keys, and runs Retrieval (§6.2) |
+| **Returns** | The sub-searches run; chunks with id, company, form, period, filing date, item and text |
+| **Errors** | Unknown company (lists the corpus); no company given or named; bad period key |
+
+#### calc · `calculator`
+
+Does arithmetic on numbers the agent already holds, so every derived figure comes from code and can be rerun by the claim check.
+
+| | |
+|---|---|
+| **Consumes** | Only its inputs |
+| **Does** | A named op (`pct_change`, `cagr`, `ratio`, `percent_of`, `difference`, `sum`) or an expression over named inputs (`+ − × ÷ **`, `abs`, `round`, `min`, `max`, `sqrt`). The expression is parsed to a syntax tree; there is no `eval` |
+| **Returns** | Result, formula, inputs: the same calculator reruns the claim check (§10.2) |
+| **Errors** | Unknown op, missing inputs, bad expression, non-finite result |
+
+#### facts · `financials`
+
+Returns reported quarterly and annual figures (revenue, net income, balance-sheet items) with their derivation.
+
+| | |
+|---|---|
+| **Consumes** | `facts`; `facts/metrics.yaml` (each metric's concepts and kind, flow or instant) |
+| **Does** | Quarters derived on read (§3.2). A flow uses the direct quarter fact; otherwise Q2 or Q3 = YTD − prior YTD (`ytd_diff`) and Q4 = FY − 9M (`fy_minus_9m`). An instant uses the quarter-end fact. Each row keeps its input ids and `filed` = the latest input; it is flagged `restated` if a later filing recast it |
+| **Returns** | Rows: id (`q:` or `xbrl:`), period, value, unit, derivation, `restated?` |
+| **Errors** | Unknown metric (lists the metrics) |
+
+#### facts · `company_kpis`
+
+Returns a company's operating KPIs (bookings, volume, segments) as extracted from earnings releases, each with its quote.
+
+| | |
+|---|---|
+| **Consumes** | `kpis` |
+| **Does** | Per metric, segment and period, the latest-filed row (the newest definition version); optional segment filter |
+| **Returns** | Rows: `kpi:` id, metric, segment, period, value, unit, chunk id, quote |
+| **Errors** | No such KPI (lists the reported ones) |
+
+#### facts · `guidance`
+
+Returns management's guidance for a metric, each guide paired with the actual once it is reported.
+
+| | |
+|---|---|
+| **Consumes** | `guidance`; `kpis` for actuals |
+| **Does** | Every guide, oldest issue first, so an update follows the guide it replaces. A `level` guide gets the actual: its `kpi:` id for the target period, resolved at D |
+| **Returns** | Rows: `guide:` id, period, low, high, unit, basis, issued in, quote, `actual?`, `actual_id?` |
+| **Errors** | No guidance for the metric (lists the guided ones) |
+
+#### facts · `filings`
+
+Lists a company's filings visible at the as-of, with form, period and filing date.
+
+| | |
+|---|---|
+| **Consumes** | `filings` |
+| **Does** | The company's filings (optionally one form), by filing date; the latest, up to the row cap |
+| **Returns** | Accession (the id), form, period, period end, filing date; total count |
+
+#### market · `market_data`
+
+Returns a company's closing prices or a macro series (rates, CPI and so on).
+
+| | |
+|---|---|
+| **Consumes** | `market` (`px:<T>:close`, `px:SPY:close`, `macro:<SERIES>`) |
+| **Does** | A company's close or a macro series, not both. `start`: every point from then; `dates`: the last point on or before each; neither: the latest point |
+| **Returns** | Rows: `px:` or `macro:` id, date, value; the series unit |
+| **Errors** | Both or neither of company and series; no data for the series |
+
+#### market · `crosscheck`
+
+Returns outside demand data (NYC TLC trips for Uber and Lyft, BTS airline passengers) to sanity-check company-reported figures.
+
+| | |
+|---|---|
+| **Consumes** | `market` (`cc:` series) |
+| **Does** | `tlc`: NYC trips for Uber (`HV0003`) and Lyft (`HV0005`) only; `bts`: airline passengers, total, domestic and international. Window by month from `start` to `end`, else the latest year |
+| **Returns** | Rows: `cc:` id, series, month, value; coverage note; unit (trips or passengers) |
+| **Errors** | TLC for another company; a series other than `tlc` or `bts` |
+
+#### reports · `research_report`
+
+Returns the latest saved Report version visible at the as-of: its estimates, price target and rating, and whether it is a draft or reviewed.
+
+| | |
+|---|---|
+| **Consumes** | `model_versions`; the saved version's `model.json` and `valuation.json` (§11) |
+| **Does** | The latest version with `as_of` < D (and ≤ the `as_of` argument, which only narrows). Defaults: the headline lines and the forecast FY columns. Each value is marked `estimate` or `actual`. Valuation gives price, PT, return and rating. The status note says draft or reviewed |
+| **Returns** | Version, as-of, status, parent, note, valuation and estimates with `model:<T>:<as_of>:v<n>:…` ids; visible versions. None → `report: null` with the visible versions |
+| **Errors** | Unknown lines (listed with the valid ones; the rest still returned) |
+
+#### model · `model_view`
+
+Shows the base forecast model for a company: its lines, forecast and the assumptions behind it.
+
+| | |
+|---|---|
+| **Consumes** | The model book's base forecast for the company (§7), built on first use |
+| **Does** | Defaults: the driver build and headline lines; recent history, the near forecast and the FY columns. Each assumption is listed with its default and its source: the anchoring guide's id, else `default` |
+| **Returns** | Rows of values per period, assumptions, the model's exceptions, and the `model:<T>:<as_of>:base:…` id format |
+| **Errors** | Unknown lines (lists the lines) |
+
+#### model · `run_scenario`
+
+Reruns the forecast and valuation with changed assumptions and compares the result with the base case.
+
+| | |
+|---|---|
+| **Consumes** | The base forecast: its model, data pack and assumptions |
+| **Does** | Changes = `overrides` plus base + `deltas`. Only proposable drivers (growth starts, ratio shifts) and `fade` are allowed. Each change is clipped to the proposer's bounds (§7.2). The model is rebuilt on the same data pack with the changed assumptions, saved as `scratch-n`, and valued as §7.2 with the same peers |
+| **Returns** | Headline lines for the last FY columns, base vs scenario; PT and rating, base vs scenario; the clipped drivers; ids for both runs |
+| **Errors** | Unknown driver (lists the allowed ones); no change given |
+
+#### model · `compare_peers`
+
+Ranks companies side by side on a valuation field or model line.
+
+| | |
+|---|---|
+| **Consumes** | Each company's base forecast and valuation, built on first use (the first call is slow) |
+| **Does** | `metric` is a valuation field (`ev_to_ebitda`, `ev_to_ebitda_less_sbc`, `pe`, `fcf_yield`, `price_target`, `return`, `rating`, `ev`, `market_cap`) or a model line at `period` (default the target year). Companies default to all. Rows are sorted ascending, non-numbers last |
+| **Returns** | Rows: company, value, unit, `model:` id, its main growth and shift assumptions with their source |
+| **Errors** | Unknown company; unknown metric (lists lines and valuation fields) |
+
+#### model · `variance_review`
+
+Compares the forecast made before a release with the reported actual, and splits the revenue gap into its causes.
+
+| | |
+|---|---|
+| **Consumes** | The model book at D (actuals) and at an earlier as-of (the estimate) |
+| **Does** | `period` must be reported at D. The estimate is the base forecast made the day after the previous quarter's release (the backtest's as-of). Each main line gives estimate vs actual and `variance_pct` = actual / estimate − 1. The revenue bridge splits the variance: gross value (GB₁ − GB₀) × TR₀ plus take rate GB₁ × (TR₁ − TR₀). Where the template has them, gross value is split again into volume (V₁ − V₀) × P₀ × TR₀ and value per unit V₁ × (P₁ − P₀) × TR₀ |
+| **Returns** | Rows with `estimate_id` and `actual_id`; the bridge in USD millions with `var-<period>` ids; the estimate's assumptions |
+| **Errors** | Period not yet reported |
+
+### 5.3 Rules
+
+- Every tool is bound to the run's as-of (§2.5).
+- Every value in a result carries an id that resolves (§10.1), so the claim check can verify what the model cites.
+- Errors are results: `{"error": …}` plus the valid choices.
+- Tools come in groups; no run gets every tool.
+- Results are capped in rows and characters (§5.2, Appendix A).
+- Ask cites estimates only through `research_report`; Research's new numbers come only from model tools (the calculator only combines their results), assumptions listed (spec §2).
+- `run_scenario` writes a session-only `scratch-n` run, clipped to the proposer's bounds (§7.2). Only Report creates versions.
+- Model tools read the model book: each company's base forecast with default assumptions (proposer off, no LLM), built once per ticker and as-of. Peers come from the same book.
+
+### 5.4 Failure handling and limits
+
+| Case | Handling |
+|---|---|
+| Unknown tool, argument, metric, line or assumption | Error with the valid choices; the model retries |
+| Unknown company, or a search naming none | Error listing the corpus |
+| Nothing visible at the as-of | Empty rows (or `report: null`), not an error |
+| A model can't be built | Error naming the failing check (§7.3) |
+| Result over the caps | Truncated, with `"omitted": n` |
+| First `compare_peers` call | Slow: peers are built on first use |
+
+---
+
+## 6. Retrieval
+
+How it works: [V4_RETRIEVAL.md](stages/V4_RETRIEVAL.md) and [V1_RETRIEVAL.md](stages/V1_RETRIEVAL.md). Schema: [V4_INTERFACES.md §3](V4_INTERFACES.md#3-search).
 
 ### 6.1 Contract
 
-Build a three-statement model from the data pack, forecast it, and value it. All deterministic code.
+Find the chunks that answer a query, one search per company and filing, under the run's as-of. No LLM.
 
-Code (`research/`): data pack (S1), DSL and graph, templates, history (S3), layer-2 checks, forecast and scenarios (S5), outside inputs, proposer (S4), valuation (S6–S7), model book.
+Code (`retrieval/`): decomposer, searcher, index (Qwen3-Embedding-0.6B, FTS5), reranker (bge-reranker-v2-m3).
 
 | Interface | Contract |
 |---|---|
-| **Templates** (7) | YAML lines: inputs (history from a source id), formulas and forecast expressions, plus drivers, scenarios and anchors |
-| **DSL** | Arithmetic, `x[-4]`, `fy()`, `fyp()`, `min`, `max`, `if_`, `first`, `@assumption`. Anything else is rejected |
-| **`model.json`** (8) | Every cell (line × period) with value and kind. **Input cells carry their source id and filing date** |
-| **`valuation.json`** (8) | Market cap, EV, cost of capital, peers, PT per scenario, weighted PT, return, rating, DCF grid, `inputs_hash` |
-| **`research.yaml`** | Every forecast and valuation knob (Appendix A) |
+| **Search** (3) | `search_filings(query, companies?, periods?, forms?, k = 8)` → the searches it ran, and up to k chunks with id, company, form, period, filing date and text |
 
-### 6.2 Rules and algorithms
+### 6.2 Rules and algorithm
+
+```text
+query → decompose: one sub-question per company (and filing slot)
+      → per sub-question, over child chunks filtered by company, period, form and as-of:
+          BM25 (FTS5) top N  +  dense (cosine) top N
+      → RRF fusion, score = Σ 1 / (k_rrf + rank) → top N → cross-encoder rerank
+      → each child swapped for its parent, best child first, each parent once
+      → round-robin merge → top k
+```
+
+- **Decomposition is rule-based:** companies come from the arguments, else from the tickers, names and aliases in the query. Each sub-question is rewritten to name only its company.
+- No period = the latest filing of each form at D.
+- The model sees parent chunks: a whole subsection or table, not a fragment.
+- **Merge:** each sub-question gets ⌈k / n⌉ places (at least 2). In every round the sub-question whose best chunk scored highest goes first; duplicates are dropped.
+
+### 6.3 Failure handling and limits
+
+| Case | Handling |
+|---|---|
+| No company, or an unknown one | Error listing the corpus |
+| Bad period key | Error |
+| No filing for a slot at that as-of | Fewer chunks, not an error |
+| GPU held by vLLM | Embedder and reranker run on CPU |
+| Size | k chunks per call (default 8), each a bounded parent |
+
+---
+
+## 7. Model engine and valuation
+
+How it works: [V4_MODEL.md](stages/V4_MODEL.md). Equations: [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md). Schemas: [V4_INTERFACES.md §7–8](V4_INTERFACES.md#7-templates).
+
+### 7.1 Contract
+
+Build a three-statement model from the data pack (the reported numbers, read from the Store, §3), forecast it, and value it. Deterministic code, except the optional S4 proposer, an LLM sub-agent (§8).
+
+**How the pieces connect.** Two files are inputs you edit (a template and `research.yaml`) and two are outputs the engine writes (`model.json`, `valuation.json`). The DSL is the formula language inside the templates.
+
+<p align="center">
+  <img src="img/v4-model-engine.svg" alt="Model engine. The data pack (reported numbers from the Store, with source ids and filing dates) and a template (YAML lines whose formulas are written in the DSL) feed S3 history, which fills inputs from the data pack, evaluates formulas with the DSL and runs layer-2 checks. S5 forecast sets assumptions from defaults, outside data, the proposer and guidance anchors, then evaluates the forecast formulas; research.yaml supplies fade, bounds and tax range. S6 and S7 value the model with peers, prices, rates and research.yaml's weights and thresholds. The model becomes model.json and, with the same expressions written as Excel formulas, workbook.xlsx; the valuation becomes valuation.json." width="100%">
+</p>
+
+- **Templates say what the model is; the DSL is how each formula in them is written.** One expression is evaluated by Python into `model.json` and written as a formula in the workbook.
+- **`research.yaml` holds numbers, not structure.** It sets what the formulas read (`@fade`, ratio bounds, tax range) and the valuation weights and rating thresholds.
+- **`model.json` is the result of S3 and S5; `valuation.json` is the result of S7**, which reads `model.json`, not the templates.
+- **The Toolbox's model tools (§5.3) run a lighter version of the same path:** base forecasts with default assumptions, no proposer, held in memory in the model book, with no workbook, PDF or saved version. Their `model:` ids resolve only inside that session (§10.3). Valuation always runs on a forecast; a forecast can run without valuation.
+
+Code (`research/`): data pack (S1), DSL and graph, templates, history (S3), layer-2 checks, forecast and scenarios (S5), outside inputs, proposer (S4: optional, an LLM sub-agent whose code is listed in §8.1), valuation (S6–S7), model book (`book.py`: the base forecasts the Toolbox's model tools read, §5.3).
+
+"S1…S7" are steps of the Report pipeline (§9.1 lists all eleven; §2.4 has the one-line key). The Model engine implements S1 and S3–S7 (S4 is its one LLM step); S2 (events) and S8–S11 are Report-only and not covered here.
+
+| Interface | Role | Contract |
+|---|---|---|
+| **Templates** (7) | Input: the model's definition | YAML lines: inputs (history from a source id), formulas and forecast expressions, plus drivers, scenarios and anchors |
+| **DSL** | The formula language inside templates | Restricted formula expressions (arithmetic, lags, fiscal-year sums, fallbacks, `@assumption`), parsed and never run as code; anything else is rejected. Vocabulary: [V4_INTERFACES.md §7](V4_INTERFACES.md#7-templates) |
+| **`research.yaml`** | Input: the knobs | Every forecast and valuation knob (Appendix A) |
+| **`model.json`** (8) | Output of S3 and S5 | Every cell (line × period) with value and kind. **Input cells carry their source id and filing date** |
+| **`valuation.json`** (8) | Output of S7 | Market cap, EV, cost of capital, peers, PT per scenario, weighted PT, return, rating, DCF grid, `inputs_hash` |
+
+### 7.2 Rules and algorithms
 
 **Model** (spec §3.1)
 
@@ -397,7 +614,7 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 | `formula_only` | Forecast cells are formulas |
 | `wacc_gt_g`, `weights` | WACC > g; weights sum to 1 |
 
-### 6.3 Failure handling and limits
+### 7.3 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -414,183 +631,6 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 
 ---
 
-## 7. Toolbox
-
-How it works: [V4_AGENT.md](stages/V4_AGENT.md#tools). Arguments and result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls).
-
-### 7.1 Contract
-
-A tool is a function the agent calls with JSON arguments; it returns JSON with citable ids. The **Toolbox** (`agent/tools.py`) holds the schemas, runs the calls, and sees exactly what its store's as-of sees. Each tool is a thin front for one block (§3–§6, §11); the Toolbox adds no logic of its own.
-
-| Caller | Uses |
-|---|---|
-| Ask | tool set `ask` |
-| Research | tool set `research` |
-| Report sub-agents (S2 events, S4 proposer, S9 debates) | tool set `ask` |
-| Report code steps, builders, evaluation | their blocks directly, no tools |
-| A person | `tenk tool NAME key=value …` (`--list` prints the schemas) |
-
-| Group | Tools | `ask` | `research` |
-|---|---|:-:|:-:|
-| text | `search_filings` | ✓ | ✓ |
-| calc | `calculator` | ✓ | ✓ |
-| facts | `financials`, `company_kpis`, `guidance`, `filings` | ✓ | ✓ |
-| market | `market_data`, `crosscheck` | ✓ | ✓ |
-| reports | `research_report` | ✓ | ✓ |
-| model | `model_view`, `run_scenario`, `compare_peers`, `variance_review` | | ✓ |
-
-### 7.2 Catalog
-
-Every tool shares the same handling:
-
-- **Company:** a ticker or name, resolved against the corpus.
-- **Periods:** the periods asked for, else the latest eight, in order (FY after Q4).
-- **Caps:** a row cap (Appendix A), the latest kept, with `"omitted": n`.
-- **Values:** ratios shown in percent.
-- **Arguments:** object and array arguments written as JSON strings are parsed.
-
-Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model tools compute through the Model engine (§6); their equations are in [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md) (scenarios §4, valuation §5).
-
-#### text · `search_filings`
-
-| | |
-|---|---|
-| **Consumes** | `chunks`, `children`, FTS5 and vectors (Store) |
-| **Computes** | Resolves companies (`["all"]` = every company with a filing), checks the period keys, and runs Retrieval (§4.2) |
-| **Returns** | The sub-searches run; chunks with id, company, form, period, filing date, item and text |
-| **Errors** | Unknown company (lists the corpus); no company given or named; bad period key |
-
-#### calc · `calculator`
-
-| | |
-|---|---|
-| **Consumes** | Only its inputs |
-| **Computes** | A named op (`pct_change`, `cagr`, `ratio`, `percent_of`, `difference`, `sum`) or an expression over named inputs (`+ − × ÷ **`, `abs`, `round`, `min`, `max`, `sqrt`). The expression is parsed to a syntax tree; there is no `eval` |
-| **Returns** | Result, formula, inputs: the same calculator reruns the claim check (§10.2) |
-| **Errors** | Unknown op, missing inputs, bad expression, non-finite result |
-
-#### facts · `financials`
-
-| | |
-|---|---|
-| **Consumes** | `facts`; `facts/metrics.yaml` (each metric's concepts and kind, flow or instant) |
-| **Computes** | Quarters derived on read (§3.2). A flow uses the direct quarter fact; otherwise Q2 or Q3 = YTD − prior YTD (`ytd_diff`) and Q4 = FY − 9M (`fy_minus_9m`). An instant uses the quarter-end fact. Each row keeps its input ids and `filed` = the latest input; it is flagged `restated` if a later filing recast it |
-| **Returns** | Rows: id (`q:` or `xbrl:`), period, value, unit, derivation, `restated?` |
-| **Errors** | Unknown metric (lists the metrics) |
-
-#### facts · `company_kpis`
-
-| | |
-|---|---|
-| **Consumes** | `kpis` |
-| **Computes** | Per metric, segment and period, the latest-filed row (the newest definition version); optional segment filter |
-| **Returns** | Rows: `kpi:` id, metric, segment, period, value, unit, chunk id, quote |
-| **Errors** | No such KPI (lists the reported ones) |
-
-#### facts · `guidance`
-
-| | |
-|---|---|
-| **Consumes** | `guidance`; `kpis` for actuals |
-| **Computes** | Every guide, oldest issue first, so an update follows the guide it replaces. A `level` guide gets the actual: its `kpi:` id for the target period, resolved at D |
-| **Returns** | Rows: `guide:` id, period, low, high, unit, basis, issued in, quote, `actual?`, `actual_id?` |
-| **Errors** | No guidance for the metric (lists the guided ones) |
-
-#### facts · `filings`
-
-| | |
-|---|---|
-| **Consumes** | `filings` |
-| **Computes** | The company's filings (optionally one form), by filing date; the latest, up to the row cap |
-| **Returns** | Accession (the id), form, period, period end, filing date; total count |
-
-#### market · `market_data`
-
-| | |
-|---|---|
-| **Consumes** | `market` (`px:<T>:close`, `px:SPY:close`, `macro:<SERIES>`) |
-| **Computes** | A company's close or a macro series, not both. `start`: every point from then; `dates`: the last point on or before each; neither: the latest point |
-| **Returns** | Rows: `px:` or `macro:` id, date, value; the series unit |
-| **Errors** | Both or neither of company and series; no data for the series |
-
-#### market · `crosscheck`
-
-| | |
-|---|---|
-| **Consumes** | `market` (`cc:` series) |
-| **Computes** | `tlc`: NYC trips for Uber (`HV0003`) and Lyft (`HV0005`) only; `bts`: airline passengers, total, domestic and international. Window by month from `start` to `end`, else the latest year |
-| **Returns** | Rows: `cc:` id, series, month, value; coverage note; unit (trips or passengers) |
-| **Errors** | TLC for another company; a series other than `tlc` or `bts` |
-
-#### reports · `research_report`
-
-| | |
-|---|---|
-| **Consumes** | `model_versions`; the saved version's `model.json` and `valuation.json` (§11) |
-| **Computes** | The latest version with `as_of` < D (and ≤ the `as_of` argument, which only narrows). Defaults: the headline lines and the forecast FY columns. Each value is marked `estimate` or `actual`. Valuation gives price, PT, return and rating. The status note says draft or reviewed |
-| **Returns** | Version, as-of, status, parent, note, valuation and estimates with `model:<T>:<as_of>:v<n>:…` ids; visible versions. None → `report: null` with the visible versions |
-| **Errors** | Unknown lines (listed with the valid ones; the rest still returned) |
-
-#### model · `model_view`
-
-| | |
-|---|---|
-| **Consumes** | The model book's base forecast for the company (§6), built on first use |
-| **Computes** | Defaults: the driver build and headline lines; recent history, the near forecast and the FY columns. Each assumption is listed with its default and its source: the anchoring guide's id, else `default` |
-| **Returns** | Rows of values per period, assumptions, the model's exceptions, and the `model:<T>:<as_of>:base:…` id format |
-| **Errors** | Unknown lines (lists the lines) |
-
-#### model · `run_scenario`
-
-| | |
-|---|---|
-| **Consumes** | The base forecast: its model, data pack and assumptions |
-| **Computes** | Changes = `overrides` plus base + `deltas`. Only proposable drivers (growth starts, ratio shifts) and `fade` are allowed. Each change is clipped to the proposer's bounds (§6.2). The model is rebuilt on the same data pack with the changed assumptions, saved as `scratch-n`, and valued as §6.2 with the same peers |
-| **Returns** | Headline lines for the last FY columns, base vs scenario; PT and rating, base vs scenario; the clipped drivers; ids for both runs |
-| **Errors** | Unknown driver (lists the allowed ones); no change given |
-
-#### model · `compare_peers`
-
-| | |
-|---|---|
-| **Consumes** | Each company's base forecast and valuation, built on first use (the first call is slow) |
-| **Computes** | `metric` is a valuation field (`ev_to_ebitda`, `ev_to_ebitda_less_sbc`, `pe`, `fcf_yield`, `price_target`, `return`, `rating`, `ev`, `market_cap`) or a model line at `period` (default the target year). Companies default to all. Rows are sorted ascending, non-numbers last |
-| **Returns** | Rows: company, value, unit, `model:` id, its main growth and shift assumptions with their source |
-| **Errors** | Unknown company; unknown metric (lists lines and valuation fields) |
-
-#### model · `variance_review`
-
-| | |
-|---|---|
-| **Consumes** | The model book at D (actuals) and at an earlier as-of (the estimate) |
-| **Computes** | `period` must be reported at D. The estimate is the base forecast made the day after the previous quarter's release (the backtest's as-of). Each main line gives estimate vs actual and `variance_pct` = actual / estimate − 1. The revenue bridge splits the variance: gross value (GB₁ − GB₀) × TR₀ plus take rate GB₁ × (TR₁ − TR₀). Where the template has them, gross value is split again into volume (V₁ − V₀) × P₀ × TR₀ and value per unit V₁ × (P₁ − P₀) × TR₀ |
-| **Returns** | Rows with `estimate_id` and `actual_id`; the bridge in USD millions with `var-<period>` ids; the estimate's assumptions |
-| **Errors** | Period not yet reported |
-
-### 7.3 Rules
-
-- Every tool is bound to the run's as-of (§2.5).
-- Every value in a result carries an id that resolves (§10.1), so the claim check can verify what the model cites.
-- Errors are results: `{"error": …}` plus the valid choices.
-- Tools come in groups; no run gets every tool.
-- Results are capped in rows and characters (§7.2, Appendix A).
-- Ask cites estimates only through `research_report`; Research computes only through model tools, assumptions listed (spec §2).
-- `run_scenario` writes a session-only `scratch-n` run, clipped to the proposer's bounds (§6.2). Only Report creates versions.
-- Model tools read the model book: each company's base forecast with default assumptions (proposer off, no LLM), built once per ticker and as-of. Peers come from the same book.
-
-### 7.4 Failure handling and limits
-
-| Case | Handling |
-|---|---|
-| Unknown tool, argument, metric, line or assumption | Error with the valid choices; the model retries |
-| Unknown company, or a search naming none | Error listing the corpus |
-| Nothing visible at the as-of | Empty rows (or `report: null`), not an error |
-| A model can't be built | Error naming the failing check (§6.3) |
-| Result over the caps | Truncated, with `"omitted": n` |
-| First `compare_peers` call | Slow: peers are built on first use |
-
----
-
 ## 8. Agent runtime
 
 How it works: [V4_AGENT.md](stages/V4_AGENT.md). Reply schemas: [V4_INTERFACES.md §5](V4_INTERFACES.md#5-llm-calls).
@@ -599,7 +639,7 @@ How it works: [V4_AGENT.md](stages/V4_AGENT.md). Reply schemas: [V4_INTERFACES.m
 
 Run the LLM: the Ask and Research loop, Report's sub-agents, and every single-shot call. Each reply is one JSON object.
 
-Code: the loop (`agent/loop.py`, LangGraph), prompts (`prompts/*.md`), sub-agents (`research/subagents.py`, `propose.py`), the model book (`research/book.py`), and one model interface (`models.py`: vLLM or Claude).
+Code: the loop (`agent/loop.py`, LangGraph), prompts (`prompts/*.md`), sub-agents (`research/subagents.py`, `propose.py`), and one model interface (`models.py`: vLLM or Claude).
 
 **LLM calls** (5):
 
@@ -630,6 +670,7 @@ question → model → tool calls → tools → model → … → JSON answer �
 - An unparseable answer gets one retry.
 - Every answer passes the claim check before it is shown.
 - Sub-agents return JSON; an item is kept only if one evidence id resolves at D.
+- Sub-agents are the same model as Ask and Research; only the prompt, tool set and budget differ. They run sequentially, in step order and in the pipeline's own process (no threads); S9 runs its drivers one at a time.
 - A debate's evidence values become note facts, so its numbers can be traced.
 - State lives in files; each call gets a purpose-built view; detail is fetched by id.
 
@@ -637,7 +678,7 @@ question → model → tool calls → tools → model → … → JSON answer �
 
 | Case | Handling |
 |---|---|
-| Tool error | Returned to the model (§7.4) |
+| Tool error | Returned to the model (§5.4) |
 | Budget spent or context full | Forced answer turn, tools off |
 | Answer still not JSON | Recorded as unparsed; no claims |
 | Sub-agent returns nothing usable | Its Report step degrades (§9.3) |
@@ -661,15 +702,15 @@ Code: runner (`research/pipeline.py`), sections, facts and writer (`research/not
 |---|---|---|---|
 | S1 data pack | code | Store | Every model input with its source (in memory) |
 | S2 events | sub-agent | Store, search | `events.json` |
-| S3 model | code | data pack, template | History model; layer-2 checks |
+| S3 history | code | data pack, template | History model (in memory); layer-2 checks |
 | S4 propose | sub-agent (off by default) | driver table, Store | Assumption overrides |
-| S5 forecast | code | model, guidance, `research.yaml` | `model.json`; layer-2 again |
+| S5 forecast | code | model, guidance, `research.yaml` | The forecast model (in memory); layer-2 again |
 | S6 peers | code | Store, per peer | Peer models (model book) |
-| S7 value | code | model, peers, market | `valuation.json`; valuation checks |
+| S7 value | code | model, peers, market | The valuation (in memory); valuation checks |
 | S8 revise | code | the parent's `model.json` | `revisions.json` |
 | S9 debates | sub-agent per scenario driver | model, Store, search | `debates.json`; section 7 sensitivities |
 | S10 write | code + LLM | all artifacts | `facts.json`, `note.json`; consistency check |
-| S11 export | code | all artifacts | Note, PDF, workbook, `exceptions.json`, `report.json`; the version row |
+| S11 export | code | all artifacts | `model.json`, `valuation.json`, note, PDF, workbook, `exceptions.json`, `report.json`; the version row |
 
 Every artifact is a JSON file in the report folder. `report.json` records the version, parent, rating, PT, counts, check results and each step's time and tokens.
 
@@ -687,7 +728,7 @@ Every artifact is a JSON file in the report folder. `report.json` records the ve
 | Step | How |
 |---|---|
 | **S2 events** | One bounded agent (tool set `ask`, `events.md`) is asked what changed for the ticker in the quarter. Each event (type, summary, evidence ids) is kept only if one evidence id resolves at D. An unparseable reply means no events |
-| **S4 propose** | §6.2 Proposer |
+| **S4 propose** | §7.2 Proposer |
 | **S8 revise** | Parent = the latest saved version before D; none → "initial draft (no prior run)". Headline lines, old (parent's `v<n>` id) vs new (`base` id); each typed by whether one of the parent's forecast quarters is now reported |
 | **S9 debates** | One agent per scenario driver in the template (tool set `ask`, `debates.md`), told the driver's value. Kept only if one evidence id resolves; the resolved values become note facts |
 | **S9 → section 7** | Sensitivities: the base model rebuilt with one driver moved one step, for the key drivers (take rate, growth, cost share) and every debated driver; each valued as a scratch run, giving the adj. EBITDA and PT change with ids |
@@ -753,7 +794,7 @@ Code: id grammar and resolver (`research/refs.py`), claim check (`generation/ver
 - **Numbers in a chunk** are parsed with sign (parentheses), written decimals, and a scale word or `%`. A bare number takes the chunk's stated units ("in millions"); with none stated, any scale.
 - **Two numbers agree** within half a unit of the last digit either is written with: "$31.4 billion" matches 31,370 (USD millions), 31,500 doesn't.
 - **Order:** a cited data row (`q:`, `kpi:`, `guide:`, `px:`, `macro:`), then an `xbrl:` fact, then a chunk. Data rows and facts must belong to the claim's company and are compared in whole units; percentages and unscaled units compare as written.
-- **Calculated:** the claim's calculation reruns through the calculator (§7.2). Its result, × 100 for a percent, or rescaled from the input unit to the claim's unit, must match. Every input must be found in a cited chunk or fact.
+- **Calculated:** the claim's calculation reruns through the calculator (§5.2). Its result, × 100 for a percent, or rescaled from the input unit to the claim's unit, must match. Every input must be found in a cited chunk or fact.
 - **Wrong company:** a value found only in another company's chunks is unverified.
 
 **Note trace:**
@@ -837,7 +878,7 @@ Code: extraction scorer, backtest, note eval (`evaluation/`); Ask and Research r
 ```text
 for each company, each release from Q4 2024 whose next quarter has reported:
     D = the day after the release's EDGAR acceptance (US/Eastern)
-    forecast the next quarter at D (§6.2; proposer per research.yaml)
+    forecast the next quarter at D (§7.2; proposer per research.yaml)
     leakage probe: no_future_input passes and the target quarter is not in history, else stop
     score vs the next quarter's first-reported value: revenue and the main KPI
     baselines: seasonal naive (same quarter last year × latest y/y), guidance midpoint
@@ -849,7 +890,7 @@ pool: MAPE and signed bias per metric and method → backtest-<label>/
 | Layer | Test | Pass bar |
 |---|---|---|
 | 1 Extraction | 337 labels | ≥ 98% exact; 100% on revenue, EPS, main KPI |
-| 2 Model integrity | §6.2 checks on every model | 100%; any FAIL stops |
+| 2 Model integrity | §7.2 checks on every model | 100%; any FAIL stops |
 | 3 Forecast | Walk-forward backtest, 48 forecasts per metric | MAPE below seasonal naive on revenue and main KPI; bias near 0 |
 | 4 Valuation | Rerun on identical inputs; WACC sweep | Identical output; targets inside the peer range or flagged |
 | 5 Note | Trace, ten sections, judge rubric, seeded errors | 100% traced; rubric ≥ 4/5 |
@@ -887,7 +928,7 @@ Gaps against the spec and known problems: [V4_RESULTS.md](V4_RESULTS.md#gaps-aga
 - **LLM steps degrade:** the section reads "failed check: reason" and the run continues (spec §2.3 req. 7).
 - **Builders never guess:** every gap becomes an exception row.
 
-Per-block cases: §3.3, §4.3, §5.3, §6.3, §7.4, §8.3, §9.3, §10.3, §11.3, §12.3.
+Per-block cases: §3.3, §4.3, §5.4, §6.3, §7.3, §8.3, §9.3, §10.3, §11.3, §12.3.
 
 ### 13.2 System limits
 
@@ -969,9 +1010,11 @@ docs/
 | **driver** | A model input the forecast grows or holds: volume, price per unit, segment bookings, take rate, cost share |
 | **assumption** | A named forecast knob, such as `gb_g_mobility.g0` or `fade` |
 | **anchor** | A guidance figure the forecast is solved to hit |
+| **template** | A YAML file defining a model's lines (inputs and formulas), drivers, scenarios and anchors (§7.1) |
+| **DSL** | The restricted formula syntax used in template `expr` and `forecast` strings; one expression is evaluated in Python and written as an Excel formula (§7.1) |
 | **model book** | A session's models at one as-of, with their `model:` ids |
 | **version** | A saved Report run (`UBER:v2`), with its parent |
-| **tool set** | The named list of tool groups a run may call (§7.1) |
+| **tool set** | The named list of tool groups a run may call (§5.1) |
 | **fact (F-n)** | A pre-formatted figure the note may print, with its source id |
 | **E-n / X-n** | Evidence and exception rows of a report's log |
 | **layers 1–5** | The spec's evaluation layers: extraction, model integrity, forecast, valuation, note |

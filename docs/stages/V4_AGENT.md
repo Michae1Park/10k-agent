@@ -1,6 +1,6 @@
 # V4 · Agent and tools
 
-How the agent loop, its tools and its sub-agents work. Rules live in the [design doc §7](../V4_TECHNICAL_DESIGN_DOC.md#7-toolbox) and [§8](../V4_TECHNICAL_DESIGN_DOC.md#8-agent-runtime); if this doc disagrees, the design doc wins. V3's loop: [V3_AGENT.md](V3_AGENT.md).
+How the agent loop, its tools and its sub-agents work. Rules live in the [design doc §5](../V4_TECHNICAL_DESIGN_DOC.md#5-toolbox) and [§8](../V4_TECHNICAL_DESIGN_DOC.md#8-agent-runtime); if this doc disagrees, the design doc wins. V3's loop: [V3_AGENT.md](V3_AGENT.md).
 
 ## The loop
 

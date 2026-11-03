@@ -1,12 +1,14 @@
 # V4 · Model and valuation
 
-How the model is built, forecast and valued. Rules live in the [design doc §6](../V4_TECHNICAL_DESIGN_DOC.md#6-model-engine-and-valuation); equations in [V4_FINANCIAL_MODELING.md](V4_FINANCIAL_MODELING.md).
+How the model is built, forecast and valued. Rules live in the [design doc §7](../V4_TECHNICAL_DESIGN_DOC.md#7-model-engine-and-valuation); equations in [V4_FINANCIAL_MODELING.md](V4_FINANCIAL_MODELING.md).
 
 <p align="center">
   <img src="../img/v4-model-valuation.svg" alt="Steps S3 to S7: model graph and checks, guidance-anchored forecast with a bounded proposer, peers, price targets, rating" width="100%">
 </p>
 
 ## Steps
+
+S-numbers are steps of the Report pipeline ([design doc §9.1](../V4_TECHNICAL_DESIGN_DOC.md#91-contract) lists all eleven). This doc covers the Model engine's steps; S2 (events) and S8–S11 (revise, debates, write, export) are Report-only; see [V4_REPORT.md](V4_REPORT.md).
 
 | Step | Does |
 | --- | --- |

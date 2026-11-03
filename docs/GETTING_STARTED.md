@@ -87,7 +87,7 @@ Ask and Research run through their gold runners, each question at its own as-of 
 ```bash
 taskset -c 16-31 python experiments/v4/ask_run.py --question <id>          # Ask: cited answers from filed data
 taskset -c 16-31 python experiments/v4/research_run.py --question <id>     # Research: model tools, assumptions shown
-tenk tool --list                                                           # the tool schemas (design doc §7)
+tenk tool --list                                                           # the tool schemas (design doc §5)
 ```
 
 Questions: `evaluation/gold/ask-gold.jsonl`, `research-gold.jsonl`. Results: `output/generation/<label>/`.
