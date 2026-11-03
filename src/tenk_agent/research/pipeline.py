@@ -362,8 +362,8 @@ def budgets_of(settings: dict) -> dict:
 
 
 def _sensitivities(book: Book, ticker: str, debated: list[str] = ()) -> list[dict]:
-    """Section 7: the 2027E adj. EBITDA and PT effect of a take-rate, growth and cost move, and
-    of a move in each debated driver (spec §2.3: every debated driver has a sensitivity)."""
+    """Section 7: the target-year adj. EBITDA and PT effect of a take-rate, growth and cost move,
+    and of a move in each debated driver (spec §2.3: every debated driver has a sensitivity)."""
     f = book.base(ticker)
     base = f.model
     names = sorted(base.assumptions)

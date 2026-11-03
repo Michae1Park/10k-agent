@@ -118,7 +118,8 @@ PERIOD = re.compile(r"\d{4}Q[1-4]|FY\d{4}")
 
 def valuation_field(v: dict, key: str) -> dict | None:
     """{value, unit} (or {text} for the rating) of one valuation output."""
-    for where in (v, v.get("multiples_2027e") or {}, (v.get("scenarios") or {}).get("base") or {}):
+    multiples = v.get("multiples") or v.get("multiples_2027e") or {}  # older files: _2027e
+    for where in (v, multiples, (v.get("scenarios") or {}).get("base") or {}):
         if key in where:
             value = where[key]
             break

@@ -273,16 +273,18 @@ SPECS |= {
         "compare_peers",
         "One metric across companies at today's as-of, from our models: a model line in a "
         "period (revenue, adj_ebitda, adj_ebitda_margin, eps_diluted, free_cash_flow, take_rate…"
-        " in FY2027 by default) or a valuation output (ev_to_ebitda, ev_to_ebitda_less_sbc, pe, "
-        "fcf_yield, price_target, return, rating). Each row lists the key assumptions behind "
-        "that company's number.",
+        " in the target year by default: the year after the as-of) or a valuation output "
+        "(ev_to_ebitda, ev_to_ebitda_less_sbc, pe, fcf_yield, price_target, return, rating). Each "
+        "row lists the key assumptions behind that company's number.",
         {
             "type": "object",
             "properties": {
                 "metric": {"type": "string"},
                 "companies": {"type": "array", "items": COMPANY,
                               "description": 'Companies (default: all eight); ["all"] too'},
-                "period": {"type": "string", "description": "For a model line (default FY2027)"},
+                "period": {"type": "string",
+                           "description": "For a model line, e.g. FY2028 (default: the target "
+                           "year, the year after the as-of)"},
             },
             "required": ["metric"],
         },
@@ -759,20 +761,25 @@ class Toolbox:
         }
 
     def compare_peers(self, metric: str, companies: list[str] | None = None,
-                      period: str = "FY2027") -> dict:
+                      period: str | None = None) -> dict:
         if not companies or [c.lower() for c in companies] == ["all"]:
             tickers = self._companies()
         else:
             tickers, unknown = self._tickers(companies)
             if unknown:
                 return {"error": f"not in the corpus: {unknown}"}
+        from tenk_agent.research.forecast import relative_year
+
+        year = relative_year(self.book.settings["valuation"]["target_year"], self.book.as_of)
+        target = f"FY{year}"
+        period = period or target
         valuation_fields = {"ev_to_ebitda", "ev_to_ebitda_less_sbc", "pe", "fcf_yield",
                             "price_target", "return", "rating", "ev", "market_cap"}
         rows = []
         for t in tickers:
             if metric in valuation_fields:
                 v = self.book.valuation(t)
-                value = v["multiples_2027e"].get(metric, v.get(metric))
+                value = v["multiples"].get(metric, v.get(metric))
                 ref = f"model:{t}:{self.book.as_of}:val-base:{metric}"
                 unit = "percent" if metric in ("return", "fcf_yield") else (
                     "USD" if metric == "price_target" else
@@ -799,7 +806,7 @@ class Toolbox:
                              if k.endswith((".g0", ".shift0"))][:4]})
         numeric = [r for r in rows if isinstance(r["value"], int | float)]
         numeric.sort(key=lambda r: r["value"])
-        return {"metric": metric, "period": None if metric in valuation_fields else period,
+        return {"metric": metric, "period": target if metric in valuation_fields else period,
                 "rows": numeric + [r for r in rows if r not in numeric]}
 
     def variance_review(self, company: str, period: str) -> dict:

@@ -227,12 +227,13 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
     # 6 -----------------------------------------------------------------------------------
     s6 = Section(6, TITLES[5])
     peers = val["peer_multiples"]
-    prow = [add(f"{t} 2027E EV/EBITDA", m, "x", f"model:{t}:{model.as_of}:val-base:ev_to_ebitda")
+    ty = f"{val.get('target_year', year + 1)}E"  # "2027E"; older files lack the field
+    prow = [add(f"{t} {ty} EV/EBITDA", m, "x", f"model:{t}:{model.as_of}:val-base:ev_to_ebitda")
             for t, m in sorted(peers["peers"].items())]
-    med = add("Peer median 2027E EV/EBITDA", peers["median"], "x", "computed")
-    own = add(f"{ticker} 2027E EV/EBITDA", val["multiples_2027e"]["ev_to_ebitda"], "x",
+    med = add(f"Peer median {ty} EV/EBITDA", peers["median"], "x", "computed")
+    own = add(f"{ticker} {ty} EV/EBITDA", val["multiples"]["ev_to_ebitda"], "x",
               f"model:{ticker}:{model.as_of}:val-base:ev_to_ebitda")
-    s6.blocks.append("Comps (2027E EV/EBITDA): " + " · ".join(
+    s6.blocks.append(f"Comps ({ty} EV/EBITDA): " + " · ".join(
         f"{t} {f.text()}" for t, f in zip(sorted(peers["peers"]), prow, strict=True))
                      + f" · median {med.text()} · {ticker} now {own.text()}")
     cc = val["cost_of_capital"]
@@ -266,11 +267,11 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
     for r in ctx["sensitivities"]:
         shock = add(f"{r['what']} shock", r["shock"], "points", "research: sensitivity")
         label = f"{r['what']} {shock.text()}"
-        d_e = add(f"2027E adj. EBITDA change if {label}", r["ebitda_change"],
+        d_e = add(f"{ty} adj. EBITDA change if {label}", r["ebitda_change"],
                   "USD millions", r["id"])
         d_pt = add(f"PT change if {label}", r["pt_change"], "USD", r["pt_id"])
         rows7.append(fact_row(label, [d_e, d_pt]))
-    s7.blocks.append(table(["Risk", "2027E adj. EBITDA", "PT impact"], rows7))
+    s7.blocks.append(table(["Risk", f"{ty} adj. EBITDA", "PT impact"], rows7))
     s7.blocks.append("Probabilities beyond the scenario weights in section 6 are not assigned.")
     sections.append(s7)
 

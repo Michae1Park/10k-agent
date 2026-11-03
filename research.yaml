@@ -2,7 +2,7 @@
 # research/forecast.py (V4.4), research/valuation.py (V4.5) and the report pipeline read it.
 
 forecast:
-  horizon: 2027Q4            # last forecast quarter
+  horizon: "+1"              # last forecast quarter: Q4 of the as-of year + 1 (or a key, 2027Q4)
   fade: 0.9                  # d: g(q+1) = g(q) × d, each quarter ("fitted" is an ablation)
   fade_bounds: [0.75, 1.0]   # the proposer may move d only within these
   guidance_point: mid        # mid | high (ablation): the anchor within a guided range
@@ -47,7 +47,7 @@ budgets:                     # spec §2.3 requirement 8: each LLM step's calls a
 
 valuation:                   # research/valuation.py (§7.3)
   weights: {multiple: 0.6, dcf: 0.4}
-  target_year: 2027          # the multiple's EBITDA year (2027E)
+  target_year: "+1"          # the multiple's EBITDA year: as-of year + 1 (or a year, 2027)
   scenario_multiple: 0.15    # bear/bull target multiple ∓/± 15% of the peer median
   terminal_growth: 0.03
   terminal_growth_grid: [0.025, 0.03, 0.035]

@@ -51,7 +51,8 @@ def workbook(folder: Path, model, f, valuation: dict, checks, facts, exceptions,
             for line, years in lines.items() for year, value in years.items()]
     sheet("Scenarios", ["scenario and line", "year", "value"], rows)
     sheet("Valuation", ["item", "value"], [
-        *[[f"peer 2027E EV/EBITDA {t}", m] for t, m in v["peer_multiples"]["peers"].items()],
+        *[[f"peer {v['target_year']}E EV/EBITDA {t}", m]
+          for t, m in v["peer_multiples"]["peers"].items()],
         ["peer median", v["peer_multiples"]["median"]],
         *[[f"{k}", x] for k, x in v["cost_of_capital"].items()],
         *[[f"{n} {k}", x] for n, s in v["scenarios"].items() for k, x in s.items()],

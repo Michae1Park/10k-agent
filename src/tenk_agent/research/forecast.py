@@ -77,6 +77,18 @@ def quarters_through(first: str, last: str) -> list[str]:
     return out
 
 
+def relative_year(setting, as_of: str) -> int:
+    """A research.yaml year: absolute (2027) or an offset from the as-of's year ("+1")."""
+    s = str(setting)
+    return int(as_of[:4]) + int(s) if s.startswith(("+", "-")) else int(s)
+
+
+def horizon_quarter(setting, as_of: str) -> str:
+    """The last forecast quarter: a quarter key (2027Q4), or Q4 of a relative year ("+1")."""
+    s = str(setting)
+    return s if "Q" in s else f"{relative_year(s, as_of)}Q4"
+
+
 def next_quarter(quarter: str) -> str:
     year, q = int(quarter[:4]), int(quarter[5])
     return f"{year + 1}Q1" if q == 4 else f"{year}Q{q + 1}"
@@ -88,7 +100,7 @@ def forecast(store: Store, ticker: str, settings: dict | None = None,
     guidance anchors."""
     settings = settings or knobs()
     base, pack, _, _ = history(store, ticker)
-    horizon = settings["forecast"]["horizon"]
+    horizon = horizon_quarter(settings["forecast"]["horizon"], base.as_of)
     future = quarters_through(next_quarter(base.quarters[-1]), horizon)
     model = build(ticker, base.template, base.as_of, base.quarters, pack, future, {})
     defaults = default_assumptions(model, settings)

@@ -5,9 +5,10 @@
   market cap, EV  last close before the as-of × the latest diluted weighted-average shares;
                   EV = market cap + debt − cash − short-term investments (leases, equity stakes
                   and customer funds not counted: listed as exceptions)
-  multiple PT     target multiple × 2027E adj. EBITDA → EV − net debt → per share; target = the
-                  sector peers' median EV / 2027E adj. EBITDA, each peer's own model at the same
-                  as-of with defaults (cached); bear/bull ∓/± 15%; outside the peer range flagged
+  multiple PT     target multiple × target-year adj. EBITDA → EV − net debt → per share; target =
+                  the sector peers' median EV / target-year adj. EBITDA, each peer's own model at
+                  the same as-of with defaults (cached); bear/bull ∓/± 15%; outside the peer
+                  range flagged
                   (also shown: EV / (EBITDA − SBC), P/E, FCF yield)
   DCF             unlevered FCF = adj. EBITDA − SBC − tax on positive EBIT − capex (ΔNWC 0): the
                   model's forecast quarters, then years grown at the model's last annual revenue
@@ -40,7 +41,7 @@ import yaml
 from tenk_agent.asof import AsOf
 from tenk_agent.corpus import WINDOW_START, companies_path
 from tenk_agent.research import datapack
-from tenk_agent.research.forecast import Forecast, forecast, knobs, scenarios
+from tenk_agent.research.forecast import Forecast, forecast, knobs, relative_year, scenarios
 from tenk_agent.research.model.graph import Model
 from tenk_agent.store import Store
 
@@ -215,7 +216,7 @@ def value(store: Store, f: Forecast, settings: dict, peer_cache: dict | None = N
     m = market(store, model)
     tax = model.assumptions.get("tax_rate", 0.21)
     capital = cost_of_capital(store, model.ticker, m, tax, v)
-    year = v["target_year"]
+    year = relative_year(v["target_year"], model.as_of)
     peers = peer_forecasts(store, model.ticker, settings, peer_cache)
     peers[model.ticker] = f
     peer_markets = {t: market(store, p.model) for t, p in peers.items()}
@@ -281,7 +282,7 @@ def value(store: Store, f: Forecast, settings: dict, peer_cache: dict | None = N
         "price_date": m.price_date, "shares": m.shares, "market_cap": m.market_cap,
         "debt": m.debt, "cash_and_investments": m.cash, "net_debt": m.net_debt, "ev": m.ev,
         "refs": m.refs, "cost_of_capital": capital, "peer_multiples": peer,
-        "multiples_2027e": shown, "scenarios": out_scenarios, "price_target": pt,
+        "target_year": year, "multiples": shown, "scenarios": out_scenarios, "price_target": pt,
         "return": ret, "rating": rating, "dcf_grid": grid, "exceptions": exceptions,
         "dcf_base": {"wacc": capital["wacc"], "terminal_growth": v["terminal_growth"],
                      "tax_rate": tax, "flows": base_dcf["flows"],
