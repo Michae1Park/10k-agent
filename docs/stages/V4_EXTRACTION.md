@@ -3,12 +3,12 @@
 How KPIs and guidance are pulled from earnings releases. Rules live in the [design doc §5](../V4_TECHNICAL_DESIGN_DOC.md#5-extraction-layer-1); if this doc disagrees, the design doc wins.
 
 <p align="center">
-  <img src="../img/v4-extraction.svg" alt="KPI and guidance extraction: one LLM call per release, code validation of quote and value, one repair turn, exception rows, reconciliation with XBRL" width="100%">
+  <img src="../img/v4-extraction.svg" alt="KPI and guidance extraction: one LLM call per release, code validation of quote and value, one repair turn, exception rows, reconciliation with XBRL (planned, not built)" width="100%">
 </p>
 
 ## Per release
 
-1. **Pick text.** The release's chunks, tables first, up to 40k characters. (Slide-image releases: the chunks naming the most KPI labels.)
+1. **Pick text.** The release's chunks, tables first, up to 40,000 characters (about 10k tokens: the 12k-token input budget, design Appendix A, less the registry). (Slide-image releases: the chunks naming the most KPI labels.)
 2. **One LLM call** with the KPI list for that company in the prompt (`extract.md`).
 3. **Code checks each row:**
    - Chunk id given?
@@ -26,7 +26,7 @@ How KPIs and guidance are pulled from earnings releases. Rules live in the [desi
 | No "…" in quotes; quote from label to number | Shortened quotes failed the verbatim check |
 | Reject a prior-year column | Two-column tables tempt the model to take last year's value |
 | Tables first, then KPI-matched chunks | Fits the token budget; slide releases have no tables |
-| Growth or margin guidance converted to a level via last year's actual | The forecast needs a level |
+| Growth or margin guidance stored with its basis; the forecast converts it to a level via last year's actual (`research/forecast.py`) | The stored row must match its quote; the forecast needs a level |
 
 ## Tests and results
 

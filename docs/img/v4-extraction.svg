@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="620" viewBox="0 0 1180 620" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
   <title id="svgtitle">KPI and guidance extraction</title>
-  <desc id="svgdesc">Zoom of the layer-1 extractor. One LLM call per release takes the release chunks, tables first within a character budget, and the company registry entry, and returns KPI and guidance rows with a chunk id and verbatim quote. Code validates each row: the chunk id was given, the quote occurs verbatim, the value is in the quote, the metric is in the registry. Failures get one repair turn that shows the chunk text, then become exception rows, never stored values. Passing rows land in kpis and guidance. Afterwards values are reconciled with XBRL where the filing wins, recast releases create a new definition version, and the gold labels grade the result.</desc>
+  <desc id="svgdesc">Zoom of the layer-1 extractor. One LLM call per release takes the release chunks, tables first within a character budget, and the company registry entry, and returns KPI and guidance rows with a chunk id and verbatim quote. Code validates each row: the chunk id was given, the quote occurs verbatim, the value is in the quote, the metric is in the registry. Failures get one repair turn that shows the chunk text, then become exception rows, never stored values. Passing rows land in kpis and guidance. Afterwards (planned, not built yet) values are reconciled with XBRL where the filing wins; recast releases create a new definition version, and the gold labels grade the result.</desc>
   <style>
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
@@ -74,7 +74,7 @@
   <rect class="panel" x="20" y="360" width="1140" height="214" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
   <text class="ptitle" x="40" y="386" font-size="14.5" font-weight="600" fill="#46586a">After extraction</text>
   <rect class="work" x="40" y="396" width="360" height="126" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
-  <text class="name" x="220.0" y="422" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Reconcile with XBRL</text>
+  <text class="name" x="220.0" y="422" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Reconcile with XBRL (planned)</text>
   <text class="sub" x="220.0" y="444" text-anchor="middle" font-size="13" fill="#4a5a68">where a KPI is also a fact (revenue,</text>
   <text class="sub" x="220.0" y="462" text-anchor="middle" font-size="13" fill="#4a5a68">segment revenue) the filing wins</text>
   <text class="sub" x="220.0" y="480" text-anchor="middle" font-size="13" fill="#4a5a68">gap under the stated rounding:</text>

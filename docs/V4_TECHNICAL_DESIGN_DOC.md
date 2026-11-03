@@ -252,7 +252,7 @@ How it works: [V4_EXTRACTION.md](stages/V4_EXTRACTION.md). Schemas: [V4_INTERFAC
 
 Read KPIs and guidance from earnings releases into checked, quoted rows.
 
-Extraction is a second pass that runs after chunking: it reads the release chunks the data layer (§3) already built, not the raw filing.
+Extraction is a second pass that runs after chunking: it reads the release chunks the data layer (§3) already built, not the raw filing. Only releases are read: they are the one source that carries every company's operating KPIs (bookings, volume, segments) and next-quarter guidance, while figures 10-Ks and 10-Qs tag come from XBRL (spec §1.5).
 
 Code: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an ablation), registry (`facts/kpis.yaml`), loader (`tenk build --stage kpis`).
 
