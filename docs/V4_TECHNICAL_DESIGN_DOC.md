@@ -1,6 +1,6 @@
 # V4 technical design: a junior sell-side research agent
 
-> **What this is:** the contract of the V4 build, as built. The [spec](V4_SPEC.md) says what to build; this doc says how the system is shaped to do it: components, interfaces, rules, and what happens when things fail. Gaps against the spec are listed once, in §13.
+> **What this is:** the contract of the V4 build, as built. The [spec](V4_SPEC.md) says what to build; this doc says how the system is shaped to do it: components, interfaces, rules, and what happens when things fail. Gaps against the spec are listed once, in §13.1.
 
 | For | Read |
 |---|---|
@@ -9,11 +9,10 @@
 | One run followed end to end | [V4_WORKED_EXAMPLE.md](stages/V4_WORKED_EXAMPLE.md) |
 | Model equations | [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md) |
 | Results | [V4_RESULTS.md](V4_RESULTS.md) |
-| Why, and the build history | [DECISIONS.md](DECISIONS.md) (D-nnn), [V4_BUILD_LOG.md](V4_BUILD_LOG.md) |
 
-**How to read it.** §2 is the map. §3–§12 cover one block each, in dependency order (§7, the Toolbox, is the agent's view of §3–§6 and §11), always in four parts: **purpose, interfaces, rules, failure handling and limits.** Each rule gives its reason. "Spec §n" is a section of the spec; a bare "§n" is a section of this doc.
+**How to read it.** Top down: §1–§2 give the system, its components and its interfaces. §3–§12 take one block each, in dependency order (§7, the Toolbox, is the agent's view of §3–§6 and §11). Each has three parts: **contract, rules, failure handling and limits.** §12 is evaluation; §13 is reliability and gaps. "Spec §n" is a section of the spec; a bare "§n" is a section of this doc.
 
-*Updated 2026-11-02.*
+*Updated 2026-11-03.*
 
 ---
 
@@ -40,10 +39,10 @@ One agent covers eight US travel and mobility companies from free public data, i
 | **As-of everywhere** | No read sees data published on or after the as-of | §2.5 |
 | **Code computes every number** | The LLM extracts, proposes bounded assumptions and writes prose; it never outputs a forecast or valuation number | §2.5 |
 | **Everything is cited** | Every figure carries an id that resolves to its source | §10 |
-| **Flag, don't hide** | A gap, conflict or failed check becomes an exception row, never an estimate shown as fact | §10.3 |
-| **Degrade, don't stop** | A failed LLM step leaves "failed check: reason"; only an integrity failure stops a run | §9.4 |
-| **Artifacts, not transcripts** | Steps hand over JSON files, not chat history | §9.2 |
-| **One definition, two evaluators** | The model is defined once; Python and the workbook evaluate it and must agree | §6.3 |
+| **Flag, don't hide** | A gap, conflict or failed check becomes an exception row, never an estimate shown as fact | §10.2 |
+| **Degrade, don't stop** | A failed LLM step leaves "failed check: reason"; only an integrity failure stops a run | §13.3 |
+| **Artifacts, not transcripts** | Steps hand over JSON files, not chat history | §9.1 |
+| **One definition, two evaluators** | The model is defined once; Python and the workbook evaluate it and must agree | §6.2 |
 | **Knobs in config** | Every default lives in a pinned YAML file | Appendix A |
 
 ### 1.3 Glossary
@@ -59,7 +58,7 @@ One agent covers eight US travel and mobility companies from free public data, i
 | **anchor** | A guidance figure the forecast is solved to hit |
 | **model book** | A session's models at one as-of, with their `model:` ids |
 | **version** | A saved Report run (`UBER:v2`), with its parent |
-| **tool set** | The named list of tool groups a run may call (§7.2) |
+| **tool set** | The named list of tool groups a run may call (§7.1) |
 | **fact (F-n)** | A pre-formatted figure the note may print, with its source id |
 | **E-n / X-n** | Evidence and exception rows of a report's log |
 | **layers 1–5** | The spec's evaluation layers: extraction, model integrity, forecast, valuation, note |
@@ -85,10 +84,10 @@ Boxes are components (§2.2); numbered arrows are interfaces (§2.3). Pink marks
 | **Facts** | Loads XBRL facts; derives quarters on read | | §3 |
 | **Store** | One SQLite file; every read filtered by the run's as-of | | §3 |
 | **Retrieval** | Hybrid search over chunks | | §4 |
-| **Toolbox** | The tools the agent calls | | §7 |
-| **Agent runtime** | The tool-calling loop, prompts and budgets: Ask, Research, sub-agents | ✓ | §8 |
 | **Extraction** | KPI and guidance rows from releases, each checked against a quote | ✓ | §5 |
 | **Model engine** | Model, checks, forecast, scenarios, valuation | | §6 |
+| **Toolbox** | The tools the agent calls: its view of the blocks above | | §7 |
+| **Agent runtime** | The tool-calling loop, prompts and budgets: Ask, Research, sub-agents | ✓ | §8 |
 | **Report pipeline** | Steps S1–S11 per ticker and as-of; the note; versions | ✓ | §9 |
 | **Verification** | Ids, claim check, number trace, consistency check | | §10 |
 | **Export** | Note, PDF, workbook, parity check, review status | | §11 |
@@ -98,24 +97,24 @@ Code paths: Appendix C.
 
 ### 2.3 Interface catalog
 
-One row per boundary. Each is stated in its section; full schemas, numbered as here, are in [V4_INTERFACES.md](V4_INTERFACES.md).
+One row per boundary. Each is stated in its section; the full schema is in [V4_INTERFACES.md](V4_INTERFACES.md) under the same number.
 
-| # | Interface | Between | § |
-|---|---|---|---|
-| 1 | **Raw cache** | Acquisition → builders | §3.2 |
-| 2 | **Store** | everything → SQLite | §3.2 |
-| 3 | **Search** | toolbox → Retrieval | §4.2 |
-| 4 | **Tool calls** | agent ↔ toolbox | §7 |
-| 5 | **LLM calls** | code ↔ model | §8.2 |
-| 6 | **Extraction rows** | extractor → Store | §5.2 |
-| 7 | **Templates** | config → Model engine | §6.2 |
-| 8 | **Model and valuation files** | Model engine → Report, tools, Export | §6.2 |
-| 9 | **Pipeline artifacts** | step → step | §9.2 |
-| 10 | **Reference ids** | everywhere | §10.2 |
-| 11 | **Fact list** | Report code → note writer | §10.2 |
-| 12 | **Outputs** | system → reviewer | §11.2 |
-| 13 | **Gold and results** | Evaluation ↔ files | §12.2 |
-| – | **Config**, **CLI** | user → system | Appendix A, B |
+| # | Interface | Between | Contract in | Schema |
+|---|---|---|---|---|
+| 1 | **Raw cache** | Acquisition → builders | §3.1 | [§1](V4_INTERFACES.md#1-raw-cache) |
+| 2 | **Store** | everything → SQLite | §3.1 | [§2](V4_INTERFACES.md#2-store) |
+| 3 | **Search** | Toolbox → Retrieval | §4.1 | [§3](V4_INTERFACES.md#3-search) |
+| 4 | **Tool calls** | agent ↔ Toolbox | §7 | [§4](V4_INTERFACES.md#4-tool-calls) |
+| 5 | **LLM calls** | code ↔ model | §8.1 | [§5](V4_INTERFACES.md#5-llm-calls) |
+| 6 | **Extraction rows** | extractor → Store | §5.1 | [§6](V4_INTERFACES.md#6-extraction-rows) |
+| 7 | **Templates** | config → Model engine | §6.1 | [§7](V4_INTERFACES.md#7-templates) |
+| 8 | **Model and valuation files** | Model engine → Report, tools, Export | §6.1 | [§8](V4_INTERFACES.md#8-model-and-valuation-files) |
+| 9 | **Pipeline artifacts** | step → step | §9.1 | [§9](V4_INTERFACES.md#9-pipeline-artifacts) |
+| 10 | **Reference ids** | everywhere | §10.1 | [§10](V4_INTERFACES.md#10-reference-ids) |
+| 11 | **Fact list** | Report code → note writer | §10.1 | [§11](V4_INTERFACES.md#11-fact-list-and-log) |
+| 12 | **Outputs** | system → reviewer | §11.1 | [§12](V4_INTERFACES.md#12-outputs) |
+| 13 | **Gold and results** | Evaluation ↔ files | §12.1 | [§13](V4_INTERFACES.md#13-gold-and-results) |
+| – | **Config**, **CLI** | user → system | Appendix A, B | – |
 
 ### 2.4 Data flow and control flow
 
@@ -150,41 +149,21 @@ One row per boundary. Each is stated in its section; full schemas, numbered as h
 | BTS, NYC TLC | publish date (BTS: month end + 90 days, estimated) |
 | Our saved versions | `as_of < D` |
 
-| Rule | Reason |
-|---|---|
-| Strictly before D | The spec says so (spec §1.2), and it is the safest for a backtest |
-| `asof.py` is the only code that compares dates | One place to audit |
-| A `Store` is bound to one `AsOf` when opened; every read filters through it | No read path can skip the filter |
-| No tool can widen the view (`research_report`'s `as_of` only narrows it) | The model can't see past the run's date by asking |
-| `.latest()` takes, per value, the newest filing visible at D | A restatement counts only once filed (spec §1.6) |
+- Strictly before D (spec §1.2).
+- `asof.py` is the only code that compares dates.
+- A `Store` is bound to one `AsOf` when opened; every read filters through it.
+- No tool can widen the view: `research_report`'s `as_of` only narrows it.
+- `.latest()` takes, per value, the newest filing visible at D; a restatement counts only once filed (spec §1.6).
 
 **The no-LLM-numbers rule.** LLM output reaches the numbers only three ways:
 
-1. Extracted rows that code checks against a verbatim quote (§5.3).
-2. Bounded assumption proposals that code clips (§6.3).
-3. Prose in which every number is a marked fact (§10.3).
+1. Extracted rows that code checks against a verbatim quote (§5.2).
+2. Bounded assumption proposals that code clips (§6.2).
+3. Prose in which every number is a marked fact (§10.2).
 
-Tables are always written by code. Reason: the spec requires every number from deterministic code (spec §3), and it keeps valuation reruns byte-identical.
+Tables are always written by code (spec §3). This keeps valuation reruns byte-identical.
 
-**Errors.**
-- **Tools never raise.** A bad call returns `{"error": …}` for the model to read, so one bad argument doesn't end a run.
-- **Report code steps stop the run** on a failed integrity or valuation check.
-- **LLM steps degrade:** the section reads "failed check: reason" and the run continues (spec §2.3 req. 7).
-- **Builders never guess:** every gap becomes an exception row.
-
-**Trace.** Every number in an answer or note carries an id. Agent runs keep their tool calls; `report.json` records each step's time, LLM calls and tokens.
-
-**System limits:**
-
-| Limit | Value |
-|---|---|
-| LLM context | 32k tokens (Qwen3.6-27B-FP8 on vLLM) |
-| GPU | One 46 GB L40S, shared by vLLM and the embedder; the judge runs as a second pass |
-| CPU | Python crashes on the P-cores: heavy runs under `taskset -c 16-31` |
-| SEC | One request per 0.12 s (SEC allows 10/s) |
-| Licences | Tiingo is internal use only: market values never leave `data/` |
-| Report time | Under 30 minutes per company |
-| Coverage | December fiscal years; filings from 2023-01-01; CART from Q3 2023 |
+**Trace.** Every number in an answer or note carries an id (§10). Agent runs keep their tool calls; `report.json` records each step's time, LLM calls and tokens.
 
 ---
 
@@ -192,13 +171,11 @@ Tables are always written by code. Reason: the spec requires every number from d
 
 How it works: [V4_DATA.md](stages/V4_DATA.md). Schemas: [V4_INTERFACES.md §1–2](V4_INTERFACES.md#1-raw-cache).
 
-### 3.1 Purpose
+### 3.1 Contract
 
 Fetch every source into a raw cache, build one SQLite file from it, and serve every read through the run's as-of.
 
-Parts: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisition/`); text processing (`preprocess/`, `chunking/`); facts (`facts/xbrl.py`, `quarters.py`); the store (`store.py`, `asof.py`).
-
-### 3.2 Interfaces
+Code: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisition/`); text processing (`preprocess/`, `chunking/`); facts (`facts/xbrl.py`, `quarters.py`); the store (`store.py`, `asof.py`).
 
 | Interface | Contract |
 |---|---|
@@ -208,24 +185,22 @@ Parts: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisit
 | **Store reads** (2) | `Store(path, asof)`: every read method filters by that as-of |
 | **Ids** | Chunks `UBER-2026Q2-ER-EX99-005`; facts `xbrl:<T>:<taxonomy>:<concept>:<accession>:<start>/<end>`; derived quarters `q:<T>:<metric>:<period>` |
 
-### 3.3 Rules
+### 3.2 Rules
 
-| Rule | Reason |
-|---|---|
-| One filing per form and period; amendments ignored | One value per period |
-| Releases: 8-K Item 2.02, every `EX-99.*` exhibit | A release can carry two exhibits (BKNG 2026-08-04) |
-| A release's period is the last quarter end before it was filed, checked against the 10-Q | Releases carry no XBRL period |
-| DEF 14A: the first proxy each year, keyed to the prior fiscal year | Later ones are special meetings (spec §1.2) |
-| Fetch cache-first; builds run offline | Reproducible builds and evaluations |
-| Filings are split into Items by rules, not the LLM | Same Items as the LLM agent, at a fraction of its 6 GPU-hours |
-| Inline XBRL is read for every company-specific and segment fact | Company facts lacks both |
-| Quarters are derived on read, never stored: Q4 = FY − 9M; Q2 and Q3 from year-to-date when needed | Nothing goes stale between as-ofs (spec §1.6) |
-| A metric uses one XBRL concept per fiscal year | Mixing concepts broke Q2 sums |
-| A year recast by a later filing reads `restated`, logged, not `fail` | A recast is a known event, not a bad number (spec §1.6) |
-| EPS and share counts: direct facts only; Q4 EPS from the release | They don't add up across quarters |
-| Sources that block scripts are dropped, never worked around | Their terms (Stooq, TSA, Google Trends) |
+- One filing per form and period; amendments are ignored.
+- Releases are 8-K Item 2.02, every `EX-99.*` exhibit (a release can carry two, as BKNG's did on 2026-08-04).
+- A release's period is the last quarter end before it was filed, checked against the 10-Q (releases carry no XBRL period).
+- DEF 14A: the first proxy each year, keyed to the prior fiscal year; later ones are special meetings (spec §1.2).
+- Fetch cache-first; builds run offline.
+- Filings are split into Items by rules, not the LLM.
+- Inline XBRL is read for every company-specific and segment fact; company facts has neither.
+- Quarters are derived on read, never stored: Q4 = FY − 9M; Q2 and Q3 from year-to-date when needed (spec §1.6).
+- A metric uses one XBRL concept per fiscal year.
+- A year recast by a later filing reads `restated`, logged, not `fail` (spec §1.6).
+- EPS and share counts: direct facts only; Q4 EPS from the release.
+- Sources that block scripts are dropped, never worked around (Stooq, TSA, Google Trends).
 
-### 3.4 Failure handling and limits
+### 3.3 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -244,29 +219,25 @@ Parts: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisit
 
 How it works: [V4_RETRIEVAL.md](stages/V4_RETRIEVAL.md) and [V1_RETRIEVAL.md](stages/V1_RETRIEVAL.md). Schema: [V4_INTERFACES.md §3](V4_INTERFACES.md#3-search).
 
-### 4.1 Purpose
+### 4.1 Contract
 
 Find the chunks that answer a query, one search per company and filing, under the run's as-of. No LLM.
 
-Parts: decomposer, searcher, index (Qwen3-Embedding-0.6B, FTS5), reranker (bge-reranker-v2-m3), all in `retrieval/`.
-
-### 4.2 Interfaces
+Code (`retrieval/`): decomposer, searcher, index (Qwen3-Embedding-0.6B, FTS5), reranker (bge-reranker-v2-m3).
 
 | Interface | Contract |
 |---|---|
 | **Search** (3) | `search_filings(query, companies?, periods?, forms?, k = 8)` → the searches it ran, and up to k chunks with id, company, form, period, filing date and text |
 
-### 4.3 Rules
+### 4.2 Rules
 
-| Rule | Reason |
-|---|---|
-| Companies come from the arguments, else the query; no period = the latest filing of each form at D | "Latest" must respect the as-of |
-| One sub-question per company and filing, naming only that company | Otherwise one company's chunks crowd out the rest |
-| Keyword + dense search, fused, then reranked | Keywords catch figures; vectors catch paraphrase |
-| The model sees parent chunks | A whole subsection or table, not a fragment |
-| Results merged round-robin until k | Every company gets its share |
+- Companies come from the arguments, else the query; no period = the latest filing of each form at D.
+- One sub-question per company and filing, naming only that company.
+- Keyword and dense search, fused, then reranked.
+- The model sees parent chunks: a whole subsection or table, not a fragment.
+- Results are merged round-robin until k.
 
-### 4.4 Failure handling and limits
+### 4.3 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -282,13 +253,11 @@ Parts: decomposer, searcher, index (Qwen3-Embedding-0.6B, FTS5), reranker (bge-r
 
 How it works: [V4_EXTRACTION.md](stages/V4_EXTRACTION.md). Schemas: [V4_INTERFACES.md §6](V4_INTERFACES.md#6-extraction-rows).
 
-### 5.1 Purpose
+### 5.1 Contract
 
 Read KPIs and guidance from earnings releases into checked, quoted rows.
 
-Parts: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an ablation), registry (`facts/kpis.yaml`), loader (`tenk build --stage kpis`).
-
-### 5.2 Interfaces
+Code: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an ablation), registry (`facts/kpis.yaml`), loader (`tenk build --stage kpis`).
 
 | Interface | Contract |
 |---|---|
@@ -296,19 +265,17 @@ Parts: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an
 | **Reply** | KPI and guidance rows, each with value, unit, source chunk id and a verbatim quote |
 | **Extraction rows** (6) | Stored in `kpis` and `guidance` with period, filing date and definition version. Ids `kpi:<T>:<metric>[.<segment>]:<period>`, `guide:<T>:<metric>:<period>` |
 
-### 5.3 Rules
+### 5.2 Rules
 
-| Rule | Reason |
-|---|---|
-| Input is only that release's chunks | No other filing can leak in |
-| Code keeps a row only if: the chunk id was given, the quote is verbatim, the value is in the quote, and the metric is in the registry | The LLM proposes; code decides what is stored |
-| One repair turn, then an exception row | Never a guessed value (spec §2.3) |
-| GAAP diluted EPS only | Non-GAAP EPS was taken for GAAP |
-| A recast gives earlier periods a new definition version; readers take the newest | Spec §1.6: restate history and note it |
-| Guidance keeps its basis (level, growth or margin); the forecast converts it | Releases guide all three ways |
-| Where a KPI is also an XBRL fact, the filing wins and the gap is logged | Spec §1.6. **Not built** (§13.1) |
+- Input is only that release's chunks; no other filing can leak in.
+- Code keeps a row only if the chunk id was given, the quote is verbatim, the value is in the quote, and the metric is in the registry. The LLM proposes; code decides what is stored.
+- One repair turn, then an exception row; never a guessed value (spec §2.3).
+- GAAP diluted EPS only.
+- A recast gives earlier periods a new definition version; readers take the newest (spec §1.6).
+- Guidance keeps its basis (level, growth or margin); the forecast converts it.
+- Where a KPI is also an XBRL fact, the filing wins and the gap is logged (spec §1.6). **Not built** (§13.1).
 
-### 5.4 Failure handling and limits
+### 5.3 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -323,13 +290,11 @@ Parts: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an
 
 How it works: [V4_MODEL.md](stages/V4_MODEL.md). Equations: [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md). Schemas: [V4_INTERFACES.md §7–8](V4_INTERFACES.md#7-templates).
 
-### 6.1 Purpose
+### 6.1 Contract
 
 Build a three-statement model from the data pack, forecast it, and value it. All deterministic code.
 
-Parts: data pack (S1), DSL and graph, templates, history (S3), layer-2 checks, forecast and scenarios (S5), outside inputs, proposer (S4), valuation (S6–S7), model book. Code: `research/`.
-
-### 6.2 Interfaces
+Code (`research/`): data pack (S1), DSL and graph, templates, history (S3), layer-2 checks, forecast and scenarios (S5), outside inputs, proposer (S4), valuation (S6–S7), model book.
 
 | Interface | Contract |
 |---|---|
@@ -339,7 +304,7 @@ Parts: data pack (S1), DSL and graph, templates, history (S3), layer-2 checks, f
 | **`valuation.json`** (8) | Market cap, EV, cost of capital, peers, PT per scenario, weighted PT, return, rating, DCF grid, `inputs_hash` |
 | **`research.yaml`** | Every forecast and valuation knob (Appendix A) |
 
-### 6.3 Rules and algorithms
+### 6.2 Rules and algorithms
 
 **Model** (spec §3.1)
 
@@ -350,15 +315,13 @@ Parts: data pack (S1), DSL and graph, templates, history (S3), layer-2 checks, f
 | `orders` | DASH, LYFT, CART | Orders or rides × value per unit; revenue = that × take rate |
 | `trip` | TRIP | Revenue on one faded rate; EBITDA a margin on revenue |
 
-| Rule | Reason |
-|---|---|
-| One definition (templates + DSL), two evaluators; Python is the source of truth | Two implementations would drift |
-| Condensed statements, shared by all templates | One engine serves all eight |
-| Tax at the trailing rate, bounded 10–30% | A one-off quarter can't set the forecast rate |
-| Every input cell carries its source and filing date | Needed by the checks and the trace |
-| Missing inputs stay blank, never 0 | A 0 broke full-year sums |
-| Non-operating items forecast at 0 | Not forecastable |
-| Travel prepayment not modeled | Spec §3.1 simplification |
+- One definition (templates + DSL), two evaluators; Python is the source of truth.
+- Condensed statements, shared by all templates.
+- Tax at the trailing rate, bounded 10–30%.
+- Every input cell carries its source and filing date.
+- Missing inputs stay blank, never 0.
+- Non-operating items forecast at 0.
+- Travel prepayment is not modeled (spec §3.1).
 
 **Forecast** (spec §3.2)
 
@@ -370,17 +333,14 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
                          bounded to the 8-quarter range ± a band (take rate 50 bps, margins 200 bps)
 ```
 
-| Rule | Reason |
-|---|---|
-| Forecast per driver, never per total | Spec §3.2 |
-| Later quarters by seasonal share | One odd quarter doesn't repeat a year later |
-| A ratio's shift holds until lapped, then 0 | A one-off change isn't compounded |
-| Ratios stay within the 8-quarter range ± a band | Within what the company has shown |
-| Each guide anchors its own driver, upstream first (bookings → revenue → EBITDA) | Later anchors see earlier ones |
-| Anchor at the midpoint, not the high end | Signed off before the backtest (spec §7) |
-| An anchor the bounds stop is logged, never forced | Flag, don't hide |
-| Scenarios move each driver by ±1σ of its history | The shock scales with the driver's history |
-| Outside data (BTS, NYC TLC, FRED) nudges one starting growth rate per company, weighted by fit; guidance overrides it | Spec §3.2 "Outside inputs" |
+- Forecast per driver, never per total (spec §3.2).
+- A ratio's shift holds until lapped, then 0; a one-off change is not compounded.
+- Ratios stay within the 8-quarter range ± a band.
+- Each guide anchors its own driver, upstream first (bookings → revenue → EBITDA); later anchors see earlier ones.
+- Anchor at the midpoint, not the high end (signed off before the backtest, spec §7).
+- An anchor the bounds stop is logged, never forced.
+- Scenarios move each driver by ±1σ of its history.
+- Outside data (BTS, NYC TLC, FRED) nudges one starting growth rate per company, weighted by fit; guidance overrides it (spec §3.2).
 
 **Proposer (S4).** Off by default: it did not beat the defaults in the backtest (spec §7). When on:
 - It may move only growth starts, ratio shifts and the fade, never an anchored assumption.
@@ -414,7 +374,7 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 | `formula_only` | Forecast cells are formulas |
 | `wacc_gt_g`, `weights` | WACC > g; weights sum to 1 |
 
-### 6.4 Failure handling and limits
+### 6.3 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -435,11 +395,9 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 
 How it works: [V4_AGENT.md](stages/V4_AGENT.md#tools). Arguments and result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls).
 
-### 7.1 Overview
+### 7.1 Contract
 
-A tool is a function the agent calls with JSON arguments; it returns JSON with citable ids. The **Toolbox** (`agent/tools.py`) holds the schemas, runs the calls, and sees exactly what its store's as-of sees.
-
-Each tool is a thin front for one block. Not everything goes through tools:
+A tool is a function the agent calls with JSON arguments; it returns JSON with citable ids. The **Toolbox** (`agent/tools.py`) holds the schemas, runs the calls, and sees exactly what its store's as-of sees. Each tool is a thin front for one block (§3–§6, §11); the Toolbox adds no logic of its own.
 
 | Caller | Uses |
 |---|---|
@@ -448,8 +406,6 @@ Each tool is a thin front for one block. Not everything goes through tools:
 | Report sub-agents (S2 events, S4 proposer, S9 debates) | tool set `ask` |
 | Report code steps, builders, evaluation | their blocks directly, no tools |
 | A person | `tenk tool NAME key=value …` (`--list` prints the schemas) |
-
-### 7.2 Tool sets
 
 | Group | Tools | `ask` | `research` |
 |---|---|:-:|:-:|
@@ -462,45 +418,43 @@ Each tool is a thin front for one block. Not everything goes through tools:
 
 V3's sets `text` and `full` remain for the V3 corpus.
 
-### 7.3 Catalog
+### 7.2 Catalog
 
-| Tool | Returns | Backed by |
-|---|---|---|
-| `search_filings` | Chunks for a query, per company and filing | Retrieval (§4) |
-| `calculator` | A result with its formula and inputs | `agent/tools.py` |
-| `financials` | Reported and derived quarterly figures (`q:`, `xbrl:` ids) | Store facts (§3) |
-| `company_kpis` | KPI rows with their quotes (`kpi:` ids) | Store KPIs (§5) |
-| `guidance` | Guidance ranges, with the actual once reported (`guide:` ids) | Store guidance (§5) |
-| `filings` | The filings visible at the as-of | Store (§3) |
-| `market_data` | Prices and macro series (`px:`, `macro:` ids) | Store market (§3) |
-| `crosscheck` | NYC TLC or BTS monthly series (`cc:` ids) | Store market (§3) |
-| `research_report` | A saved version's PT, rating, estimates and **review status** | Saved versions (§11) |
-| `model_view` | Model lines and assumptions (`model:` ids) | Model book (§6) |
-| `run_scenario` | Base vs scenario lines, PT and rating after changing assumptions | Model book (§6) |
-| `compare_peers` | One metric across companies, with each one's assumptions | Model book (§6) |
-| `variance_review` | Our saved estimate vs the actual, with a revenue bridge | Saved version + Store |
+| Group | Tool | Returns | Backed by |
+|---|---|---|---|
+| text | `search_filings` | Chunks for a query, per company and filing | Retrieval (§4) |
+| calc | `calculator` | A result with its formula and inputs | `agent/tools.py` |
+| facts | `financials` | Reported and derived quarterly figures (`q:`, `xbrl:` ids) | Store facts (§3) |
+| facts | `company_kpis` | KPI rows with their quotes (`kpi:` ids) | Store KPIs (§5) |
+| facts | `guidance` | Guidance ranges, with the actual once reported (`guide:` ids) | Store guidance (§5) |
+| facts | `filings` | The filings visible at the as-of | Store (§3) |
+| market | `market_data` | Prices and macro series (`px:`, `macro:` ids) | Store market (§3) |
+| market | `crosscheck` | NYC TLC or BTS monthly series (`cc:` ids) | Store market (§3) |
+| reports | `research_report` | A saved version's PT, rating, estimates and **review status** | Saved versions (§11) |
+| model | `model_view` | Model lines and assumptions (`model:` ids) | Model book (§6) |
+| model | `run_scenario` | Base vs scenario lines, PT and rating after changing assumptions | Model book (§6) |
+| model | `compare_peers` | One metric across companies, with each one's assumptions | Model book (§6) |
+| model | `variance_review` | Our saved estimate vs the actual, with a revenue bridge | Saved version + Store |
 
-### 7.4 Rules
+### 7.3 Rules
 
-| Rule | Reason |
-|---|---|
-| Every tool is bound to the run's as-of | §2.5 |
-| Every value in a result carries an id that resolves (§10.2) | The claim check can verify what the model cites |
-| Errors are results: `{"error": …}` plus the valid choices | The model can correct itself; one bad call doesn't end a run |
-| Tools come in groups; no run gets every tool | Smaller schemas in a 32k window; a mode can't call what it shouldn't |
-| Results capped at 40 rows and 16,000 characters | One result can't fill the window |
-| Ask cites estimates only through `research_report`; Research computes only through model tools, assumptions listed | Spec §2: Ask retrieves, Research computes |
-| `run_scenario` writes a session-only `scratch-n` run, clipped to the proposer's bounds (§6.3) | Only Report creates versions; scenarios stay within history |
-| Peers are built with default assumptions (no LLM), once per ticker and as-of | A peer's numbers don't depend on an LLM run |
+- Every tool is bound to the run's as-of (§2.5).
+- Every value in a result carries an id that resolves (§10.1), so the claim check can verify what the model cites.
+- Errors are results: `{"error": …}` plus the valid choices.
+- Tools come in groups; no run gets every tool.
+- Results are capped at 40 rows and 16,000 characters.
+- Ask cites estimates only through `research_report`; Research computes only through model tools, assumptions listed (spec §2).
+- `run_scenario` writes a session-only `scratch-n` run, clipped to the proposer's bounds (§6.2). Only Report creates versions.
+- Peers are built with default assumptions (no LLM), once per ticker and as-of.
 
-### 7.5 Failure handling and limits
+### 7.4 Failure handling and limits
 
 | Case | Handling |
 |---|---|
 | Unknown tool, argument, metric, line or assumption | Error with the valid choices; the model retries |
 | Unknown company, or a search naming none | Error listing the corpus |
 | Nothing visible at the as-of | Empty rows (or `report: null`), not an error |
-| A model can't be built | Error naming the failing check (§6.4) |
+| A model can't be built | Error naming the failing check (§6.3) |
 | Result over the caps | Truncated, with `"omitted": n` |
 | First `compare_peers` call | Slow: peers are built on first use |
 
@@ -510,51 +464,47 @@ V3's sets `text` and `full` remain for the V3 corpus.
 
 How it works: [V4_AGENT.md](stages/V4_AGENT.md). Reply schemas: [V4_INTERFACES.md §5](V4_INTERFACES.md#5-llm-calls).
 
-### 8.1 Purpose
+### 8.1 Contract
 
-Run the LLM: the Ask and Research loop, Report's sub-agents, and every single-shot call.
+Run the LLM: the Ask and Research loop, Report's sub-agents, and every single-shot call. Each reply is one JSON object.
 
-Parts: the loop (`agent/loop.py`, LangGraph), prompts (`prompts/*.md`), sub-agents (`research/subagents.py`, `propose.py`), the model book (`research/book.py`), and one model interface (`models.py`: vLLM or Claude).
+Code: the loop (`agent/loop.py`, LangGraph), prompts (`prompts/*.md`), sub-agents (`research/subagents.py`, `propose.py`), the model book (`research/book.py`), and one model interface (`models.py`: vLLM or Claude).
 
-### 8.2 Interfaces
+**LLM calls** (5):
 
-**LLM calls** (5). Each reply is one JSON object.
+| Call | Tools | Budget |
+|---|---|---|
+| Ask / Research answer | `ask` / `research` | 20 calls, 20k context |
+| KPI extraction | – | 1 call + 1 repair per release |
+| S2 events | `ask` | 8 calls, 16k |
+| S4 proposer | `ask` | 10 calls, 16k |
+| S9 debate, per driver | `ask` | 8 calls, 16k |
+| S10 prose slot | – | 1.5k tokens out, 1 repair |
+| Judge (evaluation) | – | gpt-oss-20b, a second pass |
 
-| Call | Tools | Returns | Budget |
-|---|---|---|---|
-| Ask / Research answer | `ask` / `research` | Answer, claims with cited ids, assumptions (Research) | 20 calls, 20k context |
-| KPI extraction | – | Rows with chunk id and quote | 1 call + 1 repair per release |
-| S2 events | `ask` | Events with type, summary, evidence ids | 8 calls, 16k |
-| S4 proposer | `ask` | Assumption proposals with rationale and evidence | 10 calls, 16k |
-| S9 debate, per driver | `ask` | Bull, bear, hypothesis, trigger, gap, evidence | 8 calls, 16k |
-| S10 prose slot | – | Text with facts marked `{F-n}` | 1.5k tokens out, 1 repair |
-| Judge (evaluation) | – | Scores per criterion | gpt-oss-20b, a second pass |
-
-### 8.3 Rules
+### 8.2 Rules
 
 ```text
-question → model → tool calls → tools → model → … → JSON answer → claim check (§10.3)
+question → model → tool calls → tools → model → … → JSON answer → claim check (§10.2)
 ```
 
-| Rule | Reason |
-|---|---|
-| The first turn must be a tool call | No answers from memory |
-| A repeated identical call errors and still counts | Stops loops |
-| After the call budget or a full context: one turn with tools off to answer | Every run ends with an answer |
-| An unparseable answer gets one retry | A formatting slip is not a wrong answer |
-| Every answer passes the claim check before it is shown | No unverified number presented as verified |
-| Sub-agents return JSON; an item is kept only if one evidence id resolves at D | No unsupported claim reaches the note |
-| A debate's evidence values become note facts | Its numbers can then be traced |
-| State lives in files; each call gets a purpose-built view; detail is fetched by id | Fits a 32k window |
+- The first turn must be a tool call; no answers from memory.
+- A repeated identical call errors and still counts.
+- After the call budget or a full context: one turn with tools off to answer.
+- An unparseable answer gets one retry.
+- Every answer passes the claim check before it is shown.
+- Sub-agents return JSON; an item is kept only if one evidence id resolves at D.
+- A debate's evidence values become note facts, so its numbers can be traced.
+- State lives in files; each call gets a purpose-built view; detail is fetched by id.
 
-### 8.4 Failure handling and limits
+### 8.3 Failure handling and limits
 
 | Case | Handling |
 |---|---|
-| Tool error | Returned to the model (§7.5) |
+| Tool error | Returned to the model (§7.4) |
 | Budget spent or context full | Forced answer turn, tools off |
 | Answer still not JSON | Recorded as unparsed; no claims |
-| Sub-agent returns nothing usable | Its Report step degrades (§9.4) |
+| Sub-agent returns nothing usable | Its Report step degrades (§9.3) |
 | vLLM unreachable | The call raises; a report resumes with `--resume` |
 | Determinism | Temperature 0 |
 | Judge | Can't share the GPU with the 27B model, so it runs afterwards |
@@ -565,44 +515,40 @@ question → model → tool calls → tools → model → … → JSON answer �
 
 How it works, and the note's ten sections: [V4_REPORT.md](stages/V4_REPORT.md). Artifact schemas: [V4_INTERFACES.md §9](V4_INTERFACES.md#9-pipeline-artifacts).
 
-### 9.1 Purpose
+### 9.1 Contract
 
 Run S1–S11 for one ticker and as-of, write the note, and save a version.
 
-Parts: runner (`research/pipeline.py`), sections, facts and writer (`research/note/`), trace and consistency (§10).
+Code: runner (`research/pipeline.py`), sections, facts and writer (`research/note/`), trace and consistency (§10).
 
-### 9.2 Interfaces: steps and artifacts
-
-| Step | Kind | Writes |
-|---|---|---|
-| S1 data pack | code | Every model input with its source |
-| S2 events | sub-agent | `events.json` |
-| S3 model | code | History model; layer-2 checks |
-| S4 propose | sub-agent (off by default) | Assumption overrides |
-| S5 forecast | code | `model.json`; layer-2 again |
-| S6 peers | code | Peer models |
-| S7 value | code | `valuation.json`; valuation checks |
-| S8 revise | code | `revisions.json` (vs the parent version) |
-| S9 debates | sub-agent per scenario driver | `debates.json` |
-| S10 write | code + LLM | `facts.json`, `note.json`; consistency check |
-| S11 export | code | Note, PDF, workbook, `exceptions.json`, `report.json`; the version row |
+| Step | Kind | Reads | Writes |
+|---|---|---|---|
+| S1 data pack | code | Store | Every model input with its source (in memory) |
+| S2 events | sub-agent | Store, search | `events.json` |
+| S3 model | code | data pack, template | History model; layer-2 checks |
+| S4 propose | sub-agent (off by default) | driver table, Store | Assumption overrides |
+| S5 forecast | code | model, guidance, `research.yaml` | `model.json`; layer-2 again |
+| S6 peers | code | Store, per peer | Peer models (model book) |
+| S7 value | code | model, peers, market | `valuation.json`; valuation checks |
+| S8 revise | code | the parent's `model.json` | `revisions.json` |
+| S9 debates | sub-agent per scenario driver | model, Store, search | `debates.json`; section 7 sensitivities |
+| S10 write | code + LLM | all artifacts | `facts.json`, `note.json`; consistency check |
+| S11 export | code | all artifacts | Note, PDF, workbook, `exceptions.json`, `report.json`; the version row |
 
 Every artifact is a JSON file in the report folder. `report.json` records the version, parent, rating, PT, counts, check results and each step's time and tokens.
 
-### 9.3 Rules
+### 9.2 Rules
 
-| Rule | Reason |
-|---|---|
-| Fixed steps; LLM calls are leaf tasks; no Ask or Research runs | Spec §2.3: "not an open agent loop" |
-| Parent = the latest version with an earlier as-of; none → "initial draft (no prior run)" | Spec §2.3 |
-| Revisions cover revenue, adj. EBITDA and EPS (next quarter, last two FY columns) | The headline lines of spec §2.3 table 4.1 |
-| `--resume` reuses saved LLM outputs; code steps always rerun | A crash repeats only cheap steps |
-| `--no-llm` skips every LLM step | Code-only drafts and tests |
-| Sections 1 and 10 are written last | Spec §2.3 req. 4 |
-| Section 7 has a sensitivity row for every debated driver | Spec §2.3 req. 5 |
-| Each LLM step has a budget; a run over 30 minutes logs a warning | Spec §2.3 req. 8 |
+- Fixed steps; LLM calls are leaf tasks; no Ask or Research runs (spec §2.3).
+- Parent = the latest version with an earlier as-of; none → "initial draft (no prior run)".
+- Revisions cover revenue, adj. EBITDA and EPS (next quarter, last two FY columns).
+- `--resume` reuses saved LLM outputs; code steps always rerun.
+- `--no-llm` skips every LLM step.
+- Sections 1 and 10 are written last (spec §2.3).
+- Section 7 has a sensitivity row for every debated driver.
+- Each LLM step has a budget; a run over 30 minutes logs a warning.
 
-**Consistency check** (before export; spec §2.3 req. 5). Code checks that:
+**Consistency check** (before export; spec §2.3). Code checks that:
 - the rating matches the return thresholds;
 - section 1's numbers equal their section tables;
 - every debated driver is in section 7;
@@ -611,13 +557,13 @@ Every artifact is a JSON file in the report folder. `report.json` records the ve
 
 A failure becomes an `error` exception. The takeaways get one repair; other sections are never rewritten.
 
-### 9.4 Failure handling and limits
+### 9.3 Failure handling and limits
 
 | Case | Handling |
 |---|---|
 | Layer-2 or valuation FAIL | The run stops; nothing downstream runs on unchecked numbers |
 | LLM step fails or hits its budget | Section reads "failed check: reason"; exception row; the run finishes |
-| Untraced number after repair | Sentence dropped, logged (§10.3) |
+| Untraced number after repair | Sentence dropped, logged (§10.2) |
 | Consistency failure | Exception row; takeaways repaired once |
 | Over 30 minutes | Warning exception |
 | LibreOffice or Chrome missing | Export fails; no version saved |
@@ -627,15 +573,13 @@ A failure becomes an `error` exception. The takeaways get one repair; other sect
 
 ## 10. Verification and number trace
 
-How it works: [V4_VERIFICATION.md](stages/V4_VERIFICATION.md). Full id grammar: [V4_INTERFACES.md §10–11](V4_INTERFACES.md#1011-reference-ids-fact-list-evidence-and-exception-log).
+How it works: [V4_VERIFICATION.md](stages/V4_VERIFICATION.md). Full id grammar: [V4_INTERFACES.md §10–11](V4_INTERFACES.md#10-reference-ids).
 
-### 10.1 Purpose
+### 10.1 Contract
 
 Make every number checkable: resolve ids, check answer claims, trace every number in the note, keep the evidence and exception log.
 
-Parts: id grammar and resolver (`research/refs.py`), claim check (`generation/verify.py`), fact list, number trace and consistency check (`research/note/`).
-
-### 10.2 Interfaces
+Code: id grammar and resolver (`research/refs.py`), claim check (`generation/verify.py`), fact list, number trace and consistency check (`research/note/`).
 
 | Interface | Contract |
 |---|---|
@@ -644,7 +588,7 @@ Parts: id grammar and resolver (`research/refs.py`), claim check (`generation/ve
 | **Fact list** (11) | `F-n` facts: label, formatted value, unit, source id. The writer uses them verbatim, marked `{F-n}` |
 | **Log** | `E-n` rows from the facts; `X-n` rows (severity `info`, `warning` or `error`) from every step |
 
-### 10.3 Rules
+### 10.2 Rules
 
 **Claim status** (Ask and Research answers):
 
@@ -656,16 +600,13 @@ Parts: id grammar and resolver (`research/refs.py`), claim check (`generation/ve
 | **unverified** | Anything else; shown with the reason |
 
 **Note trace:**
+- Code-written tables must appear verbatim.
+- Every number in prose is a marked fact **of its own section** or an allowed token (dates, "Q2", "10-K").
+- No "pending" or "TBD"; gaps read "n/a: …" or "failed check: …"; estimates carry "E".
+- One repair turn; a sentence still untraced is dropped and logged (spec §2.3).
+- Every gap, conflict or failed check becomes an `X-n` row.
 
-| Rule | Reason |
-|---|---|
-| Code-written tables must appear verbatim | Catches a changed table cell |
-| Every number in prose is a marked fact **of its own section** or an allowed token (dates, "Q2", "10-K") | Catches a figure swapped for another fact |
-| No "pending" or "TBD"; gaps read "n/a: …" or "failed check: …"; estimates carry "E" | Spec §2.3 note rules |
-| One repair turn; a sentence still untraced is dropped and logged | Spec §2.3 req. 3 |
-| Every gap, conflict or failed check becomes an `X-n` row | Flag, don't hide |
-
-### 10.4 Failure handling and limits
+### 10.3 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -681,13 +622,11 @@ Parts: id grammar and resolver (`research/refs.py`), claim check (`generation/ve
 
 How it works: [V4_OUTPUTS.md](stages/V4_OUTPUTS.md). Folder and tabs: [V4_INTERFACES.md §12](V4_INTERFACES.md#12-outputs).
 
-### 11.1 Purpose
+### 11.1 Contract
 
 Write the note and workbook a reviewer reads, check the workbook against the model, and record the review.
 
-Parts: workbook and parity (`research/export/workbook.py`), other tabs and PDF (`report.py`), renderer (headless Chrome), review (`tenk research approve`).
-
-### 11.2 Interfaces
+Code: workbook and parity (`research/export/workbook.py`), other tabs and PDF (`report.py`), renderer (headless Chrome), review (`tenk research approve`).
 
 | Interface | Contract |
 |---|---|
@@ -695,16 +634,14 @@ Parts: workbook and parity (`research/export/workbook.py`), other tabs and PDF (
 | **Workbook** | Tabs: Model, Assumptions, Summary, Scenarios, Valuation, DCF, Revisions, Model (prior), Checks, Log. Inputs blue, formulas black, links green |
 | **Review** | `tenk research approve TICKER:vN --by INITIALS` marks a version reviewed |
 
-### 11.3 Rules
+### 11.2 Rules
 
-| Rule | Reason |
-|---|---|
-| Parity: LibreOffice recalculates; every formula cell equals `model.json` | The workbook must be live and agree with the model |
-| Every version is a draft until approved; an amendment is a new version | The human decides (spec §2.3) |
-| Ask and Research show the status beside a cited estimate | A draft is never presented as approved |
-| Market data stays in `data/` | Tiingo licence |
+- Parity: LibreOffice recalculates; every formula cell equals `model.json`.
+- Every version is a draft until approved; an amendment is a new version (spec §2.3).
+- Ask and Research show the status beside a cited estimate, so a draft is never presented as approved.
+- Market data stays in `data/` (Tiingo licence).
 
-### 11.4 Failure handling and limits
+### 11.3 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -719,41 +656,37 @@ Parts: workbook and parity (`research/export/workbook.py`), other tabs and PDF (
 
 How it works, including the backtest loop: [V4_EVALUATION.md](stages/V4_EVALUATION.md). Gold rows: [V4_INTERFACES.md §13](V4_INTERFACES.md#13-gold-and-results).
 
-### 12.1 Purpose
+### 12.1 Contract
 
 Grade each layer against bars frozen before the code they grade.
 
-Parts: extraction scorer, backtest, note eval (`evaluation/`); Ask and Research runners (`experiments/v4/`).
-
-### 12.2 Interfaces
+Code: extraction scorer, backtest, note eval (`evaluation/`); Ask and Research runners (`experiments/v4/`).
 
 | Interface | Contract |
 |---|---|
 | **Gold** (13) | `evaluation/gold/`: extraction (337 labels), Ask (79 questions), Research (72). Every row records who verified it |
 | **Results** (13) | `evaluation/results/backtest-<label>/`; Ask and Research runs in `output/generation/<label>/` |
 
-### 12.3 Rules: layers and bars
+### 12.2 Rules: layers and bars
 
 | Layer | Test | Pass bar |
 |---|---|---|
 | 1 Extraction | 337 labels | ≥ 98% exact; 100% on revenue, EPS, main KPI |
-| 2 Model integrity | §6.3 checks on every model | 100%; any FAIL stops |
+| 2 Model integrity | §6.2 checks on every model | 100%; any FAIL stops |
 | 3 Forecast | Walk-forward backtest, 48 forecasts per metric | MAPE below seasonal naive on revenue and main KPI; bias near 0 |
 | 4 Valuation | Rerun on identical inputs; WACC sweep | Identical output; targets inside the peer range or flagged |
 | 5 Note | Trace, ten sections, judge rubric, seeded errors | 100% traced; rubric ≥ 4/5 |
 | Ask | 79 questions | ≥ 85% correct and verified; 100% of ids resolve |
 | Research | 72 questions | ≥ 90% with a verifying `model:` id and stated assumptions |
 
-| Rule | Reason |
-|---|---|
-| Bars are frozen before the code they grade; a miss is reported as a miss | No tuning to the test |
-| A gold change after a run is logged, old score beside the new | Changes after seeing answers stay visible |
-| Backtest as-of = the day after a release's EDGAR acceptance | Works for releases before the open and after the close |
-| Actuals as first reported | Scores what was knowable then |
-| Baselines: seasonal naive, guidance midpoint, an LLM with no tools | Spec §6; the last also measures memorization |
-| The judge is from another model family | No model grades itself |
+- Bars are frozen before the code they grade; a miss is reported as a miss.
+- A gold change after a run is logged, old score beside the new.
+- Backtest as-of = the day after a release's EDGAR acceptance (works for releases before the open and after the close).
+- Actuals as first reported.
+- Baselines: seasonal naive, guidance midpoint, an LLM with no tools (spec §6); the last also measures memorization.
+- The judge is from another model family; no model grades itself.
 
-### 12.4 Failure handling and limits
+### 12.3 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -766,7 +699,7 @@ Parts: extraction scorer, backtest, note eval (`evaluation/`); Ask and Research 
 
 ---
 
-## 13. Known problems and not built
+## 13. Reliability and gaps
 
 ### 13.1 Not built
 
@@ -815,9 +748,9 @@ Parts: extraction scorer, backtest, note eval (`evaluation/`); Ask and Research 
 
 | Asked | Today |
 |---|---|
-| `ixbrl:`, `E-`, `X-` ids resolved by the claim check (§10.2) | Parse only |
-| Parity mismatch as a layer-2 FAIL (§11.3) | Recorded; the run continues |
-| `tenk research approve` errors on an unknown version (§11.4) | Silently matches nothing |
+| `ixbrl:`, `E-`, `X-` ids resolved by the claim check (§10.1) | Parse only |
+| Parity mismatch as a layer-2 FAIL (§11.2) | Recorded; the run continues |
+| `tenk research approve` errors on an unknown version (§11.3) | Silently matches nothing |
 | Held-out quarters reported separately (spec §6) | Not reported: the LLM's cutoff is unpublished |
 | Human review of the rubric sample and the Ask and Research gold | Not done |
 
@@ -839,6 +772,27 @@ Working list with effort estimates: [tmp_inconsistencies.md](tmp_inconsistencies
 | **Determinism with an LLM** | Valuation is code; temperature 0; `--resume` replays LLM steps |
 | **Licensing** | Tiingo internal use only; Stooq, TSA, Google Trends dropped |
 | **Filing-text recall is unmeasured** | A missed acquisition or regulatory event is silent ([V4_AGENT.md](stages/V4_AGENT.md#filing-text-what-reaches-the-note)) |
+
+### 13.3 Error policy
+
+- **Tools never raise.** A bad call returns `{"error": …}` for the model to read, so one bad argument doesn't end a run.
+- **Report code steps stop the run** on a failed integrity or valuation check.
+- **LLM steps degrade:** the section reads "failed check: reason" and the run continues (spec §2.3 req. 7).
+- **Builders never guess:** every gap becomes an exception row.
+
+Per-block cases: §3.3, §4.3, §5.3, §6.3, §7.4, §8.3, §9.3, §10.3, §11.3, §12.3.
+
+### 13.4 System limits
+
+| Limit | Value |
+|---|---|
+| LLM context | 32k tokens (Qwen3.6-27B-FP8 on vLLM) |
+| GPU | One 46 GB L40S, shared by vLLM and the embedder; the judge runs as a second pass |
+| CPU | Python crashes on the P-cores: heavy runs under `taskset -c 16-31` |
+| SEC | One request per 0.12 s (SEC allows 10/s) |
+| Licences | Tiingo is internal use only: market values never leave `data/` |
+| Report time | Under 30 minutes per company |
+| Coverage | December fiscal years; filings from 2023-01-01; CART from Q3 2023 |
 
 ---
 

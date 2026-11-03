@@ -1,4 +1,4 @@
-"""Layer 1, extraction (V4 design doc §12.3): extracted KPIs and guidance against hand labels.
+"""Layer 1, extraction (V4 design doc §12.2): extracted KPIs and guidance against hand labels.
 
 A gold label (evaluation/gold/extraction-gold.jsonl) matches when the extraction has a row for
 its (ticker, period, metric, segment) — guidance labels `guide.<metric>.low|high` match the

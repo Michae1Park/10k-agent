@@ -1,4 +1,4 @@
-"""Draft the V4.1 extraction gold set (design doc §12.3) from built release documents.
+"""Draft the V4.1 extraction gold set (design doc §12.2) from built release documents.
 
 Each label names the table row (block id + row label) or the sentence that shows a value, and
 takes the value and its verbatim quote from there, so a reviewer checks one quote per label.

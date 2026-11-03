@@ -1,4 +1,4 @@
-"""S10 writer (design doc §10.3): prose for each slot from its facts only, number-traced.
+"""S10 writer (design doc §10.2): prose for each slot from its facts only, number-traced.
 
 One LLM call per slot (prompts/section.md, no tools); the number trace (trace.py) checks it;
 one repair turn names the untraced numbers; any sentence that still holds one is dropped from

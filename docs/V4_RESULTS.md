@@ -1,6 +1,6 @@
 # V4 results: junior sell-side research agent
 
-Eight online marketplaces (UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP), Q4 2022 to Q2 2026 (filings from 2023-01-01), every input read as of a date (filed strictly before it). Local model Qwen3.6-27B (FP8, vLLM); judge gpt-oss-20b. Bars were frozen before the first run of each phase (design doc §12.3); a miss is reported as a miss. Build log: [V4_BUILD_LOG.md](V4_BUILD_LOG.md); decisions: [DECISIONS.md](DECISIONS.md).
+Eight online marketplaces (UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP), Q4 2022 to Q2 2026 (filings from 2023-01-01), every input read as of a date (filed strictly before it). Local model Qwen3.6-27B (FP8, vLLM); judge gpt-oss-20b. Bars were frozen before the first run of each phase (design doc §12.2); a miss is reported as a miss. Build log: [V4_BUILD_LOG.md](V4_BUILD_LOG.md); decisions: [DECISIONS.md](DECISIONS.md).
 
 ## Results by layer
 

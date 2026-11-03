@@ -19,7 +19,7 @@ from tenk_agent.research.model import checks as layer2
 from tenk_agent.research.model.graph import Model, build, load_template
 from tenk_agent.store import Store
 
-TEMPLATE_OF = {  # design doc §6.3
+TEMPLATE_OF = {  # design doc §6.2
     "UBER": "segments",
     "BKNG": "marketplace", "EXPE": "marketplace", "ABNB": "marketplace",
     "DASH": "orders", "LYFT": "orders", "CART": "orders",

@@ -22,7 +22,7 @@ agent:                                                  # tool set ask, prompts/
   max_context: 20000
   result_chars: 16000
 
-score:                                                  # bars frozen 2026-10-27 (design doc §12.3)
+score:                                                  # bars frozen 2026-10-27 (design doc §12.2)
   bar_correct_verified: 0.85
   bar_cited_resolve: 1.0
   judge_model: openai:openai/gpt-oss-20b                # experiments/v2/judge.py --config experiments/v4/ask_config.yaml

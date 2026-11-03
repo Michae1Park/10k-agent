@@ -1,4 +1,4 @@
-# Operating build for order and ride platforms (V4 design doc §6.3): volume (orders, rides) ×
+# Operating build for order and ride platforms (V4 design doc §6.2): volume (orders, rides) ×
 # value per unit = gross value (DoorDash Marketplace GOV, Lyft gross bookings, Instacart GTV);
 # revenue = gross value × take rate (DoorDash: net revenue margin). Each company binds its KPIs.
 
@@ -24,7 +24,7 @@ forecast:
   growth: [volume, value_per_unit]
   ratios: {take_rate: take_rate, cost_to_gb: margin}
 
-# Scenario drivers (design §6.3): bear/bull move each by ∓/±σ of its history
+# Scenario drivers (design §6.2): bear/bull move each by ∓/±σ of its history
 scenarios: [volume_g.g0, value_per_unit_g.g0, take_rate.shift0]
 
 anchors:  # guide names as each company prints them (DASH GOV, CART GTV)

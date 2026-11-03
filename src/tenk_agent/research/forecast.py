@@ -1,4 +1,4 @@
-"""S5 forecast (V4 design doc §6.3): history model → forecast quarters to research.yaml's horizon.
+"""S5 forecast (V4 design doc §6.2): history model → forecast quarters to research.yaml's horizon.
 
 Per driver, never per total: a growth driver x = x[-4] × (1 + g) in the first forecast quarter
 (the one guidance anchors), then last fiscal year's total × (1 + g) × the quarter's seasonal

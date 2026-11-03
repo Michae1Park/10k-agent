@@ -6,7 +6,7 @@
 Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and TENK_COMPANIES=companies.yaml.
 Text answers are judged afterwards: serve the judge, run experiments/v2/judge.py --config
 experiments/v4/ask_config.yaml, then --score. Writes output/generation/<label>/results.json and
-scores.json: V3's scores (evaluation/scoring.py) plus the two frozen bars (design doc §12.3):
+scores.json: V3's scores (evaluation/scoring.py) plus the two frozen bars (design doc §12.2):
   correct_verified  correct, and every expected number stated by a verified or calculated claim
                     (text: no unverified numeric claim; declines: declined)
   cited_resolve     share of the ids cited by claims that resolve at the question's as-of

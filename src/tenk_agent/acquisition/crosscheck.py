@@ -1,4 +1,4 @@
-"""Cross-check data (V4 design doc §3.3, V4.7): outside series that test the companies' KPIs.
+"""Cross-check data (V4 design doc §3.2, V4.7): outside series that test the companies' KPIs.
 
   taskset -c 16-31 uv run python -m tenk_agent.acquisition.crosscheck [--since 2023-01]
 

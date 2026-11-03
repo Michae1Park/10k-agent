@@ -91,7 +91,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS children_fts
     USING fts5(text, content='children', content_rowid='rowid');
 """
 
-# V4 structured data (design doc §3.2), added by enable_facts(). Every row carries the date it
+# V4 structured data (design doc §3.1), added by enable_facts(). Every row carries the date it
 # became public (`filed`); reads go through the store's AsOf. Quarters are derived from facts on
 # read (facts/quarters.py), so they always match the store's AsOf.
 FACTS_SCHEMA = """
@@ -254,7 +254,7 @@ class FilingRecord:
 
 
 def id_prefix(ticker: str, fiscal_year: int, fiscal_period: str = "FY", form: str = "10-K") -> str:
-    """A filing's section- and chunk-id prefix (V4 design doc §3.2): <TICKER>-<period>[-<doc>].
+    """A filing's section- and chunk-id prefix (V4 design doc §3.1): <TICKER>-<period>[-<doc>].
     UBER-FY2025 (10-K, as in V0–V3) · UBER-2026Q2 (10-Q) · UBER-2026Q2-ER (release) ·
     UBER-FY2025-DEF14A (proxy)."""
     key = f"FY{fiscal_year}" if fiscal_period == "FY" else f"{fiscal_year}{fiscal_period}"

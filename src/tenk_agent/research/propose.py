@@ -1,4 +1,4 @@
-"""S4 assumption proposer (V4 design doc §6.3): the LLM's only influence on the numbers.
+"""S4 assumption proposer (V4 design doc §6.2): the LLM's only influence on the numbers.
 
 A bounded sub-agent (the Ask tools, prompts/propose.md, research.yaml `proposer.budget`) sees a
 driver table: each proposable assumption with its history, default and bounds. It returns

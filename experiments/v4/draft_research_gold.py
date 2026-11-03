@@ -3,7 +3,7 @@
   uv run python experiments/v4/draft_research_gold.py
 
 Research answers compute something new, so the gold checks how, not a number (design doc
-§11.3): each question names the model: ids a right answer must cite (regular expressions over
+§11.2): each question names the model: ids a right answer must cite (regular expressions over
 model:<T>:<as_of>:<version>:<line>.<period>), and every answer must list the assumptions behind
 its model numbers. Categories are spec §2.2's; debates come with Report mode (V4.6).
 Per company: 3 forecast, 2 scenario, 2 valuation and 1 variance review; 8 peer comparisons.
