@@ -158,6 +158,23 @@ Code: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisiti
 
 ### 3.2 Rules
 
+**Build lanes** (`tenk fetch`, then `tenk build`):
+
+| Source | Fetch | Build → table |
+|---|---|---|
+| EDGAR submissions + filing index | 10-K, 10-Q, 8-K Item 2.02 (`EX-99.*`), DEF 14A per company; one folder per filing | `filings` |
+| Filing HTML | – | Rule labels (Item and part headings, headings, tables, body) → Items → parent-child chunks (parents never cross a subsection; each table its own chunk) → FTS5 + embeddings over children → `chunks` |
+| EDGAR companyfacts | JSON per company | Consolidated us-gaap, dei, srt facts with their filing → `facts` |
+| Inline XBRL (filing HTML) | – | `ix:nonFraction` facts with dimensions or company concepts → `facts` |
+| Releases | – | LLM extraction (§5) → `kpis`, `guidance` |
+| Tiingo, FRED/ALFRED, Damodaran | Daily closes (tickers, SPY); macro with every vintage; monthly ERP | `market`, each row with its publish date (§2.5) |
+| BTS, NYC TLC | Monthly series; TLC trip files aggregated per license at fetch | `market` (`cc:` series) |
+| Form 4 | Insider filings | `insider_tx` |
+
+**Quarters on read** (`facts/quarters.py`): per metric, the concepts from `metrics.yaml`; per fiscal year, the first concept with facts. Facts are bucketed by span (quarter, H1, 9M, FY; year-to-date spans start 1 January), each the newest copy visible at D. Then Q1 direct; Q2 and Q3 direct, else YTD − prior YTD; Q4 = FY − 9M; instants at the quarter end. Each row keeps its input fact ids and the latest filing date among them.
+
+**Rules:**
+
 - One filing per form and period; amendments are ignored.
 - Releases are 8-K Item 2.02, every `EX-99.*` exhibit (a release can carry more than one).
 - A release's period is the last quarter end before it was filed, checked against the 10-Q (releases carry no XBRL period).
@@ -245,6 +262,20 @@ Code: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an 
 
 ### 5.2 Rules
 
+**Flow** (per release, `facts/extract.py`):
+
+```text
+release chunks → order: tables first, then chunks naming the most registry labels → cut to the input cap
+  → one LLM call (extract.md): chunks with ids + the company's registry
+  → rows {metric, segment, period, value, unit, chunk_id, quote} and guides {…, low, high, basis}
+  → code validates each row: chunk id given · quote verbatim (whitespace normalized)
+                              · value found in the quote, unit-aware · metric and segment registered
+  → failed rows → one repair turn with the reasons and the chunk text around the number
+  → still failing → exception rows; passing rows → kpis / guidance with filing date and definition version
+```
+
+**Rules:**
+
 - Input is only that release's chunks; no other filing can leak in.
 - Code keeps a row only if the chunk id was given, the quote is verbatim, the value is in the quote, and the metric is in the registry. The LLM proposes; code decides what is stored.
 - One repair turn, then an exception row; never a guessed value (spec §2.3).
@@ -286,6 +317,16 @@ Code (`research/`): data pack (S1), DSL and graph, templates, history (S3), laye
 
 **Model** (spec §3.1)
 
+```text
+S1 data pack   the template's input sources (q:<metric>, kpi:<metric>[.<segment>]) → per quarter and FY:
+               value, citable id, filing date; money in USD millions; per-share points put on the
+               latest visible split basis (flagged split_adjusted)
+S3 history     each input line takes its source, else its fallback source for periods the first lacks;
+               formula lines evaluated by the DSL; layer-2 checks
+S5 forecast    defaults from history → outside nudge → proposer (if on) → anchors → scenarios
+```
+
+
 | Template | Companies | Revenue build |
 |---|---|---|
 | `marketplace` | BKNG, EXPE, ABNB | Room nights × bookings per night = GB; revenue = GB × take rate |
@@ -316,8 +357,9 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 - Each guide anchors its own driver, upstream first (bookings → revenue → EBITDA); later anchors see earlier ones.
 - Anchor at the guidance midpoint (spec §7).
 - An anchor the bounds stop is logged, never forced.
+- **Solving an anchor:** the guide (latest visible for the first forecast quarter, or its FY for a `period: fy` anchor) gives a target: the midpoint, × the prior-year value for a growth guide, / 100 for a margin. The anchored assumption is bracketed by stepping out from its default (doubling) until the gap changes sign, then bisected; the model keeps the best value. A driver already solved is not moved again; template order sets priority.
 - Scenarios move each driver by ±1σ of its history.
-- Outside data (BTS, NYC TLC, FRED) nudges one starting growth rate per company, weighted by fit; guidance overrides it (spec §3.2).
+- **Outside nudge** (spec §3.2): per mapped `<line>.g0`, the series' y/y over a 3-month window at lag k before the first forecast quarter; an OLS fit of the driver's history y/y on the series at the same lag; slope ≤ 0 → unused; g0 = (1 − w) × default + w × fit, w = weight × R². Guidance anchors override it.
 
 **Proposer (S4).** Switched in `research.yaml` (off by default). When on:
 - **Input:** a driver table (no data pack). Each proposable driver has its last 8 quarters, default and bounds; anchored drivers are listed as fixed.
@@ -573,6 +615,9 @@ Budget values: Appendix A.
 
 ### 8.2 Rules
 
+**Context per call:** a system prompt (`prompts/<mode>.md`) with the as-of, the tool schemas of the run's set, the question, then tool results as they come. Nothing else is carried between runs. The forced answer fires when calls reach the budget or the last call's input tokens reach the context cap. Sub-agents get a purpose-built view: S2 the ticker and quarter; S4 the driver table; S9 one driver and its value.
+
+
 ```text
 question → model → tool calls → tools → model → … → JSON answer → claim check (§10.2)
 ```
@@ -746,6 +791,12 @@ Code: workbook and parity (`research/export/workbook.py`), other tabs and PDF (`
 
 ### 11.2 Rules
 
+**Workbook build** (`export/workbook.py`, `report.py`): rows are the model's lines by statement, columns its quarters and FY columns. Input cells are blue values with their source id as a cell note; every other cell is a live formula written from the same DSL expression Python evaluated; assumptions are blue cells on the Assumptions tab that formulas reference; a cell Python left blank stays blank.
+
+**Parity:** LibreOffice (headless) recalculates the workbook; every formula cell is compared with `model.json`'s value; differences are listed in `report.json`.
+
+**Rules:**
+
 - Parity: LibreOffice recalculates; every formula cell equals `model.json`.
 - Every version is a draft until approved; an amendment is a new version (spec §2.3).
 - Ask and Research show the status beside a cited estimate, so a draft is never presented as approved.
@@ -778,6 +829,20 @@ Code: extraction scorer, backtest, note eval (`evaluation/`); Ask and Research r
 | **Results** (13) | `evaluation/results/backtest-<label>/`; Ask and Research runs in `output/generation/<label>/` |
 
 ### 12.2 Rules: layers and bars
+
+**Backtest loop** (`evaluation/backtest.py`):
+
+```text
+for each company, each release from Q4 2024 whose next quarter has reported:
+    D = the day after the release's EDGAR acceptance (US/Eastern)
+    forecast the next quarter at D (§6.2; proposer per research.yaml)
+    leakage probe: no_future_input passes and the target quarter is not in history, else stop
+    score vs the next quarter's first-reported value: revenue and the main KPI
+    baselines: seasonal naive (same quarter last year × latest y/y), guidance midpoint
+pool: MAPE and signed bias per metric and method → backtest-<label>/
+--long: from each Q4 2024 release, all four quarters of 2025 (tests the fade)
+```
+
 
 | Layer | Test | Pass bar |
 |---|---|---|
