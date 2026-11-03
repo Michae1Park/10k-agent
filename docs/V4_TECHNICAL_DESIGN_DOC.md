@@ -229,13 +229,23 @@ Code (`retrieval/`): decomposer, searcher, index (Qwen3-Embedding-0.6B, FTS5), r
 |---|---|
 | **Search** (3) | `search_filings(query, companies?, periods?, forms?, k = 8)` → the searches it ran, and up to k chunks with id, company, form, period, filing date and text |
 
-### 4.2 Rules
+### 4.2 Rules and algorithm
 
-- Companies come from the arguments, else the query; no period = the latest filing of each form at D.
+```text
+query → decompose: one sub-question per company (and filing slot)
+      → per sub-question, over child chunks filtered by company, period, form and as-of:
+          BM25 (FTS5) top 40  +  dense (cosine) top 40
+      → RRF fusion, score = Σ 1 / (60 + rank) → top 40 → cross-encoder rerank
+      → each child swapped for its parent, best child first, each parent once
+      → round-robin merge → top k
+```
+
+- **Decomposition is rule-based:** companies come from the arguments, else from the tickers, names and aliases in the query. Each sub-question is rewritten to name only its company.
+- No period = the latest filing of each form at D.
 - One sub-question per company and filing, naming only that company.
 - Keyword and dense search, fused, then reranked.
 - The model sees parent chunks: a whole subsection or table, not a fragment.
-- Results are merged round-robin until k.
+- **Merge:** each sub-question gets ⌈k / n⌉ places (at least 2). In every round the sub-question whose best chunk scored highest goes first; duplicates are dropped.
 
 ### 4.3 Failure handling and limits
 
@@ -420,21 +430,131 @@ V3's sets `text` and `full` remain for the V3 corpus.
 
 ### 7.2 Catalog
 
-| Group | Tool | Returns | Backed by |
-|---|---|---|---|
-| text | `search_filings` | Chunks for a query, per company and filing | Retrieval (§4) |
-| calc | `calculator` | A result with its formula and inputs | `agent/tools.py` |
-| facts | `financials` | Reported and derived quarterly figures (`q:`, `xbrl:` ids) | Store facts (§3) |
-| facts | `company_kpis` | KPI rows with their quotes (`kpi:` ids) | Store KPIs (§5) |
-| facts | `guidance` | Guidance ranges, with the actual once reported (`guide:` ids) | Store guidance (§5) |
-| facts | `filings` | The filings visible at the as-of | Store (§3) |
-| market | `market_data` | Prices and macro series (`px:`, `macro:` ids) | Store market (§3) |
-| market | `crosscheck` | NYC TLC or BTS monthly series (`cc:` ids) | Store market (§3) |
-| reports | `research_report` | A saved version's PT, rating, estimates and **review status** | Saved versions (§11) |
-| model | `model_view` | Model lines and assumptions (`model:` ids) | Model book (§6) |
-| model | `run_scenario` | Base vs scenario lines, PT and rating after changing assumptions | Model book (§6) |
-| model | `compare_peers` | One metric across companies, with each one's assumptions | Model book (§6) |
-| model | `variance_review` | Our saved estimate vs the actual, with a revenue bridge | Saved version + Store |
+Every tool shares the same handling:
+
+- **Company:** a ticker or name, resolved against the corpus.
+- **Periods:** the periods asked for, else the latest eight, in order (FY after Q4).
+- **Caps:** at most 40 rows, the latest kept, with `"omitted": n`.
+- **Values:** ratios shown in percent; numbers rounded to 4 decimals.
+- **Arguments:** object and array arguments written as JSON strings are parsed.
+
+Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls).
+
+#### text · `search_filings`
+
+| | |
+|---|---|
+| **Consumes** | `chunks`, `children`, FTS5 and vectors (Store) |
+| **Computes** | Resolves companies (`["all"]` = every company with a filing), checks the period keys, and runs Retrieval (§4.2) with k clamped to 1–16 |
+| **Returns** | The sub-searches run; chunks with id, company, form, period, filing date, item and text |
+| **Errors** | Unknown company (lists the corpus); no company given or named; bad period key |
+
+#### calc · `calculator`
+
+| | |
+|---|---|
+| **Consumes** | Only its inputs |
+| **Computes** | A named op (`pct_change`, `cagr`, `ratio`, `percent_of`, `difference`, `sum`) or an expression over named inputs (`+ − × ÷ **`, `abs`, `round`, `min`, `max`, `sqrt`). The expression is parsed to a syntax tree; there is no `eval`. The result is rounded to 6 decimals |
+| **Returns** | Result, formula, inputs: the same calculator reruns the claim check (§10.2) |
+| **Errors** | Unknown op, missing inputs, bad expression, non-finite result |
+
+#### facts · `financials`
+
+| | |
+|---|---|
+| **Consumes** | `facts`; `facts/metrics.yaml` (each metric's concepts and kind, flow or instant) |
+| **Computes** | Quarters derived on read (§3.2). A flow uses the direct quarter fact; otherwise Q2 or Q3 = YTD − prior YTD (`ytd_diff`) and Q4 = FY − 9M (`fy_minus_9m`). An instant uses the quarter-end fact. Each row keeps its input ids and `filed` = the latest input; it is flagged `restated` if a later filing recast it |
+| **Returns** | Rows: id (`q:` or `xbrl:`), period, value, unit, derivation, `restated?` |
+| **Errors** | Unknown metric (lists the metrics) |
+
+#### facts · `company_kpis`
+
+| | |
+|---|---|
+| **Consumes** | `kpis` |
+| **Computes** | Per metric, segment and period, the latest-filed row (the newest definition version); optional segment filter |
+| **Returns** | Rows: `kpi:` id, metric, segment, period, value, unit, chunk id, quote |
+| **Errors** | No such KPI (lists the reported ones) |
+
+#### facts · `guidance`
+
+| | |
+|---|---|
+| **Consumes** | `guidance`; `kpis` for actuals |
+| **Computes** | Every guide, oldest issue first, so an update follows the guide it replaces. A `level` guide gets the actual: its `kpi:` id for the target period, resolved at D |
+| **Returns** | Rows: `guide:` id, period, low, high, unit, basis, issued in, quote, `actual?`, `actual_id?` |
+| **Errors** | No guidance for the metric (lists the guided ones) |
+
+#### facts · `filings`
+
+| | |
+|---|---|
+| **Consumes** | `filings` |
+| **Computes** | The company's filings (optionally one form), by filing date; the latest 40 |
+| **Returns** | Accession (the id), form, period, period end, filing date; total count |
+
+#### market · `market_data`
+
+| | |
+|---|---|
+| **Consumes** | `market` (`px:<T>:close`, `px:SPY:close`, `macro:<SERIES>`) |
+| **Computes** | A company's close or a macro series, not both. `start`: every point from then; `dates`: the last point on or before each; neither: the latest point |
+| **Returns** | Rows: `px:` or `macro:` id, date, value; the series unit |
+| **Errors** | Both or neither of company and series; no data for the series |
+
+#### market · `crosscheck`
+
+| | |
+|---|---|
+| **Consumes** | `market` (`cc:` series) |
+| **Computes** | `tlc`: NYC trips for Uber (`HV0003`) and Lyft (`HV0005`) only; `bts`: airline passengers, total, domestic and international. Window by month from `start` to `end`, else the last 13 months |
+| **Returns** | Rows: `cc:` id, series, month, value; coverage note; unit (trips or passengers) |
+| **Errors** | TLC for another company; a series other than `tlc` or `bts` |
+
+#### reports · `research_report`
+
+| | |
+|---|---|
+| **Consumes** | `model_versions`; the saved version's `model.json` and `valuation.json` (§11) |
+| **Computes** | The latest version with `as_of` < D (and ≤ the `as_of` argument, which only narrows). Lines default to revenue, gross bookings, adj. EBITDA and margin, EPS and FCF, where the template has them; periods to the forecast FY columns. Each value is marked `estimate` or `actual`. Valuation gives price, PT, return and rating. The status note says draft or reviewed |
+| **Returns** | Version, as-of, status, parent, note, valuation and estimates with `model:<T>:<as_of>:v<n>:…` ids; visible versions. None → `report: null` with the visible versions |
+| **Errors** | Unknown lines (listed with the valid ones; the rest still returned) |
+
+#### model · `model_view`
+
+| | |
+|---|---|
+| **Consumes** | The model book's base forecast for the company (§6), built on first use |
+| **Computes** | Lines default to the driver build, then revenue, adj. EBITDA and margin, EPS and FCF. Columns default to the last 4 history quarters, the first 6 forecast quarters and the last 3 FY. Each assumption is listed with its default and its source: the anchoring guide's id, else `default` |
+| **Returns** | Rows of values per period, assumptions, up to 6 model exceptions, and the `model:<T>:<as_of>:base:…` id format |
+| **Errors** | Unknown lines (lists the lines) |
+
+#### model · `run_scenario`
+
+| | |
+|---|---|
+| **Consumes** | The base forecast: its model, data pack and assumptions |
+| **Computes** | Changes = `overrides` plus base + `deltas`. Only proposable drivers (growth starts, ratio shifts) and `fade` are allowed. Each change is clipped to its bounds (history range; fade 0.75–1.0). The model is rebuilt on the same data pack with the changed assumptions, saved as `scratch-n`, and valued as §6.2 with the same peers |
+| **Returns** | Revenue, adj. EBITDA, EPS and FCF for the last two FY columns, base vs scenario; PT and rating, base vs scenario; the clipped drivers; ids for both runs |
+| **Errors** | Unknown driver (lists the allowed ones); no change given |
+
+#### model · `compare_peers`
+
+| | |
+|---|---|
+| **Consumes** | Each company's base forecast and valuation, built on first use (the first call is slow) |
+| **Computes** | `metric` is a valuation field (`ev_to_ebitda`, `ev_to_ebitda_less_sbc`, `pe`, `fcf_yield`, `price_target`, `return`, `rating`, `ev`, `market_cap`) or a model line at `period` (default FY2027). Companies default to all. Rows are sorted ascending, non-numbers last |
+| **Returns** | Rows: company, value, unit, `model:` id, up to 4 growth and shift assumptions with their source |
+| **Errors** | Unknown company; unknown metric (lists lines and valuation fields) |
+
+#### model · `variance_review`
+
+| | |
+|---|---|
+| **Consumes** | The model book at D (actuals) and at an earlier as-of (the estimate) |
+| **Computes** | `period` must be reported at D. The estimate is the base forecast made the day after the previous quarter's release (the backtest's as-of). Each main line gives estimate vs actual and `variance_pct` = actual / estimate − 1. The revenue bridge splits the variance: gross value (GB₁ − GB₀) × TR₀ plus take rate GB₁ × (TR₁ − TR₀). Where the template has them, gross value is split again into volume (V₁ − V₀) × P₀ × TR₀ and value per unit V₁ × (P₁ − P₀) × TR₀ |
+| **Returns** | Rows with `estimate_id` and `actual_id`; the bridge in USD millions with `var-<period>` ids; the estimate's assumptions |
+| **Errors** | Period not yet reported |
 
 ### 7.3 Rules
 
@@ -445,7 +565,7 @@ V3's sets `text` and `full` remain for the V3 corpus.
 - Results are capped at 40 rows and 16,000 characters.
 - Ask cites estimates only through `research_report`; Research computes only through model tools, assumptions listed (spec §2).
 - `run_scenario` writes a session-only `scratch-n` run, clipped to the proposer's bounds (§6.2). Only Report creates versions.
-- Peers are built with default assumptions (no LLM), once per ticker and as-of.
+- Model tools read the model book: each company's base forecast with default assumptions (proposer off, no LLM), built once per ticker and as-of. Peers come from the same book.
 
 ### 7.4 Failure handling and limits
 
@@ -598,6 +718,13 @@ Code: id grammar and resolver (`research/refs.py`), claim check (`generation/ver
 | **calculated** | Its calculation reruns from resolved inputs |
 | **cited** | No number, valid ids |
 | **unverified** | Anything else; shown with the reason |
+
+**Matching algorithm:**
+- **Numbers in a chunk** are parsed with sign (parentheses), written decimals, and a scale word or `%`. A bare number takes the chunk's stated units ("in millions"); with none stated, any scale.
+- **Two numbers agree** within half a unit of the last digit either is written with: "$31.4 billion" matches 31,370 (USD millions), 31,500 doesn't.
+- **Order:** a cited data row (`q:`, `kpi:`, `guide:`, `px:`, `macro:`), then an `xbrl:` fact, then a chunk. Data rows and facts must belong to the claim's company and are compared in whole units; percentages and unscaled units compare as written.
+- **Calculated:** the claim's calculation reruns through the calculator (§7.2). Its result, × 100 for a percent, or rescaled from the input unit to the claim's unit, must match. Every input must be found in a cited chunk or fact.
+- **Wrong company:** a value found only in another company's chunks is unverified.
 
 **Note trace:**
 - Code-written tables must appear verbatim.

@@ -93,7 +93,7 @@ Quarters are **not stored** (design [§3.2](V4_TECHNICAL_DESIGN_DOC.md#32-rules)
 *Called by the `search_filings` tool; served by Retrieval.*
 
 ```text
-search_filings(query: str, companies?: [str], periods?: [str], forms?: [str], k?: int = 8)
+search_filings(query: str, companies?: [str], periods?: [str], forms?: [str], k?: int = 8)   # k clamped to 1–16
   companies   tickers or names; ["all"] = every company
   periods     period keys ("2026Q2", "FY2025"); none = the latest filing of each form at the as-of
   forms       "10-K" | "10-Q" | "ER" | "DEF14A"
@@ -120,11 +120,11 @@ All as-of bound; `company` = ticker or name; `periods` = period keys, default th
 | `filings` | **company**, form | `{company, filings: [{id, accession_no, form, period, period_end_date, filing_date}], total}` | Store `filings` (design §3) |
 | `market_data` | company, series, dates, start | `{series, unit, rows: [{id (px:/macro:), date, value}]}` | Store `market` (design §3) |
 | `crosscheck` | **series** (`tlc`/`bts`), companies, start, end | `{series, coverage, unit, rows: [{id (cc:), month, value}]}` | Store `market` (design §3) |
-| `research_report` | **company**, lines, periods, as_of | `{company, version, as_of, status, parent, note, valuation: {price, price_target, return, rating: {value, id}}, estimates: [{line, period, kind, value, unit, id}], versions}`; none → `{report: null, versions, note}` | saved versions (design §11) |
-| `model_view` | **company**, lines, periods | `{company, as_of, forecast_from, id_format: "model:<T>:<as_of>:base:<line>.<period>", rows: [{line, unit, values: {period: value}}], assumptions: [{driver, value, default, source: default \| guidance <id>}]}` | model book (design §6) |
+| `research_report` | **company**, lines, periods, as_of | `{company, version, as_of, status, parent, note, valuation: {price, price_target, return, rating: {value, id}}, estimates: [{line, period, kind, value, unit, id}], versions, unknown_lines?: {lines, valid}}`; none → `{report: null, versions, note}` | saved versions (design §11) |
+| `model_view` | **company**, lines, periods | `{company, as_of, forecast_from, id_format: "model:<T>:<as_of>:base:<line>.<period>", rows: [{line, unit, values: {period: value}}], assumptions: [{driver, value, default, source: default \| guidance <id>}], exceptions: [str]}` | model book (design §6) |
 | `run_scenario` | **company**, overrides `{assumption: value}`, deltas `{assumption: delta}` | `{company, version (scratch-n), changes, clipped_to_bounds, rows: [{line, period, base, scenario, id, base_id}], price_target: {base, scenario, id, base_id}, rating: {base, scenario}}` | model book, forecast, valuation (design §6) |
 | `compare_peers` | **metric**, companies, period | `{metric, period, rows: [{company, value, unit, id, assumptions: [{driver, value, source}]}]}` | model book (design §6) |
-| `variance_review` | **company**, **period** | `{company, period, estimate_as_of, rows: [{line, unit, estimate, estimate_id, actual, actual_id, variance_pct}], bridge, bridge_ids, bridge_unit}` | saved version vs Store (design §6, §11) |
+| `variance_review` | **company**, **period** | `{company, period, estimate_as_of, rows: [{line, unit, estimate, estimate_id, actual, actual_id, variance_pct}], bridge, bridge_ids, bridge_unit, estimate_assumptions: [{driver, value}]}` | saved version vs Store (design §6, §11) |
 
 ## 5. LLM calls
 
