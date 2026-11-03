@@ -1,10 +1,25 @@
 # V4 interfaces: schemas
 
-The full schema of every interface in [design doc §2.3](V4_TECHNICAL_DESIGN_DOC.md#23-interface-catalog), numbered as there. The design doc states each contract in one line and the rules around it; this doc is the lookup reference. Where the two disagree, the design doc wins. Tool rules and tool sets: [design doc §7](V4_TECHNICAL_DESIGN_DOC.md#7-toolbox).
+The exact shape of every interface in the [design doc §2.3](V4_TECHNICAL_DESIGN_DOC.md#23-interface-catalog), numbered as there. The design doc states each contract and its rules; this doc is the lookup reference. Where the two disagree, the design doc wins.
+
+## Overview
+
+```text
+raw cache (1) ─build─▶ Store (2) ─▶ Search (3) ─▶ Tools (4) ─▶ LLM calls (5)
+                         ▲                          │
+              Extraction rows (6)                   ▼
+                        Templates (7) ─▶ model / valuation files (8)
+                        ─▶ pipeline artifacts (9) ─▶ outputs (12)
+              Reference ids (10) and the fact list (11) tie every number to its source
+```
+
+**The as-of rule.** Every run has an as-of date D and sees only what was public strictly before D. Each Store table has an as-of column (`filed`, `filing_date`, `published`, `as_of`), and `Store(path, asof)` filters every read through it. No tool can widen the view. Rules: [design §2.5](V4_TECHNICAL_DESIGN_DOC.md#25-cross-cutting-rules).
 
 ## 1. Raw cache
 
-**Raw cache** (`data/v4/raw/`): `filings/<T>/<period>-<form>/` (`FY2025-10K`, `2026Q2-10Q`, `2026Q2-ER`, `FY2025-DEF14A`), each with its documents and a `metadata.json`; `edgar/<T>/companyfacts.json`; `prices/`, `macro/`, `crosscheck/`. `raw/manifest.json` maps each ticker to its filings:
+*Written by `tenk fetch`; read by `tenk build`.*
+
+**Layout** (`data/v4/raw/`): `filings/<T>/<period>-<form>/` (`FY2025-10K`, `2026Q2-10Q`, `2026Q2-ER`, `FY2025-DEF14A`), each with its documents and a `metadata.json`; `edgar/<T>/companyfacts.json`; `prices/`, `macro/`, `crosscheck/`. `raw/manifest.json` maps each ticker to its filings:
 
 ```json
 {"UBER": [{"ticker": "UBER", "cik": 1543151, "form": "10-K", "accession_no": "0001543151-23-000010",
@@ -24,13 +39,15 @@ companies:
     name: Uber Technologies, Inc.
     cik: 1543151            # written by `tenk companies verify`, never typed
     sector: mobility        # peers = same sector
-    template: segments      # templates: §7 below
+    template: segments      # templates: §7
     main_kpi: gross_bookings
 ```
 
 ## 2. Store
 
-**Store schema** (one SQLite file, D-005; V4 tables, plus V0–V3's `companies`, `sections`, `chunks`, `children`, FTS5 and vectors):
+*Written at build time (and by Report for `model_versions`); read by everything, through the as-of filter.*
+
+One SQLite file: the V4 tables below, plus V0–V3's `companies`, `sections`, `chunks`, `children`, FTS5 and vectors.
 
 | Table | Columns (type; key) | As-of column |
 |---|---|---|
@@ -43,18 +60,18 @@ companies:
 | `insider_tx` | `ticker`, `accession`, `filed`, `owner`, `director`, `officer`, `title`, `date`, `code` (S, P, A, M, F, G), `shares`, `price`, `acquired_disposed` | `filed` |
 | `model_versions` | `id` TEXT PK (`<T>:v<n>`), `ticker`, `as_of`, `parent_id`, `inputs_hash`, `status` (`draft`/`reviewed`), `path` (report folder) | `as_of` |
 
-Quarters are **not stored** (design §3.3). A saved version's numbers live in its folder's files (§9), not in tables.
+Quarters are **not stored** (design [§3.2](V4_TECHNICAL_DESIGN_DOC.md#32-rules)). A saved version's numbers live in its folder's files (§9), not in tables.
 
-**Chunk ids** (parent-child chunks, V0):
+**Chunk ids** (parent-child chunks):
 
 | Form | Items | Chunk id example |
 |---|---|---|
-| 10-K | as V0 (1, 1A, 7, 7A, 8, 15, …) | `UBER-FY2025-7-003` |
+| 10-K | 1, 1A, 7, 7A, 8, 15, … | `UBER-FY2025-7-003` |
 | 10-Q | per Part: `I.1`…`I.4`, `II.1`, `II.1A` (Items repeat per Part) | `UBER-2026Q2-I.2-014` |
 | Release | one pseudo-Item `EX99` | `UBER-2026Q2-ER-EX99-005` |
 | DEF 14A | one pseudo-Item `PROXY` | `UBER-FY2025-DEF14A-PROXY-012` |
 
-**Fact and quarter ids:** `xbrl:<T>:<tax>:<concept>:<accession>:<start>/<end>` for durations (three-month and year-to-date facts share an end date, build log §3.3), `…:<end>` for instants; `q:<T>:<metric>:<period>` for a derived quarter, which records its derivation (`direct`, `ytd_diff`, `fy_minus_9m`), input fact ids and `filed` (the latest input).
+**Fact and quarter ids:** `xbrl:<T>:<tax>:<concept>:<accession>:<start>/<end>` for durations (three-month and year-to-date facts share an end date), `…:<end>` for instants; `q:<T>:<metric>:<period>` for a derived quarter, which records its derivation (`direct`, `ytd_diff`, `fy_minus_9m`), input fact ids and `filed` (the latest input).
 
 **Store read API** (every method filtered by the store's `AsOf`; `Store(path, asof)`):
 
@@ -69,9 +86,11 @@ Quarters are **not stored** (design §3.3). A saved version's numbers live in it
 | `insider_summary(ticker, start, end)` | counts and shares by transaction code |
 | `model_versions(ticker)` | version rows with `as_of < D`, oldest first |
 
-Writes (`add_filing`, `add_facts`, `add_extractions`, `add_market`, `add_insider_tx`, `add_embeddings`) happen at build time; `add_model_version` (Report) and `set_version_status` (review) at run time.
+**Writes:** `add_filing`, `add_facts`, `add_extractions`, `add_market`, `add_insider_tx`, `add_embeddings` at build time; `add_model_version` (Report) and `set_version_status` (review) at run time.
 
 ## 3. Search
+
+*Called by the `search_filings` tool; served by Retrieval.*
 
 ```text
 search_filings(query: str, companies?: [str], periods?: [str], forms?: [str], k?: int = 8)
@@ -87,7 +106,9 @@ Chunk ids: §2. Knobs: `config.yaml` `retrieval` (design Appendix A).
 
 ## 4. Tool calls
 
-All as-of bound; `company` = ticker or name; `periods` = period keys, default the latest eight; tables are capped at 40 rows with `"omitted": n`. Rules: design §7.
+*Called by the agent; each tool fronts one block.*
+
+All as-of bound; `company` = ticker or name; `periods` = period keys, default the latest eight; tables are capped at 40 rows with `"omitted": n`. Rules and tool sets: design [§7](V4_TECHNICAL_DESIGN_DOC.md#7-toolbox).
 
 | Tool | Arguments (required in bold) | Result | Backed by |
 |---|---|---|---|
@@ -99,29 +120,31 @@ All as-of bound; `company` = ticker or name; `periods` = period keys, default th
 | `filings` | **company**, form | `{company, filings: [{id, accession_no, form, period, period_end_date, filing_date}], total}` | Store `filings` (design §3) |
 | `market_data` | company, series, dates, start | `{series, unit, rows: [{id (px:/macro:), date, value}]}` | Store `market` (design §3) |
 | `crosscheck` | **series** (`tlc`/`bts`), companies, start, end | `{series, coverage, unit, rows: [{id (cc:), month, value}]}` | Store `market` (design §3) |
-| `research_report` | **company**, lines, periods, as_of | `{company, version, as_of, status, parent, note, valuation: {price, price_target, return, rating: {value, id}}, estimates: [{line, period, kind, value, unit, id}], versions}`; none → `{report: null, versions, note}` | saved versions (design §11.2) |
+| `research_report` | **company**, lines, periods, as_of | `{company, version, as_of, status, parent, note, valuation: {price, price_target, return, rating: {value, id}}, estimates: [{line, period, kind, value, unit, id}], versions}`; none → `{report: null, versions, note}` | saved versions (design §11) |
 | `model_view` | **company**, lines, periods | `{company, as_of, forecast_from, id_format: "model:<T>:<as_of>:base:<line>.<period>", rows: [{line, unit, values: {period: value}}], assumptions: [{driver, value, default, source: default \| guidance <id>}]}` | model book (design §6) |
 | `run_scenario` | **company**, overrides `{assumption: value}`, deltas `{assumption: delta}` | `{company, version (scratch-n), changes, clipped_to_bounds, rows: [{line, period, base, scenario, id, base_id}], price_target: {base, scenario, id, base_id}, rating: {base, scenario}}` | model book, forecast, valuation (design §6) |
 | `compare_peers` | **metric**, companies, period | `{metric, period, rows: [{company, value, unit, id, assumptions: [{driver, value, source}]}]}` | model book (design §6) |
-| `variance_review` | **company**, **period** | `{company, period, estimate_as_of, rows: [{line, unit, estimate, estimate_id, actual, actual_id, variance_pct}], bridge, bridge_ids, bridge_unit}` | saved version vs Store (design §6, §11.2) |
+| `variance_review` | **company**, **period** | `{company, period, estimate_as_of, rows: [{line, unit, estimate, estimate_id, actual, actual_id, variance_pct}], bridge, bridge_ids, bridge_unit}` | saved version vs Store (design §6, §11) |
 
 ## 5. LLM calls
 
-**LLM calls** (each reply is one JSON object, parsed by `models.parse_json`):
+*Made by code; each reply is one JSON object, parsed by `models.parse_json`. Tool sets and budgets: design [§8.1](V4_TECHNICAL_DESIGN_DOC.md#81-contract).*
 
-| Call | Prompt | Tools (design §7.2) | Reply schema | Budget |
-|---|---|---|---|---|
-| Ask / Research answer | `ask.md` / `research.md` | `ask` / `research` | `{answer, claims: [{id, text, value, unit, company, period, chunk_ids, calculation: {op, expression, inputs, input_unit, result} \| null}], assumptions (Research): [{driver, value, source}], table: {columns, rows} \| null, scope_notice, abstained}` | `config.yaml` `agent`: 20 calls, 20k context |
-| KPI extraction | `extract.md` | – | §6 | one call + one repair per release |
-| S2 events | `events.md` | `ask` | `{answer, events: [{type: results\|guidance\|definition_change\|business_model\|m&a\|capital\|regulation\|catalyst\|other, summary, evidence: [id]}]}` | `budgets.events`: 8 calls, 16k context, 3k out |
-| S4 proposer | `propose.md` | `ask` | `{proposals: [{driver, value, basis, confidence, rationale, evidence: [id]}]}` | `proposer.budget`: 10 calls, 16k context, 3k out |
-| S9 debate, per driver | `debates.md` | `ask` | `{answer, debate: {question, bull, bear, hypothesis, trigger, gap, evidence: [id]}}` | `budgets.debate`: 8 calls, 16k context, 3k out |
-| S10 prose slot | `section.md` | – | `{text}` with facts marked `{F-n}` | `budgets.section`: 1.5k out, one repair |
-| Judge (evaluation) | `judge.md` | – | scores per criterion | gpt-oss-20b, a second pass |
+| Call | Prompt | Tool set | Reply schema |
+|---|---|---|---|
+| Ask / Research answer | `ask.md` / `research.md` | `ask` / `research` | `{answer, claims: [{id, text, value, unit, company, period, chunk_ids, calculation: {op, expression, inputs, input_unit, result} \| null}], assumptions (Research): [{driver, value, source}], table: {columns, rows} \| null, scope_notice, abstained}` |
+| KPI extraction | `extract.md` | – | §6 |
+| S2 events | `events.md` | `ask` | `{answer, events: [{type: results\|guidance\|definition_change\|business_model\|m&a\|capital\|regulation\|catalyst\|other, summary, evidence: [id]}]}` |
+| S4 proposer | `propose.md` | `ask` | `{proposals: [{driver, value, basis, confidence, rationale, evidence: [id]}]}` |
+| S9 debate, per driver | `debates.md` | `ask` | `{answer, debate: {question, bull, bear, hypothesis, trigger, gap, evidence: [id]}}` |
+| S10 prose slot | `section.md` | – | `{text}` with facts marked `{F-n}` |
+| Judge (evaluation) | `judge.md` | – | scores per criterion |
 
 ## 6. Extraction rows
 
-**Registry** (seeded from spec §1.5):
+*Produced by the extractor from release chunks; stored in `kpis` and `guidance` (§2).*
+
+**Registry:**
 
 ```yaml
 UBER:
@@ -139,11 +162,13 @@ UBER:
                "quote": "Gross Bookings of $58.25 billion to $60.25 billion"}]}
 ```
 
-**Stored rows:** the `kpis` and `guidance` tables (§2): `target_period` normalized to a key (`2026Q3`), plus `period`/`issued_in` (the release's quarter), `filed`, `definition_version`, `method`. Ids: `kpi:<T>:<metric>[.<segment>]:<period>`, `guide:<T>:<metric>:<period>`.
+**Stored rows:** `target_period` is normalized to a key (`2026Q3`), plus `period`/`issued_in` (the release's quarter), `filed`, `definition_version`, `method`. Ids: `kpi:<T>:<metric>[.<segment>]:<period>`, `guide:<T>:<metric>:<period>`.
 
 ## 7. Templates
 
-**Template YAML.** Lines are nodes; history comes from a `source` (with an optional `fallback`), the forecast from an expression:
+*Read by the Model engine; one YAML per template.*
+
+Lines are nodes; history comes from a `source` (with an optional `fallback`), the forecast from an expression:
 
 ```yaml
 lines:
@@ -161,6 +186,8 @@ anchors: …   # guide name as each company prints it → the line it anchors
 **DSL:** arithmetic; `x[-4]` (same quarter last year); `fy(x)`, `fyp(x)` (this and last fiscal year's sum); `min`, `max`, `if_`, `first`; `@name` = an assumption. Node kinds: `input` (history, blue, provenance), `assumption` (blue), `formula` (black). Anything else is rejected.
 
 ## 8. Model and valuation files
+
+*Written by S5 and S7; read by Report, tools and Export. Knobs: `research.yaml` (design Appendix A).*
 
 **`model.json`:**
 
@@ -180,7 +207,7 @@ anchors: …   # guide name as each company prints it → the line it anchors
 | `ticker`, `as_of`, `price_date` | str | |
 | `price`, `shares`, `market_cap`, `debt`, `cash_and_investments`, `net_debt`, `ev` | number | USD, millions where amounts |
 | `refs` | {price, shares, debt, cash, short_term_investments: id} | sources |
-| `cost_of_capital` | {`rf`, `beta`, `beta_months`, `erp`, `erp_id`, `ke`, `kd`, `debt_weight`, `wacc`} | design §6.3 |
+| `cost_of_capital` | {`rf`, `beta`, `beta_months`, `erp`, `erp_id`, `ke`, `kd`, `debt_weight`, `wacc`} | design [§6.2](V4_TECHNICAL_DESIGN_DOC.md#62-rules-and-algorithms) |
 | `peer_multiples` | {`peers`: {T: x}, `median`, `range`: [lo, hi]} | 2027E EV/EBITDA |
 | `multiples_2027e` | {`ev_to_ebitda`, `ev_to_ebitda_less_sbc`, `pe`, `fcf_yield`} | this company at the price |
 | `scenarios` | {bear\|base\|bull: {`adj_ebitda`, `target_multiple`, `multiple_pt`, `multiple_outside_peer_range`, `dcf_ev`, `dcf_pt`, `dcf_used`, `price_target`}} | per scenario |
@@ -191,52 +218,44 @@ anchors: …   # guide name as each company prints it → the line it anchors
 | `exceptions` | [str] | logged by S7 |
 | `inputs_hash` | str | SHA-256 of assumptions, market refs and price |
 
-**`research.yaml`:** every forecast and valuation knob (Appendix A).
-
 ## 9. Pipeline artifacts
 
-| Step | Kind | Reads | Writes |
-|---|---|---|---|
-| S1 datapack | code | Store | data pack (in memory) |
-| S2 events | sub-agent | Store, search | `events.json` |
-| S3 model | code | data pack, template | history model; layer-2 (FAIL stops) |
-| S4 propose | sub-agent (off by default) | driver table, Store | assumption overrides |
-| S5 forecast | code | model, guidance, `research.yaml` | `model.json` (§8); layer-2 again |
-| S6 peers | code | Store, per peer | peer models (model book) |
-| S7 value | code | model, peers, market | `valuation.json` (§8); valuation checks |
-| S8 revise | code | the parent's `model.json` | `revisions.json` |
-| S9 debates | sub-agent per scenario driver | model, Store, search | `debates.json`; section 7 sensitivities |
-| S10 write | code + LLM | all artifacts | `facts.json`, `note.json`; consistency check |
-| S11 export | code | all artifacts | `note.md`, `note.pdf`, `workbook.xlsx`, `exceptions.json`, `report.json`; `model_versions` row |
+*Written by one step, read by later ones. Steps and who reads what: design [§9.1](V4_TECHNICAL_DESIGN_DOC.md#91-contract).*
 
 | Artifact | Schema |
 |---|---|
 | `events.json` | `[{type, summary, evidence: [id]}]` (§5) |
 | `debates.json` | `[{driver, question, bull, bear, hypothesis, trigger, gap, evidence: [id], evidence_values: [{id, value, unit}]}]` |
 | `revisions.json` | `[{label, old, new, unit, old_id, new_id, type: "Reported + assumption"\|"Assumption", confidence: Medium\|Low}]` for revenue, adj. EBITDA and EPS in the first forecast quarter and the last two FY columns; `[]` without a parent |
-| `facts.json` | `[{id: "F-n", label, value, unit, source: id, period, filed}]` (§10–11) |
+| `facts.json` | `[{id: "F-n", label, value, unit, source: id, period, filed}]` (§11) |
 | `note.json` | `{sections: [title], blocks: [str], slots: {key: text}, slot_facts: [{key, text, facts: [F-id]}], untraced: [str]}` |
 | `exceptions.json` | `[{id: "X-nn", severity: info\|warning\|error, item}]` |
 | `report.json` | `{ticker, as_of, version, parent, rating, price_target, sections: int, facts: int, untraced: int, exceptions: int, consistency: {check: bool}, parity: "ok/total", folder, timing: {seconds, steps: {step: {seconds, calls?, input_tokens?, output_tokens?}}}}` |
 
-## 10–11. Reference ids, fact list, evidence and exception log
+`model.json` and `valuation.json`: §8.
 
-**Reference grammar:**
+## 10. Reference ids
+
+*Resolved by `research/refs.py` under an as-of; used in every tool result, answer and note.*
 
 | Kind | Id | Resolves to |
 |---|---|---|
 | chunk | `UBER-2026Q2-ER-EX99-005` | chunk text |
 | accession | `0001543151-26-000032` | filing metadata |
-| XBRL | `xbrl:UBER:us-gaap:Revenues:<acc>:2026-04-01/2026-06-30` | value, unit (V3's end-only ids still resolve) |
-| inline XBRL | `ixbrl:<acc>:<fact id>` | parses; not resolved (design §13.1) |
+| XBRL | `xbrl:UBER:us-gaap:Revenues:<acc>:2026-04-01/2026-06-30` | value, unit (end-only ids also resolve) |
+| inline XBRL | `ixbrl:<acc>:<fact id>` | parses only |
 | derived quarter | `q:UBER:revenue:2025Q4` | value, derivation, input ids |
 | KPI, guidance | `kpi:UBER:gross_bookings.mobility:2026Q2` · `guide:UBER:adj_ebitda:2026Q3` | the row (guide: low and high) + source chunk |
 | price, macro | `px:UBER:2026-08-05` · `macro:DGS10:2026-08-05` | value |
 | cross-check | `cc:tlc:HV0003:2026-06-01` · `cc:bts:airline_passengers:2026-06-01` | value |
 | model | `model:<T>:<as_of>:<run>:<line>.<period>` or `…:<run>:<field>`; run = `base`, `scratch-<n>`, `val-<…>`, `var-<period>`, `v<n>` | model or valuation value (needs the model book; `v<n>` reads a version saved before the as-of) |
-| evidence, exception | `E-12` · `X-03` | parse; not resolved (design §13.1) |
+| evidence, exception | `E-12` · `X-03` | parses only |
 
 Data kinds resolve to `{value, unit, ticker}` in the row's own unit.
+
+## 11. Fact list and log
+
+*Built by Report code (S10); read by the note writer and the trace.*
 
 **Fact list** (one per figure the note may print):
 
@@ -245,11 +264,13 @@ Data kinds resolve to `{value, unit, ticker}` in the row's own unit.
  "source": "model:UBER:2026-08-06:val-base:price_target", "period": "", "filed": ""}
 ```
 
-`text()` formats it (rounding, "2027E"/"2025A", signs, units); the writer must use it verbatim and mark it `{F-2}`. Facts print as the `E-n` rows of the log.
+`text()` formats it (rounding, "2027E"/"2025A", signs, units); the writer must use it verbatim and mark it `{F-2}`.
 
-**Evidence and exception log:** `E-n` rows (label, value, source id) from the facts; `X-n` rows from every step (reconciliation gaps, missing inputs, clipped proposals, out-of-range multiples, EV exclusions, untraced numbers, failed consistency checks, run time). Fields today: id, severity (`info`, `warning`, `error`), item; the spec's fields are in design §13.1.
+**Evidence and exception log:** `E-n` rows (label, value, source id) from the facts; `X-n` rows from every step (reconciliation gaps, missing inputs, clipped proposals, out-of-range multiples, EV exclusions, untraced numbers, failed consistency checks, run time). Fields: id, severity (`info`, `warning`, `error`), item.
 
 ## 12. Outputs
+
+*Written by S11; read by the reviewer and, through saved versions, by Ask and Research.*
 
 **Report folder** `output/reports/<TICKER>/<as_of>/`: `note.md`, `note.pdf`, `workbook.xlsx` and the artifacts of §9, saved as a version (`UBER:v1`, `UBER:v2`, …) with its parent. `research_report` and `model:…:v<n>:…` ids read these files.
 
@@ -258,10 +279,10 @@ Data kinds resolve to `{value, unit, ticker}` in the row's own unit.
 | Tab | Contents |
 |---|---|
 | Model | lines × quarters and FY; inputs blue with provenance, formulas black, links to assumptions green |
-| Assumptions | name and value (the cells the Model tab's formulas link to); basis, confidence, variables affected and last updated are not built (design §13.1) |
-| Summary | rating, price, price date, PT, return, market cap, EV, net debt, shares, WACC, parity |
+| Assumptions | name and value (the cells the Model tab's formulas link to) |
+| Summary | rating, price, price date, PT, return, market cap, EV, net debt, shares, WACC, parity, bridge |
 | Scenarios | `scenario line`, year, value |
-| Valuation | peer multiples, median, cost of capital, scenario PTs, DCF grid (the bridge and rating are on Summary, design §13.1) |
+| Valuation | peer multiples, median, cost of capital, scenario PTs, DCF grid |
 | DCF | base-case UFCF with live discount, terminal value, EV, terminal share and per-share formulas; the WACC × growth grid |
 | Revisions | line, old, new, type, confidence |
 | Model (prior) | the parent's values as saved, or "initial draft (no prior run)" |
@@ -271,6 +292,8 @@ Data kinds resolve to `{value, unit, ticker}` in the row's own unit.
 **Review:** `tenk research approve TICKER:vN --by INITIALS` → `status: "reviewed by <INITIALS> on <date>"` (anything other than `draft` reads as reviewed).
 
 ## 13. Gold and results
+
+*Read by the Evaluation scorers.*
 
 **Gold files** (`evaluation/gold/`, JSONL; each row has `verified_by`):
 
