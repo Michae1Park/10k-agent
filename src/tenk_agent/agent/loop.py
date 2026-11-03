@@ -7,7 +7,8 @@ The model decides every step: which tool, with what arguments, and when to answe
 only makes the first turn a tool call (so no answer comes from memory), turns a repeated call
 into an error, and enforces the budget: calls past `max_calls` return an error, and after the
 budget (or once the conversation reaches `max_context` tokens) the model gets one turn with
-tools off to answer. The answer goes through V2's
+tools off to answer. Tool results are cut to the context left, so one large result cannot push
+that turn past the model's window. The answer goes through V2's
 finalize, so the claim check is the same, now also over XBRL facts (verify.py).
 """
 
@@ -38,6 +39,9 @@ SEC_GUIDANCE = (
 ANSWER_NOW = "Tool budget used up. Answer now with the JSON object from what you have."
 JSON_ONLY = "Reply again with only the JSON object."
 REPEATED = "You already made this exact call; its result is above. Use it, or answer."
+CONTEXT_FULL = " …(cut: the context is full; answer from what you have)"
+CHARS_PER_TOKEN = 3  # a low estimate for JSON tool results, so the room is not overestimated
+MIN_RESULT = 400  # characters a result keeps even when the room is gone (its ids, an error)
 
 
 @dataclass
@@ -161,14 +165,24 @@ class Agent:
 
     # --- Nodes ---------------------------------------------------------------------------
 
+    def _used(self, state: State) -> int:
+        """Tokens the next turn's input will hold: the last turn's input and output, plus an
+        estimate for the messages added since (tool results)."""
+        last = next((s for s in reversed(state["steps"]) if s.kind == "model"), None)
+        if last is None:
+            return 0
+        since = 0
+        for message in reversed(state["messages"]):
+            if message["role"] == "assistant":
+                break
+            since += len(str(message.get("content") or ""))
+        return last.input_tokens + last.output_tokens + since // CHARS_PER_TOKEN
+
     def _model(self, state: State) -> dict:
-        last_input = next(
-            (s.input_tokens for s in reversed(state["steps"]) if s.kind == "model"), 0
-        )
         over = (
             state["calls"] >= self.max_calls
             or state["turns"] >= self.max_turns - 1
-            or last_input >= self.max_context
+            or self._used(state) >= self.max_context
         )
         messages = state["messages"]
         if over and messages[-1]["role"] != "user":  # say why the tools are gone
@@ -214,6 +228,9 @@ class Agent:
     def _tools(self, state: State) -> dict:
         messages, steps, calls = list(state["messages"]), list(state["steps"]), state["calls"]
         made = {_key(s.name, s.arguments) for s in steps if s.kind == "tool"}
+        # Results share the context left: one large result must not push the next turn past
+        # the model's window (the forced answer turn still sends every message).
+        room = (self.max_context - self._used(state)) * CHARS_PER_TOKEN
         for call in messages[-1]["tool_calls"]:
             started = time.perf_counter()
             if call.error:
@@ -236,8 +253,11 @@ class Agent:
                 )
             )
             content = json.dumps(result, ensure_ascii=False)
-            if len(content) > self.result_chars:
-                content = content[: self.result_chars] + " …(cut; narrow the call)"
+            fit = max(room, MIN_RESULT)
+            if len(content) > min(self.result_chars, fit):
+                note = CONTEXT_FULL if fit < self.result_chars else " …(cut; narrow the call)"
+                content = content[: min(self.result_chars, fit)] + note
+            room -= len(content)
             messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
         return {"messages": messages, "steps": steps, "calls": calls}
 
