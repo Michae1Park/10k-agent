@@ -1,10 +1,12 @@
 """Investigate gold set (evaluation/gold/investigate-gold.jsonl): runs and scoring.
 
   taskset -c 16-31 uv run python experiments/v4/investigate_run.py --baseline [--question ID]
-  taskset -c 16-31 uv run python experiments/v4/investigate_run.py --baseline --score
+  taskset -c 16-31 uv run python experiments/v4/investigate_run.py --investigate [--question ID]
+  taskset -c 16-31 uv run python experiments/v4/investigate_run.py --investigate --score
 
 --baseline answers each question with one plain Research run (tool set "research"), the
-baseline Investigate must beat (spec §5, design doc §12.2). Investigate itself is not built yet.
+baseline Investigate must beat (spec §5, design doc §12.2). --investigate runs Investigate
+(agent/plan.py): its sub-runs are the same agents, sharing one model book per question.
 Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and TENK_COMPANIES=companies.yaml.
 
 Automatic score, per question:
@@ -33,6 +35,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import research_run  # noqa: E402  (its agent factory: same model, budgets and tool set)
 
+from tenk_agent.agent.plan import Investigator, answer_text  # noqa: E402
 from tenk_agent.evaluation.answer_metrics import matches  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -43,13 +46,17 @@ GOOD = ("verified", "calculated")
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--baseline", action="store_true", required=True)
+    mode = ap.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--baseline", action="store_true")
+    mode.add_argument("--investigate", action="store_true")
     ap.add_argument("--question", action="append")
-    ap.add_argument("--label", default="v4-investigate-baseline-qwen3.6-27b")
+    ap.add_argument("--label")
     ap.add_argument("--score", action="store_true")
     args = ap.parse_args()
     config = yaml.safe_load(research_run.CONFIG.read_text())
-    out = ROOT / "output" / "generation" / args.label
+    label = args.label or ("v4-investigate-qwen3.6-27b" if args.investigate
+                           else "v4-investigate-baseline-qwen3.6-27b")
+    out = ROOT / "output" / "generation" / label
     out.mkdir(parents=True, exist_ok=True)
     questions = {q["id"]: q for q in map(json.loads, GOLD.read_text().splitlines())}
     if args.score:
@@ -62,13 +69,10 @@ def main() -> None:
         if args.question and q["id"] not in args.question:
             continue
         try:
-            run = agent(q["as_of"]).run(q["question"])
+            row = (investigate(agent, q) if args.investigate else baseline(agent, q))
         except Exception as e:
             print(f"{q['id']:<32} FAILED {type(e).__name__}: {e}"[:300])
             continue
-        row = {"id": q["id"], "category": q["category"], "question": q["question"],
-               **run.answer, "reply": run.reply, "stop": run.stop, "seconds": run.seconds,
-               "calls": len(run.tool_calls), "steps": [asdict(s) for s in run.steps]}
         row = score(row, q, config)
         rows.append(row)
         (out / "results.json").write_text(json.dumps(rows, indent=1, ensure_ascii=False))
@@ -77,6 +81,32 @@ def main() -> None:
               f"{row['calls']:>2} calls stop {row['stop']:<8} peak {row['peak_tokens']} tok "
               f"{row['seconds']:.0f}s")
     report(out, rows, questions)
+
+
+def baseline(agent, q: dict) -> dict:
+    run = agent(q["as_of"]).run(q["question"])
+    return {"id": q["id"], "category": q["category"], "question": q["question"],
+            **run.answer, "reply": run.reply, "stop": run.stop, "seconds": run.seconds,
+            "calls": len(run.tool_calls), "steps": [asdict(s) for s in run.steps]}
+
+
+def investigate(agent, q: dict) -> dict:
+    """One Investigate run: ask and research agents over one shared model book."""
+    research = agent(q["as_of"])
+    ask = agent(q["as_of"], "ask", research.toolbox.book)
+    inv = Investigator(research.model, {"ask": ask, "research": research}).run(q["question"])
+    subs = [{"id": s.id, "mode": s.mode, "question": s.question, "follow_up": s.follow_up,
+             "stop": s.stop, "calls": s.calls, "seconds": s.seconds,
+             "answer": (s.answer or {}).get("answer"),
+             "claims": (s.answer or {}).get("claims")} for s in inv.sub_runs]
+    # sub-runs have their own contexts: peak tokens is the largest single prompt among them
+    steps = [asdict(s) for s in inv.steps] + [asdict(s) for r in inv.sub_runs for s in r.steps]
+    over = [s.id for s in inv.sub_runs if s.stop not in ("answered", "")]
+    return {"id": q["id"], "category": q["category"], "question": q["question"],
+            **inv.answer, "stop": inv.stop if not over else f"{inv.stop}; sub budget {over}",
+            "seconds": inv.seconds, "calls": sum(s.calls for s in inv.sub_runs),
+            "steps": steps, "sub_runs": subs, "log": inv.log, "fallback": inv.fallback,
+            "text": answer_text(inv)}
 
 
 def score(row: dict, q: dict, config: dict) -> dict:
@@ -110,7 +140,7 @@ def score(row: dict, q: dict, config: dict) -> dict:
         "unverified": unverified, "auto_pass": parts_ok and not unverified
         and not row.get("abstained"),
         "peak_tokens": peak, "context_cap": config["agent"]["max_context"],
-        "budget_hit": row["stop"] != "answered",
+        "budget_hit": row["stop"] != "answered",  # Investigate: any sub-run on its budget
     }
 
 

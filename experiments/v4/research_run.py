@@ -106,17 +106,18 @@ def agent_factory(config: dict):
     lock, search_lock = threading.Lock(), threading.Lock()
     books: dict[str, Book] = {}
 
-    def agent(as_of: str) -> Agent:
+    def agent(as_of: str, tool_set: str = "research", session: Book | None = None) -> Agent:
         """A fresh agent per question (its own scratch runs), sharing the as-of's book of base
-        models and valuations."""
+        models and valuations. session: an existing session's book, so several agents (an
+        Investigate run's sub-runs) share their scratch runs."""
         store = Store(db, AsOf.of(as_of))
         with lock:
             book = books.setdefault(as_of, Book(store))
         # shared base forecasts; own scratch runs and valuations (scratch-n is per session)
-        session = Book(store, book.settings, book.forecasts, {}, {}, book.earlier)
+        session = session or Book(store, book.settings, book.forecasts, {}, {}, book.earlier)
         search = replace(base, decomposer=replace(base.decomposer, store=store),
                          hybrid=replace(base.hybrid, store=store))
-        toolbox = Toolbox(store, search, None, "research", session)
+        toolbox = Toolbox(store, search, None, tool_set, session)
         call = toolbox.call
 
         def locked(name, arguments):
