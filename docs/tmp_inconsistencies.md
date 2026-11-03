@@ -41,4 +41,4 @@ The spec is fixed; the build and design doc change to match it. Delete this file
 ## Large (days)
 
 - [ ] Bounded research runs for note sections 2.3, 4.2, 6, 7, 8 (spec §2.3 req. 2)
-- [ ] `initiation` report type, and `type` as a Report input (spec §2, §2.3; design §1.1)
+- [ ] `initiation` report type, and `type` as a Report input (spec §2, §2.3; design §1)

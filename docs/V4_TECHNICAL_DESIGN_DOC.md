@@ -10,17 +10,15 @@
 | Model equations | [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md) |
 | Results | [V4_RESULTS.md](V4_RESULTS.md) |
 
-**How to read it.** Top down: §1–§2 give the system, its components and its interfaces. §3–§12 take one block each, in dependency order (§7, the Toolbox, is the agent's view of §3–§6 and §11). Each has three parts: **contract, rules, failure handling and limits.** §12 is evaluation; §13 is reliability and gaps. "Spec §n" is a section of the spec; a bare "§n" is a section of this doc.
+**How to read it.** Top down: §1 is the scope; §2 gives the components, interfaces and cross-cutting rules. §3–§12 take one block each, in dependency order (§7, the Toolbox, is the agent's view of §3–§6 and §11). Each has three parts: **contract, rules, failure handling and limits.** §12 is evaluation; §13 is reliability and gaps. "Spec §n" is a section of the spec; a bare "§n" is a section of this doc.
 
 *Updated 2026-11-03.*
 
 ---
 
-## 1. Overview
+## 1. Scope
 
-### 1.1 Goals
-
-One agent covers eight US travel and mobility companies from free public data, in three modes (spec §2):
+The system serves three entry points, each at an as-of date, over eight companies (spec §2):
 
 | Mode | In | Out |
 |---|---|---|
@@ -29,39 +27,8 @@ One agent covers eight US travel and mobility companies from free public data, i
 | **Report** | Ticker + as-of | A 10-section draft note, a model-change workbook, an evidence and exception log |
 
 - **Companies:** BKNG, EXPE, ABNB, TRIP (travel) · UBER, LYFT, DASH, CART (mobility and delivery).
-- **Every run takes an as-of date** and sees only data published before it. This makes the walk-forward backtest possible.
-- **V4 reuses V0–V3's pipeline** (parsing, chunking, retrieval, agent loop, claim check). V3 stays runnable as a regression check.
-
-### 1.2 Principles
-
-| Principle | Means | Where |
-|---|---|---|
-| **As-of everywhere** | No read sees data published on or after the as-of | §2.5 |
-| **Code computes every number** | The LLM extracts, proposes bounded assumptions and writes prose; it never outputs a forecast or valuation number | §2.5 |
-| **Everything is cited** | Every figure carries an id that resolves to its source | §10 |
-| **Flag, don't hide** | A gap, conflict or failed check becomes an exception row, never an estimate shown as fact | §10.2 |
-| **Degrade, don't stop** | A failed LLM step leaves "failed check: reason"; only an integrity failure stops a run | §13.3 |
-| **Artifacts, not transcripts** | Steps hand over JSON files, not chat history | §9.1 |
-| **One definition, two evaluators** | The model is defined once; Python and the workbook evaluate it and must agree | §6.2 |
-| **Knobs in config** | Every default lives in a pinned YAML file | Appendix A |
-
-### 1.3 Glossary
-
-| Term | Meaning |
-|---|---|
-| **as-of (D)** | The run date: the world as seen at the market open of D (US/Eastern) |
-| **release** | An 8-K Item 2.02 exhibit 99.x (earnings release or shareholder letter). Form key `ER` |
-| **period key** | `2026Q2`, `FY2025` |
-| **data pack** | Every model input with its citable id and filing date (step S1) |
-| **driver** | A model input the forecast grows or holds: volume, price per unit, segment bookings, take rate, cost share |
-| **assumption** | A named forecast knob, such as `gb_g_mobility.g0` or `fade` |
-| **anchor** | A guidance figure the forecast is solved to hit |
-| **model book** | A session's models at one as-of, with their `model:` ids |
-| **version** | A saved Report run (`UBER:v2`), with its parent |
-| **tool set** | The named list of tool groups a run may call (§7.1) |
-| **fact (F-n)** | A pre-formatted figure the note may print, with its source id |
-| **E-n / X-n** | Evidence and exception rows of a report's log |
-| **layers 1–5** | The spec's evaluation layers: extraction, model integrity, forecast, valuation, note |
+- **Reuse:** V4 builds on V0–V3's parsing, chunking, retrieval, agent loop and claim check; V3 stays runnable as a regression check.
+- **Terms:** Appendix D.
 
 ---
 
@@ -162,6 +129,10 @@ One row per boundary. Each is stated in its section; the full schema is in [V4_I
 3. Prose in which every number is a marked fact (§10.2).
 
 Tables are always written by code (spec §3). This keeps valuation reruns byte-identical.
+
+**Degrade, don't stop.** A failed LLM step leaves "failed check: reason" and the run continues; only an integrity or valuation failure stops a run (§13.3).
+
+**Artifacts, not transcripts.** Steps hand over JSON files (§9.1), never chat history; each LLM call gets a purpose-built view and fetches detail by id.
 
 **Trace.** Every number in an answer or note carries an id (§10). Agent runs keep their tool calls; `report.json` records each step's time, LLM calls and tokens.
 
@@ -997,3 +968,21 @@ docs/
   V4_INTERFACES.md   full interface schemas (§2.3)
   stages/V4_*.md     how each block works (companions to §3–§12)
 ```
+
+## Appendix D. Glossary
+
+| Term | Meaning |
+|---|---|
+| **as-of (D)** | The run date: the world as seen at the market open of D (US/Eastern) |
+| **release** | An 8-K Item 2.02 exhibit 99.x (earnings release or shareholder letter). Form key `ER` |
+| **period key** | `2026Q2`, `FY2025` |
+| **data pack** | Every model input with its citable id and filing date (step S1) |
+| **driver** | A model input the forecast grows or holds: volume, price per unit, segment bookings, take rate, cost share |
+| **assumption** | A named forecast knob, such as `gb_g_mobility.g0` or `fade` |
+| **anchor** | A guidance figure the forecast is solved to hit |
+| **model book** | A session's models at one as-of, with their `model:` ids |
+| **version** | A saved Report run (`UBER:v2`), with its parent |
+| **tool set** | The named list of tool groups a run may call (§7.1) |
+| **fact (F-n)** | A pre-formatted figure the note may print, with its source id |
+| **E-n / X-n** | Evidence and exception rows of a report's log |
+| **layers 1–5** | The spec's evaluation layers: extraction, model integrity, forecast, valuation, note |

@@ -4,7 +4,7 @@ What V3 does, what it guarantees, and how it is put together. V3 is the regressi
 
 ## Scope and guarantees
 
-**V3.** Questions about the annual reports (10-Ks) of a fixed corpus, answered from the filings alone. V4's guarantees differ: see the [V4 design doc](../V4_TECHNICAL_DESIGN_DOC.md#12-principles).
+**V3.** Questions about the annual reports (10-Ks) of a fixed corpus, answered from the filings alone. V4's guarantees differ: see the [V4 design doc](../V4_TECHNICAL_DESIGN_DOC.md#25-cross-cutting-rules).
 
 | Guarantee | How it is kept |
 |---|---|
