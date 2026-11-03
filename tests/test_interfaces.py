@@ -8,7 +8,6 @@ V4 store.
 """
 
 import json
-import os
 import re
 from pathlib import Path
 
@@ -61,10 +60,24 @@ def test_every_tool_has_an_example():
 
 
 @pytest.fixture(scope="module")
-def toolboxes():
+def v4_corpus():
+    """The V4 company list for this module; conftest.py pins V0–V3 for the rest. corpus.py
+    reads its file at import, so its globals are switched too, then restored."""
+    from tenk_agent import corpus
+
+    path = ROOT / "companies.yaml"
+    companies, years = corpus.load(path)
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("TENK_COMPANIES", str(path))
+        mp.setattr(corpus, "COMPANIES", companies)
+        mp.setattr(corpus, "FISCAL_YEARS", years)
+        yield
+
+
+@pytest.fixture(scope="module")
+def toolboxes(v4_corpus):
     if not DB.exists():
         pytest.skip("needs the V4 store")
-    os.environ.setdefault("TENK_COMPANIES", str(ROOT / "companies.yaml"))
     from tenk_agent.agent.tools import toolbox_from_settings
     from tenk_agent.asof import AsOf
     from tenk_agent.config import load
