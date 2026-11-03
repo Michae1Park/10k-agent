@@ -33,6 +33,7 @@ These hold for every interface below unless it says otherwise.
 | **Notation** | `name: type`; `name?` optional (absent when it doesn't apply); `[T]` list; `{k: T}` map; `a \| b` one of; `id` a reference id (§10) |
 | **Null vs absent** | `null` = a value that applies but is missing (a blank cell, no report yet). Absent = the field doesn't apply |
 | **Period keys** | `2026Q2`, `FY2025`. Fiscal years are calendar years (all eight companies) |
+| **Forecast years** | Relative to the as-of, not fixed: the forecast runs to Q4 of the as-of year + 1, and the valuation's target year is the as-of year + 1 (`research.yaml` `horizon`, `target_year`). Examples at 2026-08-06 read 2027Q4 and FY2027 |
 | **Dates** | ISO `YYYY-MM-DD`; `accepted_at` is UTC |
 | **As-of columns** | Every Store row carries the date it became public (`filing_date`, `filed`, `published`, `as_of`). A run at D sees rows dated strictly before D ([design §2.5](V4_TECHNICAL_DESIGN_DOC.md#25-cross-cutting-rules)) |
 | **Units** | Each value carries its unit string. XBRL facts and `financials` rows are in whole USD; KPIs, guidance, model lines and valuation amounts in `USD millions`; counts in `count millions`; per-share in `USD per share` |
@@ -367,31 +368,54 @@ In the example, the base `take_rate_mobility.shift0` is `-0.0527` (the mobility 
 
 ### model · `compare_peers`
 
+One metric across companies, from each company's base model at the session's as-of, sorted low to high.
+
 ```text
-compare_peers(metric: str, companies?: [str], period?: period = FY2027)
-→ {metric, period: period | null, rows: [{company, value, unit, id, assumptions: [{driver, value, source: "default" | "guidance <guide id>"}]}]}
+compare_peers(metric: str, companies?: [str], period?: period)
+→ {metric, period: period, rows: [Row]}
+  Row = {company, value: number | str, unit, id,
+         assumptions: [{driver, value, source: "default" | "guidance <guide id>"}]}
 error: unknown metric → {error, model_lines: [str], valuation: [str]} · unknown company → {error}
 ```
 
-**`metric`** is a valuation field or a model line:
+**Inputs**
 
-| `metric` | Value | `unit` | `period` |
+| Input | Required | Default | Meaning |
 |---|---|---|---|
-| `ev_to_ebitda`, `ev_to_ebitda_less_sbc`, `pe` | 2027E multiple | `""` | ignored; `null` in the result |
-| `fcf_yield` | 2027E free-cash-flow yield | `percent` | ignored |
-| `price_target` | Scenario-weighted price target | `USD` | ignored |
-| `return` | Price target / price − 1 | `percent` | ignored |
-| `rating` | `Buy`, `Hold` or `Sell` (sorted last) | `""` | ignored |
-| `ev`, `market_cap` | Enterprise value, market cap | `USD millions` | ignored |
-| Any model line: `revenue`, `adj_ebitda`, `adj_ebitda_margin`, `eps_diluted`, `free_cash_flow`, `take_rate`, … | The line in `period` | The line's unit (ratios in percent) | Default `FY2027` |
+| `metric` | yes | – | A valuation field or a model line (table below) |
+| `companies` | no | all eight | Tickers or names; `["all"]` too |
+| `period` | no | the target year | The model line's period (`FY2028`, `2027Q3`). Valuation fields always use the target year, so `period` is ignored for them |
 
-- **Companies:** default all eight. Each value comes from that company's base model at the same as-of.
-- **Rows:** sorted ascending by value; non-numbers last.
-- **`assumptions`:** up to four `.g0` and `.shift0` drivers behind that company's model, as fractions. `guidance <guide id>` means that guide's anchor solved it (as in `model_view`). Templates differ, so driver names differ between companies (`volume_g.g0` for LYFT's `orders` template, `gb_g_mobility.g0` for UBER's `segments`).
+**Target year:** the as-of's year + 1 (`research.yaml` `valuation.target_year: "+1"`): `FY2027` at as-of 2026-08-06, `FY2026` at 2025-08-07. No call takes a date: the as-of is fixed for the session ([Conventions](#conventions)).
+
+**Output**
+
+| Field | Meaning |
+|---|---|
+| `metric` | Echoes the input |
+| `period` | The period used: the input `period`, or the target year (always the target year for a valuation field) |
+| `rows[].company`, `value`, `unit` | One company's value in its unit (table below) |
+| `rows[].id` | The value's reference id (§10): `model:<T>:<as_of>:val-base:<field>` or `model:<T>:<as_of>:base:<line>.<period>` |
+| `rows[].assumptions` | Up to four `.g0` and `.shift0` drivers behind that company's model, as fractions; `source` as in `model_view` |
+
+**`metric`:**
+
+| `metric` | Value | `unit` |
+|---|---|---|
+| `ev_to_ebitda`, `ev_to_ebitda_less_sbc`, `pe` | Target-year multiple | `""` |
+| `fcf_yield` | Target-year free-cash-flow yield | `percent` |
+| `price_target` | Scenario-weighted price target | `USD` |
+| `return` | Price target / price − 1 | `percent` |
+| `rating` | `Buy`, `Hold` or `Sell` | `""` |
+| `ev`, `market_cap` | Enterprise value, market cap | `USD millions` |
+| Any model line: `revenue`, `adj_ebitda`, `adj_ebitda_margin`, `eps_diluted`, `free_cash_flow`, `take_rate`, … | The line in `period` | The line's unit (ratios in percent) |
+
+- **Rows:** ascending by value; non-numbers (`rating`, a missing value) last.
+- **Driver names** differ by template: `volume_g.g0` for LYFT's `orders`, `gb_g_mobility.g0` for UBER's `segments`.
 
 ```json
 {"call": {"metric": "ev_to_ebitda", "companies": ["UBER", "LYFT"]},
- "result": {"metric": "ev_to_ebitda", "period": null,
+ "result": {"metric": "ev_to_ebitda", "period": "FY2027",
             "rows": [{"company": "LYFT", "value": 7.4106, "unit": "", "id": "model:LYFT:2026-08-06:val-base:ev_to_ebitda",
                       "assumptions": [{"driver": "volume_g.g0", "value": 0.0847, "source": "default"}]},
                      {"company": "UBER", "value": 9.6967, "unit": "", "id": "model:UBER:2026-08-06:val-base:ev_to_ebitda",
@@ -604,7 +628,8 @@ A reported cell is an `input` with its source id and filing date; a forecast cel
  refs: {price, shares, debt, cash, short_term_investments: id},
  cost_of_capital: {rf, rf_id, beta, beta_months, erp, erp_id, ke, kd, debt_weight, wacc},     # fractions
  peer_multiples: {peers: {T: number}, median, range: [lo, hi]},              # target-year EV/EBITDA
- multiples_2027e: {ev_to_ebitda, ev_to_ebitda_less_sbc, pe, fcf_yield},     # fcf_yield a fraction
+ target_year: int,                                                            # as-of year + 1 (research.yaml)
+ multiples: {ev_to_ebitda, ev_to_ebitda_less_sbc, pe, fcf_yield},          # target year; fcf_yield a fraction
  scenarios: {bear | base | bull: {adj_ebitda, target_multiple, multiple_pt, multiple_outside_peer_range,
                                   dcf_ev, dcf_pt, dcf_used, price_target, terminal_share}},
  price_target, return,                                                         # weighted PT; PT / price − 1 (fraction)
@@ -623,7 +648,7 @@ A reported cell is an `input` with its source id and filing date; a forecast cel
                      "debt_weight": 0.0834, "wacc": 0.095},
  "peer_multiples": {"peers": {"CART": 8.1181, "DASH": 19.1774, "LYFT": 7.3673}, "median": 8.1181,
                     "range": [7.3673, 19.1774]},
- "multiples_2027e": {"ev_to_ebitda": 9.6548, "ev_to_ebitda_less_sbc": 11.3182, "pe": 12.2885, "fcf_yield": 0.0978},
+ "target_year": 2027, "multiples": {"ev_to_ebitda": 9.6548, "ev_to_ebitda_less_sbc": 11.3182, "pe": 12.2885, "fcf_yield": 0.0978},
  "scenarios": {"base": {"adj_ebitda": 15237.7066, "target_multiple": 8.1181, "multiple_pt": 56.7593,
                         "multiple_outside_peer_range": false, "dcf_ev": 246810.6198, "dcf_pt": 116.806,
                         "dcf_used": true, "price_target": 80.778, "terminal_share": 0.604}},

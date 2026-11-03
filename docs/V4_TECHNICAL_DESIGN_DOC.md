@@ -410,7 +410,7 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 | Too few monthly returns | β = 1, logged |
 | Proposer fails | Defaults |
 | Outside series too short or wrong-signed | Not used; logged |
-| Scope | Horizon 2027Q4 (DCF years beyond); condensed statements; no deferred bookings; three peers per sector |
+| Scope | Horizon Q4 of the as-of year + 1 (2027Q4 at a 2026 as-of; DCF years beyond); condensed statements; no deferred bookings; three peers per sector |
 
 ---
 
@@ -915,7 +915,7 @@ Per-block cases: §3.3, §4.3, §5.3, §6.3, §7.4, §8.3, §9.3, §10.3, §11.3
 - **Agent:** 20 calls, 20k context; tool results 40 rows, 16,000 characters.
 - **Sub-agents:** S2 events 8 calls, S4 proposer 10, S9 debates 8, each 16k context; S10 slot 1.5k tokens out. Extraction input ≤ 12k tokens per release. Report time budget 30 minutes.
 - **Retrieval:** 40 candidates per search, RRF k = 60, 8 chunks.
-- **Forecast:** horizon 2027Q4; fade 0.9 (bounds 0.75–1.0); guidance midpoint; seasonal shares over 3 years; ratio bands 50 bps (take rate) and 200 bps (margins); tax 10–30%; outside inputs on (weight 0.5, at least 6 quarters).
+- **Forecast:** horizon Q4 of the as-of year + 1 (`"+1"`; a fixed key such as `2027Q4` still works); valuation target year the as-of year + 1; fade 0.9 (bounds 0.75–1.0); guidance midpoint; seasonal shares over 3 years; ratio bands 50 bps (take rate) and 200 bps (margins); tax 10–30%; outside inputs on (weight 0.5, at least 6 quarters).
 - **Scenarios:** weights 25/50/25; shocks ±1σ.
 - **Valuation:** 60/40 multiple/DCF; target year 2027; scenario multiples ±15%; terminal growth 3% (grid 2.5–3.5%); 10 DCF years; β from monthly returns since 2023; debt-weight threshold 10%; Buy +15%, Sell −10%.
 

@@ -65,9 +65,11 @@ $$MC = P \times \text{shares} \qquad EV = MC + \text{Debt} - \text{Cash} - \text
 
 **Multiple**
 
-$$M^* = \operatorname{median}_{\text{peers}} \frac{EV}{EBITDA_{2027E}} \qquad PT_{M} = \frac{M^* \cdot EBITDA_{2027E} - \text{Net debt}}{\text{shares}}$$
+$$M^* = \operatorname{median}_{\text{peers}} \frac{EV}{EBITDA_{Y+1}} \qquad PT_{M} = \frac{M^* \cdot EBITDA_{Y+1} - \text{Net debt}}{\text{shares}}$$
 
 Bear/bull use $M^*(1 \mp 0.15)$; flagged if outside the peer range.
+
+$Y$ is the as-of year: at as-of 2026-08-06 the multiple is on 2027E (`research.yaml` `valuation.target_year: "+1"`).
 
 **DCF**
 
