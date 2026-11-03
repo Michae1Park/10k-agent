@@ -15,7 +15,7 @@ The tool examples (§4) are checked against the code by `tests/test_interfaces.p
 | 5 | [LLM calls](#5-llm-calls) | JSON reply | code ↔ model | [design §8](V4_TECHNICAL_DESIGN_DOC.md#8-agent-runtime) |
 | 6 | [Extraction rows](#6-extraction-rows) | JSON reply → rows | extractor → Store | [design §5](V4_TECHNICAL_DESIGN_DOC.md#5-extraction-layer-1) |
 | 7 | [Templates](#7-templates) | YAML | config → Model engine | [design §6](V4_TECHNICAL_DESIGN_DOC.md#6-model-engine-and-valuation) |
-| 8 | [Model and valuation files](#8-model-and-valuation-files) | JSON files | Model engine → Report, tools, Export | [design §6](V4_TECHNICAL_DESIGN_DOC.md#6-model-engine-and-valuation) |
+| 8 | [Model and valuation files](#8-model-and-valuation-files) | Python calls, JSON files | Model engine → Report, tools, Export | [design §6](V4_TECHNICAL_DESIGN_DOC.md#6-model-engine-and-valuation) |
 | 9 | [Pipeline artifacts](#9-pipeline-artifacts) | JSON files | step → step | [design §9](V4_TECHNICAL_DESIGN_DOC.md#9-report-pipeline) |
 | 10 | [Reference ids](#10-reference-ids) | strings | everywhere | [design §10](V4_TECHNICAL_DESIGN_DOC.md#10-verification-and-number-trace) |
 | 11 | [Fact list and log](#11-fact-list-and-log) | JSON files | Report code → note writer, trace | [design §10](V4_TECHNICAL_DESIGN_DOC.md#10-verification-and-number-trace) |
@@ -533,6 +533,44 @@ The forecast knobs a template names (`@name`), stored in `model.json` `assumptio
 
 *Written by S5 and S7; read by Report, tools and Export. Knobs: `research.yaml` (design Appendix A).*
 
+### 8.1 Engine calls
+
+The engine is plain Python over a `Store` bound to the as-of. **No call takes financial figures:** each reads its inputs from the Store (through the data pack), the company's template (§7) and `research.yaml`. The only numbers a caller may pass are assumption overrides. Code: `research/`.
+
+| Step | Call | Inputs | Returns |
+|---|---|---|---|
+| S1 data pack | `datapack.build(store, ticker, sources)` | The template's `source`/`fallback` ids | `{source: {period: Point}}` (below) |
+| S3 history | `model.history.history(store, ticker)` | Ticker; template from `companies.yaml` | `(model, pack, checks, exceptions)`: reported quarters only |
+| S5 forecast | `forecast.forecast(store, ticker, settings?, overrides?)` | `overrides: {assumption: value}` (fractions, §7) | `Forecast` (below): model through the horizon, anchors solved |
+| S4 + S5 | `forecast.forecast_with_proposer(store, ticker, settings, search?)` | `research.yaml` `proposer.method` | `Forecast`; with `llm`, the proposer's overrides applied |
+| Scenarios | `forecast.scenarios(f, settings)` | A `Forecast` | `{bear, base, bull: Model}` (scenario drivers ±1σ) |
+| S6–S7 value | `valuation.value(store, f, settings, peer_cache?)` | A `Forecast`; peers' forecasts built with defaults | The `valuation.json` dict |
+| Session | `book.Book(store)` | – | `.base(T)` forecast, `.valuation(T, version)`, scratch runs: what the model tools (§4) use |
+
+**`Point`** (one data-pack value):
+
+```json
+{"q:revenue": {"2026Q2": {"value": 14191.0, "unit": "USD millions", "id": "q:UBER:revenue:2026Q2",
+                          "filed": "2026-08-05", "derivation": "direct"}},
+ "kpi:gross_bookings.mobility": {"2026Q2": {"value": 28988.0, "unit": "USD millions",
+                                            "id": "kpi:UBER:gross_bookings.mobility:2026Q2",
+                                            "filed": "2026-08-05", "derivation": "reported"}}}
+```
+
+**`Forecast`:** `{model, pack, defaults: {assumption: value}, anchors: [Anchor], exceptions: [{severity, item}], proposals}`, where `Anchor` = `{guide, guide_id, line, target_period, target, solve, before, after, reached: bool, issued_in}` (`before` the default, `after` the solved value).
+
+**CLI**, one stage per command, writing to `output/research/<T>/<as_of>/`:
+
+```text
+python -m tenk_agent.research.model.history TICKER… AS_OF   → datapack.json, model.json, checks.json, workbook.xlsx
+python -m tenk_agent.research.forecast      TICKER… AS_OF   → the same, with forecast columns, + forecast.json (assumptions, defaults, anchors, scenarios)
+python -m tenk_agent.research.valuation     TICKER… AS_OF [--all]  → valuation.json (--all: relative ratings)
+```
+
+Exit code 1 when a layer-2 check fails or the workbook parity differs.
+
+### 8.2 Files
+
 **`model.json`:**
 
 ```text
@@ -545,11 +583,16 @@ The forecast knobs a template names (`@name`), stored in `model.json` `assumptio
 ```
 
 ```json
-{"cells": {"revenue|2026Q2": {"value": 14191.0, "kind": "input", "ref": "q:UBER:revenue:2026Q2", "filed": "2026-08-05"}},
- "lines": [{"name": "adj_ebitda_margin", "kind": "formula", "label": "adjusted EBITDA margin (on revenue)",
-            "unit": "fraction", "statement": "income", "fy": "formula", "source": null,
-            "expr": "adj_ebitda / revenue", "forecast": null, "forecast_first": null}]}
+{"forecast": ["2026Q3", "2026Q4", "…", "2027Q4"],
+ "cells": {"revenue|2026Q2": {"value": 14191.0, "kind": "input", "ref": "q:UBER:revenue:2026Q2", "filed": "2026-08-05"},
+           "gross_bookings_mobility|2026Q3": {"value": 29346.3918, "kind": "formula", "ref": null, "filed": null},
+           "take_rate_mobility|2026Q3": {"value": 0.2532, "kind": "formula", "ref": null, "filed": null}},
+ "lines": [{"name": "gross_bookings_mobility", "kind": "input", "label": "gross bookings mobility",
+            "unit": "USD millions", "statement": "operating", "fy": "sum", "source": "kpi:gross_bookings.mobility",
+            "expr": null, "forecast": "gross_bookings_mobility[-4] * (1 + gb_g_mobility)", "forecast_first": null}]}
 ```
+
+A reported cell is an `input` with its source id and filing date; a forecast cell is a `formula` (`ref` and `filed` null). Ratios are fractions (0.2532 = 25.32%).
 
 **`valuation.json`:**
 
@@ -557,18 +600,37 @@ The forecast knobs a template names (`@name`), stored in `model.json` `assumptio
 {ticker, as_of, price_date,
  price, shares, market_cap, debt, cash_and_investments, net_debt, ev,          # USD; amounts in millions
  refs: {price, shares, debt, cash, short_term_investments: id},
- cost_of_capital: {rf, beta, beta_months, erp, erp_id, ke, kd, debt_weight, wacc},
+ cost_of_capital: {rf, rf_id, beta, beta_months, erp, erp_id, ke, kd, debt_weight, wacc},     # fractions
  peer_multiples: {peers: {T: number}, median, range: [lo, hi]},              # target-year EV/EBITDA
- multiples_2027e: {ev_to_ebitda, ev_to_ebitda_less_sbc, pe, fcf_yield},
+ multiples_2027e: {ev_to_ebitda, ev_to_ebitda_less_sbc, pe, fcf_yield},     # fcf_yield a fraction
  scenarios: {bear | base | bull: {adj_ebitda, target_multiple, multiple_pt, multiple_outside_peer_range,
-                                  dcf_ev, dcf_pt, dcf_used, price_target}},
+                                  dcf_ev, dcf_pt, dcf_used, price_target, terminal_share}},
  price_target, return,                                                         # weighted PT; PT / price − 1 (fraction)
  rating: Buy | Hold | Sell,
  dcf_grid: {"<wacc>|<g>": PT},
  dcf_base: {wacc, terminal_growth, tax_rate, flows: [[period, t, ufcf]], terminal_t, last_annual, terminal, ev, terminal_share},
  exceptions: [str],
- inputs_hash: str}                                                             # SHA-256 of assumptions, market refs, price
+ inputs_hash: str}                                     # first 16 hex of SHA-256 over assumptions, market refs, price, WACC
 ```
+
+```json
+{"ticker": "UBER", "as_of": "2026-08-06", "price_date": "2026-08-05", "price": 68.18, "shares": 2050.225,
+ "market_cap": 139784.3405, "debt": 12723.0, "cash_and_investments": 5391.0, "ev": 147116.3405,
+ "cost_of_capital": {"rf": 0.0463, "rf_id": "macro:DGS10:2026-08-04", "beta": 1.1375, "beta_months": 60,
+                     "erp": 0.0428, "erp_id": "erp:damodaran:2026-08-01", "ke": 0.095, "kd": 0.0363,
+                     "debt_weight": 0.0834, "wacc": 0.095},
+ "peer_multiples": {"peers": {"CART": 8.1181, "DASH": 19.1774, "LYFT": 7.3673}, "median": 8.1181,
+                    "range": [7.3673, 19.1774]},
+ "multiples_2027e": {"ev_to_ebitda": 9.6548, "ev_to_ebitda_less_sbc": 11.3182, "pe": 12.2885, "fcf_yield": 0.0978},
+ "scenarios": {"base": {"adj_ebitda": 15237.7066, "target_multiple": 8.1181, "multiple_pt": 56.7593,
+                        "multiple_outside_peer_range": false, "dcf_ev": 246810.6198, "dcf_pt": 116.806,
+                        "dcf_used": true, "price_target": 80.778, "terminal_share": 0.604}},
+ "price_target": 83.6226, "return": 0.2265, "rating": "Buy",
+ "dcf_grid": {"0.0850|0.0250": 130.1512},
+ "inputs_hash": "92aee5b8865c5c58"}
+```
+
+Values rounded here; the file keeps 10 significant digits. Amounts in USD millions, shares in millions, price and PTs in USD per share.
 
 ## 9. Pipeline artifacts
 
