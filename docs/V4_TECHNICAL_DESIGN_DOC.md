@@ -355,9 +355,9 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 **Proposer (S4).** Off by default: it did not beat the defaults in the backtest (spec §7). When on:
 - **Input:** a driver table (no data pack). Each proposable driver has its last 8 quarters, default and bounds; anchored drivers are listed as fixed.
 - **Proposable:** growth starts (`.g0`), ratio shifts (`.shift0`) and `fade`, never one a guide anchors (the anchor runs after and would undo it).
-- **Bounds:** a growth start is limited to its 8-quarter range ± 5 points. A ratio shift is limited to ± (its 8-quarter range width + its band). The fade is limited to 0.75–1.0.
-- **Kept:** a proposal with a number and at least one evidence id that resolves at D. It is clipped to its bounds (a `warning` row) and stored with the proposed value, applied value, basis, confidence and rationale.
-- **Dropped:** anything else, with an `info` row. A reply with no JSON means defaults.
+- **Bounds:** each driver's bounds derive from its recent history; the fade's are in `research.yaml` (Appendix A).
+- **Kept:** a proposal with a number and at least one evidence id that resolves at D. It is clipped to its bounds (logged) and stored with its rationale and evidence.
+- **Dropped:** anything else, logged. A reply with no JSON means defaults.
 
 **Valuation and rating** (spec §3.3)
 
@@ -437,7 +437,7 @@ Every tool shares the same handling:
 - **Company:** a ticker or name, resolved against the corpus.
 - **Periods:** the periods asked for, else the latest eight, in order (FY after Q4).
 - **Caps:** at most 40 rows, the latest kept, with `"omitted": n`.
-- **Values:** ratios shown in percent; numbers rounded to 4 decimals.
+- **Values:** ratios shown in percent.
 - **Arguments:** object and array arguments written as JSON strings are parsed.
 
 Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model tools compute through the Model engine (§6); their equations are in [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md) (scenarios §4, valuation §5).
@@ -447,7 +447,7 @@ Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model
 | | |
 |---|---|
 | **Consumes** | `chunks`, `children`, FTS5 and vectors (Store) |
-| **Computes** | Resolves companies (`["all"]` = every company with a filing), checks the period keys, and runs Retrieval (§4.2) with k clamped to 1–16 |
+| **Computes** | Resolves companies (`["all"]` = every company with a filing), checks the period keys, and runs Retrieval (§4.2) |
 | **Returns** | The sub-searches run; chunks with id, company, form, period, filing date, item and text |
 | **Errors** | Unknown company (lists the corpus); no company given or named; bad period key |
 
@@ -456,7 +456,7 @@ Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model
 | | |
 |---|---|
 | **Consumes** | Only its inputs |
-| **Computes** | A named op (`pct_change`, `cagr`, `ratio`, `percent_of`, `difference`, `sum`) or an expression over named inputs (`+ − × ÷ **`, `abs`, `round`, `min`, `max`, `sqrt`). The expression is parsed to a syntax tree; there is no `eval`. The result is rounded to 6 decimals |
+| **Computes** | A named op (`pct_change`, `cagr`, `ratio`, `percent_of`, `difference`, `sum`) or an expression over named inputs (`+ − × ÷ **`, `abs`, `round`, `min`, `max`, `sqrt`). The expression is parsed to a syntax tree; there is no `eval` |
 | **Returns** | Result, formula, inputs: the same calculator reruns the claim check (§10.2) |
 | **Errors** | Unknown op, missing inputs, bad expression, non-finite result |
 
@@ -509,7 +509,7 @@ Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model
 | | |
 |---|---|
 | **Consumes** | `market` (`cc:` series) |
-| **Computes** | `tlc`: NYC trips for Uber (`HV0003`) and Lyft (`HV0005`) only; `bts`: airline passengers, total, domestic and international. Window by month from `start` to `end`, else the last 13 months |
+| **Computes** | `tlc`: NYC trips for Uber (`HV0003`) and Lyft (`HV0005`) only; `bts`: airline passengers, total, domestic and international. Window by month from `start` to `end`, else the latest year |
 | **Returns** | Rows: `cc:` id, series, month, value; coverage note; unit (trips or passengers) |
 | **Errors** | TLC for another company; a series other than `tlc` or `bts` |
 
@@ -518,7 +518,7 @@ Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model
 | | |
 |---|---|
 | **Consumes** | `model_versions`; the saved version's `model.json` and `valuation.json` (§11) |
-| **Computes** | The latest version with `as_of` < D (and ≤ the `as_of` argument, which only narrows). Lines default to revenue, gross bookings, adj. EBITDA and margin, EPS and FCF, where the template has them; periods to the forecast FY columns. Each value is marked `estimate` or `actual`. Valuation gives price, PT, return and rating. The status note says draft or reviewed |
+| **Computes** | The latest version with `as_of` < D (and ≤ the `as_of` argument, which only narrows). Defaults: the headline lines and the forecast FY columns. Each value is marked `estimate` or `actual`. Valuation gives price, PT, return and rating. The status note says draft or reviewed |
 | **Returns** | Version, as-of, status, parent, note, valuation and estimates with `model:<T>:<as_of>:v<n>:…` ids; visible versions. None → `report: null` with the visible versions |
 | **Errors** | Unknown lines (listed with the valid ones; the rest still returned) |
 
@@ -527,8 +527,8 @@ Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model
 | | |
 |---|---|
 | **Consumes** | The model book's base forecast for the company (§6), built on first use |
-| **Computes** | Lines default to the driver build, then revenue, adj. EBITDA and margin, EPS and FCF. Columns default to the last 4 history quarters, the first 6 forecast quarters and the last 3 FY. Each assumption is listed with its default and its source: the anchoring guide's id, else `default` |
-| **Returns** | Rows of values per period, assumptions, up to 6 model exceptions, and the `model:<T>:<as_of>:base:…` id format |
+| **Computes** | Defaults: the driver build and headline lines; recent history, the near forecast and the FY columns. Each assumption is listed with its default and its source: the anchoring guide's id, else `default` |
+| **Returns** | Rows of values per period, assumptions, the model's exceptions, and the `model:<T>:<as_of>:base:…` id format |
 | **Errors** | Unknown lines (lists the lines) |
 
 #### model · `run_scenario`
@@ -537,7 +537,7 @@ Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model
 |---|---|
 | **Consumes** | The base forecast: its model, data pack and assumptions |
 | **Computes** | Changes = `overrides` plus base + `deltas`. Only proposable drivers (growth starts, ratio shifts) and `fade` are allowed. Each change is clipped to the proposer's bounds (§6.2). The model is rebuilt on the same data pack with the changed assumptions, saved as `scratch-n`, and valued as §6.2 with the same peers |
-| **Returns** | Revenue, adj. EBITDA, EPS and FCF for the last two FY columns, base vs scenario; PT and rating, base vs scenario; the clipped drivers; ids for both runs |
+| **Returns** | Headline lines for the last FY columns, base vs scenario; PT and rating, base vs scenario; the clipped drivers; ids for both runs |
 | **Errors** | Unknown driver (lists the allowed ones); no change given |
 
 #### model · `compare_peers`
@@ -545,8 +545,8 @@ Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model
 | | |
 |---|---|
 | **Consumes** | Each company's base forecast and valuation, built on first use (the first call is slow) |
-| **Computes** | `metric` is a valuation field (`ev_to_ebitda`, `ev_to_ebitda_less_sbc`, `pe`, `fcf_yield`, `price_target`, `return`, `rating`, `ev`, `market_cap`) or a model line at `period` (default FY2027). Companies default to all. Rows are sorted ascending, non-numbers last |
-| **Returns** | Rows: company, value, unit, `model:` id, up to 4 growth and shift assumptions with their source |
+| **Computes** | `metric` is a valuation field (`ev_to_ebitda`, `ev_to_ebitda_less_sbc`, `pe`, `fcf_yield`, `price_target`, `return`, `rating`, `ev`, `market_cap`) or a model line at `period` (default the target year). Companies default to all. Rows are sorted ascending, non-numbers last |
+| **Returns** | Rows: company, value, unit, `model:` id, its main growth and shift assumptions with their source |
 | **Errors** | Unknown company; unknown metric (lists lines and valuation fields) |
 
 #### model · `variance_review`
@@ -676,11 +676,11 @@ Every artifact is a JSON file in the report folder. `report.json` records the ve
 |---|---|
 | **S2 events** | One bounded agent (tool set `ask`, `events.md`) is asked what changed for the ticker in the quarter. Each event (type, summary, evidence ids) is kept only if one evidence id resolves at D. An unparseable reply means no events |
 | **S4 propose** | §6.2 Proposer |
-| **S8 revise** | Parent = the latest saved version before D. For revenue, adj. EBITDA and EPS, in the first forecast quarter and the last two FY columns: old (parent's `v<n>` id) vs new (`base` id). `type` is "Reported + assumption" if any of the parent's forecast quarters is now reported, else "Assumption". `confidence` is Low for an FY after the as-of year, else Medium |
-| **S9 debates** | One agent per scenario driver in the template (tool set `ask`, `debates.md`), told the driver's first-quarter value. It returns question, bull, bear, hypothesis, trigger, gap and evidence. Kept only if one evidence id resolves; each resolved id's values become `evidence_values`, and so note facts |
-| **S9 → section 7** | Sensitivities: rebuild the base model with one driver moved. The moves are take rate −50 bps, growth −1 pt, cost share +50 bps, and each debated driver (growth −1 pt, shift ∓50 bps). Each move is valued as a scratch run and records the last FY's adj. EBITDA change and the PT change, with ids |
-| **S10 facts** | Code builds the sections. Every figure is registered once as an `F-n` fact (label, value, unit, source id) and formatted by `text()`: USD millions as `$9.7B` or `$412M`, percent to 1 decimal (signed for changes and returns), `x` to 1 decimal |
-| **S10 write** | One call per prose slot (`section.md`, no tools). The writer sees the slot's instruction and only that slot's facts. The number trace (§10.2) checks the text; one repair turn names the untraced numbers; any sentence still holding one is dropped, with a `warning` row |
+| **S8 revise** | Parent = the latest saved version before D. Headline lines, old (parent's `v<n>` id) vs new (`base` id); each typed by whether one of the parent's forecast quarters is now reported |
+| **S9 debates** | One agent per scenario driver in the template (tool set `ask`, `debates.md`), told the driver's value. Kept only if one evidence id resolves; the resolved values become note facts |
+| **S9 → section 7** | Sensitivities: the base model rebuilt with one driver moved one step, for the key drivers (take rate, growth, cost share) and every debated driver; each valued as a scratch run, giving the adj. EBITDA and PT change with ids |
+| **S10 facts** | Code builds the sections. Every figure is registered once as an `F-n` fact (label, value, unit, source id) and formatted once by code |
+| **S10 write** | One call per prose slot (`section.md`, no tools). The writer sees the slot's instruction and only that slot's facts. The number trace (§10.2) checks the text; one repair turn names the untraced numbers; any sentence still holding one is dropped and logged |
 | **S10 lint** | The whole note is traced again: code-written blocks must appear verbatim and every slot's figures must trace; failures are `error` rows |
 
 **Consistency check** (before export; spec §2.3). Code checks:
@@ -745,8 +745,7 @@ Code: id grammar and resolver (`research/refs.py`), claim check (`generation/ver
 - **Wrong company:** a value found only in another company's chunks is unverified.
 
 **Note trace:**
-- **Figures** are numbers with sign and suffix (`B`, `M`, `%`, `pts`, `bps`, `x`). Excluded: dates, years, quarters (`2027E`, `Q2`), F/E/X ids, section numbers, form names, ratios like `3/4`, list numbers.
-- **A figure traces** when it equals a fact of its slot within half a unit of its last written digit, in the fact's unit: `$9.7B` matches 9,712 USD millions, `+3.2%` matches 3.21 percent, `bps` are read as points / 100.
+- **A figure traces** when it equals a fact of its slot, in the fact's unit, within half a unit of its last written digit (`$9.7B` matches 9,712 USD millions). Dates, periods, ids and section numbers are not figures.
 - Code-written tables must appear verbatim.
 - Every number in prose is a marked fact **of its own section** or an allowed token (dates, "Q2", "10-K").
 - No "pending" or "TBD"; gaps read "n/a: …" or "failed check: …"; estimates carry "E".
