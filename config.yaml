@@ -4,9 +4,9 @@
 
 data_dir: data                                          # tenk fetch → data/raw/filings/<TICKER>/FY<year>/
 build:                                                  # tenk build
-  out: data/v0-chunking                                 # per-filing work files, and <method>.db
+  out: data/v4/build                                    # per-filing work files, and <method>.db
   methods: [parent_child]                               # rule | parent_child | agentic (V1's best: parent_child)
-db: data/v0-chunking/parent_child.db                    # what search, ask and chat read
+db: data/v4/build/parent_child.db                       # what search, ask and chat read
 
 llm:                                                    # V0 structure agent and agentic chunker
   model: Qwen/Qwen3.6-27B-FP8                           # scripts/serve_vllm.sh qwen3.6-27b-fp8
