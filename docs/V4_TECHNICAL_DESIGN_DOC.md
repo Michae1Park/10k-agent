@@ -166,7 +166,7 @@ Code: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisiti
 | Filing HTML | – | Rule labels (Item and part headings, headings, tables, body) → Items → parent-child chunks (parents never cross a subsection; each table its own chunk) → FTS5 + embeddings over children → `chunks` |
 | EDGAR companyfacts | JSON per company | Consolidated us-gaap, dei, srt facts with their filing → `facts` |
 | Inline XBRL (filing HTML) | – | `ix:nonFraction` facts with dimensions or company concepts → `facts` |
-| Releases | – | LLM extraction (§5) → `kpis`, `guidance` |
+| Releases | release chunks (from the Filing HTML lane) | LLM extraction (§5) → `kpis`, `guidance` |
 | Tiingo, FRED/ALFRED, Damodaran | Daily closes (tickers, SPY); macro with every vintage; monthly ERP | `market`, each row with its publish date (§2.5) |
 | BTS, NYC TLC | Monthly series; TLC trip files aggregated per license at fetch | `market` (`cc:` series) |
 | Form 4 | Insider filings | `insider_tx` |
@@ -251,6 +251,8 @@ How it works: [V4_EXTRACTION.md](stages/V4_EXTRACTION.md). Schemas: [V4_INTERFAC
 ### 5.1 Contract
 
 Read KPIs and guidance from earnings releases into checked, quoted rows.
+
+Extraction is a second pass that runs after chunking: it reads the release chunks the data layer (§3) already built, not the raw filing.
 
 Code: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an ablation), registry (`facts/kpis.yaml`), loader (`tenk build --stage kpis`).
 
