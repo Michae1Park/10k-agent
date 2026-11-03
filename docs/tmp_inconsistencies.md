@@ -1,6 +1,6 @@
 # TODO: make the build and design doc match the spec (temporary)
 
-The spec is fixed; the build and design doc change to match it. Delete this file once done. Each finished item also comes out of design doc §13.1.
+The spec is fixed; the build and design doc change to match it. Delete this file once done. Each finished item also comes out of V4_RESULTS "Gaps against the spec".
 
 ## Quick (≤ 30 min)
 
@@ -24,9 +24,9 @@ The spec is fixed; the build and design doc change to match it. Delete this file
 - [ ] **#12** S9 debates use the Research toolset (spec §2.3 req. 2; `research/subagents.py`); rerun to check
 - [ ] **#23** Section 7: model driver and evidence columns; unquantified risks from risk-factor text (`note/sections.py:273`)
 - [ ] **#17** Section 10 gets one repair turn on a failed consistency check, like Section 1 (spec §2.3 req. 6)
-- [ ] **#27** Model (prior) tab keeps the prior version with live formulas, not values (spec §2.3 Model tab; design §13.1)
+- [ ] **#27** Model (prior) tab keeps the prior version with live formulas, not values (spec §2.3 Model tab; V4_RESULTS gaps)
 - [ ] **#33** Section 3.1 driver table: driver, latest evidence, model variable (spec §2.3 example; `note/sections.py`)
-- [ ] **#29** Later quarters from the seasonal share only (spec §3.2); drop the FY-column anchor for full-year-only guidance (ABNB; design §13.1)
+- [ ] **#29** Later quarters from the seasonal share only (spec §3.2); drop the FY-column anchor for full-year-only guidance (ABNB; V4_RESULTS gaps)
 
 ## Medium (2–4 h)
 

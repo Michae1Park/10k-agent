@@ -65,7 +65,65 @@ UBER, earnings update after Q2 2026, as of 2026-08-06: [note (Markdown)](example
 - **Cross-checks are narrow.** TLC covers New York City only (a directional check on Uber and Lyft); BTS is all US airlines, with publish dates estimated (month + 90 days).
 - **Gold sets are not human-reviewed.** Ask (79) and Research (72) questions were drafted by the agent and checked by script; extraction labels were cross-checked by independent methods, not by a person. The Ask set's NYC-trips decline question is now answerable (TLC loaded in V4.7) and needs updating.
 - **Judge noise.** The note rubric moved 3.8 → 3.4 on near-identical text; no human sample has been scored.
+- **Filing-text recall is unmeasured.** A missed acquisition or regulatory event is silent ([V4_AGENT.md](stages/V4_AGENT.md#filing-text-what-reaches-the-note)).
 - **XBRL gaps.** ABNB tags no D&A or capex (no FCF line); EPS and shares lack a three-month Q4; Q4 EPS comes from the release.
+
+## Gaps against the spec
+
+What the spec asks that the build does not do yet.
+
+### Report and note
+
+| Spec asks | Today |
+|---|---|
+| Bounded research runs for sections 2.3, 4.2, 6, 7, 8 (spec §2.3 req. 2) | 2.3 and 6 are single LLM calls without tools; 4.2, 7 and 8 have no LLM text. Only debates use tools |
+| Debates with the Research toolset (spec §2.3 req. 2) | Debates use `ask`: they can't run a scenario |
+| `initiation` report type (spec §2) | `update` only |
+| No-parent flag "initial draft (no prior run)" | Reads "(no prior version)" |
+| Section 10 repaired on a failed consistency check (req. 6) | Section 10 is code-written; only the takeaways are repaired |
+| Section 3.1 driver table | Not built; section 3 has the debates only |
+| Section 7: model driver and evidence columns; unquantified risks | Risk, EBITDA change and PT impact for scenario drivers only |
+| Consensus column ("n/a") and a "no consensus" exception | Absent |
+| Secondary multiples in section 6 (spec §3.3) | Computed in `valuation.json`; not shown |
+| Outside data shown as directional checks (spec §3.2) | Used only as forecast inputs |
+
+### Forecast and valuation
+
+| Spec asks | Today |
+|---|---|
+| Variance flag: > 2% (revenue, bookings) or > 5% (EBITDA) from the guide midpoint needs a reason (spec §3.2) | Unused; no Flag column in 2.2 |
+| Later quarters by seasonal share only (spec §3.2) | A full-year-only guide anchors the FY column (ABNB) |
+| DCF with 3 modeled years, then 7 faded (spec §3.3) | Quarters end at 2027Q4; 2028 on is faded |
+| Relative rating: top 3 Buy, middle 2 Hold, bottom 3 Sell (spec §3.3) | Thirds: 2 / 4 / 2 |
+| Release vs filing gap logged ("filing wins", spec §1.6) | No comparison of release KPIs with XBRL |
+| Exception when a non-operating item exceeds 10% of NI (design) | Forecast 0 only |
+
+### Workbook and log
+
+| Spec asks | Today |
+|---|---|
+| Summary tab: old vs new, $ and % change, source | Valuation headline; old vs new is on Revisions |
+| Assumptions tab: basis, confidence, variables affected, last updated | Name and value only |
+| Scenarios tab: weights, weighted value, sensitivities | Values only |
+| Bridge and rating on the Valuation tab | On Summary |
+| Model (prior) tab with live formulas | The parent's values |
+| Revision type and source of change as separate columns; every line | One `type` column; three lines |
+| Evidence fields: period, filing date, location, retrieval date, type, cell | Id, kind, label, value, source |
+| Exception fields: treatment, status | Id, severity, item |
+| Open exceptions carried from the parent version (design) | Not built |
+| Thin peer set exception, fewer than 4 peers (spec X-04) | Not logged |
+
+### Checks and evaluation
+
+| Asked | Today |
+|---|---|
+| `ixbrl:`, `E-`, `X-` ids resolved by the claim check (design §10.1) | Parse only |
+| Parity mismatch as a layer-2 FAIL (design §11.2) | Recorded; the run continues |
+| `tenk research approve` errors on an unknown version (design §11.3) | Silently matches nothing |
+| Held-out quarters reported separately (spec §6) | Not reported: the LLM's cutoff is unpublished |
+| Human review of the rubric sample and the Ask and Research gold | Not done |
+
+Working list with effort estimates: [tmp_inconsistencies.md](tmp_inconsistencies.md).
 
 ## Decisions (2026-10-28)
 

@@ -1,6 +1,6 @@
 # V4 technical design: a junior sell-side research agent
 
-> **What this is:** the contract of the V4 build, as built. The [spec](V4_SPEC.md) says what to build; this doc says how the system is shaped to do it: components, interfaces, rules, and what happens when things fail. Gaps against the spec are listed once, in §13.1.
+> **What this is:** the build contract for V4. The [spec](V4_SPEC.md) says what to build and why; this doc says how: components, interfaces, rules, algorithms, and what happens when things fail. Tunable values live in config (Appendix A); results and gaps in [V4_RESULTS.md](V4_RESULTS.md).
 
 | For | Read |
 |---|---|
@@ -10,7 +10,7 @@
 | Model equations | [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md) |
 | Results | [V4_RESULTS.md](V4_RESULTS.md) |
 
-**How to read it.** Top down: §1 is the scope; §2 gives the components, interfaces and cross-cutting rules. §3–§12 take one block each, in dependency order (§7, the Toolbox, is the agent's view of §3–§6 and §11). Each has three parts: **contract, rules, failure handling and limits.** §12 is evaluation; §13 is reliability and gaps. "Spec §n" is a section of the spec; a bare "§n" is a section of this doc.
+**How to read it.** Top down: §1 is the scope; §2 gives the components, interfaces and cross-cutting rules. §3–§12 take one block each, in dependency order (§7, the Toolbox, is the agent's view of §3–§6 and §11). Each has three parts: **contract, rules, failure handling and limits.** §12 is evaluation; §13 is reliability. "Spec §n" is a section of the spec; a bare "§n" is a section of this doc.
 
 *Updated 2026-11-03.*
 
@@ -130,7 +130,7 @@ One row per boundary. Each is stated in its section; the full schema is in [V4_I
 
 Tables are always written by code (spec §3). This keeps valuation reruns byte-identical.
 
-**Degrade, don't stop.** A failed LLM step leaves "failed check: reason" and the run continues; only an integrity or valuation failure stops a run (§13.3).
+**Degrade, don't stop.** A failed LLM step leaves "failed check: reason" and the run continues; only an integrity or valuation failure stops a run (§13.1).
 
 **Artifacts, not transcripts.** Steps hand over JSON files (§9.1), never chat history; each LLM call gets a purpose-built view and fetches detail by id.
 
@@ -159,7 +159,7 @@ Code: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisiti
 ### 3.2 Rules
 
 - One filing per form and period; amendments are ignored.
-- Releases are 8-K Item 2.02, every `EX-99.*` exhibit (a release can carry two, as BKNG's did on 2026-08-04).
+- Releases are 8-K Item 2.02, every `EX-99.*` exhibit (a release can carry more than one).
 - A release's period is the last quarter end before it was filed, checked against the 10-Q (releases carry no XBRL period).
 - DEF 14A: the first proxy each year, keyed to the prior fiscal year; later ones are special meetings (spec §1.2).
 - Fetch cache-first; builds run offline.
@@ -169,7 +169,7 @@ Code: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisiti
 - A metric uses one XBRL concept per fiscal year.
 - A year recast by a later filing reads `restated`, logged, not `fail` (spec §1.6).
 - EPS and share counts: direct facts only; Q4 EPS from the release.
-- Sources that block scripts are dropped, never worked around (Stooq, TSA, Google Trends).
+- Sources that block scripts are dropped, never worked around.
 
 ### 3.3 Failure handling and limits
 
@@ -180,9 +180,8 @@ Code: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisiti
 | A release's period disagrees with its 10-Q, or two filings claim one period | Fetch error, flagged |
 | Missing concept or quarter | Blank; logged when the model reads it |
 | Item structure not found | Reported; the filing keeps the Items found |
-| Slide-image releases (ABNB; CART to Q4 2025; BKNG from Q4 2024) | Text from the hidden text layer; no tables |
-| Tiingo free plan | 1,000 requests a day, 500 symbols a month |
-| NYC TLC | ~540 MB per month; aggregated at fetch |
+| Image-only release | Text from the hidden text layer; no tables |
+| Provider rate or size limits | Throttled and cached; large series aggregated at fetch |
 
 ---
 
@@ -205,16 +204,14 @@ Code (`retrieval/`): decomposer, searcher, index (Qwen3-Embedding-0.6B, FTS5), r
 ```text
 query → decompose: one sub-question per company (and filing slot)
       → per sub-question, over child chunks filtered by company, period, form and as-of:
-          BM25 (FTS5) top 40  +  dense (cosine) top 40
-      → RRF fusion, score = Σ 1 / (60 + rank) → top 40 → cross-encoder rerank
+          BM25 (FTS5) top N  +  dense (cosine) top N
+      → RRF fusion, score = Σ 1 / (k_rrf + rank) → top N → cross-encoder rerank
       → each child swapped for its parent, best child first, each parent once
       → round-robin merge → top k
 ```
 
 - **Decomposition is rule-based:** companies come from the arguments, else from the tickers, names and aliases in the query. Each sub-question is rewritten to name only its company.
 - No period = the latest filing of each form at D.
-- One sub-question per company and filing, naming only that company.
-- Keyword and dense search, fused, then reranked.
 - The model sees parent chunks: a whole subsection or table, not a fragment.
 - **Merge:** each sub-question gets ⌈k / n⌉ places (at least 2). In every round the sub-question whose best chunk scored highest goes first; duplicates are dropped.
 
@@ -226,7 +223,7 @@ query → decompose: one sub-question per company (and filing slot)
 | Bad period key | Error |
 | No filing for a slot at that as-of | Fewer chunks, not an error |
 | GPU held by vLLM | Embedder and reranker run on CPU |
-| Size | 8 chunks per call, each up to 1,280 tokens |
+| Size | k chunks per call (default 8), each a bounded parent |
 
 ---
 
@@ -254,7 +251,7 @@ Code: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an 
 - GAAP diluted EPS only.
 - A recast gives earlier periods a new definition version; readers take the newest (spec §1.6).
 - Guidance keeps its basis (level, growth or margin); the forecast converts it.
-- Where a KPI is also an XBRL fact, the filing wins and the gap is logged (spec §1.6). **Not built** (§13.1).
+- Where a KPI is also an XBRL fact, the filing wins and the gap is logged (spec §1.6). Not built yet.
 
 ### 5.3 Failure handling and limits
 
@@ -262,8 +259,8 @@ Code: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an 
 |---|---|
 | Row fails after repair | Exception row; never stored |
 | Release with no valid rows | Its KPIs are missing; the model logs the gap |
-| No numeric guidance (TRIP) | Guidance baseline reads "n/a" |
-| Input size | ≤ 12k tokens per release; long releases send matching chunks first |
+| No numeric guidance | Guidance baseline reads "n/a" |
+| Input size | Capped per release; long releases send matching chunks first |
 
 ---
 
@@ -298,7 +295,7 @@ Code (`research/`): data pack (S1), DSL and graph, templates, history (S3), laye
 
 - One definition (templates + DSL), two evaluators; Python is the source of truth.
 - Condensed statements, shared by all templates.
-- Tax at the trailing rate, bounded 10–30%.
+- Tax at the trailing rate, within configured bounds.
 - Every input cell carries its source and filing date.
 - Missing inputs stay blank, never 0.
 - Non-operating items forecast at 0.
@@ -308,22 +305,21 @@ Code (`research/`): data pack (S1), DSL and graph, templates, history (S3), laye
 
 ```text
 first forecast quarter   Driver(q) = Driver(q-4) × (1 + g), anchored to the guidance midpoint
-later quarters           Driver(q) = last FY × (1 + g) × seasonal share of q (3-year mean)
-fade                     g(t+1) = g(t) × 0.90
+later quarters           Driver(q) = last FY × (1 + g) × seasonal share of q (mean of recent years)
+fade                     g(t+1) = g(t) × fade
 ratios                   same quarter last year + a shift held for 4 quarters, then 0;
-                         bounded to the 8-quarter range ± a band (take rate 50 bps, margins 200 bps)
+                         bounded to the 8-quarter range ± a band per ratio
 ```
 
 - Forecast per driver, never per total (spec §3.2).
 - A ratio's shift holds until lapped, then 0; a one-off change is not compounded.
-- Ratios stay within the 8-quarter range ± a band.
 - Each guide anchors its own driver, upstream first (bookings → revenue → EBITDA); later anchors see earlier ones.
-- Anchor at the midpoint, not the high end (signed off before the backtest, spec §7).
+- Anchor at the guidance midpoint (spec §7).
 - An anchor the bounds stop is logged, never forced.
 - Scenarios move each driver by ±1σ of its history.
 - Outside data (BTS, NYC TLC, FRED) nudges one starting growth rate per company, weighted by fit; guidance overrides it (spec §3.2).
 
-**Proposer (S4).** Off by default: it did not beat the defaults in the backtest (spec §7). When on:
+**Proposer (S4).** Switched in `research.yaml` (off by default). When on:
 - **Input:** a driver table (no data pack). Each proposable driver has its last 8 quarters, default and bounds; anchored drivers are listed as fixed.
 - **Proposable:** growth starts (`.g0`), ratio shifts (`.shift0`) and `fade`, never one a guide anchors (the anchor runs after and would undo it).
 - **Bounds:** each driver's bounds derive from its recent history; the fade's are in `research.yaml` (Appendix A).
@@ -337,11 +333,11 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 | Market cap | Last close before D × latest diluted shares |
 | EV | Market cap + debt − cash and short-term investments (leases, stakes, customer funds excluded and logged) |
 | Peers | Same-sector companies, default assumptions, same as-of |
-| Multiple PT | Peer-median 2027E EV/EBITDA × our 2027E adj. EBITDA → per share; bear/bull ∓/± 15%; a target outside the peer range is flagged |
-| DCF | Unlevered FCF = adj. EBITDA − SBC − tax − capex; 10 years, faded; Gordon terminal at 3.0% |
-| Cost of capital | Ke = DGS10 + β × ERP; β from monthly returns vs SPY since 2023; WACC = Ke when debt is under 10% of capital |
-| Price target | 0.6 × multiple + 0.4 × DCF per scenario, weighted 25/50/25; no roll-forward |
-| Rating | Buy ≥ +15%, Sell ≤ −10%, else Hold; relative ranking only with `--all` |
+| Multiple PT | Peer-median target-year EV/EBITDA × our target-year adj. EBITDA → per share; bear/bull ∓/± a set step; a target outside the peer range is flagged |
+| DCF | Unlevered FCF = adj. EBITDA − SBC − tax − capex; modeled years, then faded to the DCF horizon; Gordon terminal |
+| Cost of capital | Ke = DGS10 + β × ERP; β from monthly returns vs SPY; WACC = Ke when debt is under a set share of capital |
+| Price target | Weighted multiple and DCF targets per scenario, then scenario-weighted; no roll-forward |
+| Rating | Return vs the Buy and Sell thresholds, else Hold; relative ranking only with `--all` |
 | Determinism | Identical inputs → byte-identical `valuation.json` (layer 4) |
 
 **Layer-2 checks.** Run after S3 and S5; the valuation checks after S7. Any FAIL stops the run.
@@ -366,8 +362,8 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 | Volume KPI not disclosed | Template falls back one level up, logged |
 | Anchor out of bounds | Logged, not forced |
 | Fewer than 3 years for seasonal shares | Fewer years, logged |
-| DCF value ≤ 0 | Left out of the PT, logged (TRIP) |
-| Fewer than 24 monthly returns (CART's early as-ofs) | β = 1, logged |
+| DCF value ≤ 0 | Left out of the PT, logged |
+| Too few monthly returns | β = 1, logged |
 | Proposer fails | Defaults |
 | Outside series too short or wrong-signed | Not used; logged |
 | Scope | Horizon 2027Q4 (DCF years beyond); condensed statements; no deferred bookings; three peers per sector |
@@ -399,15 +395,13 @@ A tool is a function the agent calls with JSON arguments; it returns JSON with c
 | reports | `research_report` | ✓ | ✓ |
 | model | `model_view`, `run_scenario`, `compare_peers`, `variance_review` | | ✓ |
 
-V3's sets `text` and `full` remain for the V3 corpus.
-
 ### 7.2 Catalog
 
 Every tool shares the same handling:
 
 - **Company:** a ticker or name, resolved against the corpus.
 - **Periods:** the periods asked for, else the latest eight, in order (FY after Q4).
-- **Caps:** at most 40 rows, the latest kept, with `"omitted": n`.
+- **Caps:** a row cap (Appendix A), the latest kept, with `"omitted": n`.
 - **Values:** ratios shown in percent.
 - **Arguments:** object and array arguments written as JSON strings are parsed.
 
@@ -463,7 +457,7 @@ Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model
 | | |
 |---|---|
 | **Consumes** | `filings` |
-| **Computes** | The company's filings (optionally one form), by filing date; the latest 40 |
+| **Computes** | The company's filings (optionally one form), by filing date; the latest, up to the row cap |
 | **Returns** | Accession (the id), form, period, period end, filing date; total count |
 
 #### market · `market_data`
@@ -535,7 +529,7 @@ Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model
 - Every value in a result carries an id that resolves (§10.1), so the claim check can verify what the model cites.
 - Errors are results: `{"error": …}` plus the valid choices.
 - Tools come in groups; no run gets every tool.
-- Results are capped at 40 rows and 16,000 characters.
+- Results are capped in rows and characters (§7.2, Appendix A).
 - Ask cites estimates only through `research_report`; Research computes only through model tools, assumptions listed (spec §2).
 - `run_scenario` writes a session-only `scratch-n` run, clipped to the proposer's bounds (§6.2). Only Report creates versions.
 - Model tools read the model book: each company's base forecast with default assumptions (proposer off, no LLM), built once per ticker and as-of. Peers come from the same book.
@@ -567,13 +561,15 @@ Code: the loop (`agent/loop.py`, LangGraph), prompts (`prompts/*.md`), sub-agent
 
 | Call | Tools | Budget |
 |---|---|---|
-| Ask / Research answer | `ask` / `research` | 20 calls, 20k context |
+| Ask / Research answer | `ask` / `research` | Calls and context |
 | KPI extraction | – | 1 call + 1 repair per release |
-| S2 events | `ask` | 8 calls, 16k |
-| S4 proposer | `ask` | 10 calls, 16k |
-| S9 debate, per driver | `ask` | 8 calls, 16k |
-| S10 prose slot | – | 1.5k tokens out, 1 repair |
-| Judge (evaluation) | – | gpt-oss-20b, a second pass |
+| S2 events | `ask` | Calls and context |
+| S4 proposer | `ask` | Calls and context |
+| S9 debate, per driver | `ask` | Calls and context |
+| S10 prose slot | – | Output tokens, 1 repair |
+| Judge (evaluation) | – | Another model family, a second pass |
+
+Budget values: Appendix A.
 
 ### 8.2 Rules
 
@@ -600,7 +596,7 @@ question → model → tool calls → tools → model → … → JSON answer �
 | Sub-agent returns nothing usable | Its Report step degrades (§9.3) |
 | vLLM unreachable | The call raises; a report resumes with `--resume` |
 | Determinism | Temperature 0 |
-| Judge | Can't share the GPU with the 27B model, so it runs afterwards |
+| Judge | Runs as a second pass (§13.2) |
 
 ---
 
@@ -633,13 +629,11 @@ Every artifact is a JSON file in the report folder. `report.json` records the ve
 ### 9.2 Rules
 
 - Fixed steps; LLM calls are leaf tasks; no Ask or Research runs (spec §2.3).
-- Parent = the latest version with an earlier as-of; none → "initial draft (no prior run)".
-- Revisions cover revenue, adj. EBITDA and EPS (next quarter, last two FY columns).
 - `--resume` reuses saved LLM outputs; code steps always rerun.
 - `--no-llm` skips every LLM step.
 - Sections 1 and 10 are written last (spec §2.3).
 - Section 7 has a sensitivity row for every debated driver.
-- Each LLM step has a budget; a run over 30 minutes logs a warning.
+- Each LLM step has a budget; a run over the time budget logs a warning.
 
 **Step algorithms:**
 
@@ -647,7 +641,7 @@ Every artifact is a JSON file in the report folder. `report.json` records the ve
 |---|---|
 | **S2 events** | One bounded agent (tool set `ask`, `events.md`) is asked what changed for the ticker in the quarter. Each event (type, summary, evidence ids) is kept only if one evidence id resolves at D. An unparseable reply means no events |
 | **S4 propose** | §6.2 Proposer |
-| **S8 revise** | Parent = the latest saved version before D. Headline lines, old (parent's `v<n>` id) vs new (`base` id); each typed by whether one of the parent's forecast quarters is now reported |
+| **S8 revise** | Parent = the latest saved version before D; none → "initial draft (no prior run)". Headline lines, old (parent's `v<n>` id) vs new (`base` id); each typed by whether one of the parent's forecast quarters is now reported |
 | **S9 debates** | One agent per scenario driver in the template (tool set `ask`, `debates.md`), told the driver's value. Kept only if one evidence id resolves; the resolved values become note facts |
 | **S9 → section 7** | Sensitivities: the base model rebuilt with one driver moved one step, for the key drivers (take rate, growth, cost share) and every debated driver; each valued as a scratch run, giving the adj. EBITDA and PT change with ids |
 | **S10 facts** | Code builds the sections. Every figure is registered once as an `F-n` fact (label, value, unit, source id) and formatted once by code |
@@ -674,9 +668,9 @@ A failure becomes an `error` exception. The takeaways get one repair; other sect
 | LLM step fails or hits its budget | Section reads "failed check: reason"; exception row; the run finishes |
 | Untraced number after repair | Sentence dropped, logged (§10.2) |
 | Consistency failure | Exception row; takeaways repaired once |
-| Over 30 minutes | Warning exception |
+| Over the time budget | Warning exception |
 | LibreOffice or Chrome missing | Export fails; no version saved |
-| Runtime | One ticker per run; pin to the E-cores |
+| Runtime | One ticker per run |
 
 ---
 
@@ -716,9 +710,8 @@ Code: id grammar and resolver (`research/refs.py`), claim check (`generation/ver
 - **Wrong company:** a value found only in another company's chunks is unverified.
 
 **Note trace:**
-- **A figure traces** when it equals a fact of its slot, in the fact's unit, within half a unit of its last written digit (`$9.7B` matches 9,712 USD millions). Dates, periods, ids and section numbers are not figures.
+- **A figure traces** when it equals a fact of its slot, in the fact's unit, within half a unit of its last written digit (`$9.7B` matches 9,712 USD millions). Dates, periods, ids and section numbers are not figures; every other number must be a marked fact of its own section.
 - Code-written tables must appear verbatim.
-- Every number in prose is a marked fact **of its own section** or an allowed token (dates, "Q2", "10-K").
 - No "pending" or "TBD"; gaps read "n/a: …" or "failed check: …"; estimates carry "E".
 - One repair turn; a sentence still untraced is dropped and logged (spec §2.3).
 - Every gap, conflict or failed check becomes an `X-n` row.
@@ -731,7 +724,7 @@ Code: id grammar and resolver (`research/refs.py`), claim check (`generation/ver
 | Value doesn't match | Unverified, with the reason |
 | Untraced number in prose | One repair; then dropped, `error` logged |
 | `model:` ids | Need the session's model book, or the saved version's files |
-| `ixbrl:`, `E-`, `X-` ids | Parse only, not resolved (§13.1) |
+| `ixbrl:`, `E-`, `X-` ids | Parse only, not resolved |
 
 ---
 
@@ -762,9 +755,9 @@ Code: workbook and parity (`research/export/workbook.py`), other tabs and PDF (`
 
 | Case | Handling |
 |---|---|
-| Parity mismatch | Recorded in `report.json`; **the run does not stop** (§13.1) |
+| Parity mismatch | Recorded in `report.json`; **the run does not stop** |
 | LibreOffice or Chrome missing | Export raises; no version saved |
-| Approving an unknown version | Nothing happens, no error (§13.1) |
+| Approving an unknown version | Nothing happens, no error |
 | Parity time | Up to 300 s |
 
 ---
@@ -812,85 +805,15 @@ Code: extraction scorer, backtest, note eval (`evaluation/`); Ask and Research r
 | Judge skips a criterion | Missing from the mean |
 | Sample | 48 forecasts per metric |
 | Held-out quarters | None: the LLM's training cutoff is unpublished |
-| Human review | Partial (§13.1) |
+| Human review | Partial |
 
 ---
 
-## 13. Reliability and gaps
+## 13. Reliability
 
-### 13.1 Not built
+Gaps against the spec and known problems: [V4_RESULTS.md](V4_RESULTS.md#gaps-against-the-spec).
 
-**Report and note**
-
-| Spec asks | Today |
-|---|---|
-| Bounded research runs for sections 2.3, 4.2, 6, 7, 8 (spec §2.3 req. 2) | 2.3 and 6 are single LLM calls without tools; 4.2, 7 and 8 have no LLM text. Only debates use tools |
-| Debates with the Research toolset (spec §2.3 req. 2) | Debates use `ask`: they can't run a scenario |
-| `initiation` report type (spec §2) | `update` only |
-| No-parent flag "initial draft (no prior run)" | Reads "(no prior version)" |
-| Section 10 repaired on a failed consistency check (req. 6) | Section 10 is code-written; only the takeaways are repaired |
-| Section 3.1 driver table | Not built; section 3 has the debates only |
-| Section 7: model driver and evidence columns; unquantified risks | Risk, EBITDA change and PT impact for scenario drivers only |
-| Consensus column ("n/a") and a "no consensus" exception | Absent |
-| Secondary multiples in section 6 (spec §3.3) | Computed in `valuation.json`; not shown |
-| Outside data shown as directional checks (spec §3.2) | Used only as forecast inputs |
-
-**Forecast and valuation**
-
-| Spec asks | Today |
-|---|---|
-| Variance flag: > 2% (revenue, bookings) or > 5% (EBITDA) from the guide midpoint needs a reason (spec §3.2) | Unused; no Flag column in 2.2 |
-| Later quarters by seasonal share only (spec §3.2) | A full-year-only guide anchors the FY column (ABNB) |
-| DCF with 3 modeled years, then 7 faded (spec §3.3) | Quarters end at 2027Q4; 2028 on is faded |
-| Relative rating: top 3 Buy, middle 2 Hold, bottom 3 Sell (spec §3.3) | Thirds: 2 / 4 / 2 |
-| Release vs filing gap logged ("filing wins", spec §1.6) | No comparison of release KPIs with XBRL |
-| Exception when a non-operating item exceeds 10% of NI (design) | Forecast 0 only |
-
-**Workbook and log**
-
-| Spec asks | Today |
-|---|---|
-| Summary tab: old vs new, $ and % change, source | Valuation headline; old vs new is on Revisions |
-| Assumptions tab: basis, confidence, variables affected, last updated | Name and value only |
-| Scenarios tab: weights, weighted value, sensitivities | Values only |
-| Bridge and rating on the Valuation tab | On Summary |
-| Model (prior) tab with live formulas | The parent's values |
-| Revision type and source of change as separate columns; every line | One `type` column; three lines |
-| Evidence fields: period, filing date, location, retrieval date, type, cell | Id, kind, label, value, source |
-| Exception fields: treatment, status | Id, severity, item |
-| Open exceptions carried from the parent version (design) | Not built |
-| Thin peer set exception, fewer than 4 peers (spec X-04) | Not logged |
-
-**Checks and evaluation**
-
-| Asked | Today |
-|---|---|
-| `ixbrl:`, `E-`, `X-` ids resolved by the claim check (§10.1) | Parse only |
-| Parity mismatch as a layer-2 FAIL (§11.2) | Recorded; the run continues |
-| `tenk research approve` errors on an unknown version (§11.3) | Silently matches nothing |
-| Held-out quarters reported separately (spec §6) | Not reported: the LLM's cutoff is unpublished |
-| Human review of the rubric sample and the Ask and Research gold | Not done |
-
-Working list with effort estimates: [tmp_inconsistencies.md](tmp_inconsistencies.md).
-
-### 13.2 Known problems
-
-| Problem | Handling |
-|---|---|
-| **LLM memory leaking into the backtest** | The LLM never outputs forecast numbers; the no-tools baseline (56% MAPE) shows no memorized actuals |
-| **Data that changes after the fact** (restatements, recast segments, revisions) | Dated rows, `.latest()`, definition versions, ALFRED vintages, `restated` checks |
-| **Structural breaks** (UBER's 2026 UK agent change) | Enters as the last y/y change and holds four quarters, lifting UBER's 2027E margin |
-| **Non-operating swings** | Forecast 0; history shows reported EPS |
-| **Instacart starts at Q3 2023** | Seasonal shares from fewer years, logged |
-| **Thin peer sets** (3 per sector) | The sector median drives ratings; stated in V4_RESULTS |
-| **Negative DCF** (TRIP) | Left out; the PT rests on the multiple |
-| **Release time vs filing date** | Uses the filing date; backtest as-of = the day after acceptance |
-| **Crash-prone CPU, shared GPU** | `--resume`, E-core pinning, CPU embedder |
-| **Determinism with an LLM** | Valuation is code; temperature 0; `--resume` replays LLM steps |
-| **Licensing** | Tiingo internal use only; Stooq, TSA, Google Trends dropped |
-| **Filing-text recall is unmeasured** | A missed acquisition or regulatory event is silent ([V4_AGENT.md](stages/V4_AGENT.md#filing-text-what-reaches-the-note)) |
-
-### 13.3 Error policy
+### 13.1 Error policy
 
 - **Tools never raise.** A bad call returns `{"error": …}` for the model to read, so one bad argument doesn't end a run.
 - **Report code steps stop the run** on a failed integrity or valuation check.
@@ -899,16 +822,14 @@ Working list with effort estimates: [tmp_inconsistencies.md](tmp_inconsistencies
 
 Per-block cases: §3.3, §4.3, §5.3, §6.3, §7.4, §8.3, §9.3, §10.3, §11.3, §12.3.
 
-### 13.4 System limits
+### 13.2 System limits
 
 | Limit | Value |
 |---|---|
 | LLM context | 32k tokens (Qwen3.6-27B-FP8 on vLLM) |
-| GPU | One 46 GB L40S, shared by vLLM and the embedder; the judge runs as a second pass |
-| CPU | Python crashes on the P-cores: heavy runs under `taskset -c 16-31` |
-| SEC | One request per 0.12 s (SEC allows 10/s) |
-| Licences | Tiingo is internal use only: market values never leave `data/` |
-| Report time | Under 30 minutes per company |
+| GPU | One, shared by vLLM and the embedder; the judge runs as a second pass |
+| Licences | Market values never leave `data/` |
+| Report time | Budgeted per run (Appendix A) |
 | Coverage | December fiscal years; filings from 2023-01-01; CART from Q3 2023 |
 
 ---
@@ -924,11 +845,12 @@ Per-block cases: §3.3, §4.3, §5.3, §6.3, §7.4, §8.3, §9.3, §10.3, §11.3
 | `research/model/templates/*.yaml` | Model templates | With the code |
 
 **Key defaults:**
-- **Agent:** 20 calls, 20k context, 16,000-character tool results.
+- **Agent:** 20 calls, 20k context; tool results 40 rows, 16,000 characters.
+- **Sub-agents:** S2 events 8 calls, S4 proposer 10, S9 debates 8, each 16k context; S10 slot 1.5k tokens out. Extraction input ≤ 12k tokens per release. Report time budget 30 minutes.
 - **Retrieval:** 40 candidates per search, RRF k = 60, 8 chunks.
-- **Forecast:** horizon 2027Q4; fade 0.9 (bounds 0.75–1.0); guidance midpoint; ratio bands 50 bps (take rate) and 200 bps (margins); tax 10–30%; outside inputs on (weight 0.5, at least 6 quarters).
+- **Forecast:** horizon 2027Q4; fade 0.9 (bounds 0.75–1.0); guidance midpoint; seasonal shares over 3 years; ratio bands 50 bps (take rate) and 200 bps (margins); tax 10–30%; outside inputs on (weight 0.5, at least 6 quarters).
 - **Scenarios:** weights 25/50/25; shocks ±1σ.
-- **Valuation:** 60/40 multiple/DCF; target year 2027; scenario multiples ±15%; terminal growth 3% (grid 2.5–3.5%); 10 DCF years; debt-weight threshold 10%; Buy +15%, Sell −10%.
+- **Valuation:** 60/40 multiple/DCF; target year 2027; scenario multiples ±15%; terminal growth 3% (grid 2.5–3.5%); 10 DCF years; β from monthly returns since 2023; debt-weight threshold 10%; Buy +15%, Sell −10%.
 
 **Credentials.** Each user types in their own with `tenk setup` (`credentials.yaml`, gitignored). Environment variables take precedence. A missing one stops the command with an error naming it. `data/` and `output/` are never committed.
 
