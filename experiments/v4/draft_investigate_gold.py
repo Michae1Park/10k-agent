@@ -72,8 +72,9 @@ def ratio(t: str, top: str, bottom: str, period: str, label: str) -> dict:
 
 
 def mid(row: dict, company: str) -> dict:
+    """The midpoint; the scorer also accepts the range itself (both ends)."""
     return derived(f"guidance midpoint {row['id']}", (row["low"] + row["high"]) / 2, row["unit"],
-                   company, [row["id"]])
+                   company, [row["id"]]) | {"low": row["low"], "high": row["high"]}
 
 
 def ref(t: str, run: str, key: str) -> str:
@@ -157,7 +158,8 @@ add("bkng-expe-q3-guide-vs-model", "reported_vs_model", ["BKNG", "EXPE"],
          mid(guide("EXPE", "guide:EXPE:gross_bookings:2026Q3"), "EXPE")),
      research(ref("BKNG", "base", "gross_bookings.2026Q3"),
               ref("EXPE", "base", "gross_bookings.2026Q3"))],
-    points=["States Booking's guide as growth and Expedia's as a level, and compares like with like",
+    points=["States Booking's guide as growth and Expedia's as a level, and compares like "
+            "with like",
             "Gives each forecast vs its guide"],
     gaps=["Booking guides growth, Expedia a dollar range: one must be converted"])
 
@@ -186,8 +188,10 @@ add("travel-take-rate-premium", "sector", ["BKNG", "EXPE", "ABNB", "TRIP"],
 add("mobility-cheapest-growth", "sector", ["UBER", "LYFT", "DASH", "CART"],
     "Which mobility and delivery company is cheapest on 2027E EV / adjusted EBITDA, and how fast "
     "did its revenue grow in Q2 2026?",
-    [research(*(ref(t, "val-base", "ev_to_ebitda") for t in ("UBER", "LYFT", "DASH", "CART"))),
-     ask(*(growth(t, "revenue") for t in ("UBER", "LYFT", "DASH", "CART")))],
+    [research(*(ref(t, "val-base", "ev_to_ebitda") for t in ("UBER", "LYFT", "DASH", "CART")))
+     | {"any": True},
+     ask(*(growth(t, "revenue") for t in ("UBER", "LYFT", "DASH", "CART")))
+     | {"pick": "cheapest"}],
     points=["Names the cheapest company", "Gives that company's Q2 2026 y/y revenue growth"],
     notes="The second part depends on the first: score only the cheapest company's growth "
           "(all four are listed here so the scorer can pick it)")

@@ -64,6 +64,40 @@ def main() -> None:
         return report(out, [score(r, questions[r["id"]], args.alternative) for r in rows],
                       "scores-alternative.json" if args.alternative else "scores.json")
 
+    agent = agent_factory(config)
+    lock = threading.Lock()
+
+    done = json.loads((out / "results.json").read_text()) if args.resume and (
+        out / "results.json").exists() else []
+    finished = {r["id"] for r in done}
+    todo = [q for q in questions.values() if (not args.question or q["id"] in args.question)
+            and q["id"] not in finished]
+    print(f"{len(todo)} questions ({len(finished)} kept)")
+
+    def answer(q: dict) -> None:
+        try:
+            run = agent(q["as_of"]).run(q["question"])
+        except Exception as e:  # --resume retries it
+            print(f"{q['id']:<40} FAILED {type(e).__name__}: {e}"[:300])
+            return
+        row = {"id": q["id"], "category": q["category"], "question": q["question"],
+               **run.answer, "reply": run.reply, "stop": run.stop, "seconds": run.seconds,
+               "calls": len(run.tool_calls), "steps": [asdict(s) for s in run.steps]}
+        row = score(row, q)
+        with lock:
+            done.append(row)
+            (out / "results.json").write_text(json.dumps(done, indent=1, ensure_ascii=False))
+        print(f"{q['id']:<40} {'pass' if row['pass'] else 'FAIL':<4} ref {row['model_ref']!s:<5} "
+              f"assumptions {row['assumptions_ok']!s:<5} {row['calls']:>2} calls "
+              f"{row['seconds']:.0f}s")
+
+    with ThreadPoolExecutor(args.workers) as pool:
+        list(pool.map(answer, todo))
+    report(out, done)
+
+
+def agent_factory(config: dict):
+    """A function as_of -> a fresh Research agent (shared with investigate_run.py)."""
     db = ROOT / config["run"]["db"]
     retrieval = yaml.safe_load((ROOT / config["retrieval"]).read_text())["retrieval"]
     base = SubQuestionRetriever.from_settings(Store(db), retrieval | {"device": "cpu"})
@@ -98,33 +132,7 @@ def main() -> None:
                      result_chars=agent_config["result_chars"],
                      max_context=agent_config["max_context"])
 
-    done = json.loads((out / "results.json").read_text()) if args.resume and (
-        out / "results.json").exists() else []
-    finished = {r["id"] for r in done}
-    todo = [q for q in questions.values() if (not args.question or q["id"] in args.question)
-            and q["id"] not in finished]
-    print(f"{len(todo)} questions ({len(finished)} kept)")
-
-    def answer(q: dict) -> None:
-        try:
-            run = agent(q["as_of"]).run(q["question"])
-        except Exception as e:  # --resume retries it
-            print(f"{q['id']:<40} FAILED {type(e).__name__}: {e}"[:300])
-            return
-        row = {"id": q["id"], "category": q["category"], "question": q["question"],
-               **run.answer, "reply": run.reply, "stop": run.stop, "seconds": run.seconds,
-               "calls": len(run.tool_calls), "steps": [asdict(s) for s in run.steps]}
-        row = score(row, q)
-        with lock:
-            done.append(row)
-            (out / "results.json").write_text(json.dumps(done, indent=1, ensure_ascii=False))
-        print(f"{q['id']:<40} {'pass' if row['pass'] else 'FAIL':<4} ref {row['model_ref']!s:<5} "
-              f"assumptions {row['assumptions_ok']!s:<5} {row['calls']:>2} calls "
-              f"{row['seconds']:.0f}s")
-
-    with ThreadPoolExecutor(args.workers) as pool:
-        list(pool.map(answer, todo))
-    report(out, done)
+    return agent
 
 
 def score(row: dict, q: dict, alternative: bool = False) -> dict:
