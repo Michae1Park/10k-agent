@@ -333,7 +333,7 @@ model_view(company, lines?: [str], periods?: [period])
 ```text
 run_scenario(company, overrides?: {assumption: value}, deltas?: {assumption: delta})    # at least one
 → {company, version: "scratch-<n>", changes: {assumption: value}, clipped_to_bounds: {assumption: [lo, hi]},
-   rows: [{line, period, base, scenario, id, base_id}],
+   overrode_anchor: [assumption], rows: [{line, period, base, scenario, id, base_id}],
    price_target: {base, scenario, id, base_id}, rating: {base, scenario}}
 error: unknown driver or no change → {error, drivers: [str]}
 ```
@@ -344,6 +344,7 @@ error: unknown driver or no change → {error, drivers: [str]}
 | `deltas` | Added to the driver's base value (see it with `model_view`) |
 | Values | Fractions ([§7 Assumptions](#assumptions)): a take rate 50 bps lower is a delta of `-0.005` |
 | Allowed drivers | Every `.g0` and `.shift0` with history, and `fade`. A driver anchored to guidance may be changed too: the scenario replaces the anchor |
+| `overrode_anchor` | The changed drivers that a guidance anchor had solved: the scenario departs from guidance, and an answer should say so. Empty otherwise |
 | `changes` | The final value of each changed driver, after clipping |
 | `clipped_to_bounds` | Each driver that was clipped, with its `[lo, hi]` |
 | `rows` | `revenue`, `adj_ebitda`, `eps_diluted`, `free_cash_flow` for the last two FY columns, base vs scenario |
@@ -354,6 +355,7 @@ In the example, the base `take_rate_mobility.shift0` is `-0.0527` (the mobility 
 {"call": {"company": "UBER", "deltas": {"take_rate_mobility.shift0": 0.005}},
  "result": {"company": "UBER", "version": "scratch-1",
             "changes": {"take_rate_mobility.shift0": -0.0477}, "clipped_to_bounds": {},
+            "overrode_anchor": [],
             "rows": [{"line": "revenue", "period": "FY2027", "base": 63587.5395, "scenario": 63906.8998,
                       "id": "model:UBER:2026-08-06:scratch-1:revenue.FY2027",
                       "base_id": "model:UBER:2026-08-06:base:revenue.FY2027"}],
@@ -367,7 +369,7 @@ In the example, the base `take_rate_mobility.shift0` is `-0.0527` (the mobility 
 
 ```text
 compare_peers(metric: str, companies?: [str], period?: period = FY2027)
-→ {metric, period: period | null, rows: [{company, value, unit, id, assumptions: [{driver, value, source: default | guidance}]}]}
+→ {metric, period: period | null, rows: [{company, value, unit, id, assumptions: [{driver, value, source: "default" | "guidance <guide id>"}]}]}
 error: unknown metric → {error, model_lines: [str], valuation: [str]} · unknown company → {error}
 ```
 
@@ -380,12 +382,12 @@ error: unknown metric → {error, model_lines: [str], valuation: [str]} · unkno
 | `price_target` | Scenario-weighted price target | `USD` | ignored |
 | `return` | Price target / price − 1 | `percent` | ignored |
 | `rating` | `Buy`, `Hold` or `Sell` (sorted last) | `""` | ignored |
-| `ev`, `market_cap` | Amount in USD millions | `""` | ignored |
+| `ev`, `market_cap` | Enterprise value, market cap | `USD millions` | ignored |
 | Any model line: `revenue`, `adj_ebitda`, `adj_ebitda_margin`, `eps_diluted`, `free_cash_flow`, `take_rate`, … | The line in `period` | The line's unit (ratios in percent) | Default `FY2027` |
 
 - **Companies:** default all eight. Each value comes from that company's base model at the same as-of.
 - **Rows:** sorted ascending by value; non-numbers last.
-- **`assumptions`:** up to four `.g0` and `.shift0` drivers behind that company's model, as fractions. `guidance` means an anchor solved it. Templates differ, so driver names differ between companies (`volume_g.g0` for LYFT's `orders` template, `gb_g_mobility.g0` for UBER's `segments`).
+- **`assumptions`:** up to four `.g0` and `.shift0` drivers behind that company's model, as fractions. `guidance <guide id>` means that guide's anchor solved it (as in `model_view`). Templates differ, so driver names differ between companies (`volume_g.g0` for LYFT's `orders` template, `gb_g_mobility.g0` for UBER's `segments`).
 
 ```json
 {"call": {"metric": "ev_to_ebitda", "companies": ["UBER", "LYFT"]},
