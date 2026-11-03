@@ -1,4 +1,4 @@
-"""Structured facts from XBRL (V4 design doc §4.3), two sources into one `facts` table.
+"""Structured facts from XBRL (V4 design doc §3.3), two sources into one `facts` table.
 
   company facts  SEC's companyfacts JSON: us-gaap, dei, srt facts, consolidated only, each
                  with the filing it came from and that filing's date

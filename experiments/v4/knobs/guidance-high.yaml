@@ -1,4 +1,4 @@
-# Research knobs (V4 design doc §8, D-019): pinned per experiment, none hard-coded.
+# Research knobs (V4 design doc §6, D-019): pinned per experiment, none hard-coded.
 # research/forecast.py (V4.4), research/valuation.py (V4.5) and the report pipeline read it.
 
 forecast:

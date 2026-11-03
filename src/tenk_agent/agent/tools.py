@@ -5,7 +5,7 @@
   xbrl_facts       SEC XBRL company facts for one concept and 10-K            (tool set "full")
   edgar_filings    live EDGAR filing metadata: which filings exist, when      (tool set "full")
 
-V4 tool set "ask" (design doc §3), every result as of the store's AsOf:
+V4 tool set "ask" (design doc §7), every result as of the store's AsOf:
   financials       derived quarters and full years of a core line (facts/quarters.py)
   company_kpis     release KPIs (facts/extract.py), with their source chunks
   guidance         release guidance, with the actual where the target period has reported
@@ -25,7 +25,7 @@ V4 tool set "research" (§5.2) adds the model group, over the session's model bo
 Tools never raise: a bad call returns {"error": ...} for the model to read and recover from.
 The tool set ("text" or "full") is the V3 ablation (experiments/V3_AGENT.md).
 
-V4 (design doc §3): tools come in groups, and a tool set is a list of groups, so no single
+V4 (design doc §7): tools come in groups, and a tool set is a list of groups, so no single
 context gets every tool. A Toolbox sees what its store's AsOf sees; no tool takes an as-of.
 """
 

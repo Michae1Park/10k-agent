@@ -1,6 +1,6 @@
 # V4 · Data layer
 
-How filings, facts and market data are fetched and stored. Rules live in the [design doc §4](../V4_TECHNICAL_DESIGN_DOC.md#4-data-layer); if this doc disagrees, the design doc wins.
+How filings, facts and market data are fetched and stored. Rules live in the [design doc §3](../V4_TECHNICAL_DESIGN_DOC.md#3-data-layer); if this doc disagrees, the design doc wins.
 
 ## The build
 

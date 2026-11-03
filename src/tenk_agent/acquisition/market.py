@@ -1,4 +1,4 @@
-"""V4 market and macro data (design doc §4.3), each value with the date it became public.
+"""V4 market and macro data (design doc §3.3), each value with the date it became public.
 
   prices  Tiingo daily end-of-day per ticker and SPY (beta): close, split-adjusted close,
           volume. Public the evening of the trading day, so as-of D sees D-1's close.

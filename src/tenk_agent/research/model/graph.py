@@ -1,4 +1,4 @@
-"""The model graph (V4 design doc §8.3): lines × periods from a template, evaluated in Python.
+"""The model graph (V4 design doc §6.3): lines × periods from a template, evaluated in Python.
 
 A template (templates/*.yaml) lists lines; each is
   input       a reported series from the data pack (blue, with its source id)

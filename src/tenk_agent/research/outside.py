@@ -1,4 +1,4 @@
-"""Outside data as forecast inputs (V4 design doc §8.3; spec §3.2 "Outside inputs").
+"""Outside data as forecast inputs (V4 design doc §6.3; spec §3.2 "Outside inputs").
 
 research.yaml `forecast.outside` maps one starting growth rate (`<line>.g0`) per company to a
 monthly outside series (NYC TLC trips, BTS airline passengers, FRED restaurant sales or CPI).

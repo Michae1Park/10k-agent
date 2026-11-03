@@ -1,4 +1,4 @@
-"""S7 valuation (V4 design doc §8.3): market value, multiples, DCF, price target and rating.
+"""S7 valuation (V4 design doc §6.3): market value, multiples, DCF, price target and rating.
 
   taskset -c 16-31 uv run python -m tenk_agent.research.valuation UBER BKNG 2026-09-01 [--all]
 

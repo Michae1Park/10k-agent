@@ -1,6 +1,6 @@
 # V4 · Retrieval
 
-How `search_filings` finds passages. The search itself is V1's ([V1_RETRIEVAL.md](V1_RETRIEVAL.md)); V4 adds filtering by period, form and as-of date. Rules live in the [design doc §5](../V4_TECHNICAL_DESIGN_DOC.md#5-retrieval).
+How `search_filings` finds passages. The search itself is V1's ([V1_RETRIEVAL.md](V1_RETRIEVAL.md)); V4 adds filtering by period, form and as-of date. Rules live in the [design doc §4](../V4_TECHNICAL_DESIGN_DOC.md#4-retrieval).
 
 <p align="center">
   <img src="../img/v4-search.svg" alt="search_filings in V4: slots resolved from arguments or query, one sub-question per company and filing, keyword and dense search under the as-of filter, fusion, parents, rerank, round-robin merge" width="100%">

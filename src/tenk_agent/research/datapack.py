@@ -1,4 +1,4 @@
-"""S1 data pack (V4 design doc §8): a company's reported history as of a date, with sources.
+"""S1 data pack (V4 design doc §6): a company's reported history as of a date, with sources.
 
 Each series is keyed as the model's templates name a source: `q:<metric>` for a core line from
 XBRL (facts/quarters.py; quarters and fiscal years) and `kpi:<metric>[.<segment>]` for a release

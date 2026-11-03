@@ -1,4 +1,4 @@
-"""V4 acquisition (design doc §4.3): every 10-K, 10-Q, earnings release and proxy in the window.
+"""V4 acquisition (design doc §3.3): every 10-K, 10-Q, earnings release and proxy in the window.
 
   10-K, 10-Q   one original per period (amendments ignored); fiscal year and period from the
                company-facts rows tagged with the filing's accession (as V3's D-004)

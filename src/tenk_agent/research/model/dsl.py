@@ -1,10 +1,10 @@
-"""The model's formula language (V4 design doc §8.3): one expression, two evaluators.
+"""The model's formula language (V4 design doc §6.3): one expression, two evaluators.
 
   gross_bookings * take_rate          arithmetic over lines of the same period
   trips[-4] * (1 + trips_g)           a line k quarters back (an Excel cell k quarter columns left)
   fy(revenue)                         the fiscal year's four quarters summed (FY columns)
   fyp(revenue)                        the previous fiscal year's four quarters summed (a quarter
-                                      column: the seasonal-share forecast, design doc §8.3)
+                                      column: the seasonal-share forecast, design doc §6.3)
   min(a, b) · max(a, b) · if_(c, a, b)
   first(a, b)                         a, or b where a can't be computed (an input missing, a zero
                                       divisor); Excel: IFERROR(IF(COUNT(a's cells)=n, a, b), b)

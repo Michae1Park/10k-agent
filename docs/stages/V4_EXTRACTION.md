@@ -1,6 +1,6 @@
 # V4 · KPI extraction
 
-How KPIs and guidance are pulled from earnings releases. Rules live in the [design doc §7](../V4_TECHNICAL_DESIGN_DOC.md#7-extraction-layer-1); if this doc disagrees, the design doc wins.
+How KPIs and guidance are pulled from earnings releases. Rules live in the [design doc §5](../V4_TECHNICAL_DESIGN_DOC.md#5-extraction-layer-1); if this doc disagrees, the design doc wins.
 
 <p align="center">
   <img src="../img/v4-extraction.svg" alt="KPI and guidance extraction: one LLM call per release, code validation of quote and value, one repair turn, exception rows, reconciliation with XBRL" width="100%">

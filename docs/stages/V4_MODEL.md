@@ -1,6 +1,6 @@
 # V4 · Model and valuation
 
-How the model is built, forecast and valued. Rules live in the [design doc §8](../V4_TECHNICAL_DESIGN_DOC.md#8-model-engine-and-valuation); equations in [V4_FINANCIAL_MODELING.md](V4_FINANCIAL_MODELING.md).
+How the model is built, forecast and valued. Rules live in the [design doc §6](../V4_TECHNICAL_DESIGN_DOC.md#6-model-engine-and-valuation); equations in [V4_FINANCIAL_MODELING.md](V4_FINANCIAL_MODELING.md).
 
 <p align="center">
   <img src="../img/v4-model-valuation.svg" alt="Steps S3 to S7: model graph and checks, guidance-anchored forecast with a bounded proposer, peers, price targets, rating" width="100%">

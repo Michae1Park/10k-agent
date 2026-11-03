@@ -1,4 +1,4 @@
-# Operating build by segment (V4 design doc §8.3): Uber. Per segment, gross bookings × take
+# Operating build by segment (V4 design doc §6.3): Uber. Per segment, gross bookings × take
 # rate = revenue and adjusted EBITDA as a margin on gross bookings; corporate costs separate;
 # totals are the reported ones, and the checks require the segments to sum to them.
 
@@ -72,7 +72,7 @@ forecast:
   ratios: {take_rate_mobility: take_rate, take_rate_delivery: take_rate,
            take_rate_freight: take_rate, cost_to_gb: margin}
 
-# Scenario drivers (design §8.3): bear/bull move each by ∓/±σ of its history
+# Scenario drivers (design §6.3): bear/bull move each by ∓/±σ of its history
 scenarios: [gb_g_mobility.g0, gb_g_delivery.g0, take_rate_mobility.shift0]
 
 anchors:

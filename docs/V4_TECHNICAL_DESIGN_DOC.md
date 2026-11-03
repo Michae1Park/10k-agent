@@ -11,7 +11,7 @@
 | Results | [V4_RESULTS.md](V4_RESULTS.md) |
 | Why, and the build history | [DECISIONS.md](DECISIONS.md) (D-nnn), [V4_BUILD_LOG.md](V4_BUILD_LOG.md) |
 
-**How to read it.** §2 is the map. §3 is the tool catalog. §4–§12 cover one block each, always in four parts: **purpose, interfaces, rules, failure handling and limits.** Each rule gives its reason. "Spec §n" is a section of the spec; a bare "§n" is a section of this doc.
+**How to read it.** §2 is the map. §3–§12 cover one block each, in dependency order (§7, the Toolbox, is the agent's view of §3–§6 and §11), always in four parts: **purpose, interfaces, rules, failure handling and limits.** Each rule gives its reason. "Spec §n" is a section of the spec; a bare "§n" is a section of this doc.
 
 *Updated 2026-11-02.*
 
@@ -43,7 +43,7 @@ One agent covers eight US travel and mobility companies from free public data, i
 | **Flag, don't hide** | A gap, conflict or failed check becomes an exception row, never an estimate shown as fact | §10.3 |
 | **Degrade, don't stop** | A failed LLM step leaves "failed check: reason"; only an integrity failure stops a run | §9.4 |
 | **Artifacts, not transcripts** | Steps hand over JSON files, not chat history | §9.2 |
-| **One definition, two evaluators** | The model is defined once; Python and the workbook evaluate it and must agree | §8.3 |
+| **One definition, two evaluators** | The model is defined once; Python and the workbook evaluate it and must agree | §6.3 |
 | **Knobs in config** | Every default lives in a pinned YAML file | Appendix A |
 
 ### 1.3 Glossary
@@ -59,7 +59,7 @@ One agent covers eight US travel and mobility companies from free public data, i
 | **anchor** | A guidance figure the forecast is solved to hit |
 | **model book** | A session's models at one as-of, with their `model:` ids |
 | **version** | A saved Report run (`UBER:v2`), with its parent |
-| **tool set** | The named list of tool groups a run may call (§3.2) |
+| **tool set** | The named list of tool groups a run may call (§7.2) |
 | **fact (F-n)** | A pre-formatted figure the note may print, with its source id |
 | **E-n / X-n** | Evidence and exception rows of a report's log |
 | **layers 1–5** | The spec's evaluation layers: extraction, model integrity, forecast, valuation, note |
@@ -80,15 +80,15 @@ Boxes are components (§2.2); numbered arrows are interfaces (§2.3). Pink marks
 
 | Component | Does | LLM | § |
 |---|---|:-:|---|
-| **Acquisition** | Fetches filings, XBRL, prices, macro, ERP, cross-checks and Form 4 into a raw cache | | §4 |
-| **Text processing** | Turns filings into Items, chunks and vectors (by rules) | | §4 |
-| **Facts** | Loads XBRL facts; derives quarters on read | | §4 |
-| **Store** | One SQLite file; every read filtered by the run's as-of | | §4 |
-| **Retrieval** | Hybrid search over chunks | | §5 |
-| **Toolbox** | The tools the agent calls | | §3 |
-| **Agent runtime** | The tool-calling loop, prompts and budgets: Ask, Research, sub-agents | ✓ | §6 |
-| **Extraction** | KPI and guidance rows from releases, each checked against a quote | ✓ | §7 |
-| **Model engine** | Model, checks, forecast, scenarios, valuation | | §8 |
+| **Acquisition** | Fetches filings, XBRL, prices, macro, ERP, cross-checks and Form 4 into a raw cache | | §3 |
+| **Text processing** | Turns filings into Items, chunks and vectors (by rules) | | §3 |
+| **Facts** | Loads XBRL facts; derives quarters on read | | §3 |
+| **Store** | One SQLite file; every read filtered by the run's as-of | | §3 |
+| **Retrieval** | Hybrid search over chunks | | §4 |
+| **Toolbox** | The tools the agent calls | | §7 |
+| **Agent runtime** | The tool-calling loop, prompts and budgets: Ask, Research, sub-agents | ✓ | §8 |
+| **Extraction** | KPI and guidance rows from releases, each checked against a quote | ✓ | §5 |
+| **Model engine** | Model, checks, forecast, scenarios, valuation | | §6 |
 | **Report pipeline** | Steps S1–S11 per ticker and as-of; the note; versions | ✓ | §9 |
 | **Verification** | Ids, claim check, number trace, consistency check | | §10 |
 | **Export** | Note, PDF, workbook, parity check, review status | | §11 |
@@ -102,14 +102,14 @@ One row per boundary. Each is stated in its section; full schemas, numbered as h
 
 | # | Interface | Between | § |
 |---|---|---|---|
-| 1 | **Raw cache** | Acquisition → builders | §4.2 |
-| 2 | **Store** | everything → SQLite | §4.2 |
-| 3 | **Search** | toolbox → Retrieval | §5.2 |
-| 4 | **Tool calls** | agent ↔ toolbox | §3 |
-| 5 | **LLM calls** | code ↔ model | §6.2 |
-| 6 | **Extraction rows** | extractor → Store | §7.2 |
-| 7 | **Templates** | config → Model engine | §8.2 |
-| 8 | **Model and valuation files** | Model engine → Report, tools, Export | §8.2 |
+| 1 | **Raw cache** | Acquisition → builders | §3.2 |
+| 2 | **Store** | everything → SQLite | §3.2 |
+| 3 | **Search** | toolbox → Retrieval | §4.2 |
+| 4 | **Tool calls** | agent ↔ toolbox | §7 |
+| 5 | **LLM calls** | code ↔ model | §8.2 |
+| 6 | **Extraction rows** | extractor → Store | §5.2 |
+| 7 | **Templates** | config → Model engine | §6.2 |
+| 8 | **Model and valuation files** | Model engine → Report, tools, Export | §6.2 |
 | 9 | **Pipeline artifacts** | step → step | §9.2 |
 | 10 | **Reference ids** | everywhere | §10.2 |
 | 11 | **Fact list** | Report code → note writer | §10.2 |
@@ -160,8 +160,8 @@ One row per boundary. Each is stated in its section; full schemas, numbered as h
 
 **The no-LLM-numbers rule.** LLM output reaches the numbers only three ways:
 
-1. Extracted rows that code checks against a verbatim quote (§7.3).
-2. Bounded assumption proposals that code clips (§8.3).
+1. Extracted rows that code checks against a verbatim quote (§5.3).
+2. Bounded assumption proposals that code clips (§6.3).
 3. Prose in which every number is a marked fact (§10.3).
 
 Tables are always written by code. Reason: the spec requires every number from deterministic code (spec §3), and it keeps valuation reruns byte-identical.
@@ -188,92 +188,17 @@ Tables are always written by code. Reason: the spec requires every number from d
 
 ---
 
-## 3. Tools
-
-How it works: [V4_AGENT.md](stages/V4_AGENT.md#tools). Arguments and result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls).
-
-### 3.1 Overview
-
-A tool is a function the agent calls with JSON arguments; it returns JSON with citable ids. The **Toolbox** (`agent/tools.py`) holds the schemas, runs the calls, and sees exactly what its store's as-of sees.
-
-Each tool is a thin front for one block. Not everything goes through tools:
-
-| Caller | Uses |
-|---|---|
-| Ask | tool set `ask` |
-| Research | tool set `research` |
-| Report sub-agents (S2 events, S4 proposer, S9 debates) | tool set `ask` |
-| Report code steps, builders, evaluation | their blocks directly, no tools |
-| A person | `tenk tool NAME key=value …` (`--list` prints the schemas) |
-
-### 3.2 Tool sets
-
-| Group | Tools | `ask` | `research` |
-|---|---|:-:|:-:|
-| text | `search_filings` | ✓ | ✓ |
-| calc | `calculator` | ✓ | ✓ |
-| facts | `financials`, `company_kpis`, `guidance`, `filings` | ✓ | ✓ |
-| market | `market_data`, `crosscheck` | ✓ | ✓ |
-| reports | `research_report` | ✓ | ✓ |
-| model | `model_view`, `run_scenario`, `compare_peers`, `variance_review` | | ✓ |
-
-V3's sets `text` and `full` remain for the V3 corpus.
-
-### 3.3 Catalog
-
-| Tool | Returns | Backed by |
-|---|---|---|
-| `search_filings` | Chunks for a query, per company and filing | Retrieval (§5) |
-| `calculator` | A result with its formula and inputs | `agent/tools.py` |
-| `financials` | Reported and derived quarterly figures (`q:`, `xbrl:` ids) | Store facts (§4) |
-| `company_kpis` | KPI rows with their quotes (`kpi:` ids) | Store KPIs (§7) |
-| `guidance` | Guidance ranges, with the actual once reported (`guide:` ids) | Store guidance (§7) |
-| `filings` | The filings visible at the as-of | Store (§4) |
-| `market_data` | Prices and macro series (`px:`, `macro:` ids) | Store market (§4) |
-| `crosscheck` | NYC TLC or BTS monthly series (`cc:` ids) | Store market (§4) |
-| `research_report` | A saved version's PT, rating, estimates and **review status** | Saved versions (§11) |
-| `model_view` | Model lines and assumptions (`model:` ids) | Model book (§8) |
-| `run_scenario` | Base vs scenario lines, PT and rating after changing assumptions | Model book (§8) |
-| `compare_peers` | One metric across companies, with each one's assumptions | Model book (§8) |
-| `variance_review` | Our saved estimate vs the actual, with a revenue bridge | Saved version + Store |
-
-### 3.4 Rules
-
-| Rule | Reason |
-|---|---|
-| Every tool is bound to the run's as-of | §2.5 |
-| Every value in a result carries an id that resolves (§10.2) | The claim check can verify what the model cites |
-| Errors are results: `{"error": …}` plus the valid choices | The model can correct itself; one bad call doesn't end a run |
-| Tools come in groups; no run gets every tool | Smaller schemas in a 32k window; a mode can't call what it shouldn't |
-| Results capped at 40 rows and 16,000 characters | One result can't fill the window |
-| Ask cites estimates only through `research_report`; Research computes only through model tools, assumptions listed | Spec §2: Ask retrieves, Research computes |
-| `run_scenario` writes a session-only `scratch-n` run, clipped to the proposer's bounds (§8.3) | Only Report creates versions; scenarios stay within history |
-| Peers are built with default assumptions (no LLM), once per ticker and as-of | A peer's numbers don't depend on an LLM run |
-
-### 3.5 Failure handling and limits
-
-| Case | Handling |
-|---|---|
-| Unknown tool, argument, metric, line or assumption | Error with the valid choices; the model retries |
-| Unknown company, or a search naming none | Error listing the corpus |
-| Nothing visible at the as-of | Empty rows (or `report: null`), not an error |
-| A model can't be built | Error naming the failing check (§8.4) |
-| Result over the caps | Truncated, with `"omitted": n` |
-| First `compare_peers` call | Slow: peers are built on first use |
-
----
-
-## 4. Data layer
+## 3. Data layer
 
 How it works: [V4_DATA.md](stages/V4_DATA.md). Schemas: [V4_INTERFACES.md §1–2](V4_INTERFACES.md#1-raw-cache).
 
-### 4.1 Purpose
+### 3.1 Purpose
 
 Fetch every source into a raw cache, build one SQLite file from it, and serve every read through the run's as-of.
 
 Parts: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisition/`); text processing (`preprocess/`, `chunking/`); facts (`facts/xbrl.py`, `quarters.py`); the store (`store.py`, `asof.py`).
 
-### 4.2 Interfaces
+### 3.2 Interfaces
 
 | Interface | Contract |
 |---|---|
@@ -283,7 +208,7 @@ Parts: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisit
 | **Store reads** (2) | `Store(path, asof)`: every read method filters by that as-of |
 | **Ids** | Chunks `UBER-2026Q2-ER-EX99-005`; facts `xbrl:<T>:<taxonomy>:<concept>:<accession>:<start>/<end>`; derived quarters `q:<T>:<metric>:<period>` |
 
-### 4.3 Rules
+### 3.3 Rules
 
 | Rule | Reason |
 |---|---|
@@ -300,7 +225,7 @@ Parts: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisit
 | EPS and share counts: direct facts only; Q4 EPS from the release | They don't add up across quarters |
 | Sources that block scripts are dropped, never worked around | Their terms (Stooq, TSA, Google Trends) |
 
-### 4.4 Failure handling and limits
+### 3.4 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -315,23 +240,23 @@ Parts: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisit
 
 ---
 
-## 5. Retrieval
+## 4. Retrieval
 
 How it works: [V4_RETRIEVAL.md](stages/V4_RETRIEVAL.md) and [V1_RETRIEVAL.md](stages/V1_RETRIEVAL.md). Schema: [V4_INTERFACES.md §3](V4_INTERFACES.md#3-search).
 
-### 5.1 Purpose
+### 4.1 Purpose
 
 Find the chunks that answer a query, one search per company and filing, under the run's as-of. No LLM.
 
 Parts: decomposer, searcher, index (Qwen3-Embedding-0.6B, FTS5), reranker (bge-reranker-v2-m3), all in `retrieval/`.
 
-### 5.2 Interfaces
+### 4.2 Interfaces
 
 | Interface | Contract |
 |---|---|
 | **Search** (3) | `search_filings(query, companies?, periods?, forms?, k = 8)` → the searches it ran, and up to k chunks with id, company, form, period, filing date and text |
 
-### 5.3 Rules
+### 4.3 Rules
 
 | Rule | Reason |
 |---|---|
@@ -341,7 +266,7 @@ Parts: decomposer, searcher, index (Qwen3-Embedding-0.6B, FTS5), reranker (bge-r
 | The model sees parent chunks | A whole subsection or table, not a fragment |
 | Results merged round-robin until k | Every company gets its share |
 
-### 5.4 Failure handling and limits
+### 4.4 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -353,72 +278,17 @@ Parts: decomposer, searcher, index (Qwen3-Embedding-0.6B, FTS5), reranker (bge-r
 
 ---
 
-## 6. Agent runtime
-
-How it works: [V4_AGENT.md](stages/V4_AGENT.md). Reply schemas: [V4_INTERFACES.md §5](V4_INTERFACES.md#5-llm-calls).
-
-### 6.1 Purpose
-
-Run the LLM: the Ask and Research loop, Report's sub-agents, and every single-shot call.
-
-Parts: the loop (`agent/loop.py`, LangGraph), prompts (`prompts/*.md`), sub-agents (`research/subagents.py`, `propose.py`), the model book (`research/book.py`), and one model interface (`models.py`: vLLM or Claude).
-
-### 6.2 Interfaces
-
-**LLM calls** (5). Each reply is one JSON object.
-
-| Call | Tools | Returns | Budget |
-|---|---|---|---|
-| Ask / Research answer | `ask` / `research` | Answer, claims with cited ids, assumptions (Research) | 20 calls, 20k context |
-| KPI extraction | – | Rows with chunk id and quote | 1 call + 1 repair per release |
-| S2 events | `ask` | Events with type, summary, evidence ids | 8 calls, 16k |
-| S4 proposer | `ask` | Assumption proposals with rationale and evidence | 10 calls, 16k |
-| S9 debate, per driver | `ask` | Bull, bear, hypothesis, trigger, gap, evidence | 8 calls, 16k |
-| S10 prose slot | – | Text with facts marked `{F-n}` | 1.5k tokens out, 1 repair |
-| Judge (evaluation) | – | Scores per criterion | gpt-oss-20b, a second pass |
-
-### 6.3 Rules
-
-```text
-question → model → tool calls → tools → model → … → JSON answer → claim check (§10.3)
-```
-
-| Rule | Reason |
-|---|---|
-| The first turn must be a tool call | No answers from memory |
-| A repeated identical call errors and still counts | Stops loops |
-| After the call budget or a full context: one turn with tools off to answer | Every run ends with an answer |
-| An unparseable answer gets one retry | A formatting slip is not a wrong answer |
-| Every answer passes the claim check before it is shown | No unverified number presented as verified |
-| Sub-agents return JSON; an item is kept only if one evidence id resolves at D | No unsupported claim reaches the note |
-| A debate's evidence values become note facts | Its numbers can then be traced |
-| State lives in files; each call gets a purpose-built view; detail is fetched by id | Fits a 32k window |
-
-### 6.4 Failure handling and limits
-
-| Case | Handling |
-|---|---|
-| Tool error | Returned to the model (§3.5) |
-| Budget spent or context full | Forced answer turn, tools off |
-| Answer still not JSON | Recorded as unparsed; no claims |
-| Sub-agent returns nothing usable | Its Report step degrades (§9.4) |
-| vLLM unreachable | The call raises; a report resumes with `--resume` |
-| Determinism | Temperature 0 |
-| Judge | Can't share the GPU with the 27B model, so it runs afterwards |
-
----
-
-## 7. Extraction (layer 1)
+## 5. Extraction (layer 1)
 
 How it works: [V4_EXTRACTION.md](stages/V4_EXTRACTION.md). Schemas: [V4_INTERFACES.md §6](V4_INTERFACES.md#6-extraction-rows).
 
-### 7.1 Purpose
+### 5.1 Purpose
 
 Read KPIs and guidance from earnings releases into checked, quoted rows.
 
 Parts: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an ablation), registry (`facts/kpis.yaml`), loader (`tenk build --stage kpis`).
 
-### 7.2 Interfaces
+### 5.2 Interfaces
 
 | Interface | Contract |
 |---|---|
@@ -426,7 +296,7 @@ Parts: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an
 | **Reply** | KPI and guidance rows, each with value, unit, source chunk id and a verbatim quote |
 | **Extraction rows** (6) | Stored in `kpis` and `guidance` with period, filing date and definition version. Ids `kpi:<T>:<metric>[.<segment>]:<period>`, `guide:<T>:<metric>:<period>` |
 
-### 7.3 Rules
+### 5.3 Rules
 
 | Rule | Reason |
 |---|---|
@@ -438,7 +308,7 @@ Parts: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an
 | Guidance keeps its basis (level, growth or margin); the forecast converts it | Releases guide all three ways |
 | Where a KPI is also an XBRL fact, the filing wins and the gap is logged | Spec §1.6. **Not built** (§13.1) |
 
-### 7.4 Failure handling and limits
+### 5.4 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -449,17 +319,17 @@ Parts: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an
 
 ---
 
-## 8. Model engine and valuation
+## 6. Model engine and valuation
 
 How it works: [V4_MODEL.md](stages/V4_MODEL.md). Equations: [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md). Schemas: [V4_INTERFACES.md §7–8](V4_INTERFACES.md#7-templates).
 
-### 8.1 Purpose
+### 6.1 Purpose
 
 Build a three-statement model from the data pack, forecast it, and value it. All deterministic code.
 
 Parts: data pack (S1), DSL and graph, templates, history (S3), layer-2 checks, forecast and scenarios (S5), outside inputs, proposer (S4), valuation (S6–S7), model book. Code: `research/`.
 
-### 8.2 Interfaces
+### 6.2 Interfaces
 
 | Interface | Contract |
 |---|---|
@@ -469,7 +339,7 @@ Parts: data pack (S1), DSL and graph, templates, history (S3), layer-2 checks, f
 | **`valuation.json`** (8) | Market cap, EV, cost of capital, peers, PT per scenario, weighted PT, return, rating, DCF grid, `inputs_hash` |
 | **`research.yaml`** | Every forecast and valuation knob (Appendix A) |
 
-### 8.3 Rules and algorithms
+### 6.3 Rules and algorithms
 
 **Model** (spec §3.1)
 
@@ -544,7 +414,7 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 | `formula_only` | Forecast cells are formulas |
 | `wacc_gt_g`, `weights` | WACC > g; weights sum to 1 |
 
-### 8.4 Failure handling and limits
+### 6.4 Failure handling and limits
 
 | Case | Handling |
 |---|---|
@@ -558,6 +428,136 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 | Proposer fails | Defaults |
 | Outside series too short or wrong-signed | Not used; logged |
 | Scope | Horizon 2027Q4 (DCF years beyond); condensed statements; no deferred bookings; three peers per sector |
+
+---
+
+## 7. Toolbox
+
+How it works: [V4_AGENT.md](stages/V4_AGENT.md#tools). Arguments and result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls).
+
+### 7.1 Overview
+
+A tool is a function the agent calls with JSON arguments; it returns JSON with citable ids. The **Toolbox** (`agent/tools.py`) holds the schemas, runs the calls, and sees exactly what its store's as-of sees.
+
+Each tool is a thin front for one block. Not everything goes through tools:
+
+| Caller | Uses |
+|---|---|
+| Ask | tool set `ask` |
+| Research | tool set `research` |
+| Report sub-agents (S2 events, S4 proposer, S9 debates) | tool set `ask` |
+| Report code steps, builders, evaluation | their blocks directly, no tools |
+| A person | `tenk tool NAME key=value …` (`--list` prints the schemas) |
+
+### 7.2 Tool sets
+
+| Group | Tools | `ask` | `research` |
+|---|---|:-:|:-:|
+| text | `search_filings` | ✓ | ✓ |
+| calc | `calculator` | ✓ | ✓ |
+| facts | `financials`, `company_kpis`, `guidance`, `filings` | ✓ | ✓ |
+| market | `market_data`, `crosscheck` | ✓ | ✓ |
+| reports | `research_report` | ✓ | ✓ |
+| model | `model_view`, `run_scenario`, `compare_peers`, `variance_review` | | ✓ |
+
+V3's sets `text` and `full` remain for the V3 corpus.
+
+### 7.3 Catalog
+
+| Tool | Returns | Backed by |
+|---|---|---|
+| `search_filings` | Chunks for a query, per company and filing | Retrieval (§4) |
+| `calculator` | A result with its formula and inputs | `agent/tools.py` |
+| `financials` | Reported and derived quarterly figures (`q:`, `xbrl:` ids) | Store facts (§3) |
+| `company_kpis` | KPI rows with their quotes (`kpi:` ids) | Store KPIs (§5) |
+| `guidance` | Guidance ranges, with the actual once reported (`guide:` ids) | Store guidance (§5) |
+| `filings` | The filings visible at the as-of | Store (§3) |
+| `market_data` | Prices and macro series (`px:`, `macro:` ids) | Store market (§3) |
+| `crosscheck` | NYC TLC or BTS monthly series (`cc:` ids) | Store market (§3) |
+| `research_report` | A saved version's PT, rating, estimates and **review status** | Saved versions (§11) |
+| `model_view` | Model lines and assumptions (`model:` ids) | Model book (§6) |
+| `run_scenario` | Base vs scenario lines, PT and rating after changing assumptions | Model book (§6) |
+| `compare_peers` | One metric across companies, with each one's assumptions | Model book (§6) |
+| `variance_review` | Our saved estimate vs the actual, with a revenue bridge | Saved version + Store |
+
+### 7.4 Rules
+
+| Rule | Reason |
+|---|---|
+| Every tool is bound to the run's as-of | §2.5 |
+| Every value in a result carries an id that resolves (§10.2) | The claim check can verify what the model cites |
+| Errors are results: `{"error": …}` plus the valid choices | The model can correct itself; one bad call doesn't end a run |
+| Tools come in groups; no run gets every tool | Smaller schemas in a 32k window; a mode can't call what it shouldn't |
+| Results capped at 40 rows and 16,000 characters | One result can't fill the window |
+| Ask cites estimates only through `research_report`; Research computes only through model tools, assumptions listed | Spec §2: Ask retrieves, Research computes |
+| `run_scenario` writes a session-only `scratch-n` run, clipped to the proposer's bounds (§6.3) | Only Report creates versions; scenarios stay within history |
+| Peers are built with default assumptions (no LLM), once per ticker and as-of | A peer's numbers don't depend on an LLM run |
+
+### 7.5 Failure handling and limits
+
+| Case | Handling |
+|---|---|
+| Unknown tool, argument, metric, line or assumption | Error with the valid choices; the model retries |
+| Unknown company, or a search naming none | Error listing the corpus |
+| Nothing visible at the as-of | Empty rows (or `report: null`), not an error |
+| A model can't be built | Error naming the failing check (§6.4) |
+| Result over the caps | Truncated, with `"omitted": n` |
+| First `compare_peers` call | Slow: peers are built on first use |
+
+---
+
+## 8. Agent runtime
+
+How it works: [V4_AGENT.md](stages/V4_AGENT.md). Reply schemas: [V4_INTERFACES.md §5](V4_INTERFACES.md#5-llm-calls).
+
+### 8.1 Purpose
+
+Run the LLM: the Ask and Research loop, Report's sub-agents, and every single-shot call.
+
+Parts: the loop (`agent/loop.py`, LangGraph), prompts (`prompts/*.md`), sub-agents (`research/subagents.py`, `propose.py`), the model book (`research/book.py`), and one model interface (`models.py`: vLLM or Claude).
+
+### 8.2 Interfaces
+
+**LLM calls** (5). Each reply is one JSON object.
+
+| Call | Tools | Returns | Budget |
+|---|---|---|---|
+| Ask / Research answer | `ask` / `research` | Answer, claims with cited ids, assumptions (Research) | 20 calls, 20k context |
+| KPI extraction | – | Rows with chunk id and quote | 1 call + 1 repair per release |
+| S2 events | `ask` | Events with type, summary, evidence ids | 8 calls, 16k |
+| S4 proposer | `ask` | Assumption proposals with rationale and evidence | 10 calls, 16k |
+| S9 debate, per driver | `ask` | Bull, bear, hypothesis, trigger, gap, evidence | 8 calls, 16k |
+| S10 prose slot | – | Text with facts marked `{F-n}` | 1.5k tokens out, 1 repair |
+| Judge (evaluation) | – | Scores per criterion | gpt-oss-20b, a second pass |
+
+### 8.3 Rules
+
+```text
+question → model → tool calls → tools → model → … → JSON answer → claim check (§10.3)
+```
+
+| Rule | Reason |
+|---|---|
+| The first turn must be a tool call | No answers from memory |
+| A repeated identical call errors and still counts | Stops loops |
+| After the call budget or a full context: one turn with tools off to answer | Every run ends with an answer |
+| An unparseable answer gets one retry | A formatting slip is not a wrong answer |
+| Every answer passes the claim check before it is shown | No unverified number presented as verified |
+| Sub-agents return JSON; an item is kept only if one evidence id resolves at D | No unsupported claim reaches the note |
+| A debate's evidence values become note facts | Its numbers can then be traced |
+| State lives in files; each call gets a purpose-built view; detail is fetched by id | Fits a 32k window |
+
+### 8.4 Failure handling and limits
+
+| Case | Handling |
+|---|---|
+| Tool error | Returned to the model (§7.5) |
+| Budget spent or context full | Forced answer turn, tools off |
+| Answer still not JSON | Recorded as unparsed; no claims |
+| Sub-agent returns nothing usable | Its Report step degrades (§9.4) |
+| vLLM unreachable | The call raises; a report resumes with `--resume` |
+| Determinism | Temperature 0 |
+| Judge | Can't share the GPU with the 27B model, so it runs afterwards |
 
 ---
 
@@ -737,7 +737,7 @@ Parts: extraction scorer, backtest, note eval (`evaluation/`); Ask and Research 
 | Layer | Test | Pass bar |
 |---|---|---|
 | 1 Extraction | 337 labels | ≥ 98% exact; 100% on revenue, EPS, main KPI |
-| 2 Model integrity | §8.3 checks on every model | 100%; any FAIL stops |
+| 2 Model integrity | §6.3 checks on every model | 100%; any FAIL stops |
 | 3 Forecast | Walk-forward backtest, 48 forecasts per metric | MAPE below seasonal naive on revenue and main KPI; bias near 0 |
 | 4 Valuation | Rerun on identical inputs; WACC sweep | Identical output; targets inside the peer range or flagged |
 | 5 Note | Trace, ten sections, judge rubric, seeded errors | 100% traced; rubric ≥ 4/5 |

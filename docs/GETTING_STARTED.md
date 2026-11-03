@@ -59,7 +59,7 @@ tenk build --stage kpis                                      # load the validate
 | Some forms only | `tenk fetch --forms 10-Q ER` |
 | Extract with Claude | `extract_pilot.py --model anthropic:<id>` |
 
-What each table holds: [design doc §4](V4_TECHNICAL_DESIGN_DOC.md#4-data-layer). Every read sees only data filed **before** a run's as-of date.
+What each table holds: [design doc §3](V4_TECHNICAL_DESIGN_DOC.md#3-data-layer). Every read sees only data filed **before** a run's as-of date.
 
 ## 4. Write a report
 
@@ -87,7 +87,7 @@ Ask and Research run through their gold runners, each question at its own as-of 
 ```bash
 taskset -c 16-31 python experiments/v4/ask_run.py --question <id>          # Ask: cited answers from filed data
 taskset -c 16-31 python experiments/v4/research_run.py --question <id>     # Research: model tools, assumptions shown
-tenk tool --list                                                           # the tool schemas (design doc §3)
+tenk tool --list                                                           # the tool schemas (design doc §7)
 ```
 
 Questions: `evaluation/gold/ask-gold.jsonl`, `research-gold.jsonl`. Results: `output/generation/<label>/`.

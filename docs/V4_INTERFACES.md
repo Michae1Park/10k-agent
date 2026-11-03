@@ -1,6 +1,6 @@
 # V4 interfaces: schemas
 
-The full schema of every interface in [design doc §2.3](V4_TECHNICAL_DESIGN_DOC.md#23-interface-catalog), numbered as there. The design doc states each contract in one line and the rules around it; this doc is the lookup reference. Where the two disagree, the design doc wins. Tool rules and tool sets: [design doc §3](V4_TECHNICAL_DESIGN_DOC.md#3-tools).
+The full schema of every interface in [design doc §2.3](V4_TECHNICAL_DESIGN_DOC.md#23-interface-catalog), numbered as there. The design doc states each contract in one line and the rules around it; this doc is the lookup reference. Where the two disagree, the design doc wins. Tool rules and tool sets: [design doc §7](V4_TECHNICAL_DESIGN_DOC.md#7-toolbox).
 
 ## 1. Raw cache
 
@@ -43,7 +43,7 @@ companies:
 | `insider_tx` | `ticker`, `accession`, `filed`, `owner`, `director`, `officer`, `title`, `date`, `code` (S, P, A, M, F, G), `shares`, `price`, `acquired_disposed` | `filed` |
 | `model_versions` | `id` TEXT PK (`<T>:v<n>`), `ticker`, `as_of`, `parent_id`, `inputs_hash`, `status` (`draft`/`reviewed`), `path` (report folder) | `as_of` |
 
-Quarters are **not stored** (design §4.3). A saved version's numbers live in its folder's files (§9), not in tables.
+Quarters are **not stored** (design §3.3). A saved version's numbers live in its folder's files (§9), not in tables.
 
 **Chunk ids** (parent-child chunks, V0):
 
@@ -87,29 +87,29 @@ Chunk ids: §2. Knobs: `config.yaml` `retrieval` (design Appendix A).
 
 ## 4. Tool calls
 
-All as-of bound; `company` = ticker or name; `periods` = period keys, default the latest eight; tables are capped at 40 rows with `"omitted": n`. Rules: design §3.
+All as-of bound; `company` = ticker or name; `periods` = period keys, default the latest eight; tables are capped at 40 rows with `"omitted": n`. Rules: design §7.
 
 | Tool | Arguments (required in bold) | Result | Backed by |
 |---|---|---|---|
-| `search_filings` | **query**, companies, periods, forms, k | §3 | Retrieval (design §5) |
+| `search_filings` | **query**, companies, periods, forms, k | §3 | Retrieval (design §4) |
 | `calculator` | **inputs** `{name: number}`, `op` or `expression` | `{result, formula, inputs}` | `agent/tools.py` |
-| `financials` | **company**, **metric**, periods | `{company, metric, rows: [{id (q:/xbrl:), period, value, unit, derivation, restated?}]}` | Store `facts`, derived quarters (design §4) |
-| `company_kpis` | **company**, metric, segment, periods | `{company, rows: [{id (kpi:), metric, segment, period, value, unit, chunk_id, quote}]}` | Store `kpis` (design §4, §7) |
-| `guidance` | **company**, metric, periods | `{company, rows: [{id (guide:), metric, segment, period, low, high, unit, basis, issued_in, chunk_id, quote, actual?, actual_id?}]}` | Store `guidance` (design §4, §7) |
-| `filings` | **company**, form | `{company, filings: [{id, accession_no, form, period, period_end_date, filing_date}], total}` | Store `filings` (design §4) |
-| `market_data` | company, series, dates, start | `{series, unit, rows: [{id (px:/macro:), date, value}]}` | Store `market` (design §4) |
-| `crosscheck` | **series** (`tlc`/`bts`), companies, start, end | `{series, coverage, unit, rows: [{id (cc:), month, value}]}` | Store `market` (design §4) |
+| `financials` | **company**, **metric**, periods | `{company, metric, rows: [{id (q:/xbrl:), period, value, unit, derivation, restated?}]}` | Store `facts`, derived quarters (design §3) |
+| `company_kpis` | **company**, metric, segment, periods | `{company, rows: [{id (kpi:), metric, segment, period, value, unit, chunk_id, quote}]}` | Store `kpis` (design §3, §5) |
+| `guidance` | **company**, metric, periods | `{company, rows: [{id (guide:), metric, segment, period, low, high, unit, basis, issued_in, chunk_id, quote, actual?, actual_id?}]}` | Store `guidance` (design §3, §5) |
+| `filings` | **company**, form | `{company, filings: [{id, accession_no, form, period, period_end_date, filing_date}], total}` | Store `filings` (design §3) |
+| `market_data` | company, series, dates, start | `{series, unit, rows: [{id (px:/macro:), date, value}]}` | Store `market` (design §3) |
+| `crosscheck` | **series** (`tlc`/`bts`), companies, start, end | `{series, coverage, unit, rows: [{id (cc:), month, value}]}` | Store `market` (design §3) |
 | `research_report` | **company**, lines, periods, as_of | `{company, version, as_of, status, parent, note, valuation: {price, price_target, return, rating: {value, id}}, estimates: [{line, period, kind, value, unit, id}], versions}`; none → `{report: null, versions, note}` | saved versions (design §11.2) |
-| `model_view` | **company**, lines, periods | `{company, as_of, forecast_from, id_format: "model:<T>:<as_of>:base:<line>.<period>", rows: [{line, unit, values: {period: value}}], assumptions: [{driver, value, default, source: default \| guidance <id>}]}` | model book (design §8) |
-| `run_scenario` | **company**, overrides `{assumption: value}`, deltas `{assumption: delta}` | `{company, version (scratch-n), changes, clipped_to_bounds, rows: [{line, period, base, scenario, id, base_id}], price_target: {base, scenario, id, base_id}, rating: {base, scenario}}` | model book, forecast, valuation (design §8) |
-| `compare_peers` | **metric**, companies, period | `{metric, period, rows: [{company, value, unit, id, assumptions: [{driver, value, source}]}]}` | model book (design §8) |
-| `variance_review` | **company**, **period** | `{company, period, estimate_as_of, rows: [{line, unit, estimate, estimate_id, actual, actual_id, variance_pct}], bridge, bridge_ids, bridge_unit}` | saved version vs Store (design §8, §11.2) |
+| `model_view` | **company**, lines, periods | `{company, as_of, forecast_from, id_format: "model:<T>:<as_of>:base:<line>.<period>", rows: [{line, unit, values: {period: value}}], assumptions: [{driver, value, default, source: default \| guidance <id>}]}` | model book (design §6) |
+| `run_scenario` | **company**, overrides `{assumption: value}`, deltas `{assumption: delta}` | `{company, version (scratch-n), changes, clipped_to_bounds, rows: [{line, period, base, scenario, id, base_id}], price_target: {base, scenario, id, base_id}, rating: {base, scenario}}` | model book, forecast, valuation (design §6) |
+| `compare_peers` | **metric**, companies, period | `{metric, period, rows: [{company, value, unit, id, assumptions: [{driver, value, source}]}]}` | model book (design §6) |
+| `variance_review` | **company**, **period** | `{company, period, estimate_as_of, rows: [{line, unit, estimate, estimate_id, actual, actual_id, variance_pct}], bridge, bridge_ids, bridge_unit}` | saved version vs Store (design §6, §11.2) |
 
 ## 5. LLM calls
 
 **LLM calls** (each reply is one JSON object, parsed by `models.parse_json`):
 
-| Call | Prompt | Tools (design §3.2) | Reply schema | Budget |
+| Call | Prompt | Tools (design §7.2) | Reply schema | Budget |
 |---|---|---|---|---|
 | Ask / Research answer | `ask.md` / `research.md` | `ask` / `research` | `{answer, claims: [{id, text, value, unit, company, period, chunk_ids, calculation: {op, expression, inputs, input_unit, result} \| null}], assumptions (Research): [{driver, value, source}], table: {columns, rows} \| null, scope_notice, abstained}` | `config.yaml` `agent`: 20 calls, 20k context |
 | KPI extraction | `extract.md` | – | §6 | one call + one repair per release |
@@ -180,7 +180,7 @@ anchors: …   # guide name as each company prints it → the line it anchors
 | `ticker`, `as_of`, `price_date` | str | |
 | `price`, `shares`, `market_cap`, `debt`, `cash_and_investments`, `net_debt`, `ev` | number | USD, millions where amounts |
 | `refs` | {price, shares, debt, cash, short_term_investments: id} | sources |
-| `cost_of_capital` | {`rf`, `beta`, `beta_months`, `erp`, `erp_id`, `ke`, `kd`, `debt_weight`, `wacc`} | design §8.3 |
+| `cost_of_capital` | {`rf`, `beta`, `beta_months`, `erp`, `erp_id`, `ke`, `kd`, `debt_weight`, `wacc`} | design §6.3 |
 | `peer_multiples` | {`peers`: {T: x}, `median`, `range`: [lo, hi]} | 2027E EV/EBITDA |
 | `multiples_2027e` | {`ev_to_ebitda`, `ev_to_ebitda_less_sbc`, `pe`, `fcf_yield`} | this company at the price |
 | `scenarios` | {bear\|base\|bull: {`adj_ebitda`, `target_multiple`, `multiple_pt`, `multiple_outside_peer_range`, `dcf_ev`, `dcf_pt`, `dcf_used`, `price_target`}} | per scenario |
