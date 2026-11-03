@@ -353,9 +353,11 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 - Outside data (BTS, NYC TLC, FRED) nudges one starting growth rate per company, weighted by fit; guidance overrides it (spec §3.2).
 
 **Proposer (S4).** Off by default: it did not beat the defaults in the backtest (spec §7). When on:
-- It may move only growth starts, ratio shifts and the fade, never an anchored assumption.
-- Code clips each proposal to the history's range.
-- A proposal is kept only if one of its evidence ids resolves.
+- **Input:** a driver table (no data pack). Each proposable driver has its last 8 quarters, default and bounds; anchored drivers are listed as fixed.
+- **Proposable:** growth starts (`.g0`), ratio shifts (`.shift0`) and `fade`, never one a guide anchors (the anchor runs after and would undo it).
+- **Bounds:** a growth start is limited to its 8-quarter range ± 5 points. A ratio shift is limited to ± (its 8-quarter range width + its band). The fade is limited to 0.75–1.0.
+- **Kept:** a proposal with a number and at least one evidence id that resolves at D. It is clipped to its bounds (a `warning` row) and stored with the proposed value, applied value, basis, confidence and rationale.
+- **Dropped:** anything else, with an `info` row. A reply with no JSON means defaults.
 
 **Valuation and rating** (spec §3.3)
 
@@ -438,7 +440,7 @@ Every tool shares the same handling:
 - **Values:** ratios shown in percent; numbers rounded to 4 decimals.
 - **Arguments:** object and array arguments written as JSON strings are parsed.
 
-Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls).
+Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls). The model tools compute through the Model engine (§6); their equations are in [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md) (scenarios §4, valuation §5).
 
 #### text · `search_filings`
 
@@ -534,7 +536,7 @@ Result schemas: [V4_INTERFACES.md §4](V4_INTERFACES.md#4-tool-calls).
 | | |
 |---|---|
 | **Consumes** | The base forecast: its model, data pack and assumptions |
-| **Computes** | Changes = `overrides` plus base + `deltas`. Only proposable drivers (growth starts, ratio shifts) and `fade` are allowed. Each change is clipped to its bounds (history range; fade 0.75–1.0). The model is rebuilt on the same data pack with the changed assumptions, saved as `scratch-n`, and valued as §6.2 with the same peers |
+| **Computes** | Changes = `overrides` plus base + `deltas`. Only proposable drivers (growth starts, ratio shifts) and `fade` are allowed. Each change is clipped to the proposer's bounds (§6.2). The model is rebuilt on the same data pack with the changed assumptions, saved as `scratch-n`, and valued as §6.2 with the same peers |
 | **Returns** | Revenue, adj. EBITDA, EPS and FCF for the last two FY columns, base vs scenario; PT and rating, base vs scenario; the clipped drivers; ids for both runs |
 | **Errors** | Unknown driver (lists the allowed ones); no change given |
 
@@ -668,12 +670,28 @@ Every artifact is a JSON file in the report folder. `report.json` records the ve
 - Section 7 has a sensitivity row for every debated driver.
 - Each LLM step has a budget; a run over 30 minutes logs a warning.
 
-**Consistency check** (before export; spec §2.3). Code checks that:
-- the rating matches the return thresholds;
-- section 1's numbers equal their section tables;
-- every debated driver is in section 7;
-- a guidance change in the events appears in 2.2;
-- every open issue is in section 10.
+**Step algorithms:**
+
+| Step | How |
+|---|---|
+| **S2 events** | One bounded agent (tool set `ask`, `events.md`) is asked what changed for the ticker in the quarter. Each event (type, summary, evidence ids) is kept only if one evidence id resolves at D. An unparseable reply means no events |
+| **S4 propose** | §6.2 Proposer |
+| **S8 revise** | Parent = the latest saved version before D. For revenue, adj. EBITDA and EPS, in the first forecast quarter and the last two FY columns: old (parent's `v<n>` id) vs new (`base` id). `type` is "Reported + assumption" if any of the parent's forecast quarters is now reported, else "Assumption". `confidence` is Low for an FY after the as-of year, else Medium |
+| **S9 debates** | One agent per scenario driver in the template (tool set `ask`, `debates.md`), told the driver's first-quarter value. It returns question, bull, bear, hypothesis, trigger, gap and evidence. Kept only if one evidence id resolves; each resolved id's values become `evidence_values`, and so note facts |
+| **S9 → section 7** | Sensitivities: rebuild the base model with one driver moved. The moves are take rate −50 bps, growth −1 pt, cost share +50 bps, and each debated driver (growth −1 pt, shift ∓50 bps). Each move is valued as a scratch run and records the last FY's adj. EBITDA change and the PT change, with ids |
+| **S10 facts** | Code builds the sections. Every figure is registered once as an `F-n` fact (label, value, unit, source id) and formatted by `text()`: USD millions as `$9.7B` or `$412M`, percent to 1 decimal (signed for changes and returns), `x` to 1 decimal |
+| **S10 write** | One call per prose slot (`section.md`, no tools). The writer sees the slot's instruction and only that slot's facts. The number trace (§10.2) checks the text; one repair turn names the untraced numbers; any sentence still holding one is dropped, with a `warning` row |
+| **S10 lint** | The whole note is traced again: code-written blocks must appear verbatim and every slot's figures must trace; failures are `error` rows |
+
+**Consistency check** (before export; spec §2.3). Code checks:
+
+| Check | Passes when |
+|---|---|
+| `rating_thresholds` | The rating matches the return thresholds in `research.yaml` |
+| `section1_numbers` | Every number in section 1 equals the same figure as its section's table prints it (PT, return and rating as in section 6) |
+| `debated_drivers` | Every debated driver has a row in section 7's sensitivities |
+| `guidance_in_2_2` | A guidance event (S2) has guided lines in section 2.2 |
+| `open_issues` | Every `warning` and `error` row is listed, by X-id, in section 10 |
 
 A failure becomes an `error` exception. The takeaways get one repair; other sections are never rewritten.
 
@@ -727,6 +745,8 @@ Code: id grammar and resolver (`research/refs.py`), claim check (`generation/ver
 - **Wrong company:** a value found only in another company's chunks is unverified.
 
 **Note trace:**
+- **Figures** are numbers with sign and suffix (`B`, `M`, `%`, `pts`, `bps`, `x`). Excluded: dates, years, quarters (`2027E`, `Q2`), F/E/X ids, section numbers, form names, ratios like `3/4`, list numbers.
+- **A figure traces** when it equals a fact of its slot within half a unit of its last written digit, in the fact's unit: `$9.7B` matches 9,712 USD millions, `+3.2%` matches 3.21 percent, `bps` are read as points / 100.
 - Code-written tables must appear verbatim.
 - Every number in prose is a marked fact **of its own section** or an allowed token (dates, "Q2", "10-K").
 - No "pending" or "TBD"; gaps read "n/a: …" or "failed check: …"; estimates carry "E".
