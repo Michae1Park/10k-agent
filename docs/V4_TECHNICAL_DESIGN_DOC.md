@@ -18,12 +18,13 @@
 
 ## 1. Scope
 
-The system serves three entry points, each at an as-of date, over eight companies (spec §2):
+The system serves four entry points, each at an as-of date, over eight companies (spec §2):
 
 | Mode | In | Out |
 |---|---|---|
 | **Ask** | A question + as-of | A short cited answer from filed data |
 | **Research** | A question + as-of | An answer computed by the model, assumptions shown |
+| **Investigate** | A multi-part question + as-of | A plan of Ask and Research sub-runs and one combined, claim-checked answer |
 | **Report** | Ticker + as-of | A 10-section draft note, a model-change workbook, an evidence and exception log |
 
 - **Companies:** BKNG, EXPE, ABNB, TRIP (travel) · UBER, LYFT, DASH, CART (mobility and delivery).
@@ -54,7 +55,7 @@ Green, pink and yellow boxes and the Evaluation panel are components (§2.2); pu
 | **Toolbox** | The tools the agent calls: its view of the other blocks | | §5 |
 | **Retrieval** | Hybrid search over chunks | | §6 |
 | **Model engine** | Model, checks, forecast, scenarios, valuation | | §7 |
-| **Agent runtime** | The tool-calling loop, prompts and budgets: Ask, Research, sub-agents | ✓ | §8 |
+| **Agent runtime** | The tool-calling loop, prompts and budgets: Ask, Research, sub-agents; the Investigate planner | ✓ | §8 |
 | **Report pipeline** | Steps S1–S11 per ticker and as-of; the note; versions | ✓ | §9 |
 | **Verification** | Ids, claim check, number trace, consistency check | | §10 |
 | **Export** | Note, PDF, workbook, parity check, review status | | §11 |
@@ -97,9 +98,11 @@ One row per boundary. Each is stated in its section; the full schema is in [V4_I
 |---|---|---|
 | **Ask** | The agent, with tool set `ask` | A calculator over reported figures |
 | **Research** | The agent, with tool set `research` (adds model tools) | Model tools; the calculator only combines their results |
+| **Investigate** | The planner: sub-questions, each an Ask or Research run, one replan | The sub-runs; the combiner only cites and calculates over them |
 | **Report** | Code: fixed steps S1–S11; LLM calls are leaf tasks | The Model engine only |
 
 - Ask and Research are one agent with two tool sets.
+- Investigate is the only mode that plans: it runs Ask and Research as sub-runs and combines their checked answers (§8.4). It never starts a Report.
 - **Report steps S1–S11** (full table in §9.1): S1 data pack · S2 events · S3 history · S4 propose · S5 forecast · S6 peers · S7 value · S8 revise · S9 debates · S10 write · S11 export. The Model engine (§7) implements S1 and S3–S7; S4 is its optional LLM step.
 - Report is not an agent loop and never starts an Ask or Research run (spec §2.3). Only its sub-agents (S2, S4, S9) call tools.
 - Ask and Research read a saved report back through `research_report` and `model:…:v<n>` ids.
@@ -268,6 +271,7 @@ A tool is a function the agent calls with JSON arguments; it returns JSON with c
 |---|---|
 | Ask | tool set `ask` |
 | Research | tool set `research` |
+| Investigate | its sub-runs use `ask` or `research`; the planner and combiner call no tools |
 | Report sub-agents (S2 events, S4 proposer, S9 debates) | tool set `ask` |
 | Report code steps, builders, evaluation | their blocks directly, no tools |
 | A person | `tenk tool NAME key=value …` (`--list` prints the schemas) |
@@ -639,13 +643,15 @@ How it works: [V4_AGENT.md](stages/V4_AGENT.md). Reply schemas: [V4_INTERFACES.m
 
 Run the LLM: the Ask and Research loop, Report's sub-agents, and every single-shot call. Each reply is one JSON object.
 
-Code: the loop (`agent/loop.py`, LangGraph), prompts (`prompts/*.md`), sub-agents (`research/subagents.py`, `propose.py`), and one model interface (`models.py`: vLLM or Claude).
+Code: the loop (`agent/loop.py`, LangGraph), the Investigate planner (`agent/plan.py`), prompts (`prompts/*.md`), sub-agents (`research/subagents.py`, `propose.py`), and one model interface (`models.py`: vLLM or Claude).
 
 **LLM calls** (5):
 
 | Call | Tools | Budget |
 |---|---|---|
 | Ask / Research answer | `ask` / `research` | Calls and context |
+| Investigate plan and replan | – | 1 call each, 1 retry; ≤ 5 sub-questions + ≤ 2 follow-ups |
+| Investigate combine | – | 1 call, 1 retry; input capped |
 | KPI extraction | – | 1 call + 1 repair per release |
 | S2 events | `ask` | Calls and context |
 | S4 proposer | `ask` | Calls and context |
@@ -685,6 +691,45 @@ question → model → tool calls → tools → model → … → JSON answer �
 | vLLM unreachable | The call raises; a report resumes with `--resume` |
 | Determinism | Temperature 0 |
 | Judge | Runs as a second pass (§13.2) |
+
+### 8.4 Investigate (planner)
+
+**Contract.** Answer a question too broad for one run: plan sub-questions, run each as an Ask or Research run, replan once, and combine the checked sub-answers into one claim-checked answer (spec §2.4). Code: `agent/plan.py`; prompts `plan.md`, `combine.md`.
+
+**Flow:**
+
+```text
+question → plan (plan.md: question, as-of, coverage table, tool-set summaries; no tools)
+         → [{id, question, mode: ask|research, why}]  ≤ 5
+         → each sub-question, in order: a normal Ask or Research run (§8.2), own budget and claim check
+         → replan (plan.md, replan turn: the plan + each sub-answer's text, claim statuses, gaps)
+             → ≤ 2 follow-ups, run the same way; once only
+         → combine (combine.md: question + every sub-answer's claims with ids and status; no tools)
+         → JSON answer → claim check (§10.2) with the allowed-ids rule
+```
+
+**Rules:**
+
+- Sub-runs are ordinary Ask and Research runs: same loop, prompts, tool sets, budgets and claim check. The planner changes only which questions are asked.
+- Sub-runs run sequentially in one process, as Report's sub-agents do (§8.2). Each gets only its own sub-question: no plan, no other sub-answers.
+- The combiner sees each sub-answer as its claims: text, status (§10.2) and ids. Only `verified`, `calculated` and `cited` claims are usable; `unverified` claims and failed sub-runs are listed as gaps it must name.
+- **Allowed ids:** the final answer may cite only ids that a sub-answer cited. A new id makes the claim unverified ("not from a sub-answer").
+- New numbers come only from calculations over cited values, which the claim check reruns (§10.2). The combiner calls no tools.
+- No sub-question may restate the whole question: the plan is checked against an exact or near-duplicate match and rejected.
+- Investigate never starts a Report and never writes versions; it reads saved reports through `research_report`.
+- Every Investigate run keeps the plan, the replan, each sub-run's tool calls and answer, and the combine call, with times and tokens.
+
+**Failure handling and limits:**
+
+| Case | Handling |
+|---|---|
+| Plan unparseable after one retry, or empty | The question runs as one Research run; logged |
+| More than 5 sub-questions or 2 follow-ups | Cut to the limit, in order; logged |
+| Sub-run fails or hits its budget | Its forced answer is used; failed claims become gaps |
+| Replan unparseable | No follow-ups; combine runs |
+| Combine unparseable after one retry | Recorded as unparsed; the sub-answers are still shown |
+| Combine input over its cap | Each sub-answer cut to its claims, longest text first |
+| Time | Up to (5 + 2) sub-runs; budget in Appendix A, a warning past it |
 
 ---
 
@@ -868,7 +913,7 @@ Code: extraction scorer, backtest, note eval (`evaluation/`); Ask and Research r
 
 | Interface | Contract |
 |---|---|
-| **Gold** (13) | `evaluation/gold/`: extraction (337 labels), Ask (79 questions), Research (72). Every row records who verified it |
+| **Gold** (13) | `evaluation/gold/`: extraction (337 labels), Ask (79 questions), Research (72), Investigate (10–15, `investigate-gold.jsonl`). Every row records who verified it |
 | **Results** (13) | `evaluation/results/backtest-<label>/`; Ask and Research runs in `output/generation/<label>/` |
 
 ### 12.2 Rules: layers and bars
@@ -896,6 +941,7 @@ pool: MAPE and signed bias per metric and method → backtest-<label>/
 | 5 Note | Trace, ten sections, judge rubric, seeded errors | 100% traced; rubric ≥ 4/5 |
 | Ask | 79 questions | ≥ 85% correct and verified; 100% of ids resolve |
 | Research | 72 questions | ≥ 90% with a verifying `model:` id and stated assumptions |
+| Investigate | 10–15 multi-part questions, each also given to one Research run as the baseline | Higher correct-and-verified rate than the baseline; 100% of ids resolve |
 
 - Bars are frozen before the code they grade; a miss is reported as a miss.
 - A gold change after a run is logged, old score beside the new.
@@ -954,6 +1000,7 @@ Per-block cases: §3.3, §4.3, §5.4, §6.3, §7.3, §8.3, §9.3, §10.3, §11.3
 
 **Key defaults:**
 - **Agent:** 20 calls, 20k context; tool results 40 rows, 16,000 characters.
+- **Investigate:** ≤ 5 sub-questions, ≤ 2 follow-ups in one replan; each sub-run on the Ask or Research budget; combine input 16k tokens; time budget 30 minutes.
 - **Sub-agents:** S2 events 8 calls, S4 proposer 10, S9 debates 8, each 16k context; S10 slot 1.5k tokens out. Extraction input ≤ 12k tokens per release. Report time budget 30 minutes.
 - **Retrieval:** 40 candidates per search, RRF k = 60, 8 chunks.
 - **Forecast:** horizon Q4 of the as-of year + 1 (`"+1"`; a fixed key such as `2027Q4` still works); valuation target year the as-of year + 1; fade 0.9 (bounds 0.75–1.0); guidance midpoint; seasonal shares over 3 years; ratio bands 50 bps (take rate) and 200 bps (margins); tax 10–30%; outside inputs on (weight 0.5, at least 6 quarters).
@@ -971,12 +1018,14 @@ Per-block cases: §3.3, §4.3, §5.4, §6.3, §7.3, §8.3, §9.3, §10.3, §11.3
 | `tenk build --stage chunk,load,append,embed,pages,facts,market,kpis` | Build stages |
 | `tenk research report TICKER… --as-of D [--no-llm] [--resume]` | Report mode |
 | `tenk research approve TICKER:vN --by INITIALS` | Mark a version reviewed |
+| `tenk investigate "question" --as-of D` | Investigate mode: plan, sub-runs, combined answer |
 | `tenk setup` | Type in your credentials |
 | `tenk tool NAME key=value …` | Run one tool by hand (`--list`: schemas) |
 | `python -m tenk_agent.research.{model.history,forecast,valuation} TICKER… AS_OF` | One stage alone (`valuation --all`: relative ratings) |
 | `python -m tenk_agent.evaluation.backtest [--label] [--proposer] [--long]` | Backtest and ablations |
 | `python -m tenk_agent.evaluation.note_eval FOLDER…` | Layer 5 |
 | `experiments/v4/ask_run.py`, `research_run.py` | Ask and Research gold runs |
+| `experiments/v4/investigate_run.py` | Investigate gold run and its single-Research baseline |
 
 ## Appendix C. Code layout
 
@@ -991,9 +1040,9 @@ src/tenk_agent/
                  model/   dsl.py graph.py history.py checks.py templates/
                  note/    facts.py sections.py write.py trace.py consistency.py
                  export/  workbook.py report.py
-  agent/         tools.py loop.py sec.py
+  agent/         tools.py loop.py plan.py sec.py
   evaluation/    extraction.py backtest.py note_eval.py render.py (+ V0–V3)
-  prompts/       ask.md research.md extract.md propose.md events.md debates.md section.md judge.md
+  prompts/       ask.md research.md plan.md combine.md extract.md propose.md events.md debates.md section.md judge.md
 docs/
   V4_INTERFACES.md   full interface schemas (§2.3)
   stages/V4_*.md     how each block works (companions to §3–§12)

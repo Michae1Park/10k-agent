@@ -4,12 +4,13 @@
 
 A portfolio project: one agent covers eight US travel and mobility companies using only free, public data. It answers questions, runs the analyst loop on demand (model, forecast, value) and writes a draft sell-side note. A human reviews every rating and price target.
 
-Three modes (details in §2):
+Four modes (details in §2):
 
 | Mode | You give it | You get |
 | --- | --- | --- |
 | **Ask** | A question | A short cited answer from filed data |
 | **Research** | A question | An analytical answer from the model, forecast or valuation |
+| **Investigate** | A multi-part question | A planned answer: the question split into Ask and Research runs, then combined |
 | **Report** | A ticker, as-of and type | A draft note, a model-change workbook and an evidence log |
 
 **Every run takes an as-of date.** The agent sees only data published strictly before it, which is what makes backtesting possible (§6).
@@ -134,15 +135,16 @@ Window: **filings made from 2023-01-01 through the day before the as-of date**.
 
 ---
 
-## 2. Outputs: three product modes
+## 2. Outputs: four product modes
 
 | Mode | Input | Output | Runs |
 | --- | --- | --- | --- |
 | **Ask** | A question + as-of | Short cited answer from filed data | Seconds to minutes |
 | **Research** | A question + as-of | Analytical answer from the model, forecast or valuation, with assumptions shown | Minutes |
+| **Investigate** | A multi-part question + as-of | A combined answer, with the plan, each sub-answer and its claims shown | Minutes to tens of minutes |
 | **Report** | Ticker + as-of + type (`update` or `initiation`) | A 10-section draft note, a model-change workbook (`.xlsx`) and an evidence and exception log | Target: under 30 min per company |
 
-Ask and Research both answer questions. Ask retrieves what was reported; Research computes something new (an estimate, scenario or valuation) by running the model.
+Ask and Research both answer questions. Ask retrieves what was reported; Research computes something new (an estimate, scenario or valuation) by running the model. Investigate answers a question too broad for one run: it plans sub-questions, runs each as Ask or Research, and combines their verified answers (§2.4).
 
 When a comparison needs a KPI that some of the companies do not report (§1.5), Ask and Research say which companies lack it, never fill the gap with an estimate, and offer the closest metric all of them report (for example, GAAP diluted EPS in place of adjusted EPS). Where definitions differ between companies, they say so.
 
@@ -417,7 +419,26 @@ Requirements:
 7. **Degrade, don't stop.** If a research run fails or hits its budget, the section reads "failed check: reason" and the run continues. A model-integrity failure still stops the run.
 8. **Time.** Target under 30 minutes per company. Each section has a call and token budget, and the budgets sum to well under that target.
 
-Not required: a planner, multi-step decomposition of sections, or an agent that coordinates other agents.
+Not required in Report: a planner, multi-step decomposition of sections, or an agent that coordinates other agents. Planning lives in Investigate (§2.4).
+
+### 2.4 Investigate mode: example question per category
+
+| Category | Example question |
+| --- | --- |
+| Peer comparison with reasons | Which of Uber and Lyft has the better adjusted EBITDA margin trajectory, and what does each management say drives it? |
+| Reported vs modeled | DoorDash beat its Q2 2026 GOV guidance; does our model expect that to continue, and what would a 1-point lower growth rate do to the price target? |
+| Sector view | Across the four travel companies, whose take rate moved most over the last year, and does that company trade at a premium? |
+| What changed | What changed for Expedia since its last release: guidance, KPIs and new risk factors? |
+
+Requirements:
+
+1. **Plan, then run.** One LLM call splits the question into at most 5 sub-questions, each marked Ask or Research. Each runs as a normal Ask or Research run, with its own budget and claim check.
+2. **One replan.** After the sub-answers return, the planner may add up to 2 follow-up sub-questions once, for a gap or a surprise. It cannot remove or rerun one.
+3. **Combine from verified answers only.** A final LLM call, with no tools, writes the answer from the sub-answers. It may cite only ids the sub-answers cited and may combine their numbers only through calculations the claim check reruns. It adds no new data.
+4. **Same checks.** The final answer passes the claim check (every id resolves at the as-of). Sub-answers that failed or went unverified are shown as gaps, never filled.
+5. **Shown work.** The output lists the plan, each sub-question with its mode and answer, and the final answer.
+6. **Degrade, don't stop.** If the plan fails, the whole question runs as one Research run. If a sub-run fails, the answer names the gap.
+7. **No Report runs.** Investigate starts Ask and Research runs only; it reads saved reports through Research's tools.
 
 ---
 
@@ -506,6 +527,8 @@ Every DCF includes a price-per-share grid against WACC and terminal growth.
 | 5. Note quality | Number trace, all 10 sections present, rubric review, seeded errors | 100% of figures traced; rubric average of at least 4 of 5 |
 
 Ask and Research modes also get a gold question set (about 80 questions across the eight companies), with pass bars set before the first run.
+
+Investigate gets its own gold set of 10–15 multi-part questions. The same questions also go to a single Research run as the baseline. Pass bar: Investigate scores higher than the baseline on correct-and-verified answers, and 100% of its ids resolve. A miss is reported as a miss.
 
 ## 6. Backtest
 
