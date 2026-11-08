@@ -46,7 +46,7 @@ lines:
 
   # Forecast: each segment's bookings grow on its own rate (faded), shifted by one common
   # @gb_g_adj that the gross-bookings anchor solves; segment take rates as ratios; adj. EBITDA
-  # as a margin on total gross bookings (segment EBITDA stopped in 2026Q1, build log §3.12)
+  # as a margin on total gross bookings (segment EBITDA stopped in 2026Q1)
   gb_g_mobility:  {kind: formula, expr: "gross_bookings_mobility / gross_bookings_mobility[-4] - 1",
                    unit: fraction, fy: none, label: Mobility gross bookings growth y/y,
                    forecast_first: "@gb_g_mobility.g0 + @gb_g_adj",

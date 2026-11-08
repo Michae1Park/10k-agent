@@ -1,4 +1,4 @@
-# Research knobs (V4 design doc §6, Appendix A; D-019): pinned per experiment, none hard-coded.
+# Research knobs (V4 design doc §6, Appendix A): pinned per experiment, none hard-coded.
 # research/forecast.py (V4.4), research/valuation.py (V4.5) and the report pipeline read it.
 
 forecast:
@@ -12,7 +12,6 @@ forecast:
     take_rate: 0.005         # 50 bps (§7.3)
     margin: 0.02             # 200 bps for EBITDA margins
   tax_rate_bounds: [0.10, 0.30]
-  variance_flag: {revenue: 0.02, adj_ebitda: 0.05}  # vs the guidance midpoint (§7.3)
   outside:                   # spec §3.2 outside inputs (research/outside.py, §7.3)
     method: nowcast          # nowcast | "off" (ablation; quoted: YAML reads off as false)
     weight: 0.5              # × the fit's R²: how far g0 moves toward the outside nowcast

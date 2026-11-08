@@ -10,6 +10,7 @@ catalysts, sources and the review block.
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
+from tenk_agent.research.note import trace
 from tenk_agent.research.note.facts import Fact, Facts
 
 TITLES = ("Executive summary", "Earnings results", "Drivers and key debates",
@@ -96,7 +97,18 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
                            [f"| {rating.text()} | {price.text()} | {pt.text()} | {ret.text()} | "
                             f"{mcap.text()} | {ev.text()} | {low52.text()}–{high52.text()} | "
                             f"{nxt} (est.) |"]))
-    change = ctx.get("rating_change") or "initial draft (no prior version)"
+    change = "initial draft (no prior run)"
+    parent = ctx.get("parent")
+    if parent:
+        version = parent["id"].split(":")[1]
+        same_pt = round(parent["price_target"], 2) == round(val["price_target"], 2)
+        if parent["rating"] == val["rating"] and same_pt:
+            change = f"none vs. the prior version ({version})"
+        else:
+            old_pt = add("prior version 12-month price target", parent["price_target"], "USD",
+                         f"{parent['id']} valuation.json")
+            change = (f"rating {parent['rating']} → {val['rating']}, PT {old_pt.text()} → "
+                      f"{pt.text()}, vs. the prior version ({version})")
     s1.blocks.append(f"Rating / PT change: {change}")
     takeaway_facts = [price.id, pt.id, ret.id, rating.id]
     sections.append(s1)
@@ -130,9 +142,9 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
     s2.blocks.append(f"2.1 Headline ({last})")
     s2.blocks.append(table(["", "Actual", "Our est.", "Var.", "Guide mid", "Var. vs mid", "Y/Y"],
                            rows))
-    if not prior:
-        s2.blocks.append("Our estimate: the model as of the day after the previous release "
-                         "(defaults; no saved prior version).")
+    if prior:
+        s2.blocks.append("Our estimate: the model as of the day after the previous release. "
+                         "Variances use unrounded values.")
     s2.blocks.append(f"2.2 Guidance for {first}")
     grows = []
     for a in ctx["anchors"]:
@@ -181,7 +193,13 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
         if driver in model.assumptions:  # the debated assumption, as the model holds it
             evidence.append(add(f"assumption {driver}", model.assumptions[driver] * 100,
                                 "percent", f"model:{ticker}:{model.as_of}:base (assumption)"))
-        s3.blocks.append(f"3.{i} {d['question']}")
+        question = d["question"]
+        # the sub-agent wrote the question: a number in it must trace like any prose figure
+        if trace.check(question, Facts([f for f in evidence if f]), f"debate-{i} question"):
+            ctx["exceptions"].append({"severity": "warning", "item": "dropped debate question "
+                                      f"with an untraced number in section 3 (debate-{i})"})
+            question = f"What next for {driver_label(driver)}?"
+        s3.blocks.append(f"3.{i} {question}")
         s3.blocks.append(Slot(f"debate-{i}", "Write this debate in four labelled lines — Bull, "
                               "Bear, Hypothesis, Trigger — and one Data gap line, from the "
                               f"debate below and these facts.\nDebate: {d}",
@@ -199,12 +217,12 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
             old = add(f"{r['label']} old", r["old"], r["unit"], r["old_id"])
             new = add(f"{r['label']} new", r["new"], r["unit"], r["new_id"])
             ch = add(f"{r['label']} change", pct(r["new"], r["old"]), "percent", "computed")
-            rrows.append(fact_row(r["label"], [old, new, ch]) + f" {r['type']} | "
+            rrows.append(fact_row(r["label"], [old, new, ch]) + f" {r['source']} | "
                          f"{r['confidence']} |")
-        s4.blocks.append(table(["", "Old", "New", "Change", "Type", "Confidence"], rrows))
+        s4.blocks.append(table(["", "Old", "New", "Change", "Source", "Confidence"], rrows))
     else:
-        s4.blocks.append("Initial draft: no prior version to revise.")
-    s4.blocks.append("4.3 Integrity checks (layer 2)")
+        s4.blocks.append("Initial draft (no prior run): no old estimates to revise.")
+    s4.blocks.append("4.2 Integrity checks (layer 2)")
     s4.blocks.append(" · ".join(f"[{c['status']}] {c['name']}" for c in ctx["checks"]))
     sections.append(s4)
 
@@ -306,8 +324,7 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
         s9.blocks.append(f"Insider activity in {ins['period']} (Form 4, dilution context): "
                          f"{sold.text()} shares sold in the open market ({value.text()}), "
                          f"{awarded.text()} awarded.")
-    issues = add("open issues", float(len(ctx["exceptions"])), "count", "exception log")
-    s9.blocks.append(f"Open issues: {issues.text()}; see the exception log (X-rows).")
+    s9.blocks.append(exceptions_line(ctx["exceptions"]))
     buy = add("Buy threshold return", ctx["rating"]["buy"] * 100, "percent", "research.yaml")
     sell = add("Sell threshold return", ctx["rating"]["sell"] * 100, "percent", "research.yaml")
     s9.blocks.append(f"Rating definitions: Buy ≥ {buy.text()} 12-month return, Sell ≤ "
@@ -322,6 +339,34 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
                           "Valuation), one line each, then one 'Thesis (hypothesis):' line. "
                           "Use only these facts.", takeaway_facts + val_facts[:6]))
     return sections
+
+
+DRIVERS = {"gb_g": "gross bookings growth", "take_rate": "take rate", "volume_g": "volume growth",
+           "value_per_unit_g": "value per unit growth", "revenue_g": "revenue growth",
+           "cost_to_gb": "cost share of gross bookings", "trips_g": "trips growth",
+           "margin": "adj. EBITDA margin"}
+
+
+def driver_label(driver: str | None) -> str:
+    """A scenario driver's assumption name in words: gb_g_mobility.g0 → Mobility gross
+    bookings growth."""
+    name = (driver or "the driver").split(".")[0]
+    for key, words in sorted(DRIVERS.items(), key=lambda kv: -len(kv[0])):
+        if name == key:
+            return words
+        if name.startswith(key + "_"):
+            return f"{name[len(key) + 1:].replace('_', ' ').capitalize()} {words}"
+    return name.replace("_", " ")
+
+
+def exceptions_line(exceptions: list[dict]) -> str:
+    """Section 9's count of the exception log by severity; rewritten at export, once the log
+    is final (like section 10)."""
+    counts = {sev: sum(x["severity"] == sev for x in exceptions)
+              for sev in ("error", "warning", "info")}
+    by = ", ".join(f"{n} {sev}" for sev, n in counts.items() if n)
+    return (f"Exceptions: {len(exceptions)}" + (f" ({by})" if by else "")
+            + "; see the exception log (X-rows).")
 
 
 def review_blocks(exceptions: list[dict]) -> list[str]:

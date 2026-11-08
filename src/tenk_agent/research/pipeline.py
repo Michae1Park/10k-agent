@@ -192,9 +192,10 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
     # S10: the note
     clock.step("S10 write")
     facts = Facts()
-    prior, prior_ref = _prior(book, ticker, by_period, period, parent, parent_model)
+    prior, prior_ref = _prior(book, ticker, by_period, period)
     ctx = context(store, f, valuation, events, debates, revisions, results, exceptions,
-                  sensitivities, prior, prior_ref, settings, by_period[period].filing_date)
+                  sensitivities, prior, prior_ref, settings, by_period[period].filing_date,
+                  parent)
     built = note_sections.build(ctx, facts)
     if llm_steps:
         from tenk_agent.research.note.write import fill
@@ -230,11 +231,12 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
               "No rating or PT is approved until the responsible analyst confirms it.")
     note_md = note_sections.markdown(built, header)
     s10 = next(s for s in built if s.number == 10)
+    # section 10 and section 9's exception count are rewritten at export, once the log is final
     blocks = [b for s in built if s is not s10 for b in s.blocks
-              if isinstance(b, str) and b.strip()]
+              if isinstance(b, str) and b.strip() and not b.startswith("Exceptions: ")]
     slots = [{"key": b.key, "text": b.text, "facts": b.facts} for s in built for b in s.blocks
              if isinstance(b, note_sections.Slot) and b.text]
-    untraced = lint(note_md, facts, blocks, slots)
+    untraced = lint(note_md, facts, blocks, slots, final=False)
     exceptions += [{"severity": "error", "item": f"untraced number {u.text!r} ({u.where})"}
                    for u in untraced]
     (folder / "note.json").write_text(json.dumps(
@@ -252,6 +254,10 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
                            f"{budgets['run_minutes']} minutes (see report.json timing)"})
     numbered = [{"id": f"X-{i:02d}", **x} for i, x in enumerate(exceptions, 1)]
     s10.blocks = note_sections.review_blocks(numbered)
+    facts.add("exceptions in the log", float(len(numbered)), "count", "exception log")
+    s9 = next(s for s in built if s.number == 9)
+    s9.blocks = [note_sections.exceptions_line(numbered) if isinstance(b, str)
+                 and b.startswith("Exceptions: ") else b for b in s9.blocks]
     issues = consistency.open_issues(s10, numbered)
     if not issues.ok:  # by construction it passes; a failure is logged, never hidden
         numbered += [{"id": f"X-{len(numbered) + i:02d}", **x}
@@ -283,11 +289,12 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
 
 
 def lint(note_md: str, facts: Facts, blocks: list[str] | None = None,
-         slots: list[dict] | None = None) -> list:
+         slots: list[dict] | None = None, final: bool = True) -> list:
     """Every number in the note body must trace to a fact; every block code wrote (`blocks`:
     tables and lines) must read exactly as printed, so a figure changed to another fact's value
     is still caught; each prose slot's numbers must trace to that slot's own facts (`slots`:
-    {text, facts}), not to any fact in the note."""
+    {text, facts}), not to any fact in the note. final=False (inside the run): section 9's
+    exception count is not set yet, so its line is skipped."""
     body = note_md.split("\n## ", 1)[1] if "\n## " in note_md else note_md
     out = [trace.Untraced("block changed", b.splitlines()[0][:40]) for b in blocks or []
            if b not in note_md]
@@ -298,7 +305,7 @@ def lint(note_md: str, facts: Facts, blocks: list[str] | None = None,
             out.append(trace.Untraced("prose changed", slot["key"]))
         out += trace.check(slot["text"], own, slot["key"])
     for line in body.splitlines():
-        if line.startswith("##") or line.startswith("|---"):
+        if line.startswith(("##", "|---")) or (not final and line.startswith("Exceptions: ")):
             continue
         out += trace.check(line, facts, line[:40])
     return out
@@ -310,13 +317,9 @@ def _events(llm, store, search, ticker, period, budget):
     return events(llm, store, search, ticker, period, budget)
 
 
-def _prior(book, ticker, by_period, period, parent, parent_model):
-    """Our estimate for the reported quarter: the parent version's, else the default model
-    the day after the previous release."""
-    if parent_model:
-        version = parent["id"].split(":")[1]
-        prefix = f"model:{ticker}:{parent['as_of']}:{version}"
-        return parent_model, lambda line, q: f"{prefix}:{line}.{q}"
+def _prior(book, ticker, by_period, period):
+    """Our estimate for the reported quarter (section 2.1): the base forecast made the day
+    after the previous release (design doc §9.2). Section 4's "old" is the parent version."""
     from tenk_agent.evaluation.backtest import run_day
     from tenk_agent.research.forecast import next_quarter
 
@@ -346,7 +349,7 @@ def _revisions(model, parent, parent_model) -> list[dict]:
                         "old_id": f"model:{model.ticker}:{parent['as_of']}:{version}:"
                                   f"{line}.{period}",
                         "new_id": f"model:{model.ticker}:{model.as_of}:base:{line}.{period}",
-                        "type": "Reported + assumption" if reported else "Assumption",
+                        "source": "Reported + assumption" if reported else "Assumption",
                         "confidence": "Low" if period.startswith("FY")
                         and period[2:] > model.as_of[:4] else "Medium"})
     return out
@@ -402,7 +405,7 @@ def _sensitivities(book: Book, ticker: str, debated: list[str] = ()) -> list[dic
 
 
 def context(store, f, valuation, events, debates, revisions, results, exceptions,
-            sensitivities, prior, prior_ref, settings, release_date) -> dict:
+            sensitivities, prior, prior_ref, settings, release_date, parent=None) -> dict:
     model = f.model
     ticker = model.ticker
     company = yaml.safe_load(companies_path().read_text())["companies"][ticker]
@@ -438,8 +441,17 @@ def context(store, f, valuation, events, debates, revisions, results, exceptions
         "anchored": {a.solve for a in f.anchors}, "exceptions": exceptions,
         "insiders": store.insider_summary(ticker, *_quarter_dates(last)) | {
             "period": last},
-        "rating_change": None,
+        "parent": parent_view(parent),
     }
+
+
+def parent_view(parent: dict | None) -> dict | None:
+    """The parent version's id, as-of, rating and price target (section 1's change line)."""
+    if not parent:
+        return None
+    saved = json.loads((Path(parent["path"]) / "valuation.json").read_text())
+    return {"id": parent["id"], "as_of": parent["as_of"], "rating": saved["rating"],
+            "price_target": saved["price_target"]}
 
 
 def _quarter_dates(quarter: str) -> tuple[str, str]:

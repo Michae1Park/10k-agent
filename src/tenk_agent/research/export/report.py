@@ -59,8 +59,8 @@ def workbook(folder: Path, model, f, valuation: dict, checks, facts, exceptions,
         *[[f"DCF per share, WACC|g {k}", x] for k, x in v["dcf_grid"].items()]])
     dcf_tab(book, valuation)
     prior_tab(book, prior, prior_id)
-    sheet("Revisions", ["line", "old", "new", "type", "confidence"],
-          [[r["label"], r["old"], r["new"], r["type"], r["confidence"]] for r in revisions])
+    sheet("Revisions", ["line", "old", "new", "source", "confidence"],
+          [[r["label"], r["old"], r["new"], r["source"], r["confidence"]] for r in revisions])
     sheet("Checks", ["check", "status", "tested", "failures", "skipped"],
           [[c.name, c.status, c.tested, "; ".join(c.failures), len(c.skipped)] for c in checks])
     sheet("Log", ["id", "kind", "label or severity", "value or item", "source"],
