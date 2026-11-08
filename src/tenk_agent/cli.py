@@ -13,6 +13,7 @@ tenk report LABEL              write a finished V2 run's end-to-end report to ev
 tenk companies verify          V4: check companies.yaml against SEC (CIK, FYE, filing counts)
 tenk research report T --as-of D   V4 Report mode: note, workbook, logs (research/pipeline.py)
 tenk research approve T:vN --by X  V4: mark a report's model version reviewed
+tenk investigate "Q" --as-of D   V4: Investigate mode
 """
 
 import argparse
@@ -49,7 +50,8 @@ def main(argv: list[str] | None = None) -> int:
                        help="V4 corpus: prices (Tiingo), macro (FRED) and ERP only")
 
     build = commands.add_parser("build", help="V0 chunks of every filing → V1 database")
-    stages = ("chunk", "load", "append", "embed", "pages", "facts", "market", "kpis")  # build.STAGES
+    # build.STAGES
+    stages = ("chunk", "load", "append", "embed", "pages", "facts", "market", "kpis")
     build.add_argument(
         "--stage", action="append", choices=stages, help="default: chunk, load, embed"
     )
@@ -83,6 +85,12 @@ def main(argv: list[str] | None = None) -> int:
     agent.add_argument("--live", action="store_true", help="allow SEC requests not in the cache")
     agent.add_argument("--model", help="default: generation.model")
     agent.add_argument("--json", action="store_true", help="print the answer and steps as JSON")
+
+    investigate = commands.add_parser(
+        "investigate", help="V4 Investigate: plan Ask and Research sub-runs, combine them")
+    investigate.add_argument("question")
+    investigate.add_argument("--as-of", required=True, help="YYYY-MM-DD")
+    investigate.add_argument("--json", action="store_true", help="print the run as JSON")
 
     gold = commands.add_parser("gold", help="review a gold question set (default: list it)")
     gold.add_argument("--gold", type=Path, default=GOLD, help="default: %(default)s")
@@ -135,6 +143,7 @@ def main(argv: list[str] | None = None) -> int:
         "chat": _chat,
         "tool": _tool,
         "agent": _agent,
+        "investigate": _investigate,
         "gold": _gold,
         "report": _report,
         "companies": _companies,
@@ -432,6 +441,30 @@ def _agent(args: argparse.Namespace, settings: dict) -> int:
     tokens_in = sum(s.input_tokens for s in run.steps)
     tokens_out = sum(s.output_tokens for s in run.steps)
     print(f"\n{run.seconds:.1f}s · {tokens_in} in / {tokens_out} out · stop: {run.stop}\n")
+    return 0
+
+
+def _investigate(args: argparse.Namespace, settings: dict) -> int:
+    """Investigate mode (design doc §8.4): a plan of Ask and Research sub-runs over one shared
+    model book, one replan, and a claim-checked combined answer."""
+    from dataclasses import asdict
+
+    from tenk_agent.agent.factory import agent_factory
+    from tenk_agent.agent.plan import Investigator, answer_text
+
+    if not DATA_DIR:
+        print("Investigate needs the V4 corpus: TENK_COMPANIES=companies.yaml", file=sys.stderr)
+        return 2
+    db = Path(DATA_DIR) / "build" / "parent_child.db"
+    agent = agent_factory(db, settings["retrieval"], settings["generation"], settings["agent"])
+    research = agent(args.as_of)
+    ask = agent(args.as_of, "ask", research.toolbox.book)
+    inv = Investigator(research.model, {"ask": ask, "research": research}).run(args.question)
+    if args.json:
+        print(json.dumps(asdict(inv), indent=2, default=str))
+        return 0
+    print(answer_text(inv))
+    print(f"\n{inv.seconds:.1f}s · {len(inv.sub_runs)} sub-runs · stop: {inv.stop}")
     return 0
 
 
