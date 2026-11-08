@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main, v4]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - run: uv run ruff check
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      # LibreOffice runs the workbook parity tests (every formula cell equals the Python model)
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-calc-nogui
+      - run: uv sync --locked
+      # No GPU, model, credentials or local data: tests that need the V4 store skip
+      - run: uv run pytest -q -rs
