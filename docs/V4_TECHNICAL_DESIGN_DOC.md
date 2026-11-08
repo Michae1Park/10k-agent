@@ -1,6 +1,6 @@
 # V4 technical design: a junior sell-side research agent
 
-> **What this is:** the build contract for V4. The [spec](V4_SPEC.md) says what to build and why; this doc says how: components, interfaces, rules, algorithms, and what happens when things fail. Tunable values live in config (Appendix A); results and gaps in [V4_RESULTS.md](V4_RESULTS.md).
+> **What this is:** the build contract for V4. The [spec](V4_SPEC.md) says what to build and why; this doc says how: components, interfaces, rules, algorithms, and what happens when things fail. The two agree; the build follows both. Tunable values live in config (Appendix A); results in [V4_RESULTS.md](V4_RESULTS.md).
 
 | For | Read |
 |---|---|
@@ -11,8 +11,6 @@
 | Results | [V4_RESULTS.md](V4_RESULTS.md) |
 
 **How to read it.** Top down: §1 is the scope; §2 gives the components, interfaces and cross-cutting rules. §3–§12 take one block each, data first; §5, the Toolbox, is the agent's view of the blocks in §3, §4, §6, §7 and §11, so it refers ahead to §6 and §7. Each has three parts: **contract, rules, failure handling and limits.** §12 is evaluation; §13 is reliability. "Spec §n" is a section of the spec; a bare "§n" is a section of this doc.
-
-*Updated 2026-11-03.*
 
 ---
 
@@ -38,7 +36,7 @@ The system serves four entry points, each at an as-of date, over eight companies
 ### 2.1 Component map
 
 <p align="center">
-  <img src="img/v4-components.svg" alt="V4 component map. External sources feed Acquisition, which writes a raw cache. Text processing and Facts build the Store, one SQLite file read only through an AsOf filter. Retrieval and the Model engine read the Store. The Agent runtime (loop, prompts, sub-agents) calls the Toolbox, which reaches Retrieval, the Store and the Model engine. Ask and Research are two modes of the Agent runtime; the Report pipeline runs fixed steps, calls the Model engine and bounded sub-agents, and its artifacts pass Verification and Export into a note, workbook and log. Saved versions go back to the Store. Evaluation reads gold sets and every layer's outputs. Components that call the LLM are marked." width="100%">
+  <img src="img/v4-components.svg" alt="V4 component map. External sources feed Acquisition, which writes a raw cache. Text processing and Facts build the Store, one SQLite file read only through an AsOf filter. Retrieval and the Model engine read the Store. The Agent runtime (loop, prompts, sub-agents, the Investigate planner) calls the Toolbox, which reaches Retrieval, the Store and the Model engine. Ask and Research are two modes of the Agent runtime; the Report pipeline runs fixed steps, calls the Model engine and bounded sub-agents, and its artifacts pass Verification and Export into a note, workbook and log. Saved versions go back to the Store. Evaluation reads gold sets and every layer's outputs. Components that call the LLM are marked." width="100%">
 </p>
 
 Green, pink and yellow boxes and the Evaluation panel are components (§2.2); purple boxes are data, blue ones are outside the system, grey Config is files. Numbered arrows are interfaces (§2.3). Pink marks a component that calls the LLM.
@@ -243,10 +241,10 @@ release chunks → order: tables first, then chunks naming the most registry lab
 - Input is only that release's chunks; no other filing can leak in.
 - Code keeps a row only if the chunk id was given, the quote is verbatim, the value is in the quote, and the metric is in the registry. The LLM proposes; code decides what is stored.
 - One repair turn, then an exception row; never a guessed value (spec §2.3).
-- GAAP diluted EPS only.
+- `eps` is GAAP diluted EPS; adjusted EPS is its own KPI key (spec §1.5).
 - A recast gives earlier periods a new definition version; readers take the newest (spec §1.6).
 - Guidance keeps its basis (level, growth or margin); the forecast converts it.
-- Where a KPI is also an XBRL fact, the filing wins and the gap is logged (spec §1.6). Not built yet.
+- Where a figure is both tagged in XBRL and printed in the release, the model reads XBRL; the two are not reconciled (spec §1.6).
 
 ### 4.3 Failure handling and limits
 
@@ -446,6 +444,7 @@ Compares the forecast made before a release with the reported actual, and splits
 - Errors are results: `{"error": …}` plus the valid choices.
 - Tools come in groups; no run gets every tool.
 - Results are capped in rows and characters (§5.2, Appendix A).
+- A comparison needs a figure for every company it names: Ask and Research say which companies lack a KPI, never estimate it, and say where definitions differ (spec §2).
 - Ask cites estimates only through `research_report`; Research's new numbers come only from model tools (the calculator only combines their results), assumptions listed (spec §2).
 - `run_scenario` writes a session-only `scratch-n` run, clipped to the proposer's bounds (§7.2). Only Report creates versions.
 - Model tools read the model book: each company's base forecast with default assumptions (proposer off, no LLM), built once per ticker and as-of. Peers come from the same book.
@@ -534,7 +533,7 @@ Code (`research/`): data pack (S1), DSL and graph, templates, history (S3), laye
 | **DSL** | The formula language inside templates | Restricted formula expressions (arithmetic, lags, fiscal-year sums, fallbacks, `@assumption`), parsed and never run as code; anything else is rejected. Vocabulary: [V4_INTERFACES.md §7](V4_INTERFACES.md#7-templates) |
 | **`research.yaml`** | Input: the knobs | Every forecast and valuation knob (Appendix A) |
 | **`model.json`** (8) | Output of S3 and S5 | Every cell (line × period) with value and kind. **Input cells carry their source id and filing date** |
-| **`valuation.json`** (8) | Output of S7 | Market cap, EV, cost of capital, peers, PT per scenario, weighted PT, return, rating, DCF grid, `inputs_hash` |
+| **`valuation.json`** (8) | Output of S7 | Market cap, EV, cost of capital, peers, multiples (EV/EBITDA, EV/(EBITDA − SBC), P/E, FCF yield), PT per scenario, weighted PT, return, rating, DCF grid, `inputs_hash` |
 
 ### 7.2 Rules and algorithms
 
@@ -570,7 +569,8 @@ S5 forecast    defaults from history → outside nudge → proposer (if on) → 
 ```text
 first forecast quarter   Driver(q) = Driver(q-4) × (1 + g), anchored to the guidance midpoint
 later quarters           Driver(q) = last FY × (1 + g) × seasonal share of q (mean of recent years)
-fade                     g(t+1) = g(t) × fade
+fade                     g(t+1) = g(t) × fade (fixed 0.9; `fitted` is an ablation: the median
+                         quarter-to-quarter ratio of the growth drivers' y/y, within the bounds)
 ratios                   same quarter last year + a shift held for 4 quarters, then 0;
                          bounded to the 8-quarter range ± a band per ratio
 ```
@@ -578,17 +578,17 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 - Forecast per driver, never per total (spec §3.2).
 - A ratio's shift holds until lapped, then 0; a one-off change is not compounded.
 - Each guide anchors its own driver, upstream first (bookings → revenue → EBITDA); later anchors see earlier ones.
-- Anchor at the guidance midpoint (spec §7).
+- Anchor at the guidance midpoint (spec §3.2); `guidance_point: high` is an ablation.
 - An anchor the bounds stop is logged, never forced.
 - **Solving an anchor:** the guide (latest visible for the first forecast quarter, or its FY for a `period: fy` anchor) gives a target: the midpoint, × the prior-year value for a growth guide, / 100 for a margin. The anchored assumption is bracketed by stepping out from its default (doubling) until the gap changes sign, then bisected; the model keeps the best value. A driver already solved is not moved again; template order sets priority.
-- Scenarios move each driver by ±1σ of its history.
+- Scenarios move the template's 2–3 scenario drivers by ±1σ of their history.
 - **Outside nudge** (spec §3.2): per mapped `<line>.g0`, the series' y/y over a 3-month window at lag k before the first forecast quarter; an OLS fit of the driver's history y/y on the series at the same lag; slope ≤ 0 → unused; g0 = (1 − w) × default + w × fit, w = weight × R². Guidance anchors override it.
 
 **Proposer (S4).** Switched in `research.yaml` (off by default). When on:
 - **Input:** a driver table (no data pack). Each proposable driver has its last 8 quarters, default and bounds; anchored drivers are listed as fixed.
 - **Proposable:** growth starts (`.g0`), ratio shifts (`.shift0`) and `fade`, never one a guide anchors (the anchor runs after and would undo it).
 - **Bounds:** each driver's bounds derive from its recent history; the fade's are in `research.yaml` (Appendix A).
-- **Kept:** a proposal with a number and at least one evidence id that resolves at D. It is clipped to its bounds (logged) and stored with its rationale and evidence.
+- **Kept:** a proposal with a number and at least one evidence id that resolves at D. It is clipped to its bounds (logged) and stored with its basis, confidence, rationale and evidence.
 - **Dropped:** anything else, logged. A reply with no JSON means defaults.
 
 **Valuation and rating** (spec §3.3)
@@ -602,7 +602,7 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 | DCF | Unlevered FCF = adj. EBITDA − SBC − tax − capex; modeled years, then faded to the DCF horizon; Gordon terminal |
 | Cost of capital | Ke = DGS10 + β × ERP; β from monthly returns vs SPY; WACC = Ke when debt is under a set share of capital |
 | Price target | Weighted multiple and DCF targets per scenario, then scenario-weighted; no roll-forward |
-| Rating | Return vs the Buy and Sell thresholds, else Hold; relative ranking only with `--all` |
+| Rating | Return vs the Buy and Sell thresholds, else Hold. `--all` also ranks by return: top third Buy, bottom third Sell, the rest Hold |
 | Determinism | Identical inputs → byte-identical `valuation.json` (layer 4) |
 
 **Layer-2 checks.** Run after S3 and S5; the valuation checks after S7. Any FAIL stops the run.
@@ -623,9 +623,9 @@ ratios                   same quarter last year + a shift held for 4 quarters, t
 | Case | Handling |
 |---|---|
 | Layer-2 or valuation check FAIL | The run stops, naming the check |
-| Missing input | Blank, logged |
+| Missing input | Blank, `info` logged |
 | Volume KPI not disclosed | Template falls back one level up, logged |
-| Anchor out of bounds | Logged, not forced |
+| Anchor out of bounds | `warning` logged, not forced |
 | Fewer than 3 years for seasonal shares | Fewer years, logged |
 | DCF value ≤ 0 | Left out of the PT, logged |
 | Too few monthly returns | β = 1, logged |
@@ -774,7 +774,7 @@ Every artifact is a JSON file in the report folder. `report.json` records the ve
 |---|---|
 | **S2 events** | One bounded agent (tool set `ask`, `events.md`) is asked what changed for the ticker in the quarter. Each event (type, summary, evidence ids) is kept only if one evidence id resolves at D. An unparseable reply means no events |
 | **S4 propose** | §7.2 Proposer |
-| **S8 revise** | Parent = the latest saved version before D; none → "initial draft (no prior run)". Headline lines, old (parent's `v<n>` id) vs new (`base` id); each typed by whether one of the parent's forecast quarters is now reported |
+| **S8 revise** | Parent = the latest saved version before D; none → "initial draft (no prior run)". Revenue, adj. EBITDA and EPS for the first forecast quarter and the last two FY columns, old (parent's `v<n>` id) vs new (`base` id). Source: "Reported + assumption" if one of the parent's forecast quarters is now reported, else "Assumption". Confidence: Low for fiscal years after the as-of year, else Medium. Section 1 states the rating and PT change vs the parent |
 | **S9 debates** | One agent per scenario driver in the template (tool set `ask`, `debates.md`), told the driver's value. Kept only if one evidence id resolves; the resolved values become note facts |
 | **S9 → section 7** | Sensitivities: the base model rebuilt with one driver moved one step, for the key drivers (take rate, growth, cost share) and every debated driver; each valued as a scratch run, giving the adj. EBITDA and PT change with ids |
 | **S10 facts** | Code builds the sections. Every figure is registered once as an `F-n` fact (label, value, unit, source id) and formatted once by code |
@@ -793,14 +793,18 @@ Every artifact is a JSON file in the report folder. `report.json` records the ve
 
 A failure becomes an `error` exception. The takeaways get one repair; other sections are never rewritten.
 
+**Section 2.1's "Our est."** is the base forecast made the day after the previous release (as in `variance_review`); section 4's "Old" is the parent version (S8).
+
+**Who writes each section** (spec §2.3): code writes 2.1, 2.2, 4, 5, 7, 8 (next earnings date and S2's catalyst events), 9 (with the Form 4 insider summary) and 10. LLM prose slots: 2.3 quality of the quarter, each 3.n debate (from S9), the 6 target-multiple justification and the 1 takeaways.
+
 ### 9.3 Failure handling and limits
 
 | Case | Handling |
 |---|---|
 | Layer-2 or valuation FAIL | The run stops; nothing downstream runs on unchecked numbers |
-| LLM step fails or hits its budget | Section reads "failed check: reason"; exception row; the run finishes |
-| Untraced number after repair | Sentence dropped, logged (§10.2) |
-| Consistency failure | Exception row; takeaways repaired once |
+| LLM step fails or hits its budget | Section reads "failed check: reason"; `warning` row; the run finishes |
+| Untraced number after repair | Sentence dropped, `warning` logged (§10.2) |
+| Consistency failure | `error` row; takeaways repaired once |
 | Over the time budget | Warning exception |
 | LibreOffice or Chrome missing | Export fails; no version saved |
 | Runtime | One ticker per run |
@@ -822,7 +826,7 @@ Code: id grammar and resolver (`research/refs.py`), claim check (`generation/ver
 | **Reference ids** (10) | One grammar for every kind: chunk, accession, `xbrl:`, `q:`, `kpi:`, `guide:`, `px:`, `macro:`, `cc:`, `model:`, `E-n`, `X-n`. Data ids resolve under an as-of to a value and unit |
 | **`model:` ids** | `model:<T>:<as_of>:<run>:<line>.<period>`; run = `base`, `scratch-n`, `val-…`, `var-<period>` or a saved `v<n>` |
 | **Fact list** (11) | `F-n` facts: label, formatted value, unit, source id. The writer uses them verbatim, marked `{F-n}` |
-| **Log** | `E-n` rows from the facts; `X-n` rows (severity `info`, `warning` or `error`) from every step |
+| **Log** | `E-n` rows from the facts (id, figure, value, source id); `X-n` rows from every step (id, severity `info`, `warning` or `error`, item) |
 
 ### 10.2 Rules
 
@@ -855,7 +859,7 @@ Code: id grammar and resolver (`research/refs.py`), claim check (`generation/ver
 |---|---|
 | Cited id doesn't resolve | Claim unverified, "unknown id" |
 | Value doesn't match | Unverified, with the reason |
-| Untraced number in prose | One repair; then dropped, `error` logged |
+| Untraced number in prose | One repair; then the sentence is dropped, `warning` logged; one left in the final note is an `error` (lint) |
 | `model:` ids | Need the session's model book, or the saved version's files |
 | `ixbrl:`, `E-`, `X-` ids | Parse only, not resolved |
 
@@ -874,7 +878,7 @@ Code: workbook and parity (`research/export/workbook.py`), other tabs and PDF (`
 | Interface | Contract |
 |---|---|
 | **Report folder** (12) | `output/reports/<TICKER>/<as_of>/`: note (`.md`, `.pdf`), workbook, artifacts; saved as a version with its parent |
-| **Workbook** | Tabs: Model, Assumptions, Summary, Scenarios, Valuation, DCF, Revisions, Model (prior), Checks, Log. Inputs blue, formulas black, links green |
+| **Workbook** | Tabs: Model, Assumptions, Summary, Scenarios, Valuation, DCF, Revisions, Model (prior), Checks, Log (contents: spec §2.3). Inputs blue, formulas black, links green |
 | **Review** | `tenk research approve TICKER:vN --by INITIALS` marks a version reviewed |
 
 ### 11.2 Rules
@@ -885,7 +889,6 @@ Code: workbook and parity (`research/export/workbook.py`), other tabs and PDF (`
 
 **Rules:**
 
-- Parity: LibreOffice recalculates; every formula cell equals `model.json`.
 - Every version is a draft until approved; an amendment is a new version (spec §2.3).
 - Ask and Research show the status beside a cited estimate, so a draft is never presented as approved.
 - Market data stays in `data/` (Tiingo licence).
@@ -896,7 +899,7 @@ Code: workbook and parity (`research/export/workbook.py`), other tabs and PDF (`
 |---|---|
 | Parity mismatch | Recorded in `report.json`; **the run does not stop** |
 | LibreOffice or Chrome missing | Export raises; no version saved |
-| Approving an unknown version | Nothing happens, no error |
+| Approving an unknown version | Error, nothing changed |
 | Parity time | Up to 300 s |
 
 ---
@@ -927,7 +930,10 @@ for each company, each release from Q4 2024 whose next quarter has reported:
     leakage probe: no_future_input passes and the target quarter is not in history, else stop
     score vs the next quarter's first-reported value: revenue and the main KPI
     baselines: seasonal naive (same quarter last year × latest y/y), guidance midpoint
-pool: MAPE and signed bias per metric and method → backtest-<label>/
+pool: MAPE, median and range of APE, and signed bias per metric and method, by company and pooled;
+      paired Wilcoxon (model vs naive); guidance call (actual above or below the midpoint)
+      → backtest-<label>/
+no-tools LLM baseline: experiments/v4/llm_baseline.py over a run's forecasts
 --long: from each Q4 2024 release, all four quarters of 2025 (tests the fade)
 ```
 
@@ -937,7 +943,7 @@ pool: MAPE and signed bias per metric and method → backtest-<label>/
 | 1 Extraction | 337 labels | ≥ 98% exact; 100% on revenue, EPS, main KPI |
 | 2 Model integrity | §7.2 checks on every model | 100%; any FAIL stops |
 | 3 Forecast | Walk-forward backtest, 48 forecasts per metric | MAPE below seasonal naive on revenue and main KPI; bias near 0 |
-| 4 Valuation | Rerun on identical inputs; WACC sweep | Identical output; targets inside the peer range or flagged |
+| 4 Valuation | Rerun on identical inputs; WACC sensitivity sweep | Identical output; targets inside the peer range or flagged |
 | 5 Note | Trace, ten sections, judge rubric, seeded errors | 100% traced; rubric ≥ 4/5 |
 | Ask | 79 questions | ≥ 85% correct and verified; 100% of ids resolve |
 | Research | 72 questions | ≥ 90% with a verifying `model:` id and stated assumptions |
@@ -948,6 +954,7 @@ pool: MAPE and signed bias per metric and method → backtest-<label>/
 - Backtest as-of = the day after a release's EDGAR acceptance (works for releases before the open and after the close).
 - Actuals as first reported.
 - Baselines: seasonal naive, guidance midpoint, an LLM with no tools (spec §6); the last also measures memorization.
+- Ablations (spec §6): the `research.yaml` switches `fade: fitted`, `guidance_point: high`, `outside.method: off` and `proposer.method: llm`, each a backtest rerun under its own `--label`. Rules vs LLM extraction (`facts/rules.py`) is scored on layer 1.
 - The judge is from another model family; no model grades itself.
 
 ### 12.3 Failure handling and limits
@@ -959,13 +966,10 @@ pool: MAPE and signed bias per metric and method → backtest-<label>/
 | Judge skips a criterion | Missing from the mean |
 | Sample | 48 forecasts per metric |
 | Held-out quarters | None: the LLM's training cutoff is unpublished |
-| Human review | Partial |
 
 ---
 
 ## 13. Reliability
-
-Gaps against the spec and known problems: [V4_RESULTS.md](V4_RESULTS.md#gaps-against-the-spec).
 
 ### 13.1 Error policy
 
@@ -1005,7 +1009,7 @@ Per-block cases: §3.3, §4.3, §5.4, §6.3, §7.3, §8.3, §9.3, §10.3, §11.3
 - **Retrieval:** 40 candidates per search, RRF k = 60, 8 chunks.
 - **Forecast:** horizon Q4 of the as-of year + 1 (`"+1"`; a fixed key such as `2027Q4` still works); valuation target year the as-of year + 1; fade 0.9 (bounds 0.75–1.0); guidance midpoint; seasonal shares over 3 years; ratio bands 50 bps (take rate) and 200 bps (margins); tax 10–30%; outside inputs on (weight 0.5, at least 6 quarters).
 - **Scenarios:** weights 25/50/25; shocks ±1σ.
-- **Valuation:** 60/40 multiple/DCF; target year 2027; scenario multiples ±15%; terminal growth 3% (grid 2.5–3.5%); 10 DCF years; β from monthly returns since 2023; debt-weight threshold 10%; Buy +15%, Sell −10%.
+- **Valuation:** 60/40 multiple/DCF; scenario multiples ±15%; terminal growth 3% (grid 2.5–3.5%); 10 DCF years; β from monthly returns since 2023; debt-weight threshold 10%; Buy +15%, Sell −10%.
 
 **Credentials.** Each user types in their own with `tenk setup` (`credentials.yaml`, gitignored). Environment variables take precedence. A missing one stops the command with an error naming it. `data/` and `output/` are never committed.
 
@@ -1025,6 +1029,7 @@ Per-block cases: §3.3, §4.3, §5.4, §6.3, §7.3, §8.3, §9.3, §10.3, §11.3
 | `python -m tenk_agent.evaluation.backtest [--label] [--proposer] [--long]` | Backtest and ablations |
 | `python -m tenk_agent.evaluation.note_eval FOLDER…` | Layer 5 |
 | `experiments/v4/ask_run.py`, `research_run.py` | Ask and Research gold runs |
+| `experiments/v4/llm_baseline.py --from LABEL` | No-tools LLM backtest baseline |
 | `experiments/v4/investigate_run.py` | Investigate gold run and its single-Research baseline |
 
 ## Appendix C. Code layout

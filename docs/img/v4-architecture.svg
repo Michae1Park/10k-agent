@@ -38,7 +38,7 @@
   <text class="sub" x="730" y="98" text-anchor="middle" font-size="13" fill="#4a5a68">macro with vintages · equity risk premium</text>
   <rect class="ext" x="880" y="52" width="260" height="62" rx="7" fill="#e6eef8" stroke="#4a7bab" stroke-width="1.5"/>
   <text class="name" x="1010" y="77" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">BTS · NYC TLC · Form 4</text>
-  <text class="sub" x="1010" y="98" text-anchor="middle" font-size="13" fill="#4a5a68">cross-checks · insiders (V4.7)</text>
+  <text class="sub" x="1010" y="98" text-anchor="middle" font-size="13" fill="#4a5a68">cross-checks · insiders</text>
 
   <!-- Build -->
   <rect class="panel" x="20" y="150" width="1140" height="240" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
@@ -145,7 +145,7 @@
     <rect class="work" x="814" y="844" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="856.5" fill="#132030">S5  forecast · anchor to guidance, scenarios</text>
     <rect class="work" x="814" y="863" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="875.5" fill="#132030">S6  peers · S1, S3, S5 per peer, defaults</text>
     <rect class="work" x="814" y="882" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="894.5" fill="#132030">S7  value · comps, DCF, targets, ratings</text>
-    <rect class="work" x="814" y="901" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="913.5" fill="#132030">S8  revise · old vs new vs parent version</text>
+    <rect class="work" x="814" y="901" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="913.5" fill="#132030">S8  revise · old (parent) vs new</text>
     <rect class="llm" x="814" y="920" width="312" height="16" rx="3" fill="#fbe8f1" stroke="#b4538a"/><text class="name" x="822" y="932.5" fill="#132030">S9  debates · bull, bear, trigger per driver</text>
     <rect class="llm" x="814" y="939" width="312" height="16" rx="3" fill="#fbe8f1" stroke="#b4538a"/><text class="name" x="822" y="951.5" fill="#132030">S10 write · ten sections, number trace</text>
     <rect class="work" x="814" y="958" width="312" height="16" rx="3" fill="#e7f3ea" stroke="#4f8f61"/><text class="name" x="822" y="970.5" fill="#132030">S11 export · note, workbook, parity check</text>
