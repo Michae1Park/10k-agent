@@ -1,7 +1,7 @@
 """V4 acquisition (design doc §3.2): every 10-K, 10-Q, earnings release and proxy in the window.
 
   10-K, 10-Q   one original per period (amendments ignored); fiscal year and period from the
-               company-facts rows tagged with the filing's accession (as V3's D-004)
+               company-facts rows tagged with the filing's accession
   release      8-K with Item 2.02; every EX-99.* exhibit from the filing index (99.1 release,
                99.2 letter where used); the quarter it reports is the last quarter end before
                it was filed, checked against that quarter's 10-Q or 10-K
@@ -10,8 +10,9 @@
                meeting) is skipped. Text only: compensation, equity plans, share requests
 
 Each filing lands in <data_dir>/raw/filings/<TICKER>/<period>-<form>/ (FY2025-10K,
-2026Q2-10Q, 2026Q2-ER, FY2025-DEF14A) with a metadata.json, and raw/manifest.json lists them all with the
-time each was retrieved. December fiscal years only (all V4 companies; companies verify checks).
+2026Q2-10Q, 2026Q2-ER, FY2025-DEF14A) with a metadata.json, and raw/manifest.json lists them
+all with the time each was retrieved. December fiscal years only (all V4 companies;
+`tenk companies verify` checks).
 """
 
 import json

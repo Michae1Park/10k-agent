@@ -55,7 +55,7 @@ Plus one false premise ("Apple's net income fell in fiscal 2025…": it rose 19.
 | **text** | `search_filings`, `calculator` (round 3: + `get_section`) | What the agent fetches | What tool use adds |
 | **full** | + `xbrl_facts`, `edgar_filings` | Also XBRL facts and filing metadata | What the SEC data adds on top |
 
-SEC data comes from the cache (`data/raw/edgar/`, fetched 2026-09-30) with the client off: no request leaves the machine during a run ([D-036](../docs/DECISIONS.md#d-036)).
+SEC data comes from the cache (`data/raw/edgar/`, fetched 2026-09-30) with the client off: no request leaves the machine during a run.
 
 ---
 
@@ -69,7 +69,7 @@ question ─► model ──tool calls──► tools ─► model ─► … �
 
 | Setting | Value |
 |---|---|
-| Loop | LangGraph `model ⇄ tools`, over the project's own `Model` interface (D-013) |
+| Loop | LangGraph `model ⇄ tools`, over the project's own `Model` interface |
 | Prompt | [agent.md](../src/tenk_agent/prompts/agent.md): how to work (plan, cover every company and year, calculator for all arithmetic), V2's rules, the corpus table, V2's answer format |
 | First turn | Must be a tool call (`tool_choice: required`) |
 | Budget | 20 tool calls; a repeated call returns an error; then one answer turn with tools off. The same once the conversation reaches 20k input tokens (the server holds 32k) |
@@ -92,7 +92,7 @@ V2's metrics ([§4](V2_GENERATION.md#4-metrics)), plus tool use from each agent 
 | Calls per question, errors, repeats, budget stops | From the steps |
 | Expected-tools recall / precision | Called tools vs the question's `expected_tools` (only tools the variant has) |
 
-Text answers were judged by `gpt-oss-20b` (the fixed judge, D-029) with [v2/judge.py](v2/judge.py) `--config experiments/v3/config.yaml`.
+Text answers were judged by `gpt-oss-20b` (the fixed judge) with [v2/judge.py](v2/judge.py) `--config experiments/v3/config.yaml`.
 
 ---
 
@@ -179,7 +179,7 @@ The prompt and loop were fixed on dev questions, each fix for a failure seen in 
 | | Stop at 20k input tokens | One run exceeded the server's 32k context |
 | Round 2 rerun | Only a JSON object with `answer` is an answer (20 affected runs rerun) | On the answer turn the model sometimes wrote a tool call as text, whose JSON arguments were taken for the answer: 9 empty answers |
 | Round 3 (2026-10-25) | `search_filings` is V1's whole retrieval: sub-questions per company and filing, round-robin merge, `k` 8 in all (was 4 per company). `companies` / `fiscal_years` given replace those in the query; no company → an error. Prompt: pass the companies | The agent builds on V1 exactly; round 2 ran only V1's hybrid search, one search per company |
-| Round 4 (2026-10-26) | `get_section` removed: the tool, its `section_chunks` knob and the prompt's one mention of it | Ablation below: no score change beyond run-to-run spread, 6–14% fewer input tokens ([D-037](../docs/DECISIONS.md#d-037)) |
+| Round 4 (2026-10-26) | `get_section` removed: the tool, its `section_chunks` knob and the prompt's one mention of it | Ablation below: no score change beyond run-to-run spread, 6–14% fewer input tokens |
 
 Round 1 (before the grounding fix): `text` 85.2%, `full` 91.5% of number and decline questions, `full` 84.1% grounded; kept in `output/generation/v3-qwen3.6-27b-fp8-round1/`. Round 2 (search per company): `text` 55 / 60 (91.7%), `full` 54 / 59 (91.5%), overall 88.5% / 88.5%, test 18 / 17, every claim grounded; kept in `output/generation/v3-qwen3.6-27b-fp8-round2/`. Round 3 is within a question of round 2 on every headline number. Between rounds the two agent variants move by up to 7 points, so a difference of a few points between `text` and `full`, or between rounds, is within run-to-run variation; V2's gap is not.
 

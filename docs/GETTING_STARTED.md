@@ -14,7 +14,7 @@ Install, build the V4 corpus, write a research report, ask questions, run the ev
 | Keys | Your own SEC User-Agent, Tiingo and FRED API keys (free) | |
 | Disk | 10 GB, plus the V4 data (`data/v4/`; NYC TLC is ~540 MB a month, aggregated at fetch) | |
 
-All commands run from the repo root. Heavy jobs run pinned to the E-cores: `taskset -c 16-31` ([I-001](DECISIONS.md#i-001)).
+All commands run from the repo root. Heavy jobs run pinned to the E-cores: `taskset -c 16-31`.
 
 ## 1. Install
 
@@ -46,7 +46,7 @@ Presets, the judge, other models and GPU memory: [SERVING.md](SERVING.md). Fetch
 tenk companies verify                                        # CIKs, December year-ends, filing counts vs SEC
 tenk fetch                                                   # 10-K, 10-Q, earnings releases, DEF 14A from 2023 (cached)
 tenk fetch --market                                          # prices, macro (ALFRED), ERP, cross-checks
-taskset -c 16-31 tenk build --stage chunk --stage load       # rule-based Items and chunks (no LLM, D-039) → data/v4/build/parent_child.db
+taskset -c 16-31 tenk build --stage chunk --stage load       # rule-based Items and chunks (no LLM) → data/v4/build/parent_child.db
 taskset -c 16-31 tenk build --stage facts --stage market     # XBRL and inline XBRL facts; market series
 taskset -c 16-31 tenk build --stage embed                    # vectors; stop vLLM first or set retrieval.device: cpu
 taskset -c 16-31 python experiments/v4/extract_pilot.py --releases all   # KPI and guidance extraction (model served)
@@ -165,14 +165,14 @@ Things to try: change `chunking.target` and rerun V0's scoring; set `slot_search
 
 | Symptom | Fix |
 |---|---|
-| Python segfaults at random | Run with `taskset -c 16-31` ([I-001](DECISIONS.md#i-001)) |
-| GPU out of memory | [SERVING.md](SERVING.md#gotchas) ([I-002](DECISIONS.md#i-002)) |
-| vLLM out of memory or a missing `nvcc` | [I-003](DECISIONS.md#i-003) |
+| Python segfaults at random | Run with `taskset -c 16-31` |
+| GPU out of memory | [SERVING.md](SERVING.md#gotchas) |
+| vLLM out of memory or a missing `nvcc` | Use the `qwen3.6-27b-fp8` preset: bf16 KV cache, no vision, 32k context ([SERVING.md](SERVING.md)) |
 | "Report mode needs the V4 corpus" | `export TENK_COMPANIES=companies.yaml` |
 | A credential error naming a key | `tenk setup` |
 | Export raises `RuntimeError` | Install LibreOffice and Chrome or Chromium; no version is saved until export works |
 | A report crashed midway | Rerun with `--resume` |
-| Tests fail on collection | `env -u PYTHONPATH uv run pytest` ([I-010](DECISIONS.md#i-010)) |
+| Tests fail on collection | `env -u PYTHONPATH uv run pytest` |
 | Answers take minutes | Leave `generation.thinking: false` |
 | "labeled with … not …" in a V0 run | Labels are cached by their settings: `--relabel`, or another `run.label` |
 

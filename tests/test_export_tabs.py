@@ -9,8 +9,7 @@ from openpyxl import Workbook, load_workbook
 
 from tenk_agent.research import valuation
 from tenk_agent.research.export import report
-
-from test_valuation import V, Model
+from test_valuation import Model, V
 
 
 def _valuation(wacc=0.09, g=0.03):

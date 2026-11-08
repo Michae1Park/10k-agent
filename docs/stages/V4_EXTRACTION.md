@@ -3,7 +3,7 @@
 How KPIs and guidance are pulled from earnings releases. Rules live in the [design doc §4](../V4_TECHNICAL_DESIGN_DOC.md#4-extraction-layer-1); if this doc disagrees, the design doc wins.
 
 <p align="center">
-  <img src="../img/v4-extraction.svg" alt="KPI and guidance extraction: one LLM call per release, code validation of quote and value, one repair turn, exception rows, reconciliation with XBRL (planned, not built)" width="100%">
+  <img src="../img/v4-extraction.svg" alt="KPI and guidance extraction: one LLM call per release, code validation of quote and value, one repair turn, exception rows, XBRL read first where a figure has both, not reconciled" width="100%">
 </p>
 
 ## Per release

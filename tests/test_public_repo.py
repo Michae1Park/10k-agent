@@ -1,5 +1,5 @@
-"""The public repo holds no credentials, downloaded data, run outputs or third-party market data
-(D-046): Tiingo prices, FRED and Damodaran values and anything derived from them stay local."""
+"""The public repo holds no credentials, downloaded data, run outputs or third-party market data:
+Tiingo prices, FRED and Damodaran values and anything derived from them stay local."""
 
 import re
 import subprocess
@@ -25,8 +25,8 @@ def test_example_note_is_redacted():
     assert "Public copy, redacted" in note
     summary = next(line for line in note.splitlines() if line.startswith("| local only"))
     assert "$" not in summary
-    for row in re.findall(r"^\| E-\d+ \| [^|]+ \| ([^|]+) \| ((?:px|macro:|erp:)[^|]*|[^|]*val-[^|]*)\|",
-                          note, re.MULTILINE):
+    evidence = r"^\| E-\d+ \| [^|]+ \| ([^|]+) \| ((?:px|macro:|erp:)[^|]*|[^|]*val-[^|]*)\|"
+    for row in re.findall(evidence, note, re.MULTILINE):
         assert row[0].strip() == "local only", row
 
 

@@ -8,15 +8,15 @@ What V3 does, what it guarantees, and how it is put together. V3 is the regressi
 
 | Guarantee | How it is kept |
 |---|---|
-| Every number comes from a cited passage, never from the model's memory | The prompt requires it; each claim is then checked against the chunks (or the XBRL facts) it cites ([generation spec](V2_GENERATION.md#how-it-works), [D-036](../DECISIONS.md#d-036)) |
-| Fiscal years come from filing metadata, never from text | `filings.fiscal_year` from the XBRL cover page ([D-004](../DECISIONS.md#d-004)) |
+| Every number comes from a cited passage, never from the model's memory | The prompt requires it; each claim is then checked against the chunks (or the XBRL facts) it cites ([generation spec](V2_GENERATION.md#how-it-works)) |
+| Fiscal years come from filing metadata, never from text | `filings.fiscal_year` from the XBRL cover page |
 | Unverifiable claims are shown as unverified, not hidden | Claim status `unverified`, with the reason |
 | Questions outside the corpus are declined | `abstained: true` and a scope notice |
-| No stock prices, forecasts or investment advice (V3) | Declined by the prompt ([D-001](../DECISIONS.md#d-001)); V4 allows them as labeled drafts ([D-038](../DECISIONS.md#d-038)) |
+| No stock prices, forecasts or investment advice (V3) | Declined by the prompt; V4 allows them as labeled drafts |
 
-**V3 corpus** (`companies-v3.yaml`, kept as a regression check). Apple, Microsoft, Amazon, Alphabet, Meta, NVIDIA, Tesla, Netflix × fiscal years 2023–2025 (24 10-Ks), chosen because their fiscal years end in different months: "NVIDIA's revenue in 2024" is mostly its fiscal 2025 ([D-001](../DECISIONS.md#d-001)). Built and tested so far: the FY2025 filings of AAPL, AMZN, MSFT and NVDA.
+**V3 corpus** (`companies-v3.yaml`, kept as a regression check). Apple, Microsoft, Amazon, Alphabet, Meta, NVIDIA, Tesla, Netflix × fiscal years 2023–2025 (24 10-Ks), chosen because their fiscal years end in different months: "NVIDIA's revenue in 2024" is mostly its fiscal 2025. Built and tested so far: the FY2025 filings of AAPL, AMZN, MSFT and NVDA.
 
-**Out of scope (V3).** Prices, forecasts, advice ([D-001](../DECISIONS.md#d-001)); a public deployment ([D-023](../DECISIONS.md#d-023)); verification-by-tools, model comparison and fine-tuning.
+**Out of scope (V3).** Prices, forecasts, advice; a public deployment; verification-by-tools, model comparison and fine-tuning.
 
 ## Pipeline
 
@@ -55,7 +55,7 @@ Evaluation does not run this check; it reads the statuses (below). An unknown ch
 
 ## Models
 
-Answers, the agent and the judge go through `Model.complete(messages)` (`src/tenk_agent/models.py`); providers (vLLM or any OpenAI-compatible server, the Anthropic SDK) translate one neutral message format ([D-013](../DECISIONS.md#d-013)). The V0 structure agent and agentic chunker call vLLM's OpenAI API directly, for schema-constrained decoding. V4 uses the same layer. Serving and choosing a model: [SERVING.md](../SERVING.md).
+Answers, the agent and the judge go through `Model.complete(messages)` (`src/tenk_agent/models.py`); providers (vLLM or any OpenAI-compatible server, the Anthropic SDK) translate one neutral message format. The V0 structure agent and agentic chunker call vLLM's OpenAI API directly, for schema-constrained decoding. V4 uses the same layer. Serving and choosing a model: [SERVING.md](../SERVING.md).
 
 ## Evaluation
 

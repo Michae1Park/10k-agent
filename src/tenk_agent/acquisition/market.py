@@ -2,7 +2,7 @@
 
   prices  Tiingo daily end-of-day per ticker and SPY (beta): close, split-adjusted close,
           volume. Public the evening of the trading day, so as-of D sees D-1's close.
-          Licence: internal use only, so nothing here is committed or published (§10, build log §3.5)
+          Licence: internal use only, so nothing here is committed or published (§10)
   macro   FRED/ALFRED: CPIAUCSL, UMCSENT, RSFSDP with every vintage (realtime_start is when
           each value was published); DGS10 and DTWEXBGS are not revised, published the next day
   erp     Damodaran's monthly implied equity risk premium ("T12m with sustainable payout"),

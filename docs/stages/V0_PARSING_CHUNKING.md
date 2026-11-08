@@ -7,7 +7,7 @@
 | Data | Where |
 |---|---|
 | 10-K primary document (HTML), filing metadata (accession, fiscal year, period end, URL) | `data/raw/filings/<TICKER>/FY<year>/*.htm`, `metadata.json`; all of them in `data/raw/manifest.json` |
-| XBRL company facts (gold cross-checks only, D-007) | `data/raw/edgar/<TICKER>/companyfacts.json` |
+| XBRL company facts (gold cross-checks only) | `data/raw/edgar/<TICKER>/companyfacts.json` |
 | **Work files, per filing** | `data/v0-chunking/<TICKER>-FY<year>/` (`build.out`) |
 | **Database, per chunking** | `data/v0-chunking/<method>.db` (V1) |
 

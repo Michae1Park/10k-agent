@@ -66,7 +66,7 @@
   <text class="name" x="357.0" y="274" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Proposer (S4)</text>
   <text class="sub" x="357.0" y="296" text-anchor="middle" font-size="13" fill="#4a5a68">bounded sub-agent per</text>
   <text class="sub" x="357.0" y="314" text-anchor="middle" font-size="13" fill="#4a5a68">company: value, basis,</text>
-  <text class="sub" x="357.0" y="332" text-anchor="middle" font-size="13" fill="#4a5a68">rationale, evidence ids</text>
+  <text class="sub" x="357.0" y="332" text-anchor="middle" font-size="13" fill="#4a5a68">confidence, rationale, ids</text>
   <rect class="work" x="484" y="248" width="190" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="579.0" y="274" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Bounds</text>
   <text class="sub" x="579.0" y="296" text-anchor="middle" font-size="13" fill="#4a5a68">take rate in 8-quarter range</text>

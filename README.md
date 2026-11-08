@@ -68,6 +68,5 @@ Full steps, the experiments, and troubleshooting: [Getting started](docs/GETTING
 | [Serving](docs/SERVING.md) | The model layer and vLLM presets |
 | [Architecture](docs/ARCHITECTURE.md) | Versions, principles, the repository layout and the doc map; V3's pipeline in [stages/V3_ARCHITECTURE.md](docs/stages/V3_ARCHITECTURE.md) |
 | [Stage specs](docs/stages/) | V0–V3: data, knobs, outputs, how each works |
-| [Decisions & issues](docs/DECISIONS.md) | Why things are the way they are, known issues |
 | [Experiments](experiments/README.md) | Each version's design, metrics and results |
 | [Contributing](CONTRIBUTING.md) | Checks, rules, commit style |

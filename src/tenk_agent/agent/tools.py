@@ -177,7 +177,8 @@ SPECS |= {
             "type": "object",
             "properties": {
                 "company": COMPANY,
-                "form": {"type": "string", "description": "10-K, 10-Q, ER or DEF14A (default: all)"},
+                "form": {"type": "string",
+                         "description": "10-K, 10-Q, ER or DEF14A (default: all)"},
             },
             "required": ["company"],
         },

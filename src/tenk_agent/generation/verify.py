@@ -10,7 +10,7 @@ Run over every claim of every answer (answers.finalize):
 On a parent-child database a number is also checked against the company: a claim about MSFT
 citing only AAPL chunks that show its value is unverified.
 
-V3 (D-036): a claim may also cite XBRL facts by their `xbrl:` id; a value equal to a cited
+V3: a claim may also cite XBRL facts by their `xbrl:` id; a value equal to a cited
 fact of the claim's company is verified too, and calculation inputs may come from them. The
 facts are read from the SEC cache (`sec`), never fetched. A claim about a filing (a date, a
 form) may cite its accession number, checked against the cached EDGAR submissions.

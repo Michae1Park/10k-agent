@@ -384,7 +384,7 @@ error: unknown metric → {error, model_lines: [str], valuation: [str]} · unkno
 |---|---|---|---|
 | `metric` | yes | – | A valuation field or a model line (table below) |
 | `companies` | no | all eight | Tickers or names; `["all"]` too |
-| `period` | no | the target year | The model line's period (`FY2028`, `2027Q3`). Valuation fields always use the target year, so `period` is ignored for them |
+| `period` | no | the target year | The model line's period (`FY2027`, `2027Q3`). Valuation fields always use the target year, so `period` is ignored for them |
 
 **Target year:** the as-of's year + 1 (`research.yaml` `valuation.target_year: "+1"`): `FY2027` at as-of 2026-08-06, `FY2026` at 2025-08-07. No call takes a date: the as-of is fixed for the session ([Conventions](#conventions)).
 
@@ -667,7 +667,7 @@ Values rounded here; the file keeps 10 significant digits. Amounts in USD millio
 |---|---|---|
 | `events.json` | S2 | `[{type, summary, evidence: [id]}]` (§5) |
 | `debates.json` | S9 | `[{driver, question, bull, bear, hypothesis, trigger, gap, evidence: [id], evidence_values: [{id, value, unit}]}]` |
-| `revisions.json` | S8 | `[{label, old, new, unit, old_id, new_id, type: "Reported + assumption" \| "Assumption", confidence: Medium \| Low}]`; `[]` without a parent |
+| `revisions.json` | S8 | `[{label, old, new, unit, old_id, new_id, source: "Reported + assumption" \| "Assumption", confidence: Medium \| Low}]`; `[]` without a parent |
 | `facts.json` | S10 | §11 |
 | `note.json` | S10 | `{sections: [title], blocks: [str], slots: {key: text}, slot_facts: [{key, text, facts: [F-id]}], untraced: [str]}` |
 | `exceptions.json` | S10–S11 | §11 |
@@ -775,7 +775,7 @@ Saved as a version (`UBER:v1`, `UBER:v2`, …) with its parent. `research_report
 | Scenarios | scenario line, year, value |
 | Valuation | peer multiples, median, cost of capital, scenario PTs, DCF grid |
 | DCF | base-case UFCF with live discount, terminal value, EV, terminal share and per-share formulas; the WACC × growth grid |
-| Revisions | line, old, new, type, confidence |
+| Revisions | line, old, new, source, confidence |
 | Model (prior) | the parent's values as saved, or "initial draft (no prior run)" |
 | Checks | check, status, tested, failures, skipped |
 | Log | id, kind (evidence or exception), label or severity, value or item, source |

@@ -4,10 +4,10 @@ Every response is cached under data/raw/edgar/<TICKER>/ (the files `tenk fetch` 
 writes for the corpus). Offline (no client), only cached responses are served, so an eval
 run never touches the network and always sees the same data.
 
-XBRL facts are a citable source of their own (D-036): `xbrl:<TICKER>:<taxonomy>:<concept>:
+XBRL facts are a citable source of their own: `xbrl:<TICKER>:<taxonomy>:<concept>:
 <accession>:<period end>`; V4 ids write a duration as `<start>/<end>`
 (research/refs.py). EDGAR metadata answers which filings exist and when; it never
-answers financial questions (D-036: metadata only).
+answers financial questions.
 """
 
 import json

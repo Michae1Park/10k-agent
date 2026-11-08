@@ -1,6 +1,6 @@
 # V3 · Agent: the model picks the tools, then answers with cited claims
 
-**Builds on** V1 (its search is now a tool) and V2 (the same answer format and claim check). **Code:** [`agent/`](../../src/tenk_agent/agent/), prompt [prompts/agent.md](../../src/tenk_agent/prompts/agent.md). **Design and results:** [experiments/V3_AGENT.md](../../experiments/V3_AGENT.md): 88.5% (10-K tools) and 87.2% (+ SEC data) of 78 questions right, against V2's 66.7% on the same model; 99.3% and 100% of numeric claims grounded. **Why these tools:** [D-036](../DECISIONS.md#d-036). Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
+**Builds on** V1 (its search is now a tool) and V2 (the same answer format and claim check). **Code:** [`agent/`](../../src/tenk_agent/agent/), prompt [prompts/agent.md](../../src/tenk_agent/prompts/agent.md). **Design and results:** [experiments/V3_AGENT.md](../../experiments/V3_AGENT.md): 88.5% (10-K tools) and 87.2% (+ SEC data) of 78 questions right, against V2's 66.7% on the same model; 99.3% and 100% of numeric claims grounded.. Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
 
 ## Commands
 
@@ -45,7 +45,7 @@ tenk agent "..." --tools text --max-calls 8 --json
 | `xbrl_facts` | One concept of one 10-K from SEC company facts, any registrant; an unknown concept returns the closest names | Values for the filing's year and the prior years it shows, each with an `xbrl_id` to cite |
 | `edgar_filings` | EDGAR filing metadata, any registrant | Form, accession, filing date, period end, link (no financial data) |
 
-There is no tool to read a section in order: `get_section` was removed after an ablation found no gain ([D-037](../DECISIONS.md#d-037)). Search reaches the text, and parent-child chunks return a hit with its subsection or table.
+There is no tool to read a section in order: `get_section` was removed after an ablation found no gain. Search reaches the text, and parent-child chunks return a hit with its subsection or table.
 
 A tool never raises: bad arguments, a company outside the corpus, an uncached SEC file, return `{"error": …}` for the model to read. Object and array arguments written as JSON strings are parsed.
 
@@ -62,4 +62,4 @@ question ─► model ──tool calls──► tools ─► model ─► … �
 | 3. Answer | `model` | A turn without tool calls is the answer, in V2's JSON format; one "only the JSON" retry. Past the budget, one turn with tools off |
 | 4. Check | `generation/answers.py`, `verify.py` | V2's claim check; a claim may also cite `xbrl:` ids, verified against the cached fact |
 
-**Claims citing XBRL** ([D-036](../DECISIONS.md#d-036)): `xbrl:<TICKER>:<taxonomy>:<concept>:<accession>:<period end>`. The value must equal the fact (to the claim's written precision, any unit), and the fact must be the claim's company. Calculation inputs may come from cited facts too, any company's (a comparison spans companies). A percent claim also matches its calculation × 100 (8.3 percent from a `ratio` of 0.083); a sum or difference may be claimed in another unit than its inputs'; a value a cited source shows as is stays verified even with a needless calculation (a unit conversion). A claim about a filing (its date, its form) may cite the accession number `edgar_filings` returned, checked against the cached submissions.
+**Claims citing XBRL**: `xbrl:<TICKER>:<taxonomy>:<concept>:<accession>:<period end>`. The value must equal the fact (to the claim's written precision, any unit), and the fact must be the claim's company. Calculation inputs may come from cited facts too, any company's (a comparison spans companies). A percent claim also matches its calculation × 100 (8.3 percent from a `ratio` of 0.083); a sum or difference may be claimed in another unit than its inputs'; a value a cited source shows as is stays verified even with a needless calculation (a unit conversion). A claim about a filing (its date, its form) may cite the accession number `edgar_filings` returned, checked against the cached submissions.

@@ -29,7 +29,7 @@ How a Report run turns a ticker and date into a note. Rules live in the [design 
 | 2 Earnings results | code + `quality` | Actual vs estimate vs guidance; guidance vs our forecast; quality of the quarter |
 | 3 Drivers and debates | debates | Per driver: bull, bear, hypothesis, trigger, gap |
 | 4 Estimate revisions | code | Old vs new, change, source, confidence; integrity results |
-| 5 Financial summary | code | Annual 2024A–2028E |
+| 5 Financial summary | code | Annual, two actual years to the as-of year + 1 (2024A–2027E at a 2026 as-of) |
 | 6 Valuation | code + `valuation` | Comps, DCF, scenarios, PT, rating; multiple justification |
 | 7 Risks and sensitivity | code | Sensitivity rows |
 | 8 Catalysts | code + events | Next earnings date; events with sources |
@@ -42,9 +42,9 @@ Runs before export. Code checks that:
 
 - the rating matches its thresholds;
 - section 1's numbers match the sections they come from;
-- every scenario driver was debated;
-- guidance appears in section 2.2;
-- every open issue is listed in section 10.
+- every debated driver has a sensitivity row in section 7;
+- a guidance event (S2) has guided lines in section 2.2;
+- every warning and error is listed in section 10.
 
 A failure becomes an `error` issue. Only the takeaways get a repair; other sections are never rewritten.
 

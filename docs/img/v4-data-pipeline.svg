@@ -165,7 +165,7 @@
   <path class="edge" d="M 1108 724.0 L 1134 724.0" fill="none" stroke="#5a6b7a" stroke-width="1.6"/>
   <path class="edge" d="M 1134 352.0 L 1134 828" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <rect class="sink" x="40" y="828" width="1100" height="72" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
-  <text class="name" x="590.0" y="854" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">One SQLite file (D-005)</text>
+  <text class="name" x="590.0" y="854" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">One SQLite file</text>
   <text class="sub" x="590.0" y="876" text-anchor="middle" font-size="13" fill="#4a5a68">chunks · children · FTS5 · vectors · facts · kpis · guidance · market · insider_tx · model_versions</text>
   <rect class="work" x="40" y="924" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="sub" x="74" y="936" font-size="12.5" fill="#4a5a68">code</text>

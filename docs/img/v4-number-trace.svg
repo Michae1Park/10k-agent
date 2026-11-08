@@ -57,8 +57,8 @@
   <text class="sub" x="1070.0" y="278" text-anchor="middle" font-size="13" fill="#4a5a68">violations</text>
   <text class="sub" x="1070.0" y="296" text-anchor="middle" font-size="13" fill="#4a5a68">listed</text>
   <rect class="gate" x="1000" y="350" width="140" height="72" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
-  <text class="name" x="1070.0" y="376" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Failed check</text>
-  <text class="sub" x="1070.0" y="398" text-anchor="middle" font-size="13" fill="#4a5a68">exception row</text>
+  <text class="name" x="1070.0" y="376" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Sentence dropped</text>
+  <text class="sub" x="1070.0" y="398" text-anchor="middle" font-size="13" fill="#4a5a68">warning row</text>
   <path class="edge" d="M 880 174 L 880 230" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <text class="elabel" x="872" y="206" text-anchor="end" font-size="12" fill="#46586a">pass</text>
   <path class="edge" d="M 1030 174 L 1030 230" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>

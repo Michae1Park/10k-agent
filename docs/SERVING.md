@@ -15,24 +15,24 @@ Set `generation.model` (or pass `--model`). How the model layer is built: [V3 ar
 
 | `generation.model` | Provider | Notes |
 |---|---|---|
-| `openai:<model>` | OpenAI-compatible server at `generation.base_url` | **Default** (`openai:Qwen/Qwen3.6-27B-FP8`, [D-029](DECISIONS.md#d-029)). vLLM or Ollama; `temperature 0`; `<think>` blocks stripped; thinking off (`thinking: false`) |
+| `openai:<model>` | OpenAI-compatible server at `generation.base_url` | **Default** (`openai:Qwen/Qwen3.6-27B-FP8`). vLLM or Ollama; `temperature 0`; `<think>` blocks stripped; thinking off (`thinking: false`) |
 | `anthropic:<model id>` | Anthropic SDK | Optional. Needs `ANTHROPIC_API_KEY` (environment or `.env`) |
 
 ## vLLM presets
 
-`scripts/serve_vllm.sh <preset>`, pinned to the E-cores ([I-001](DECISIONS.md#i-001)), port 8001 (the judge: 8002). vLLM lives in its own conda env; the script finds `~/miniconda3/envs/vllm_py311/bin/vllm` when `vllm` isn't on `PATH` (tested with vLLM 0.20.0).
+`scripts/serve_vllm.sh <preset>`, pinned to the E-cores, port 8001 (the judge: 8002). vLLM lives in its own conda env; the script finds `~/miniconda3/envs/vllm_py311/bin/vllm` when `vllm` isn't on `PATH` (tested with vLLM 0.20.0).
 
 | Preset | Model | Weights | Context | Notes |
 |---|---|---|---|---|
-| `qwen3.6-27b-fp8` | Qwen/Qwen3.6-27B-FP8 | 28.5 GB FP8 | 32k | **The default.** CUDA graphs (~17 tok/s vs ~11.5 eager), at most 4 sequences, 80% of memory, no vision, bf16 KV ([I-003](DECISIONS.md#i-003)). Keep V2's `run.workers` ≤ 4 |
-| `gpt-oss-20b` | openai/gpt-oss-20b | ~13 GB MXFP4 | 32k | **The judge** (V2, V4; [D-029](DECISIONS.md#d-029)), port 8002, `GPU_UTIL=0.45`. Doesn't fit beside the 27B: judge a run afterwards (`experiments/v2/judge.py`, `--config` for V4) |
+| `qwen3.6-27b-fp8` | Qwen/Qwen3.6-27B-FP8 | 28.5 GB FP8 | 32k | **The default.** CUDA graphs (~17 tok/s vs ~11.5 eager), at most 4 sequences, 80% of memory, no vision, bf16 KV. Keep V2's `run.workers` ≤ 4 |
+| `gpt-oss-20b` | openai/gpt-oss-20b | ~13 GB MXFP4 | 32k | **The judge** (V2, V4; another model family, so no model grades itself), port 8002, `GPU_UTIL=0.45`. Doesn't fit beside the 27B: judge a run afterwards (`experiments/v2/judge.py`, `--config` for V4) |
 | `qwen3.5-9b` | Qwen/Qwen3.5-9B | 18 GB BF16 | 64k | A smaller model to compare: `--model openai:Qwen/Qwen3.5-9B` |
 | `gemma-4-31b-fp8` | RedHatAI/gemma-4-31B-it-FP8-block | 30.4 GiB FP8 | 32k | Another model to compare (`GPU_UTIL` 0.86) |
 | `qwen3-1.7b` | Qwen/Qwen3-1.7B | 3.4 GB | 64k | Smoke tests |
 
 | Variable | Default | What it does |
 |---|---|---|
-| `GPU_UTIL` | 0.72 (27B: 0.80) | GPU memory share; leaves room for the embedder and reranker ([I-002](DECISIONS.md#i-002)) |
+| `GPU_UTIL` | 0.72 (27B: 0.80) | GPU memory share; leaves room for the embedder and reranker |
 | `MAX_LEN` / `MAX_LEN_27B` / `MAX_LEN_31B` / `MAX_LEN_JUDGE` | 65536 / 32768 / 32768 / 32768 | Context length |
 | `MAX_SEQS_27B` | 4 | Sequences at once on the 27B; the vLLM default (256) fills the card at startup |
 | `PORT`, `CPUS`, `VLLM_BIN` | 8001, 16-31, `vllm` (else the conda env above) | |
@@ -42,6 +42,6 @@ Set `generation.model` (or pass `--model`). How the model layer is built: [V3 ar
 
 ## Gotchas
 
-- **GPU memory.** The 27B leaves ~8 GB for the embedder and reranker that search, the agent and the V1/V2 experiments load. Embedding a whole corpus (`--stage embed`) wants vLLM stopped, or `retrieval.device: cpu` ([I-002](DECISIONS.md#i-002)).
+- **GPU memory.** The 27B leaves ~8 GB for the embedder and reranker that search, the agent and the V1/V2 experiments load. Embedding a whole corpus (`--stage embed`) wants vLLM stopped, or `retrieval.device: cpu`.
 - **Thinking mode.** Qwen models think by default; `generation.thinking: false` keeps an answer to seconds instead of minutes.
 - **One model per port.** The 27B and the judge don't fit together: generate first, then stop the 27B and serve the judge.

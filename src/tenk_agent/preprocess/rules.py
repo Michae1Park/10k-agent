@@ -1,8 +1,8 @@
-"""Rule-based structure labels for V4 filings: 10-K, 10-Q, earnings release (D-039).
+"""Rule-based structure labels for V4 filings: 10-K, 10-Q, earnings release.
 
 Headings in these filings are regular (a bold "PART I" line, then bold "Item 2." lines), and a
 release has no Items, so rules label all three. On the four V3 10-Ks with LLM labels, rules put
-every block both keep in the same Item (100%, D-039); V3 keeps V0's LLM structure agent. The
+every block both keep in the same Item (100%); V3 keeps V0's LLM structure agent. The
 labels have the structure agent's shape, so V0's assembly and chunkers run unchanged.
 
   item_heading  a bold, short, non-link "Item n." paragraph (or one-row table) that moves

@@ -152,7 +152,7 @@ def test_text_tool_set_hides_sec_tools(tools):
     assert "unknown tool" in tools.call("xbrl_facts", {})["error"]
 
 
-# --- Claim check with XBRL citations (verify.py, D-036) ------------------------------------
+# --- Claim check with XBRL citations (verify.py) ------------------------------------
 
 FACT = f"xbrl:AAPL:us-gaap:ResearchAndDevelopmentExpense:{ACCESSION}:2025-09-27"
 PRIOR = f"xbrl:AAPL:us-gaap:ResearchAndDevelopmentExpense:{ACCESSION}:2024-09-28"

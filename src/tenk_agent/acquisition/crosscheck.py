@@ -26,7 +26,7 @@ BTS = ("https://data.bts.gov/resource/crem-w557.json?$select=date,"
        "u_s_airline_traffic_total_non_seasonally_adjusted,"
        "u_s_airline_traffic_domestic_non_seasonally_adjusted,"
        "u_s_airline_traffic_international_non_seasonally_adjusted&$order=date&$limit=5000")
-LICENSES = {"HV0003": "UBER", "HV0005": "LYFT"}  # confirmed on the first file (V4 build log §3.5)
+LICENSES = {"HV0003": "UBER", "HV0005": "LYFT"}  # confirmed on the first file
 BTS_LAG_DAYS = 90
 AGENT = "tenk-agent research (crosscheck fetch)"
 
