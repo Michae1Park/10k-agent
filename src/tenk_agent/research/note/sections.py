@@ -299,7 +299,13 @@ def build(ctx: dict, facts: Facts) -> list[Section]:
                      "announced). Watch the guided lines in section 2.2.")
     for e in ctx["events"]:
         if e.get("type") in ("catalyst", "regulation", "m&a"):
-            s8.blocks.append(f"- {e['summary']} ({', '.join(e['evidence'])})")
+            summary = e["summary"]
+            # the events sub-agent wrote the summary: its numbers must trace like any prose
+            if trace.check(summary, facts, "section 8 event"):
+                ctx["exceptions"].append({"severity": "warning", "item": "dropped event summary "
+                                          "with an untraced number in section 8"})
+                summary = f"{e['type'].capitalize()} event in the filings"
+            s8.blocks.append(f"- {summary} ({', '.join(e['evidence'])})")
     sections.append(s8)
 
     # 9 -----------------------------------------------------------------------------------

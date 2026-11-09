@@ -14,7 +14,8 @@ from tenk_agent.research.note.facts import Facts
 NUMBER = re.compile(r"(?<![\w.])(?P<sign>[+\-−])?\$?"
                     r"(?P<num>\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)"
                     r"(?P<suffix>\s?(?:%|pts?|bps|x|B|M|bn|billion|million)\b|%)?")
-NOT_FIGURES = re.compile(r"\b\d{4}-\d\d-\d\d\b|\b(?:FY)?(?:19|20)\d\d(?:Q[1-4]|E|A)?\b"
+NOT_FIGURES = re.compile(r"\b[A-Z]{2,5}-(?:FY)?\d{4}(?:Q[1-4])?(?:-[\w.]+)+"  # chunk ids
+                         r"|\b\d{4}-\d\d-\d\d\b|\b(?:FY)?(?:19|20)\d\d(?:Q[1-4]|E|A)?\b"
                          r"|\bQ[1-4]\b|\bF-\d+\b|\bX-\d+\b|\bE-\d+\b|\bsections? \d+(?:\.\d+)?\b"
                          r"|\b\d+-(?:week|month|year|day)\b|\bForm \d+\b|\b\d+-[KQ]\b"
                          r"|\bEx(?:hibit|\.)? ?\d+(?:\.\d+)?\b"
