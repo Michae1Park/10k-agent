@@ -101,6 +101,8 @@ def redact_workbook(src: Path, dst: Path) -> None:
         label = str(row[0].value or "")
         if row[1].value is not None and not label.endswith(("adj_ebitda", "_id", "dcf_used")):
             row[1].value = LOCAL
+        if label.startswith("DCF per share, WACC|g "):  # the label carries the WACC itself
+            row[0].value = re.sub(r"WACC\|g [\d.]+\|", f"WACC|g {LOCAL}|", label)
     d = wb["DCF"]
     for row in d.iter_rows():
         grid = isinstance(row[0].value, int | float)  # a WACC row of the price grid
