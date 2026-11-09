@@ -339,7 +339,7 @@ SPECS["crosscheck"] = ToolSpec(
             "series": {"type": "string",
                        "description": "tlc (with companies) or bts (airline passengers)"},
             "companies": {"type": "array", "items": COMPANY, "description": "For tlc"},
-            "start": {"type": "string", "description": "YYYY-MM (default: the last 13 months)"},
+            "start": {"type": "string", "description": "YYYY-MM (default: the latest year)"},
             "end": {"type": "string", "description": "YYYY-MM"},
         },
         "required": ["series"],
@@ -627,7 +627,7 @@ class Toolbox:
                 points = [p for p in points if (not start or p[0][:7] >= start)
                           and (not end or p[0][:7] <= end)]
             else:
-                points = points[-13:]
+                points = points[-12:]  # the latest year
             rows += [{"id": f"{name}:{d}", "series": label, "month": d[:7], "value": v}
                      for d, v in points]
         return {"series": series, "coverage": COVERAGE[series], "unit": "trips" if series ==

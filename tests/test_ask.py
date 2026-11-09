@@ -63,7 +63,7 @@ def test_claims_verify_against_data_rows(tmp_path):
     assert status(8, "percent", "guide:AAPL:revenue_growth:2025Q4") == "unverified"
     reason = verify_claim({"company": "AAPL", "value": 1, "unit": "count millions",
                            "chunk_ids": ["kpi:AAPL:units:2024Q1"]}, store)["status_reason"]
-    assert "unknown chunk IDs ['kpi:AAPL:units:2024Q1']" in reason
+    assert "unknown id ['kpi:AAPL:units:2024Q1']" in reason
 
 
 def test_ask_tools(tmp_path):

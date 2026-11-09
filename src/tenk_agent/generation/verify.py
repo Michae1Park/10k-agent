@@ -185,8 +185,9 @@ def verify_claim(claim: dict, store: Store, sec: FactSource | None = None, book=
     else:
         status, reason = "unverified", "no valid citation"
 
-    if missing:
-        reason = (reason + "; " if reason else "") + f"unknown chunk IDs {missing}"
+    if missing:  # a cited id that doesn't resolve leaves the claim unverified
+        status = "unverified"
+        reason = (reason + "; " if reason else "") + f"unknown id {missing}"
     return claim | {"status": status, "status_reason": reason}
 
 

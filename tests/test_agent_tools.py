@@ -184,7 +184,7 @@ def test_a_fact_of_another_company_or_an_unknown_fact_does_not_verify(tools):
     unknown = verify_claim(
         claim(value=1, unit="USD", chunk_ids=[FACT[:-1] + "8"]), tools.store, tools.sec
     )
-    assert "unknown chunk IDs" in unknown["status_reason"]
+    assert "unknown id" in unknown["status_reason"]
 
 
 def test_calculation_inputs_may_come_from_cited_facts(tools):
@@ -297,7 +297,7 @@ def test_a_filing_claim_may_cite_its_accession_number(tools):
     unknown = verify_claim(
         claim(value=None, unit=None, chunk_ids=["0000000000-25-000000"]), tools.store, tools.sec
     )
-    assert unknown["status"] == "unverified" and "unknown chunk IDs" in unknown["status_reason"]
+    assert unknown["status"] == "unverified" and "unknown id" in unknown["status_reason"]
 
 
 def test_per_share_units_are_dollars():
