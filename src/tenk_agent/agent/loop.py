@@ -7,7 +7,8 @@ The model decides every step: which tool, with what arguments, and when to answe
 only makes the first turn a tool call (so no answer comes from memory), turns a repeated call
 into an error, and enforces the budget: calls past `max_calls` return an error, and after the
 budget (or once the conversation reaches `max_context` tokens) the model gets one turn with
-tools off to answer. The answer goes through V2's
+tools off to answer. Tool results are cut to the context left, so one large result cannot push
+that turn past the model's window. The answer goes through V2's
 finalize, so the claim check is the same, now also over XBRL facts (verify.py).
 """
 
@@ -26,6 +27,8 @@ from tenk_agent.models import Model, parse_json
 from tenk_agent.prompts import PROMPTS
 
 PROMPT = PROMPTS / "agent.md"
+ASK_PROMPT = PROMPTS / "ask.md"  # V4 tool set "ask"
+RESEARCH_PROMPT = PROMPTS / "research.md"  # V4 tool set "research"
 SEC_GUIDANCE = (
     "- xbrl_facts gives a figure as the company tagged it in XBRL; cite its xbrl_id. Prefer "
     "it for standard line items (revenue, net income, R&D), and the 10-K text (search_filings) "
@@ -36,6 +39,9 @@ SEC_GUIDANCE = (
 ANSWER_NOW = "Tool budget used up. Answer now with the JSON object from what you have."
 JSON_ONLY = "Reply again with only the JSON object."
 REPEATED = "You already made this exact call; its result is above. Use it, or answer."
+CONTEXT_FULL = " …(cut: the context is full; answer from what you have)"
+CHARS_PER_TOKEN = 3  # a low estimate for JSON tool results, so the room is not overestimated
+MIN_RESULT = 400  # characters a result keeps even when the room is gone (its ids, an error)
 
 
 @dataclass
@@ -58,6 +64,7 @@ class Run:
     steps: list[Step] = field(default_factory=list)
     seconds: float = 0.0
     stop: str = ""  # "answered", "budget", "turns"
+    reply: str = ""  # the last model text, unparsed (sub-agents return their own JSON)
 
     @property
     def tool_calls(self) -> list[Step]:
@@ -75,6 +82,14 @@ class State(TypedDict):
 
 
 def build_system(toolbox: Toolbox, max_calls: int, prompt=PROMPT) -> str:
+    if toolbox.tool_set in ("ask", "research"):
+        default = ASK_PROMPT if toolbox.tool_set == "ask" else RESEARCH_PROMPT
+        return (
+            (default if prompt == PROMPT else prompt).read_text()
+            .replace("{as_of}", toolbox.asof.date.isoformat())
+            .replace("{max_calls}", str(max_calls))
+            .replace("{coverage}", coverage_table(toolbox.store))
+        )
     full = toolbox.tool_set == "full"
     return (
         prompt.read_text()
@@ -83,6 +98,27 @@ def build_system(toolbox: Toolbox, max_calls: int, prompt=PROMPT) -> str:
         .replace("{xbrl_ids}", " or xbrl_id values, or a filing's accession_no" if full else "")
         .replace("{corpus}", corpus_table(toolbox.store))
     )
+
+
+def coverage_table(store) -> str:
+    """The Ask prompt's {coverage}: per company, the latest filing of each form visible at the
+    store's AsOf, and how far back the corpus goes."""
+    lines = ["Coverage (latest period of each form filed before today; earliest period):"]
+    by_company: dict[str, list] = {}
+    names = {}
+    for f in store.filings():
+        names[f.ticker] = f.company_name
+        by_company.setdefault(f.ticker, []).append(f)
+    for ticker, filings in sorted(by_company.items()):
+        latest = {}
+        for f in sorted(filings, key=lambda f: f.filing_date):
+            fy, fp = f.fiscal_year, f.fiscal_period
+            latest[f.form] = f"{f'FY{fy}' if fp == 'FY' else f'{fy}{fp}'} (filed {f.filing_date})"
+        earliest = min(f.period_end_date for f in filings)
+        forms = "; ".join(f"{f} {latest[f]}" for f in ("ER", "10-Q", "10-K", "DEF14A")
+                          if f in latest)
+        lines.append(f"- {ticker} {names[ticker]}: {forms}; from {earliest}")
+    return "\n".join(lines)
 
 
 @dataclass
@@ -123,19 +159,30 @@ class Agent:
             {"recursion_limit": 2 * self.max_turns + 5},
         )
         raw = parse_answer(state["reply"])
-        answer = finalize(raw, self.toolbox.store, self.toolbox.sec)
-        return Run(answer, state["steps"], round(time.perf_counter() - start, 3), state["stop"])
+        answer = finalize(raw, self.toolbox.store, self.toolbox.sec, self.toolbox.book)
+        return Run(answer, state["steps"], round(time.perf_counter() - start, 3), state["stop"],
+                   state["reply"])
 
     # --- Nodes ---------------------------------------------------------------------------
 
+    def _used(self, state: State) -> int:
+        """Tokens the next turn's input will hold: the last turn's input and output, plus an
+        estimate for the messages added since (tool results)."""
+        last = next((s for s in reversed(state["steps"]) if s.kind == "model"), None)
+        if last is None:
+            return 0
+        since = 0
+        for message in reversed(state["messages"]):
+            if message["role"] == "assistant":
+                break
+            since += len(str(message.get("content") or ""))
+        return last.input_tokens + last.output_tokens + since // CHARS_PER_TOKEN
+
     def _model(self, state: State) -> dict:
-        last_input = next(
-            (s.input_tokens for s in reversed(state["steps"]) if s.kind == "model"), 0
-        )
         over = (
             state["calls"] >= self.max_calls
             or state["turns"] >= self.max_turns - 1
-            or last_input >= self.max_context
+            or self._used(state) >= self.max_context
         )
         messages = state["messages"]
         if over and messages[-1]["role"] != "user":  # say why the tools are gone
@@ -181,6 +228,9 @@ class Agent:
     def _tools(self, state: State) -> dict:
         messages, steps, calls = list(state["messages"]), list(state["steps"]), state["calls"]
         made = {_key(s.name, s.arguments) for s in steps if s.kind == "tool"}
+        # Results share the context left: one large result must not push the next turn past
+        # the model's window (the forced answer turn still sends every message).
+        room = (self.max_context - self._used(state)) * CHARS_PER_TOKEN
         for call in messages[-1]["tool_calls"]:
             started = time.perf_counter()
             if call.error:
@@ -203,8 +253,11 @@ class Agent:
                 )
             )
             content = json.dumps(result, ensure_ascii=False)
-            if len(content) > self.result_chars:
-                content = content[: self.result_chars] + " …(cut; narrow the call)"
+            fit = max(room, MIN_RESULT)
+            if len(content) > min(self.result_chars, fit):
+                note = CONTEXT_FULL if fit < self.result_chars else " …(cut; narrow the call)"
+                content = content[: min(self.result_chars, fit)] + note
+            room -= len(content)
             messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
         return {"messages": messages, "steps": steps, "calls": calls}
 

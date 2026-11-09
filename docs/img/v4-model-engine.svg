@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="610" viewBox="0 0 1120 610" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">Model engine: inputs, steps and files</title>
+  <desc id="svgdesc">How the model engine's pieces connect. The data pack (reported numbers from the Store) and a template (YAML lines whose formulas are written in the DSL) feed S3 history, which fills inputs from the data pack and evaluates formulas with the DSL, then runs layer-2 checks. S5 forecast evaluates the forecast formulas, which read assumptions set from defaults, outside data, the proposer and guidance anchors; research.yaml supplies its knobs. S6 and S7 value the model with peers, prices and rates and research.yaml's weights and thresholds. The model becomes model.json and, through the same DSL expressions written as Excel formulas, workbook.xlsx; the valuation becomes valuation.json.</desc>
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .gate  { fill: #3a2f14; stroke: #d4a84a; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      #arrow > path { fill: #8496a6; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1119" height="609" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+  <text class="ptitle" x="30" y="36" font-size="15" font-weight="600" fill="#46586a">Model engine: what goes in, which step uses it, which file comes out</text>
+
+  <!-- inputs you edit or read -->
+  <rect class="ext" x="30" y="150" width="230" height="84" rx="7" fill="#e6f0fa" stroke="#4f7fae" stroke-width="1.5"/>
+  <text class="name" x="145" y="178" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Data pack (S1)</text>
+  <text class="sub" x="145" y="202" text-anchor="middle" font-size="13" fill="#4a5a68">reported numbers from the Store</text>
+  <text class="sub" x="145" y="220" text-anchor="middle" font-size="13" fill="#4a5a68">with source id and filing date</text>
+
+  <rect class="ext" x="30" y="262" width="230" height="84" rx="7" fill="#e6f0fa" stroke="#4f7fae" stroke-width="1.5"/>
+  <text class="name" x="145" y="290" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Template (YAML)</text>
+  <text class="sub" x="145" y="314" text-anchor="middle" font-size="13" fill="#4a5a68">lines: inputs by source id,</text>
+  <text class="sub" x="145" y="332" text-anchor="middle" font-size="13" fill="#4a5a68">formulas written in the DSL</text>
+
+  <rect class="ext" x="580" y="48" width="480" height="74" rx="7" fill="#e6f0fa" stroke="#4f7fae" stroke-width="1.5"/>
+  <text class="name" x="820" y="74" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">research.yaml</text>
+  <text class="sub" x="820" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">forecast knobs: fade, ratio bounds, tax range, scenario weights</text>
+  <text class="sub" x="820" y="114" text-anchor="middle" font-size="13" fill="#4a5a68">valuation knobs: DCF and multiple weights, rating thresholds</text>
+
+  <!-- steps -->
+  <rect class="work" x="310" y="170" width="210" height="160" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="415" y="198" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">S3 history</text>
+  <text class="sub" x="415" y="224" text-anchor="middle" font-size="13" fill="#4a5a68">inputs ← data pack</text>
+  <text class="sub" x="415" y="244" text-anchor="middle" font-size="13" fill="#4a5a68">formulas ← DSL evaluates</text>
+  <text class="sub" x="415" y="264" text-anchor="middle" font-size="13" fill="#4a5a68">layer-2 checks</text>
+
+  <rect class="work" x="580" y="170" width="210" height="160" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="685" y="198" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">S5 forecast</text>
+  <text class="sub" x="685" y="224" text-anchor="middle" font-size="13" fill="#4a5a68">assumptions set from</text>
+  <text class="sub" x="685" y="242" text-anchor="middle" font-size="13" fill="#4a5a68">defaults, outside data,</text>
+  <text class="sub" x="685" y="260" text-anchor="middle" font-size="13" fill="#4a5a68">proposer, guidance anchors</text>
+  <text class="sub" x="685" y="278" text-anchor="middle" font-size="13" fill="#4a5a68">then the DSL evaluates</text>
+  <text class="sub" x="685" y="296" text-anchor="middle" font-size="13" fill="#4a5a68">the forecast formulas</text>
+
+  <rect class="work" x="850" y="170" width="210" height="160" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="955" y="198" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">S6–S7 value</text>
+  <text class="sub" x="955" y="224" text-anchor="middle" font-size="13" fill="#4a5a68">peers' models, same as-of</text>
+  <text class="sub" x="955" y="244" text-anchor="middle" font-size="13" fill="#4a5a68">prices, rates, cost of capital</text>
+  <text class="sub" x="955" y="264" text-anchor="middle" font-size="13" fill="#4a5a68">multiple + DCF price target</text>
+  <text class="sub" x="955" y="284" text-anchor="middle" font-size="13" fill="#4a5a68">rating</text>
+
+  <!-- files out -->
+  <rect class="sink" x="580" y="400" width="210" height="76" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="685" y="428" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">model.json</text>
+  <text class="sub" x="685" y="450" text-anchor="middle" font-size="13" fill="#4a5a68">every cell: line × period,</text>
+  <text class="sub" x="685" y="466" text-anchor="middle" font-size="13" fill="#4a5a68">value, kind, source id</text>
+
+  <rect class="sink" x="850" y="400" width="210" height="76" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="955" y="428" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">valuation.json</text>
+  <text class="sub" x="955" y="450" text-anchor="middle" font-size="13" fill="#4a5a68">PT per scenario, rating,</text>
+  <text class="sub" x="955" y="466" text-anchor="middle" font-size="13" fill="#4a5a68">DCF grid, inputs_hash</text>
+
+  <rect class="sink" x="310" y="400" width="210" height="76" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="415" y="428" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">workbook.xlsx</text>
+  <text class="sub" x="415" y="450" text-anchor="middle" font-size="13" fill="#4a5a68">same formulas as Excel,</text>
+  <text class="sub" x="415" y="466" text-anchor="middle" font-size="13" fill="#4a5a68">parity-checked (§11)</text>
+
+  <!-- edges -->
+  <path class="edge" d="M 260 192 L 310 192" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 260 304 L 310 304" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 520 250 L 580 250" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="550" y="242" text-anchor="middle" font-size="12" fill="#5a6b7a">history</text>
+  <path class="edge" d="M 790 250 L 850 250" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="820" y="242" text-anchor="middle" font-size="12" fill="#5a6b7a">model</text>
+  <path class="edge" d="M 685 122 L 685 170" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="697" y="150" font-size="12" fill="#5a6b7a">fade, bounds, tax</text>
+  <path class="edge" d="M 955 122 L 955 170" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="elabel" x="967" y="150" font-size="12" fill="#5a6b7a">weights, thresholds</text>
+  <path class="edge" d="M 685 330 L 685 400" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 955 330 L 955 400" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 580 438 L 520 438" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- note -->
+  <rect class="gate" x="30" y="500" width="1030" height="56" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="sub" x="48" y="524" font-size="13" fill="#4a5a68">The DSL is the formula syntax inside template strings. Python evaluates it into model.json; the workbook writes the same expression as an Excel formula.</text>
+  <text class="sub" x="48" y="544" font-size="13" fill="#4a5a68">In a Report run the files are written to the report folder at S11; the model and the valuation exist in memory from S5 and S7.</text>
+
+  <!-- legend -->
+  <rect class="ext" x="30" y="578" width="14" height="14" rx="3" fill="#e6f0fa" stroke="#4f7fae" stroke-width="1.5"/>
+  <text class="elabel" x="50" y="590" font-size="12" fill="#5a6b7a">input</text>
+  <rect class="work" x="110" y="578" width="14" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="elabel" x="130" y="590" font-size="12" fill="#5a6b7a">code step (no LLM)</text>
+  <rect class="sink" x="260" y="578" width="14" height="14" rx="3" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="elabel" x="280" y="590" font-size="12" fill="#5a6b7a">output file</text>
+</svg>

@@ -1,6 +1,6 @@
 # V2 · Generation: chunks → one model call → a cited answer
 
-**Builds on** V1: its top 8 chunks go to one model call. **Code:** [`generation/`](../../src/tenk_agent/generation/), prompt [prompts/answer.md](../../src/tenk_agent/prompts/answer.md). **Design and results:** [experiments/V2_GENERATION.md](../../experiments/V2_GENERATION.md): with V1's retrieval, 21 of 30 number questions right, all 8 declines declined, every numeric claim found in a chunk it cites. **Run it:** [Getting started](../GETTING_STARTED.md#4-ask). Overview: [ARCHITECTURE.md](../ARCHITECTURE.md).
+**Builds on** V1: its top 8 chunks go to one model call. **Code:** [`generation/`](../../src/tenk_agent/generation/), prompt [prompts/answer.md](../../src/tenk_agent/prompts/answer.md). **Design and results:** [experiments/V2_GENERATION.md](../../experiments/V2_GENERATION.md): with V1's retrieval, 21 of 30 number questions right, all 8 declines declined, every numeric claim found in a chunk it cites. **Run it:** [Getting started](../GETTING_STARTED.md#4-ask). Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
 
 ## Data
 

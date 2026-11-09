@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="756" viewBox="0 0 1180 756" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="svgtitle">Report pipeline</title>
+  <desc id="svgdesc">Report pipeline, S1 to S11, as built. Code steps S1, S6, S8 and S11; check steps S3, S5 and S7, whose layer-2 or valuation checks stop the run on a FAIL; LLM steps S2 events, S4 propose (off by default), S9 debates and S10 write, which degrade instead: defaults replace proposals, the section reads failed check, an exception row is written and the run finishes. Each step writes an artifact that later steps read instead of the chat. --resume reuses the saved LLM outputs (events.json, debates.json, the prose slots) and reruns the code steps; --no-llm skips the LLM steps. S11 saves the run as a draft model version whose parent is the latest earlier version for the ticker.</desc>
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; stroke: #2b3540; }
+      .panel { fill: #151c24; stroke: #3a4753; }
+      .ext   { fill: #16283c; stroke: #6f9dc8; }
+      .work  { fill: #16301f; stroke: #63ab77; }
+      .llm   { fill: #3a1a2c; stroke: #d487b0; }
+      .sink  { fill: #241b33; stroke: #a186c4; }
+      .gate  { fill: #3a2f14; stroke: #d4a84a; }
+      .name  { fill: #e6edf3; }
+      .sub   { fill: #9fb0c0; }
+      .ptitle{ fill: #93a4b4; }
+      .edge  { stroke: #8496a6; }
+      .elabel{ fill: #93a4b4; }
+      .badge { fill: #0f1419; stroke: #8496a6; }
+      #arrow > path { fill: #8496a6; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6b7a"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1179" height="755" rx="10" fill="#ffffff" stroke="#e3e9ef"/>
+  <text class="ptitle" x="40" y="50" text-anchor="start" font-size="14.5" font-weight="600" fill="#46586a">Steps (each reads artifacts, never the previous chat)</text>
+  <text class="ptitle" x="430" y="50" text-anchor="start" font-size="14.5" font-weight="600" fill="#46586a">Writes</text>
+  <rect class="work" x="40" y="70" width="340" height="46" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="56" y="90" font-size="14.5" font-weight="600" fill="#132030">S1  datapack</text>
+  <text class="sub" x="56" y="107" font-size="12.5" fill="#4a5a68">inputs with ids and filing dates</text>
+  <path class="edge" d="M 380 93.0 H 426" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="sub" x="434" y="97.0" text-anchor="start" font-size="13" fill="#46586a">(in memory)</text>
+  <path class="edge" d="M 210 116 V 125" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="llm" x="40" y="126" width="340" height="46" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="56" y="146" font-size="14.5" font-weight="600" fill="#132030">S2  events</text>
+  <text class="sub" x="56" y="163" font-size="12.5" fill="#4a5a68">sub-agent, ask tools</text>
+  <path class="edge" d="M 380 149.0 H 426" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="430" y="132" width="260" height="34" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="560" y="154.0" text-anchor="middle" font-size="13.5" fill="#132030">events.json</text>
+  <path class="edge" d="M 210 172 V 181" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="gate" x="40" y="182" width="340" height="46" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="56" y="202" font-size="14.5" font-weight="600" fill="#132030">S3  model</text>
+  <text class="sub" x="56" y="219" font-size="12.5" fill="#4a5a68">history + layer-2 checks</text>
+  <path class="edge" d="M 380 205.0 H 426" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text class="sub" x="434" y="209.0" text-anchor="start" font-size="13" fill="#46586a">(in memory)</text>
+  <path class="edge" d="M 210 228 V 237" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="llm" x="40" y="238" width="340" height="46" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="56" y="258" font-size="14.5" font-weight="600" fill="#132030">S4  propose</text>
+  <text class="sub" x="56" y="275" font-size="12.5" fill="#4a5a68">sub-agent; off by default</text>
+  <path class="edge" d="M 380 261.0 H 426" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="430" y="244" width="260" height="34" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="560" y="266.0" text-anchor="middle" font-size="13.5" fill="#132030">assumptions (clipped)</text>
+  <path class="edge" d="M 210 284 V 293" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="gate" x="40" y="294" width="340" height="46" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="56" y="314" font-size="14.5" font-weight="600" fill="#132030">S5  forecast</text>
+  <text class="sub" x="56" y="331" font-size="12.5" fill="#4a5a68">anchors, seasonal share, scenarios; checks</text>
+  <path class="edge" d="M 380 317.0 H 426" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="430" y="300" width="260" height="34" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="560" y="322.0" text-anchor="middle" font-size="13.5" fill="#132030">model.json</text>
+  <path class="edge" d="M 210 340 V 349" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="40" y="350" width="340" height="46" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="56" y="370" font-size="14.5" font-weight="600" fill="#132030">S6  peers</text>
+  <text class="sub" x="56" y="387" font-size="12.5" fill="#4a5a68">same-sector defaults, cached</text>
+  <path class="edge" d="M 380 373.0 H 426" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="430" y="356" width="260" height="34" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="560" y="378.0" text-anchor="middle" font-size="13.5" fill="#132030">model book</text>
+  <path class="edge" d="M 210 396 V 405" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="gate" x="40" y="406" width="340" height="46" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="56" y="426" font-size="14.5" font-weight="600" fill="#132030">S7  value</text>
+  <text class="sub" x="56" y="443" font-size="12.5" fill="#4a5a68">comps, DCF, PT, rating; valuation checks</text>
+  <path class="edge" d="M 380 429.0 H 426" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="430" y="412" width="260" height="34" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="560" y="434.0" text-anchor="middle" font-size="13.5" fill="#132030">valuation.json</text>
+  <path class="edge" d="M 210 452 V 461" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="40" y="462" width="340" height="46" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="56" y="482" font-size="14.5" font-weight="600" fill="#132030">S8  revise</text>
+  <text class="sub" x="56" y="499" font-size="12.5" fill="#4a5a68">vs the parent version</text>
+  <path class="edge" d="M 380 485.0 H 426" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="430" y="468" width="260" height="34" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="560" y="490.0" text-anchor="middle" font-size="13.5" fill="#132030">revisions.json</text>
+  <path class="edge" d="M 210 508 V 517" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="llm" x="40" y="518" width="340" height="46" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="56" y="538" font-size="14.5" font-weight="600" fill="#132030">S9  debates</text>
+  <text class="sub" x="56" y="555" font-size="12.5" fill="#4a5a68">one sub-agent per scenario driver</text>
+  <path class="edge" d="M 380 541.0 H 426" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="430" y="524" width="260" height="34" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="560" y="546.0" text-anchor="middle" font-size="13.5" fill="#132030">debates.json</text>
+  <path class="edge" d="M 210 564 V 573" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="llm" x="40" y="574" width="340" height="46" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="56" y="594" font-size="14.5" font-weight="600" fill="#132030">S10 write</text>
+  <text class="sub" x="56" y="611" font-size="12.5" fill="#4a5a68">facts, prose slots, trace, consistency</text>
+  <path class="edge" d="M 380 597.0 H 426" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="430" y="580" width="260" height="34" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="560" y="602.0" text-anchor="middle" font-size="13.5" fill="#132030">facts.json · note.json</text>
+  <path class="edge" d="M 210 620 V 629" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="work" x="40" y="630" width="340" height="46" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="56" y="650" font-size="14.5" font-weight="600" fill="#132030">S11 export</text>
+  <text class="sub" x="56" y="667" font-size="12.5" fill="#4a5a68">note, workbook, parity, version</text>
+  <path class="edge" d="M 380 653.0 H 426" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect class="sink" x="430" y="636" width="260" height="34" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="560" y="658.0" text-anchor="middle" font-size="13.5" fill="#132030">note · workbook · report.json</text>
+  <text class="ptitle" x="750" y="50" text-anchor="start" font-size="14.5" font-weight="600" fill="#46586a">When a step fails</text>
+  <rect class="gate" x="750" y="70" width="390" height="104" rx="7" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/>
+  <text class="name" x="945.0" y="101.5" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">Check step: S3 · S5 · S7</text>
+  <text class="sub" x="945.0" y="120.5" text-anchor="middle" font-size="13" fill="#4a5a68">layer-2 or valuation check FAILs</text>
+  <text class="sub" x="945.0" y="137.5" text-anchor="middle" font-size="13" fill="#4a5a68">→ stop the run, report the check;</text>
+  <text class="sub" x="945.0" y="154.5" text-anchor="middle" font-size="13" fill="#4a5a68">nothing runs on numbers that did not pass</text>
+  <rect class="llm" x="750" y="190" width="390" height="120" rx="7" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/>
+  <text class="name" x="945.0" y="221.0" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">LLM step: S2 · S4 · S9 · S10</text>
+  <text class="sub" x="945.0" y="240.0" text-anchor="middle" font-size="13" fill="#4a5a68">bad JSON after repair, budget hit,</text>
+  <text class="sub" x="945.0" y="257.0" text-anchor="middle" font-size="13" fill="#4a5a68">or no evidence id resolves</text>
+  <text class="sub" x="945.0" y="274.0" text-anchor="middle" font-size="13" fill="#4a5a68">→ degrade: defaults, &quot;failed check: reason&quot;,</text>
+  <text class="sub" x="945.0" y="291.0" text-anchor="middle" font-size="13" fill="#4a5a68">exception row; the run finishes</text>
+  <text class="ptitle" x="750" y="350" text-anchor="start" font-size="14.5" font-weight="600" fill="#46586a">Running it</text>
+  <rect class="work" x="750" y="366" width="390" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="945.0" y="397.5" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">--resume</text>
+  <text class="sub" x="945.0" y="416.5" text-anchor="middle" font-size="13" fill="#4a5a68">reuses events.json, debates.json and</text>
+  <text class="sub" x="945.0" y="433.5" text-anchor="middle" font-size="13" fill="#4a5a68">the prose slots; code steps always rerun</text>
+  <text class="sub" x="945.0" y="450.5" text-anchor="middle" font-size="13" fill="#4a5a68">(cheap, deterministic)</text>
+  <rect class="work" x="750" y="486" width="390" height="70" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
+  <text class="name" x="945.0" y="517.5" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">--no-llm</text>
+  <text class="sub" x="945.0" y="536.5" text-anchor="middle" font-size="13" fill="#4a5a68">skips S2, S4&#x27;s LLM, S9 and S10&#x27;s prose</text>
+  <rect class="sink" x="750" y="572" width="390" height="104" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>
+  <text class="name" x="945.0" y="603.5" text-anchor="middle" font-size="14.5" font-weight="600" fill="#132030">Version (S11)</text>
+  <text class="sub" x="945.0" y="622.5" text-anchor="middle" font-size="13" fill="#4a5a68">model_versions row, status draft;</text>
+  <text class="sub" x="945.0" y="639.5" text-anchor="middle" font-size="13" fill="#4a5a68">parent = latest version with an earlier as-of</text>
+  <text class="sub" x="945.0" y="656.5" text-anchor="middle" font-size="13" fill="#4a5a68">(none: &quot;initial draft (no prior run)&quot;)</text>
+  <rect class="work" x="40" y="722" width="26" height="14" rx="3" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/><text class="sub" x="74" y="734" font-size="12.5" fill="#4a5a68">code</text>
+  <rect class="gate" x="112.8" y="722" width="26" height="14" rx="3" fill="#fbf1d9" stroke="#b58a24" stroke-width="1.5"/><text class="sub" x="146.8" y="734" font-size="12.5" fill="#4a5a68">code with a stopping check</text>
+  <rect class="llm" x="344.0" y="722" width="26" height="14" rx="3" fill="#fbe8f1" stroke="#b4538a" stroke-width="1.5"/><text class="sub" x="378.0" y="734" font-size="12.5" fill="#4a5a68">LLM step</text>
+  <rect class="sink" x="445.6" y="722" width="26" height="14" rx="3" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/><text class="sub" x="479.6" y="734" font-size="12.5" fill="#4a5a68">artifact or state</text>
+  <text class="elabel" x="1140" y="734" text-anchor="end" font-size="12.5" fill="#46586a">budgets: research.yaml · timing: report.json</text>
+</svg>

@@ -217,11 +217,15 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Downloaded filings and derived data (reproducible via `tenk fetch`)
+# Your own credentials (template: credentials.example.yaml); never commit them
+credentials.yaml
+
+# Downloaded filings, prices and derived data: local only, never committed or pushed
+# (Tiingo prices are licensed for internal use only)
 /data/
 
-# Playground reports
-output/
+# Run outputs (reports, workbooks, scores): local only
+/output/
 
 # Gold set review PDFs: regenerate with `tenk gold render`
 evaluation/gold/*.pdf

@@ -1,0 +1,139 @@
+# Operating KPIs per company (V4 design doc §5, spec §1.4): what the extractor looks for in
+# each earnings release. unit: the unit values are stored in. labels: how the release names it.
+# segments: segment keys ("total" = consolidated). definition_version: bumped when a company
+# redefines the KPI (a recast); stored with every value.
+# guidance: metrics the company guides, and in what form (level, growth_yoy, margin).
+# definitions: a KPI's definition_version by first period, when a company recasts it (TRIP's
+# 2026 move to continuing operations); without it every period is version 1.
+# Guidance `high` may be null for an open-ended range ("at least 35.5%").
+
+UBER:
+  kpis:
+    gross_bookings: {unit: USD millions, segments: [total, mobility, delivery, freight],
+                     labels: ["Gross Bookings"]}
+    trips: {unit: count millions, labels: ["Trips"]}
+    mapcs: {unit: count millions, labels: ["Monthly Active Platform Consumers", "MAPCs"]}
+    revenue: {unit: USD millions, segments: [total, mobility, delivery, freight],
+              labels: ["Revenue"]}
+    adj_ebitda: {unit: USD millions, segments: [total, mobility, delivery, freight, corporate],
+                 labels: ["Adjusted EBITDA"]}
+    free_cash_flow: {unit: USD millions, labels: ["Free cash flow"]}
+    eps_diluted: {unit: USD per share, labels: ["Diluted", "GAAP Diluted EPS"]}
+    adj_eps: {unit: USD per share, labels: ["Non-GAAP EPS"]}
+  guidance:
+    gross_bookings: {unit: USD millions, basis: level}
+    adj_ebitda: {unit: USD millions, basis: level}
+    non_gaap_eps: {unit: USD per share, basis: level}
+
+BKNG:
+  kpis:
+    room_nights: {unit: count millions, labels: ["Room Nights"]}
+    gross_bookings: {unit: USD millions, labels: ["Total Gross Bookings", "Gross Bookings"]}
+    revenue: {unit: USD millions, labels: ["Total revenues"]}
+    adj_ebitda: {unit: USD millions, labels: ["Adjusted EBITDA"]}
+    net_income: {unit: USD millions, labels: ["Net income"]}
+    eps_diluted: {unit: USD per share,
+                  labels: ["Net income applicable to common stockholders per diluted common share"]}
+    adj_eps: {unit: USD per share, labels: ["Adjusted EPS"]}
+    free_cash_flow: {unit: USD millions, labels: ["Free cash flow"]}
+  guidance:
+    room_nights_growth: {unit: percent, basis: growth_yoy}
+    gross_bookings_growth: {unit: percent, basis: growth_yoy}
+    revenue_growth: {unit: percent, basis: growth_yoy}
+    adj_ebitda_growth: {unit: percent, basis: growth_yoy}
+
+EXPE:
+  kpis:
+    room_nights: {unit: count millions, labels: ["Booked Room Nights", "Booked room nights"]}
+    gross_bookings: {unit: USD millions, segments: [total, b2c, b2b],
+                     labels: ["Gross Bookings", "Gross bookings", "B2C", "B2B"]}
+    revenue: {unit: USD millions, segments: [total, b2c, b2b], labels: ["Revenue"]}
+    adj_ebitda: {unit: USD millions, labels: ["Adjusted EBITDA"]}
+    eps_diluted: {unit: USD per share,
+                  labels: ["Diluted Earnings Per Share", "Diluted earnings per share"]}
+    adj_eps: {unit: USD per share, labels: ["Adjusted EPS"]}
+    free_cash_flow: {unit: USD millions, labels: ["Free cash flow"]}
+  guidance:
+    gross_bookings: {unit: USD millions, basis: level}
+    gross_bookings_growth: {unit: percent, basis: growth_yoy}
+    revenue: {unit: USD millions, basis: level}
+    revenue_growth: {unit: percent, basis: growth_yoy}
+    adj_ebitda: {unit: USD millions, basis: level}
+    adj_ebitda_margin_change: {unit: percentage points, basis: margin}
+
+ABNB:
+  kpis:
+    nights_and_experiences: {unit: count millions,
+                             labels: ["Nights and Seats Booked", "Nights and Experiences Booked"]}
+    gross_booking_value: {unit: USD millions, labels: ["Gross Booking Value", "GBV"]}
+    revenue: {unit: USD millions, labels: ["Revenue"]}
+    net_income: {unit: USD millions, labels: ["Net income", "Net Income"]}
+    adj_ebitda: {unit: USD millions, labels: ["Adjusted EBITDA"]}
+    free_cash_flow: {unit: USD millions, labels: ["Free Cash Flow"]}
+    eps_diluted: {unit: USD per share, labels: ["Diluted"]}
+  guidance:
+    revenue: {unit: USD millions, basis: level}
+    revenue_growth: {unit: percent, basis: growth_yoy}
+    adj_ebitda_margin: {unit: percent, basis: margin}
+
+TRIP:
+  kpis:
+    revenue: {unit: USD millions,  # eliminations: negative, printed under the 2022–2025 segments
+              segments: [total, tripadvisor, viator, thefork, experiences, hotels_other,
+                         eliminations],
+              labels: ["Total Revenue", "Brand Tripadvisor", "Viator", "TheFork",
+                       "Experiences", "Hotels and Other", "Intersegment eliminations"],
+              definitions: {2026Q2: 2}}
+    adj_ebitda: {unit: USD millions,
+                 segments: [total, tripadvisor, viator, thefork, experiences, hotels_other],
+                 labels: ["Total Adjusted EBITDA"], definitions: {2026Q2: 2}}
+    eps_diluted: {unit: USD per share, labels: ["Diluted"], definitions: {2026Q2: 2}}
+    adj_eps: {unit: USD per share,  # non-GAAP diluted EPS (from continuing operations since 2026Q2)
+              labels: ["Non-GAAP Diluted Earnings (Loss) per Share", "Non-GAAP Diluted EPS"],
+              definitions: {2026Q2: 2}}
+    gross_bookings: {unit: USD millions, segments: [viator],  # Viator only: "GBV"
+                     labels: ["Gross bookings value", "Gross booking value", "GBV"]}
+    experience_bookings: {unit: count millions, labels: ["experience bookings"]}
+    free_cash_flow: {unit: USD millions, labels: ["Free cash flow"], definitions: {2026Q2: 2}}
+  guidance: {}  # TRIP gives no numeric guidance in its releases (V4.0a survey)
+
+LYFT:
+  kpis:
+    active_riders: {unit: count millions, labels: ["Active Riders"]}
+    rides: {unit: count millions, labels: ["Rides"]}
+    gross_bookings: {unit: USD millions, labels: ["Gross Bookings"]}
+    revenue: {unit: USD millions, labels: ["Revenue"]}
+    adj_ebitda: {unit: USD millions, labels: ["Adjusted EBITDA"]}
+    free_cash_flow: {unit: USD millions, labels: ["Free cash flow"]}
+    eps_diluted: {unit: USD per share, labels: ["Diluted"]}
+  guidance:
+    gross_bookings: {unit: USD millions, basis: level}
+    gross_bookings_growth: {unit: percent, basis: growth_yoy}
+    adj_ebitda: {unit: USD millions, basis: level}
+    adj_ebitda_margin: {unit: percent, basis: margin}
+
+DASH:
+  kpis:
+    total_orders: {unit: count millions, labels: ["Total Orders"]}
+    marketplace_gov: {unit: USD millions, labels: ["Marketplace GOV"]}
+    revenue: {unit: USD millions, labels: ["Revenue"]}
+    adj_ebitda: {unit: USD millions, labels: ["Adjusted EBITDA"]}
+    free_cash_flow: {unit: USD millions, labels: ["Free Cash Flow", "Free cash flow"]}
+    eps_diluted: {unit: USD per share, labels: ["Diluted"]}
+  guidance:
+    marketplace_gov: {unit: USD millions, basis: level}
+    adj_ebitda: {unit: USD millions, basis: level}
+
+CART:
+  kpis:
+    gtv: {unit: USD millions, labels: ["GTV", "Gross transaction value"]}
+    orders: {unit: count millions, labels: ["Orders"]}
+    revenue: {unit: USD millions, segments: [total, transaction, advertising],
+              labels: ["Total revenue", "Transaction revenue", "Advertising and other revenue"]}
+    net_income: {unit: USD millions, labels: ["Net income", "GAAP net income"]}
+    adj_ebitda: {unit: USD millions, labels: ["Adjusted EBITDA"]}
+    free_cash_flow: {unit: USD millions, labels: ["Free cash flow"]}
+    eps_diluted: {unit: USD per share, labels: ["Diluted"]}
+  guidance:
+    gtv: {unit: USD millions, basis: level}
+    adj_ebitda: {unit: USD millions, basis: level}

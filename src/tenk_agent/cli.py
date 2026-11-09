@@ -1,6 +1,7 @@
 """tenk: the V0–V2 pipeline from the command line. Settings: config.yaml (--config, TENK_CONFIG).
 
-tenk fetch                     download the corpus 10-Ks from EDGAR
+tenk setup                     type in your own SEC, Tiingo and FRED credentials
+tenk fetch                     download the corpus filings from EDGAR (V4: 10-K, 10-Q, releases)
 tenk build                     V0 preprocess + chunk every filing, then V1's database + vectors
 tenk search "question"         V1: sub-questions and the top k chunks
 tenk ask "question"            V2: one cited answer
@@ -9,18 +10,22 @@ tenk tool NAME key=value ...   V3: run one agent tool by hand (--list: the schem
 tenk agent "question"          V3: the agent picks and calls tools, then answers
 tenk gold [show|render|verify] review a gold question set
 tenk report LABEL              write a finished V2 run's end-to-end report to evaluation/results
+tenk companies verify          V4: check companies.yaml against SEC (CIK, FYE, filing counts)
+tenk research report T --as-of D   V4 Report mode: note, workbook, logs (research/pipeline.py)
+tenk research approve T:vN --by X  V4: mark a report's model version reviewed
+tenk investigate "Q" --as-of D   V4: Investigate mode
 """
 
 import argparse
 import json
 import logging
-import os
 import sys
 from datetime import date
 from pathlib import Path
 
 from tenk_agent import config as config_file
-from tenk_agent.corpus import COMPANIES, FISCAL_YEARS, company_by_ticker
+from tenk_agent import credentials
+from tenk_agent.corpus import COMPANIES, DATA_DIR, FISCAL_YEARS, WINDOW_START, company_by_ticker
 from tenk_agent.store import ChunkRecord, Store
 
 GOLD = Path("evaluation/gold/generation-gold-fy2025.jsonl")
@@ -35,12 +40,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", type=Path, help="default: $TENK_CONFIG or config.yaml")
     commands = parser.add_subparsers(dest="command", required=True)
 
+    commands.add_parser("setup", help="type in your own credentials (credentials.yaml)")
     fetch = commands.add_parser("fetch", help="download the corpus 10-Ks from EDGAR")
     fetch.add_argument("--tickers", nargs="*", help="subset of corpus tickers (default: all)")
     fetch.add_argument("--refresh", action="store_true", help="re-download cached files")
+    fetch.add_argument("--forms", nargs="*", choices=("10-K", "10-Q", "ER", "DEF14A"),
+                       help="V4 corpus: forms to fetch (default: all four)")
+    fetch.add_argument("--market", action="store_true",
+                       help="V4 corpus: prices (Tiingo), macro (FRED) and ERP only")
 
     build = commands.add_parser("build", help="V0 chunks of every filing → V1 database")
-    stages = ("chunk", "load", "embed", "pages")  # build.STAGES
+    # build.STAGES
+    stages = ("chunk", "load", "append", "embed", "pages", "facts", "market", "kpis")
     build.add_argument(
         "--stage", action="append", choices=stages, help="default: chunk, load, embed"
     )
@@ -75,6 +86,12 @@ def main(argv: list[str] | None = None) -> int:
     agent.add_argument("--model", help="default: generation.model")
     agent.add_argument("--json", action="store_true", help="print the answer and steps as JSON")
 
+    investigate = commands.add_parser(
+        "investigate", help="V4 Investigate: plan Ask and Research sub-runs, combine them")
+    investigate.add_argument("question")
+    investigate.add_argument("--as-of", required=True, help="YYYY-MM-DD")
+    investigate.add_argument("--json", action="store_true", help="print the run as JSON")
+
     gold = commands.add_parser("gold", help="review a gold question set (default: list it)")
     gold.add_argument("--gold", type=Path, default=GOLD, help="default: %(default)s")
     gold_actions = gold.add_subparsers(dest="gold_action")
@@ -92,11 +109,32 @@ def main(argv: list[str] | None = None) -> int:
     report.add_argument("--context", default="retrieved", help="default: %(default)s")
     report.add_argument("--out", type=Path, help=f"default: {RESULTS}/<label>")
 
+    companies = commands.add_parser("companies", help="V4: the coverage in companies.yaml")
+    companies.add_argument("action", choices=("verify",))
+    companies.add_argument("--file", type=Path, default=Path("companies.yaml"))
+    companies.add_argument("--data-dir", type=Path, default=Path("data/v4"))
+    companies.add_argument("--since", help="window start, filing date (default: the file's)")
+    companies.add_argument("--refresh", action="store_true", help="re-download cached files")
+
+    research = commands.add_parser("research", help="V4 Report mode")
+    research_actions = research.add_subparsers(dest="research_action", required=True)
+    run = research_actions.add_parser("report", help="S1–S11: note, workbook and logs")
+    run.add_argument("tickers", nargs="+")
+    run.add_argument("--as-of", required=True, help="YYYY-MM-DD: inputs filed before it")
+    run.add_argument("--no-llm", action="store_true", help="code-only draft (no events, "
+                     "debates or prose)")
+    run.add_argument("--resume", action="store_true", help="reuse saved LLM steps")
+    approve = research_actions.add_parser("approve", help="mark a model version reviewed")
+    approve.add_argument("version", help="e.g. UBER:v1")
+    approve.add_argument("--by", required=True, help="reviewer initials")
+
     args = parser.parse_args(argv)
     settings = config_file.load(args.config)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     for noisy in ("httpx", "httpx2", "sentence_transformers", "anthropic", "openai"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
+    if args.command == "setup":
+        return credentials.setup()
     handlers = {
         "fetch": _fetch,
         "build": _build,
@@ -105,10 +143,17 @@ def main(argv: list[str] | None = None) -> int:
         "chat": _chat,
         "tool": _tool,
         "agent": _agent,
+        "investigate": _investigate,
         "gold": _gold,
         "report": _report,
+        "companies": _companies,
+        "research": _research,
     }
-    return handlers[args.command](args, settings)
+    try:
+        return handlers[args.command](args, settings)
+    except credentials.MissingCredential as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
 
 
 # --- fetch, build ----------------------------------------------------------------------------
@@ -117,20 +162,89 @@ def main(argv: list[str] | None = None) -> int:
 def _fetch(args: argparse.Namespace, settings: dict) -> int:
     from tenk_agent.acquisition import fetch
 
-    user_agent = os.environ.get("SEC_USER_AGENT")
-    if not user_agent:
-        print("Set SEC_USER_AGENT, e.g. 'Name you@example.com'", file=sys.stderr)
-        return 2
+    user_agent = credentials.get("sec_user_agent")
     companies = [company_by_ticker(t) for t in args.tickers] if args.tickers else list(COMPANIES)
+    if FISCAL_YEARS is None and args.market:  # V4: prices, macro, ERP
+        from tenk_agent.acquisition import market
+
+        raw = Path(DATA_DIR) / "raw"
+        problems = market.fetch_prices([c.ticker for c in companies], raw,
+                                       credentials.get("tiingo_api_key"), args.refresh)
+        problems += market.fetch_macro(raw, credentials.get("fred_api_key"), args.refresh)
+        problems += market.fetch_erp(raw, args.refresh)
+        for problem in problems:
+            print(problem, file=sys.stderr)
+        return 1 if problems else 0
+    if FISCAL_YEARS is None:  # V4: every filing in the window (acquisition/filings.py)
+        from tenk_agent.acquisition import filings
+
+        forms = tuple(args.forms or filings.FORMS)
+        problems = filings.fetch(
+            companies, Path(DATA_DIR), user_agent, WINDOW_START, forms, args.refresh
+        )
+        for problem in problems:
+            print(problem, file=sys.stderr)
+        return 1 if problems else 0
     ok = fetch(companies, FISCAL_YEARS, Path(settings["data_dir"]), user_agent, args.refresh)
     return 0 if ok else 1
+
+
+def _research(args: argparse.Namespace, settings: dict) -> int:
+    from tenk_agent.asof import AsOf
+    from tenk_agent.store import Store
+
+    if not DATA_DIR:
+        print("Report mode needs the V4 corpus: TENK_COMPANIES=companies.yaml", file=sys.stderr)
+        return 2
+    db = Path(DATA_DIR) / "build" / "parent_child.db"
+    if args.research_action == "approve":
+        store = Store(db, AsOf.today())
+        store.enable_facts()
+        if not any(v["id"] == args.version for v in store.model_versions(
+                args.version.split(":")[0])):
+            print(f"no saved version {args.version}", file=sys.stderr)
+            return 2
+        store.set_version_status(args.version, f"reviewed by {args.by} on {date.today()}")
+        print(f"{args.version}: reviewed by {args.by}")
+        return 0
+    import yaml
+
+    from tenk_agent.research.forecast import knobs
+    from tenk_agent.research.pipeline import run
+
+    search = None
+    if not args.no_llm:
+        from tenk_agent.retrieval.search import SubQuestionRetriever
+
+        today = Store(db, AsOf.today())
+        retrieval = yaml.safe_load(Path("experiments/v1/config.yaml").read_text())["retrieval"]
+        search = SubQuestionRetriever.from_settings(today, retrieval | {"device": "cpu"})
+    for ticker in args.tickers:
+        print(json.dumps(run(db, ticker.upper(), args.as_of, knobs(), not args.no_llm,
+                             args.resume, search), indent=1))
+    return 0
+
+
+def _companies(args: argparse.Namespace, settings: dict) -> int:
+    from tenk_agent.acquisition.companies import verify
+
+    user_agent = credentials.get("sec_user_agent")
+    problems = verify(args.file, args.data_dir, user_agent, args.since, args.refresh)
+    for problem in problems:
+        print(problem, file=sys.stderr)
+    print(f"Verified {args.file}: {len(problems)} problem(s)")
+    return 1 if problems else 0
 
 
 def _build(args: argparse.Namespace, settings: dict) -> int:
     from tenk_agent.build import build, filing_dirs
 
-    filings = filing_dirs(Path(settings["data_dir"]), args.filing)
-    out = args.out or Path(settings["build"]["out"])
+    if DATA_DIR:  # V4 corpus: its own data folder, every form
+        filings = filing_dirs(Path(DATA_DIR), args.filing, "*")
+        out = args.out or Path(DATA_DIR) / "build"
+    else:
+        filings = filing_dirs(Path(settings["data_dir"]), args.filing)
+        out = args.out or Path(settings["build"]["out"])
     methods = args.method or settings["build"]["methods"]
     build(filings, out, settings, methods, args.stage or ["chunk", "load", "embed"], args.jobs)
     return 0
@@ -330,6 +444,30 @@ def _agent(args: argparse.Namespace, settings: dict) -> int:
     return 0
 
 
+def _investigate(args: argparse.Namespace, settings: dict) -> int:
+    """Investigate mode (design doc §8.4): a plan of Ask and Research sub-runs over one shared
+    model book, one replan, and a claim-checked combined answer."""
+    from dataclasses import asdict
+
+    from tenk_agent.agent.factory import agent_factory
+    from tenk_agent.agent.plan import Investigator, answer_text
+
+    if not DATA_DIR:
+        print("Investigate needs the V4 corpus: TENK_COMPANIES=companies.yaml", file=sys.stderr)
+        return 2
+    db = Path(DATA_DIR) / "build" / "parent_child.db"
+    agent = agent_factory(db, settings["retrieval"], settings["generation"], settings["agent"])
+    research = agent(args.as_of)
+    ask = agent(args.as_of, "ask", research.toolbox.book)
+    inv = Investigator(research.model, {"ask": ask, "research": research}).run(args.question)
+    if args.json:
+        print(json.dumps(asdict(inv), indent=2, default=str))
+        return 0
+    print(answer_text(inv))
+    print(f"\n{inv.seconds:.1f}s · {len(inv.sub_runs)} sub-runs · stop: {inv.stop}")
+    return 0
+
+
 # --- gold --------------------------------------------------------------------------------------
 
 
@@ -398,7 +536,9 @@ def _gold_render(args: argparse.Namespace, settings: dict) -> int:
     from tenk_agent.evaluation.render import render_pdf, render_summary_pdf
 
     out = args.out or args.gold.with_suffix(".pdf")
-    store = Store(Path(settings["db"]))
+    # V4 corpus: its own database (every form); V3: the config's
+    db = Path(DATA_DIR) / "build" / "parent_child.db" if DATA_DIR else Path(settings["db"])
+    store = Store(db)
     count = render_pdf(args.gold, store, Path(settings["data_dir"]), out)
     summary = out.with_name(f"{out.stem}-summary.pdf")
     render_summary_pdf(args.gold, summary)

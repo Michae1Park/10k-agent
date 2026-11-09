@@ -5,8 +5,15 @@
          filing in order. Cached: labels are reused, and each method's chunks while its
          settings match
   load   chunks → <out>/<method>.db, rebuilt from scratch; parent-child adds children
+  append like load, into the existing <method>.db: only filings it lacks (a newly fetched form,
+         such as the DEF 14A proxies); facts, KPIs, market data and model versions are kept.
+         Then `embed` adds only the new vectors
   embed  vectors for every chunk (and child). Stop vLLM first, or set retrieval.device: cpu
   pages  each chunk's pages, written into an already built <method>.db in place
+  facts  V4: XBRL company facts and inline facts of every 10-K and 10-Q into <method>.db
+  market V4: prices, macro and ERP from the fetch caches into <method>.db
+  kpis   V4: release KPIs and guidance from an extraction run's extractions.json into <method>.db
+         (experiments/v4/extract_pilot.py --releases all writes it; build.kpis names the run)
 
 Filings are read from <data_dir>/raw/filings/<TICKER>/FY<year>/ (tenk fetch); each one's work
 files (blocks, labels, document, chunks-<method>.json, chunk.log) go to <out>/<TICKER>-FY<year>/.
@@ -28,13 +35,17 @@ from tenk_agent.retrieval.embeddings import get_embedder
 from tenk_agent.retrieval.index import add_pages, embed_corpus, load
 from tenk_agent.store import Store
 
-STAGES = ("chunk", "load", "embed", "pages")
+STAGES = ("chunk", "load", "append", "embed", "pages", "facts", "market", "kpis")
+KPIS = Path("output/extraction/v4.8-releases-all/extractions.json")  # v4.3 + adj. EPS, TRIP, CART
 
 
-def filing_dirs(data_dir: Path, names: list[str] | None = None) -> list[Path]:
-    """The filings' folders: `names` as TICKER/FYyear, or every one downloaded."""
+def filing_dirs(
+    data_dir: Path, names: list[str] | None = None, pattern: str = "FY*"
+) -> list[Path]:
+    """The filings' folders: `names` as TICKER/<folder>, or every one downloaded whose folder
+    matches `pattern` (V3: FY<year>; V4: FY2025-10K, 2026Q2-10Q, 2026Q2-ER, so "*")."""
     root = data_dir / "raw" / "filings"
-    return [root / n for n in names] if names else sorted(root.glob("*/FY*"))
+    return [root / n for n in names] if names else sorted(root.glob(f"*/{pattern}"))
 
 
 def filing_name(filing: Path) -> str:
@@ -78,9 +89,16 @@ def _chunk_logged(filing: Path, out: Path, settings: dict, methods: list[str]):
 def chunk_one(filing: Path, target: Path, settings: dict, methods) -> None:
     """V0's preprocessing and chunking on one full filing (it is its own cover page), into
     `target`. A document already there is reused; so are chunks made with these settings."""
-    html = next(filing.glob("*.htm"))
+    meta = json.loads((filing / "metadata.json").read_text())
     if not (target / "document.json").exists():
-        preprocess(html, html, target, settings["llm"], settings["labeling"])
+        if "form" in meta:  # V4 filings: rule-based structure (preprocess/rules.py)
+            from tenk_agent.corpus import company_by_ticker
+            from tenk_agent.preprocess.rules import preprocess_filing
+
+            preprocess_filing(filing, target, company_by_ticker(meta["ticker"]).name)
+        else:
+            html = next(filing.glob("*.htm"))
+            preprocess(html, html, target, settings["llm"], settings["labeling"])
     todo = [m for m in methods if not is_current(target, m, settings["chunking"])]
     if todo:
         chunk(target, settings["llm"], settings["chunking"], todo)
@@ -89,8 +107,9 @@ def chunk_one(filing: Path, target: Path, settings: dict, methods) -> None:
 # --- load, embed, pages --------------------------------------------------------------------
 
 
-def load_db(method: str, filings: list[Path], out: Path) -> Path:
-    """<out>/<method>.db from each filing's document and chunks-<method>.json."""
+def load_db(method: str, filings: list[Path], out: Path, append: bool = False) -> Path:
+    """<out>/<method>.db from each filing's document and chunks-<method>.json (`append`: into
+    the existing database, new filings only)."""
     path = out / f"{method}.db"
     rows = []
     for filing in filings:
@@ -102,7 +121,7 @@ def load_db(method: str, filings: list[Path], out: Path) -> Path:
                 json.loads((source / f"chunks-{method}.json").read_text()),
             )
         )
-    counts = load(path, rows)
+    counts = load(path, rows, append=append)
     print(f"{method}: {len(filings)} filings, {counts} → {path}")
     return path
 
@@ -128,6 +147,49 @@ def pages_db(method: str, filings: list[Path], out: Path) -> None:
     print(f"{method}: pages for {add_pages(store, rows)} → {out / f'{method}.db'}")
 
 
+def facts_db(method: str, filings: list[Path], out: Path, since: str) -> None:
+    """V4 facts (facts/xbrl.py) into <out>/<method>.db: each company's companyfacts JSON (from
+    the fetch cache beside the filings) and the inline XBRL of its 10-Ks and 10-Qs."""
+    from tenk_agent.asof import AsOf
+    from tenk_agent.facts.xbrl import company_facts, filing_facts
+
+    store = Store(out / f"{method}.db", AsOf.today())  # loading only: no dated reads
+    store.enable_facts()
+    counts = {"companyfacts": 0, "inline": 0}
+    for ticker in sorted({f.parent.name for f in filings}):
+        raw = filings[0].parents[2] / "edgar" / ticker / "companyfacts.json"
+        counts["companyfacts"] += store.add_facts(
+            company_facts(ticker, json.loads(raw.read_text()), since)
+        )
+    for filing in filings:
+        if filing.name.endswith(("-10K", "-10Q")):
+            counts["inline"] += store.add_facts(filing_facts(filing))
+    print(f"{method}: facts {counts} → {out / f'{method}.db'}")
+
+
+def kpis_db(method: str, out: Path, extractions: Path) -> None:
+    """Each release's extracted KPIs and guidance, dated by the release's filing date."""
+    from tenk_agent.asof import AsOf
+
+    store = Store(out / f"{method}.db", AsOf.today())  # loading only
+    store.enable_facts()
+    filed = {
+        (f.ticker, f"{f.fiscal_year}{f.fiscal_period}"): f.filing_date
+        for f in store.filings()
+        if f.form == "ER"
+    }
+    n, missing = 0, []
+    for r in json.loads(extractions.read_text()).values():
+        if (r["ticker"], r["period"]) not in filed:
+            missing.append(f"{r['ticker']}-{r['period']}")
+            continue
+        n += store.add_extractions(
+            r["ticker"], r["period"], filed[r["ticker"], r["period"]], r["kpis"], r["guidance"]
+        )
+    print(f"{method}: kpis and guidance {n} rows → {out / f'{method}.db'}"
+          + (f" (no release filing: {', '.join(missing)})" if missing else ""))
+
+
 def build(filings: list[Path], out: Path, settings: dict, methods, stages, jobs: int = 8) -> None:
     """Run `stages` in order. `settings`: llm, labeling and chunking (chunk), retrieval (embed)."""
     if "chunk" in stages and (failed := chunk_all(filings, out, settings, methods, jobs)):
@@ -135,9 +197,30 @@ def build(filings: list[Path], out: Path, settings: dict, methods, stages, jobs:
     if "load" in stages:
         for method in methods:
             load_db(method, filings, out)
+    if "append" in stages:
+        for method in methods:
+            load_db(method, filings, out, append=True)
     if "embed" in stages:
         for method in methods:
             embed_db(method, out, settings["retrieval"])
     if "pages" in stages:
         for method in methods:
             pages_db(method, filings, out)
+    if "market" in stages:
+        from tenk_agent.acquisition.market import market_rows
+        from tenk_agent.asof import AsOf
+
+        for method in methods:
+            store = Store(out / f"{method}.db", AsOf.today())  # loading only
+            store.enable_facts()
+            rows = market_rows(filings[0].parents[2])
+            store.add_market(rows)
+            print(f"{method}: market {len(rows)} rows → {out / f'{method}.db'}")
+    if "facts" in stages:
+        from tenk_agent.corpus import WINDOW_START
+
+        for method in methods:
+            facts_db(method, filings, out, WINDOW_START)
+    if "kpis" in stages:
+        for method in methods:
+            kpis_db(method, out, Path(settings.get("build", {}).get("kpis", KPIS)))

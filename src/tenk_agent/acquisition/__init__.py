@@ -1,4 +1,4 @@
-"""Data acquisition: the corpus 10-Ks (corpus.py, D-001) downloaded from SEC EDGAR.
+"""Data acquisition: the corpus 10-Ks (corpus.py) downloaded from SEC EDGAR.
 
   edgar.py  EDGAR client (fair-access rate limit, retries); one 10-K resolved per fiscal year
 

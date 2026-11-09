@@ -1,0 +1,81 @@
+# V4 results: junior sell-side research agent
+
+Eight online marketplaces (UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP), Q4 2022 to Q2 2026 (filings from 2023-01-01), every input read as of a date (filed strictly before it). Local model Qwen3.6-27B (FP8, vLLM); judge gpt-oss-20b. Bars were frozen before the first run of each phase (design doc §12.2); a miss is reported as a miss.
+
+## Results by layer
+
+| Layer | Test | Bar | Result | |
+|---|---|---|---|---|
+| 1. Extraction | 337 hand-checked labels, 32 releases, all eight | ≥ 98% exact; 100% on revenue, EPS, main KPI | **98.5% exact, 100% critical** | pass |
+| 2. Model integrity | balance (two ways), quarters sum, Q4 ties, take rate, segments sum, no future input, formula-only; workbook parity | 100% | **all eight pass** at three as-ofs; every formula cell recalculates to Python's value in LibreOffice | pass |
+| 3. Forecast | walk-forward, 90 next-quarter forecasts (Q1 2025–Q2 2026) | MAPE below seasonal naive on revenue and main KPI; bias near zero | revenue **3.14% vs 3.77%**, main KPI **2.30% vs 2.58%**; bias −0.15% / −0.23% (Wilcoxon p 0.15 / 0.71) | pass (not significant) |
+| 4. Valuation | identical inputs; WACC monotonicity; peer range | byte-identical; PT falls as WACC rises; multiples inside the peer range or flagged | **byte-identical for all eight; monotone wherever the DCF is meaningful; all inside or flagged** | pass |
+| 5. Note | ten sections, number trace, seeded errors, rubric | 100% traced; rubric ≥ 4/5; every seeded error caught | all eight (2026-11-09): **ten sections, 100% traced, every seeded error caught** (474/474); rubric UBER 4.0, BKNG 4.0, DASH 4.6, ABNB 4.4, CART 4.2, **EXPE 3.6, LYFT 3.4, TRIP 3.8** (mean 4.0; the judge moves ±0.4 on the same text) | 5 of 8 pass; **miss** on EXPE, LYFT, TRIP (rubric) |
+| Ask | 79 questions | ≥ 85% correct and verified; 100% of cited ids resolve | **89.9%, 100%** (run 4, after the user's gold rulings; run 3 on the original gold: 84.8%) | pass |
+| Research | 72 questions | ≥ 90% pass (model: ref, assumptions, no unverified claim); 100% of forward numbers from model tools | **88.9%, 100%** (run 2, with two scoring corrections the user adopted after run 1; 87.5% / 94.6% as first frozen) | **miss** |
+| Investigate | 12 multi-part questions, each also given to one Research run as the baseline | higher correct-and-verified rate than the baseline; 100% of cited ids resolve | **25.0% vs 16.7%** auto-pass (every part's expected value or `model:` id verified, no unverified numeric claim; parts 11/21 both); **100% of ids resolve** (115 and 116 cited); 9 vs 17 unverified claims. Required points are judged by hand in `review.md`, not yet done | pass (automatic score) |
+
+## Backtest
+
+![Next-quarter MAPE by company](img/v4-backtest-by-company.svg)
+
+| Run (90 forecasts unless noted) | Revenue MAPE | Main KPI MAPE | Revenue / KPI bias | Wilcoxon p |
+|---|---|---|---|---|
+| **model, defaults** (outside inputs on) | **3.15%** | **2.30%** | −0.15% / −0.23% | 0.176 / 0.930 |
+| seasonal naive | 3.77% | 2.58% | +0.64% / +0.17% | |
+| guidance midpoint (where guided: 13 revenue, 31 KPI) | 2.54% | 1.64% | | |
+| plain LLM, no tools | 56.3% (all) | | | |
+| ablation: guidance high end | 3.00% | 2.01% | +0.68% / +0.50% | **0.011 / 0.011** |
+| ablation: LLM proposer | 3.78% | 2.90% | +1.09% / +0.39% | 0.600 / 0.315 |
+| ablation: outside inputs off (the earlier default) | 3.14% | 2.30% | −0.15% / −0.23% | 0.145 / 0.706 |
+| ablation: fitted fade | = defaults (next quarter uses only the starting rate) | | | |
+| long horizon (2025 from Feb 2025, 32), fixed / fitted fade | 4.07% / 3.36% | 4.38% / 3.65% | −1.15% / −1.53% (fixed) | naive 4.18% / 3.38% |
+
+Forecast rule (2026-11-01, spec §3.2): quarters after the first now take last year's total × (1 + growth) × the quarter's 3-year average seasonal share (fewer years where history is shorter); the first quarter keeps the anchored same-quarter-last-year rule, so the next-quarter rows above are unchanged (rerun as `backtest-all-seasonal`: identical). The long-horizon rows are the new rule (`backtest-all-long-seasonal`, `-long-fitted-seasonal`); on the old rule they were 4.03% / 3.29% revenue and 4.18% / 3.73% main KPI, so the seasonal share cost 0.2 points on the fixed-fade main KPI (EXPE, ABNB, BKNG most) and was mixed with the fitted fade.
+
+Guidance: companies beat their own guided midpoint 43 times in 44. Extraction ablation: rules 31.5% exact (KPIs 47.7%, guidance not attempted) vs the LLM's 98.5%. Outside inputs (TLC, BTS, FRED): at every forecast date the series reach only 3–6 months before the end of the target quarter, so they enter as a lagged nowcast; next-quarter accuracy is unchanged, because most next quarters are guided and the anchor overrides the input, and many fits had too little history or a non-positive slope.
+
+## Ratings, as of 2026-09-01 (`--all`)
+
+Prices and every value derived from them are third-party market data and stay local; run the valuation with your own credentials to see them.
+
+| | Price | 12-month PT | Return | Absolute | Relative |
+|---|---|---|---|---|---|
+| LYFT | local only | local only | local only | local only | local only |
+| TRIP | local only | local only | local only | local only | local only |
+| EXPE | local only | local only | local only | local only | local only |
+| CART | local only | local only | local only | local only | local only |
+| UBER | local only | local only | local only | local only | local only |
+| BKNG | local only | local only | local only | local only | local only |
+| ABNB | local only | local only | local only | local only | local only |
+| DASH | local only | local only | local only | local only | local only |
+
+Drafts for senior analyst review. Read the limits before reading these.
+
+## Example report
+
+UBER, earnings update after Q2 2026, as of 2026-08-06: [note (Markdown)](examples/UBER-2026-08-06-note.md), [note (PDF)](examples/UBER-2026-08-06-note.pdf), [model-change workbook](examples/UBER-2026-08-06-workbook.xlsx). Ten sections, 100% of figures traced to the evidence log, every model cell a live formula. Public copy, redacted from the 2026-11-09 run by `experiments/v4/redact_example.py`: every value derived from prices, macro or ERP data reads "local only".
+
+## Limits
+
+- **Small sample.** 90 next-quarter forecasts over six quarters; neither gate difference vs seasonal naive is statistically significant. The year-ahead forecast is worse than naive on the main KPI.
+- **Possible leakage.** The LLM's training cutoff is not published, so no quarter can be called held out. Two probes found none: every forecast's inputs were filed before its date, and the no-tools LLM is far off (56% MAPE).
+- **Valuation mechanics drive the ratings.** The target multiple is the sector peers' median of our own 2027E EV/EBITDA, so a company priced well above its peers gets a large Sell and a cheap one a large Buy; only three peers per sector. TRIP's DCF is negative (continuing-operations FCF), so its PT rests on a multiple of a thin EBITDA.
+- **Forecast defaults miss structural breaks.** UBER's 2026 UK move to agent enters as the last y/y change and lifts its 2027E margin to 23.9%; the LLM proposer, meant to catch such breaks, hurt accuracy on the backtest.
+- **No paid data.** No consensus estimates; prices from Tiingo's free tier (internal use only); companies' own KPI definitions differ.
+- **Cross-checks are narrow.** TLC covers New York City only (a directional check on Uber and Lyft); BTS is all US airlines, with publish dates estimated (month + 90 days).
+- **Gold sets are not human-reviewed.** Ask (79) and Research (72) questions were drafted by the agent and checked by script; extraction labels were cross-checked by independent methods, not by a person. The Ask set's NYC-trips decline question is now answerable (TLC is now loaded) and needs updating.
+- **Judge noise.** The note rubric moved 3.8 → 3.4 on near-identical text; no human sample has been scored.
+- **Filing-text recall is unmeasured.** A missed acquisition or regulatory event is silent ([V4_AGENT.md](stages/V4_AGENT.md#filing-text-what-reaches-the-note)).
+- **XBRL gaps.** ABNB tags no D&A or capex (no FCF line); EPS and shares lack a three-month Q4; Q4 EPS comes from the release.
+
+## Scoring notes (2026-10-28)
+
+- Guidance anchor: the midpoint stays the default although the high end scored better (p = 0.011); a human review is pending.
+- Research scoring: the two corrections (variance answers may cite the bridge's `var-` ids; claims citing only guidance are reported data) are adopted, after run 1, by the user.
+- Qwen vs Claude on the LLM steps: not run, by the user's decision.
+- Gold sets and a human rubric sample: to be reviewed by the user later.
+
+## Roll-out: all eight end to end (2026-11-09)
+
+Each company's report ran on the Qwen 27B the day after its Q2 2026 release (`tenk research report <T> --as-of <D>`: UBER 2026-08-06, BKNG 2026-08-05, DASH and EXPE 2026-08-06, ABNB, CART, LYFT and TRIP 2026-08-07), 6–10 minutes each, then reran with `--resume` after the checker fixes below. All eight: ten sections, full workbook parity (350–750 formula cells), no `error` exceptions, saved as drafts. Fixes found on the way, each to the pipeline's checks, none to the notes' text: text written by the sub-agents (debate questions, event summaries) is now traced like prose, and a sentence with an untraced number is replaced by a code-written one (a warning); section 9's exception counts are set once the log is final and checked verbatim; chunk ids are not read as figures. The example files above are the redacted public copy of this UBER run (`experiments/v4/redact_example.py`; market values read "local only").

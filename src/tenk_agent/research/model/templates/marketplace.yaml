@@ -1,0 +1,59 @@
+# Operating build for travel marketplaces (V4 design doc §6.2): gross bookings = volume (room
+# nights; Airbnb: nights and experiences) × gross bookings per unit; revenue = gross bookings ×
+# take rate. A company binds its own KPI names under `companies`.
+
+lines:
+  volume:                   {kind: input, source: "kpi:room_nights", unit: count millions,
+                             label: room nights}
+  gross_bookings:           {kind: input, source: "kpi:gross_bookings", unit: USD millions,
+                             forecast: "volume * gross_bookings_per_unit"}
+  gross_bookings_per_unit:  {kind: formula, expr: "gross_bookings / volume", unit: USD,
+                             label: gross bookings per night}
+  take_rate:                {kind: formula, expr: "revenue / gross_bookings", unit: fraction}
+  adj_ebitda_margin_gb:     {kind: formula, expr: "adj_ebitda / gross_bookings", unit: fraction,
+                             label: adjusted EBITDA margin on gross bookings}
+  cost_to_gb:      {kind: formula, expr: "(revenue - adj_ebitda) / gross_bookings", unit: fraction,
+                    label: costs before adj. EBITDA as a share of gross bookings}
+  # forecast identities (the statements' lines, redefined with a forecast)
+  revenue:     {kind: input, source: "q:revenue", fallback: "kpi:revenue", unit: USD millions, statement: income,
+                forecast: "gross_bookings * take_rate"}
+  adj_ebitda:  {kind: input, source: "kpi:adj_ebitda", unit: USD millions, statement: income,
+                label: adjusted EBITDA, forecast: "revenue - cost_to_gb * gross_bookings"}
+
+forecast:
+  growth: [volume, gross_bookings_per_unit]
+  ratios: {take_rate: take_rate, cost_to_gb: margin}
+
+# Guidance → the line it constrains and the assumption solved so the first forecast quarter
+# hits the guided midpoint (in order: bookings, then revenue, then EBITDA; design §6.2)
+# Scenario drivers (design §6.2): bear/bull move each by ∓/±σ of its history
+scenarios: [volume_g.g0, gross_bookings_per_unit_g.g0, take_rate.shift0]
+
+anchors:
+  - {guide: room_nights_growth, line: volume, basis: growth_yoy, solve: volume_g.g0}
+  - {guide: nights_growth, line: volume, basis: growth_yoy, solve: volume_g.g0}
+  - {guide: gross_bookings, line: gross_bookings, basis: level, solve: gross_bookings_per_unit_g.g0}
+  - {guide: gross_bookings_growth, line: gross_bookings, basis: growth_yoy,
+     solve: gross_bookings_per_unit_g.g0}
+  - {guide: revenue, line: revenue, basis: level, solve: take_rate.shift0}
+  - {guide: revenue_growth, line: revenue, basis: growth_yoy, solve: take_rate.shift0}
+  - {guide: adj_ebitda, line: adj_ebitda, basis: level, solve: cost_to_gb.shift0}
+  - {guide: adj_ebitda_growth, line: adj_ebitda, basis: growth_yoy,
+     solve: cost_to_gb.shift0}
+  # full-year-only guides, after the quarterly ones (ABNB guides its FY adj. EBITDA margin)
+  - {guide: adj_ebitda_margin, line: adj_ebitda_margin, basis: margin, period: fy,
+     solve: cost_to_gb.shift0}
+
+sums: {}
+
+companies:
+  BKNG:
+  EXPE:
+    lines:  # no total liabilities tagged: derived from the reported right-hand total
+      total_liabilities: {kind: formula, statement: balance, fy: last, unit: USD millions,
+                          expr: "liabilities_and_equity - mezzanine - equity_total",
+                          label: total liabilities (derived)}
+  ABNB:
+    sources:
+      volume: "kpi:nights_and_experiences"
+      gross_bookings: "kpi:gross_booking_value"

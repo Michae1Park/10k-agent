@@ -41,7 +41,7 @@ Each version adds one stage and was tested on its own before the next was built.
 | **V2 · Generation** | One model call over V1's top 8 → JSON answer with claims citing chunk IDs → each claim checked | [21 / 30 number questions right](experiments/V2_GENERATION.md), 8 / 8 declines, every numeric claim grounded |
 | **V3 · Agent** | The model drives: search, calculate, XBRL facts and EDGAR metadata (LangGraph) → V2's JSON answer and claim check | [87–89% of 78 questions right vs V2's 66.7%](experiments/V3_AGENT.md); the gain is tool use, not the SEC data |
 
-**Corpus:** Apple, Microsoft, Amazon, Alphabet, Meta, NVIDIA, Tesla, Netflix × fiscal years 2023–2025 (24 10-Ks); built and tested so far: the FY2025 filings of AAPL, AMZN, MSFT and NVDA. **Rules:** every number comes from a cited passage, never from the model's memory; unverifiable claims are shown as unverified, not hidden; no stock prices, forecasts or investment advice ([guarantees](docs/ARCHITECTURE.md#scope-and-guarantees)).
+**Corpus:** Apple, Microsoft, Amazon, Alphabet, Meta, NVIDIA, Tesla, Netflix × fiscal years 2023–2025 (24 10-Ks); built and tested so far: the FY2025 filings of AAPL, AMZN, MSFT and NVDA. **Rules:** every number comes from a cited passage, never from the model's memory; unverifiable claims are shown as unverified, not hidden; no stock prices, forecasts or investment advice ([guarantees](docs/stages/V3_ARCHITECTURE.md#scope-and-guarantees)).
 
 ## Quickstart
 
@@ -50,7 +50,7 @@ Linux or macOS, Python 3.12 + [uv](https://docs.astral.sh/uv/), a ~40 GB GPU for
 ```bash
 git clone <this repo> && cd 10k-agent
 uv sync --extra local --extra chunking
-export SEC_USER_AGENT="Your Name you@example.com"
+uv run tenk setup                                    # your own SEC, Tiingo, FRED credentials
 uv run tenk fetch                                    # 24 10-Ks from EDGAR (cached)
 scripts/serve_vllm.sh qwen3.6-27b-fp8                # the default model, other terminal
 taskset -c 16-31 uv run tenk build --stage chunk     # V0 on every filing (~35–60 min each)
@@ -66,8 +66,7 @@ Full steps, the experiments, and troubleshooting: [Getting started](docs/GETTING
 |---|---|
 | [Getting started](docs/GETTING_STARTED.md) | Install, build the corpus, ask, run the experiments |
 | [Serving](docs/SERVING.md) | The model layer and vLLM presets |
-| [Architecture](docs/ARCHITECTURE.md) | Scope and guarantees, the pipeline, the repository layout |
+| [Architecture](docs/ARCHITECTURE.md) | Versions, principles, the repository layout and the doc map; V3's pipeline in [stages/V3_ARCHITECTURE.md](docs/stages/V3_ARCHITECTURE.md) |
 | [Stage specs](docs/stages/) | V0–V3: data, knobs, outputs, how each works |
-| [Decisions & issues](docs/DECISIONS.md) | Why things are the way they are, known issues |
 | [Experiments](experiments/README.md) | Each version's design, metrics and results |
 | [Contributing](CONTRIBUTING.md) | Checks, rules, commit style |

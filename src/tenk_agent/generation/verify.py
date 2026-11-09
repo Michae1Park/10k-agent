@@ -10,18 +10,23 @@ Run over every claim of every answer (answers.finalize):
 On a parent-child database a number is also checked against the company: a claim about MSFT
 citing only AAPL chunks that show its value is unverified.
 
-V3 (D-036): a claim may also cite XBRL facts by their `xbrl:` id; a value equal to a cited
+V3: a claim may also cite XBRL facts by their `xbrl:` id; a value equal to a cited
 fact of the claim's company is verified too, and calculation inputs may come from them. The
 facts are read from the SEC cache (`sec`), never fetched. A claim about a filing (a date, a
 form) may cite its accession number, checked against the cached EDGAR submissions.
+
+V4: ids are parsed and resolved by research/refs.py, one grammar for every source kind. Data
+ids (q:, kpi:, guide:, px:, macro:) work as XBRL facts do: a value equal to a cited row of the
+claim's company is verified, and calculation inputs may come from them; percentages and other
+unscaled units compare as written.
 """
 
 import re
 from dataclasses import dataclass
-from typing import Protocol
 
 from tenk_agent.corpus import resolve_company
 from tenk_agent.generation.calculator import CalculatorError, calculate
+from tenk_agent.research.refs import DATA, FactSource, Resolver, parse
 from tenk_agent.store import ChunkRecord, Store
 
 SCALES = {
@@ -43,14 +48,7 @@ NUMBER = re.compile(
     r"(?P<close>\))?\s?(?P<suffix>%|percent\b|thousand\b|million\b|billion\b|trillion\b)?",
     re.IGNORECASE,
 )
-ACCESSION = re.compile(r"^\d{10}-\d{2}-\d{6}$")
 CHUNK_UNITS = re.compile(r"in (thousands|millions|billions)", re.IGNORECASE)
-
-
-class FactSource(Protocol):
-    def xbrl_fact(self, xbrl_id: str) -> dict | None: ...
-
-    def filing(self, accession: str) -> dict | None: ...
 
 
 @dataclass
@@ -143,32 +141,37 @@ def _close(target: float, shown: float, shown_rounding: float, claim_rounding: f
     return abs(target - shown) <= slack
 
 
-def verify_claim(claim: dict, store: Store, sec: FactSource | None = None) -> dict:
-    """Set a claim's status (verified / calculated / cited / unverified) and the reason."""
+def verify_claim(claim: dict, store: Store, sec: FactSource | None = None, book=None) -> dict:
+    """Set a claim's status (verified / calculated / cited / unverified) and the reason.
+    `book`: Research mode's model book, for model: ids (research/book.py)."""
     ids = claim.get("chunk_ids") or []
-    facts = [(i, sec.xbrl_fact(i) if sec else None) for i in ids if i.startswith("xbrl:")]
-    filings = [(i, sec.filing(i) if sec else None) for i in ids if ACCESSION.match(i)]
-    cited = [
-        (cid, store.get_chunk(cid))
-        for cid in ids
-        if not cid.startswith("xbrl:") and not ACCESSION.match(cid)
+    resolver = Resolver(store, sec, book)
+    resolved = {i: resolver.resolve(i) for i in ids}
+    groups = {i: _group(i) for i in ids}
+    facts = [(i, r.fact if (r := resolved[i]) else None) for i in ids if groups[i] == "xbrl"]
+    filings = [
+        (i, r.filing if (r := resolved[i]) else None) for i in ids if groups[i] == "accession"
     ]
+    cited = [(i, r.chunk if (r := resolved[i]) else None) for i in ids if groups[i] == "chunk"]
     chunks = [c for _, c in cited if c]
     company = resolve_company(str(claim.get("company") or ""))
     found_facts = [(i, f) for i, f in facts if f and (not company or f["ticker"] == company.ticker)]
     found_filings = [i for i, f in filings if f]
+    data = [(i, v) for i in ids if groups[i] == "data" and resolved[i] for v in resolved[i].values]
+    found_data = [(i, v) for i, v in data if not company or v["ticker"] in ("", company.ticker)]
     missing = (
         [cid for cid, c in cited if not c]
         + [i for i, f in facts if not f]
         + [i for i, f in filings if not f]
+        + [i for i in ids if groups[i] == "data" and not resolved[i]]
     )
     calculation = claim.get("calculation")
     value = claim.get("value")
 
-    direct = _direct(claim, chunks, found_facts, store) if value is not None else None
+    direct = _direct(claim, chunks, found_facts, store, found_data) if value is not None else None
     if calculation:
         # Inputs may be any company's cited facts: a comparison's calculation spans companies.
-        all_facts = [(i, f) for i, f in facts if f]
+        all_facts = [(i, f) for i, f in facts if f] + [(i, _whole(v)) for i, v in data if _whole(v)]
         status, reason = _check_calculation(claim, calculation, chunks, all_facts)
         if status == "unverified" and direct and direct[0] == "verified":
             # A value the sources show as is, with a needless calculation (a unit conversion).
@@ -177,19 +180,53 @@ def verify_claim(claim: dict, store: Store, sec: FactSource | None = None) -> di
         status, reason = "unverified", f"value {value!r} is not a number"
     elif value is not None:
         status, reason = direct
-    elif chunks or found_facts or found_filings:
+    elif chunks or found_facts or found_filings or found_data:
         status, reason = "cited", ""
     else:
         status, reason = "unverified", "no valid citation"
 
-    if missing:
-        reason = (reason + "; " if reason else "") + f"unknown chunk IDs {missing}"
+    if missing:  # a cited id that doesn't resolve leaves the claim unverified
+        status = "unverified"
+        reason = (reason + "; " if reason else "") + f"unknown id {missing}"
     return claim | {"status": status, "status_reason": reason}
 
 
-def _direct(claim: dict, chunks: list[ChunkRecord], facts: list, store: Store):
-    """(status, reason) for a value read straight from the cited chunks or facts."""
+def _group(ref_id: str) -> str:
+    """How the claim check counts an id: an XBRL fact (malformed ones too), a filing, a data
+    row, or a chunk (every other kind, until its data is built)."""
+    if ref_id.startswith("xbrl:"):
+        return "xbrl"
+    kind = parse(ref_id).kind
+    return "accession" if kind == "accession" else "data" if kind in DATA else "chunk"
+
+
+WHOLE = {"usd": 1.0, "usd/shares": 1.0, "shares": 1.0}  # XBRL-derived quarters' units
+
+
+def _whole(row: dict) -> dict | None:
+    """A data row in whole units, as fact_matches reads facts; None for unscaled units."""
+    scale = unit_scale(row["unit"]) or WHOLE.get(row["unit"].strip().lower())
+    return row | {"value": row["value"] * scale} if scale else None
+
+
+def data_matches(value, unit: str | None, row: dict) -> bool:
+    """A claimed value equals a data row: by scale, or as written when neither unit scales
+    (percent, percentage points, a macro series' own unit)."""
+    whole = _whole(row)
+    if whole:
+        return fact_matches(value, unit, whole)
+    claimed = _as_float(value)
+    if claimed is None or unit_scale(unit) is not None:
+        return False
+    return _close(abs(claimed), abs(float(row["value"])), 0.0, _rounding(_decimals(value), 1.0))
+
+
+def _direct(claim: dict, chunks: list[ChunkRecord], facts: list, store: Store, data=()):
+    """(status, reason) for a value read straight from the cited chunks, facts or data rows."""
     value, unit = claim.get("value"), claim.get("unit")
+    row = next((i for i, v in data if data_matches(value, unit, v)), None)
+    if row:
+        return "verified", f"matches {row}"
     spans = [(c.id, span) for c in chunks if (span := find_value(value, unit, c))]
     conflict = _lineage_conflict(claim, [c for c in chunks if c.id in dict(spans)], store)
     fact = next((i for i, f in facts if fact_matches(value, unit, f)), None)

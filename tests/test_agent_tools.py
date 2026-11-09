@@ -152,7 +152,7 @@ def test_text_tool_set_hides_sec_tools(tools):
     assert "unknown tool" in tools.call("xbrl_facts", {})["error"]
 
 
-# --- Claim check with XBRL citations (verify.py, D-036) ------------------------------------
+# --- Claim check with XBRL citations (verify.py) ------------------------------------
 
 FACT = f"xbrl:AAPL:us-gaap:ResearchAndDevelopmentExpense:{ACCESSION}:2025-09-27"
 PRIOR = f"xbrl:AAPL:us-gaap:ResearchAndDevelopmentExpense:{ACCESSION}:2024-09-28"
@@ -184,7 +184,7 @@ def test_a_fact_of_another_company_or_an_unknown_fact_does_not_verify(tools):
     unknown = verify_claim(
         claim(value=1, unit="USD", chunk_ids=[FACT[:-1] + "8"]), tools.store, tools.sec
     )
-    assert "unknown chunk IDs" in unknown["status_reason"]
+    assert "unknown id" in unknown["status_reason"]
 
 
 def test_calculation_inputs_may_come_from_cited_facts(tools):
@@ -297,7 +297,7 @@ def test_a_filing_claim_may_cite_its_accession_number(tools):
     unknown = verify_claim(
         claim(value=None, unit=None, chunk_ids=["0000000000-25-000000"]), tools.store, tools.sec
     )
-    assert unknown["status"] == "unverified" and "unknown chunk IDs" in unknown["status_reason"]
+    assert unknown["status"] == "unverified" and "unknown id" in unknown["status_reason"]
 
 
 def test_per_share_units_are_dollars():
@@ -326,3 +326,63 @@ def test_search_filings_runs_v1_retrieval_and_asks_for_companies(tmp_path):
     assert result["error"].startswith("name the companies")
     named = tools.call("search_filings", {"query": "Apple revenue in fiscal 2025"})
     assert [c["chunk_id"] for c in named["chunks"]] == ["AAPL-FY2025-7-000"]
+
+
+def test_tool_sets_are_built_from_groups_in_v3_order():
+    from tenk_agent.agent.tools import GROUPS, TOOL_SETS
+
+    assert TOOL_SETS == {
+        "text": ("search_filings", "calculator"),
+        "full": ("search_filings", "calculator", "xbrl_facts", "edgar_filings"),
+        "ask": ("search_filings", "calculator", "financials", "company_kpis", "guidance",
+                "filings", "market_data", "crosscheck", "research_report"),
+        "research": ("search_filings", "calculator", "financials", "company_kpis", "guidance",
+                     "filings", "market_data", "crosscheck", "research_report", "model_view",
+                     "run_scenario", "compare_peers", "variance_review"),
+    }
+    assert {t for tools in GROUPS.values() for t in tools} == set(TOOL_SETS["full"]) | set(
+        TOOL_SETS["research"]
+    )
+
+
+def test_toolbox_sees_its_stores_asof(tools):
+    assert tools.asof == tools.store.asof
+
+
+def test_research_report_returns_a_saved_version_made_before_the_asof(tmp_path):
+    from tenk_agent.asof import AsOf
+    from tenk_agent.research.refs import Resolver
+
+    make_store(tmp_path)
+    folder = tmp_path / "report"
+    folder.mkdir()
+    (folder / "model.json").write_text(json.dumps({
+        "forecast": ["2026Q3", "2026Q4", "2027Q1", "2027Q2", "2027Q3", "2027Q4"],
+        "columns": ["2026Q2", "2026Q3", "FY2026", "FY2027"],
+        "lines": [{"name": "revenue", "unit": "USD millions"},
+                  {"name": "adj_ebitda_margin", "unit": "fraction"}],
+        "cells": {"revenue|FY2027": {"value": 520000.0}, "revenue|FY2026": {"value": 480000.0},
+                  "adj_ebitda_margin|FY2027": {"value": 0.25}}}))
+    (folder / "valuation.json").write_text(json.dumps(
+        {"price": 200.0, "price_target": 240.0, "return": 0.2, "rating": "Buy"}))
+    writer = Store(tmp_path / "test.db", AsOf.of("2026-08-07"))
+    writer.enable_facts()
+    assert writer.add_model_version("AAPL", "2026-08-06", None, "h", str(folder)) == "AAPL:v1"
+
+    same_day = Toolbox(Store(tmp_path / "test.db", AsOf.of("2026-08-06")), None, None, "ask")
+    assert same_day.call("research_report", {"company": "AAPL"})["report"] is None
+
+    store = Store(tmp_path / "test.db", AsOf.of("2026-08-07"))
+    result = Toolbox(store, None, None, "ask").call(
+        "research_report", {"company": "Apple", "lines": ["revenue", "adj_ebitda_margin"]})
+    assert result["version"] == "AAPL:v1" and result["status"] == "draft"
+    assert result["valuation"]["rating"]["text"] == "Buy"
+    rows = {(r["line"], r["period"]): r for r in result["estimates"]}
+    assert rows[("revenue", "FY2027")]["value"] == 520000.0
+    assert rows[("adj_ebitda_margin", "FY2027")]["value"] == 25.0  # ratios in percent
+    ref = rows[("revenue", "FY2027")]["id"]
+    assert ref == "model:AAPL:2026-08-06:v1:revenue.FY2027"
+    resolver = Resolver(store)  # no model book: Ask's claim check resolves saved versions
+    assert resolver.resolve(ref).values[0]["value"] == 520000.0
+    assert resolver.resolve("model:AAPL:2026-08-06:v1:price_target").values[0]["value"] == 240
+    assert Resolver(same_day.store).resolve(ref) is None  # not yet saved at that as-of

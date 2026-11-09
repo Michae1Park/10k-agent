@@ -98,6 +98,17 @@ def test_a_long_conversation_must_answer_with_tools_off(tmp_path):
     assert model.seen[1][1] == "none" and run.stop == "budget"
 
 
+def test_tool_results_are_cut_to_the_context_left(tmp_path):
+    """The context check counts results added since the last turn: a large result is cut to
+    the room left and the next turn must answer, instead of overflowing the model."""
+    big = [("calculator", {"op": "sum", "inputs": {f"x{i}": i for i in range(400)}})]
+    run_agent, model = agent(tmp_path, [big, json.dumps(ANSWER)], max_context=200)
+    run = run_agent.run("q")  # 15 tokens used: room for about 555 characters
+    content = model.seen[1][0][-2]["content"]  # the tool result, before the "answer now" turn
+    assert content.endswith("answer from what you have)") and len(content) < 700
+    assert model.seen[1][1] == "none" and run.stop == "budget"
+
+
 def test_tool_markup_or_a_bare_claims_list_is_not_an_answer(tmp_path):
     markup = '<tool_call>\n<function=calculator>\n<parameter=inputs>\n{"a": 1}\n</parameter>'
     for bad in (markup, json.dumps(ANSWER["claims"])):

@@ -1,0 +1,81 @@
+# Core financial lines (V4 design doc §3.2, §5.2): each metric's XBRL concepts in priority order
+# (the first with a value for a period wins), and its kind:
+#   flow       a duration; quarters derived from year-to-date facts (Q2 = H1 − Q1, Q4 = FY − 9M)
+#   instant    a balance at the period end
+#   per_share  a duration that doesn't add up (EPS): direct three-month and full-year facts only
+#   shares     weighted-average share counts: as per_share
+# Per-company overrides: `companies: {TICKER: [concepts]}` replaces the list for that company.
+
+revenue:
+  kind: flow
+  concepts: [Revenues, RevenueFromContractWithCustomerExcludingAssessedTax]
+operating_income:
+  kind: flow
+  concepts: [OperatingIncomeLoss]
+net_income:
+  kind: flow
+  concepts: [NetIncomeLoss, NetIncomeLossAvailableToCommonStockholdersBasic, ProfitLoss]
+income_tax:
+  kind: flow
+  concepts: [IncomeTaxExpenseBenefit]
+sbc:
+  kind: flow
+  concepts: [ShareBasedCompensation, AllocatedShareBasedCompensationExpense]
+d_and_a:
+  kind: flow
+  concepts: [DepreciationDepletionAndAmortization, DepreciationAndAmortization,
+             DepreciationAmortizationAndAccretionNet, DepreciationAmortizationAndOther]
+operating_cash_flow:
+  kind: flow
+  concepts: [NetCashProvidedByUsedInOperatingActivities]
+capex:
+  kind: flow
+  concepts: [PaymentsToAcquirePropertyPlantAndEquipment, PaymentsToAcquireProductiveAssets]
+buybacks:
+  kind: flow
+  concepts: [PaymentsForRepurchaseOfCommonStock]
+eps_diluted:
+  kind: per_share
+  concepts: [EarningsPerShareDiluted]
+shares_diluted:
+  kind: shares
+  concepts: [WeightedAverageNumberOfDilutedSharesOutstanding]
+cash:
+  kind: instant
+  concepts: [CashAndCashEquivalentsAtCarryingValue]
+total_assets:
+  kind: instant
+  concepts: [Assets]
+total_liabilities:
+  kind: instant
+  concepts: [Liabilities]
+equity:
+  kind: instant
+  concepts: [StockholdersEquity, StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest]
+equity_total:  # with non-controlling interests: the balance sheet's equity section (V4.3 balance check)
+  kind: instant
+  concepts: [StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest, StockholdersEquity]
+mezzanine:  # temporary equity between liabilities and equity: redeemable NCI (UBER, DASH),
+  # redeemable preferred stock (CART, tagged per class of stock in the inline XBRL only)
+  kind: instant
+  concepts: [RedeemableNoncontrollingInterestEquityCarryingAmount,
+             TemporaryEquityCarryingAmountIncludingPortionAttributableToNoncontrollingInterests,
+             TemporaryEquityCarryingAmountAttributableToParent]
+  class_of_stock: true  # research/datapack.py: also summed across classes of stock
+liabilities_and_equity:  # the balance sheet's right-hand total (EXPE tags no total liabilities)
+  kind: instant
+  concepts: [LiabilitiesAndStockholdersEquity]
+debt:  # total long-term debt; DASH tags only its convertible notes; BKNG only the noncurrent part
+  # (research/valuation.py then adds debt_current)
+  kind: instant
+  concepts: [LongTermDebt, ConvertibleLongTermNotesPayable, LongTermDebtNoncurrent]
+debt_current:
+  kind: instant
+  concepts: [LongTermDebtCurrent, DebtCurrent]
+short_term_investments:
+  kind: instant
+  concepts: [ShortTermInvestments, MarketableSecuritiesCurrent,
+             AvailableForSaleSecuritiesDebtSecuritiesCurrent]
+interest_expense:
+  kind: flow
+  concepts: [InterestExpenseNonoperating, InterestExpense, InterestExpenseDebt]

@@ -1,0 +1,258 @@
+"""Forecast columns, assumptions and guidance anchors (research/model/graph.py and
+research/forecast.py)."""
+
+import json
+import shutil
+
+import pytest
+import yaml
+
+from tenk_agent.research import forecast as fc
+from tenk_agent.research.datapack import Point
+from tenk_agent.research.export import workbook
+from tenk_agent.research.model import checks, graph
+
+HISTORY = ["2024Q1", "2024Q2", "2024Q3", "2024Q4",
+           "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2"]
+FUTURE = ["2026Q3", "2026Q4", "2027Q1"]
+TEMPLATE = {
+    "lines": {
+        "volume": {"kind": "input", "source": "kpi:volume", "unit": "count millions"},
+        "price": {"kind": "input", "source": "kpi:price", "unit": "USD"},
+        "gross_bookings": {"kind": "input", "source": "kpi:gb", "unit": "USD millions",
+                           "forecast": "volume * price"},
+        "revenue": {"kind": "input", "source": "q:revenue", "unit": "USD millions",
+                    "forecast": "gross_bookings * take_rate"},
+        "take_rate": {"kind": "formula", "expr": "revenue / gross_bookings", "unit": "fraction"},
+    },
+    "forecast": {"growth": ["volume", "price"], "ratios": {"take_rate": "take_rate"}},
+    "anchors": [{"guide": "revenue", "line": "revenue", "basis": "level",
+                 "solve": "take_rate.shift0"}],
+    "companies": {"TEST": None},
+}
+SETTINGS = {"forecast": {"fade": 0.9, "ratio_bounds": {"take_rate": 0.005, "margin": 0.02},
+                         "tax_rate_bounds": [0.1, 0.3], "guidance_point": "mid"}}
+
+
+@pytest.fixture
+def templates(tmp_path, monkeypatch):
+    (tmp_path / "test.yaml").write_text(yaml.safe_dump(TEMPLATE))
+    (tmp_path / "statements.yaml").write_text(yaml.safe_dump({"lines": {}}))
+    monkeypatch.setattr(graph, "TEMPLATES", tmp_path)
+
+
+def series(values, unit="USD millions"):
+    return {q: Point(v, unit, f"id:{q}", "2026-08-01") for q, v in zip(HISTORY, values,
+                                                                       strict=True) if v}
+
+
+def pack(gb_missing=False):
+    volume = [9, 10, 11, 12, 10, 11, 12, 13, 11, 12.1]
+    price = [95, 95, 95, 95, 100, 100, 100, 100, 105, 105]
+    gb = [v * p for v, p in zip(volume, price, strict=True)]
+    if gb_missing:
+        gb[6] = None  # 2025Q3 not extracted (ABNB)
+    return {"kpi:volume": series(volume), "kpi:price": series(price), "kpi:gb": series(gb),
+            "q:revenue": series([0.1 * g if g else 120.0 for g in gb])}
+
+
+def model(p=None):
+    m = graph.build("TEST", "test", "2026-09-01", HISTORY, p or pack(), FUTURE)
+    m.assumptions = fc.default_assumptions(m, SETTINGS)
+    graph.evaluate_cells(m, p or pack())
+    return m
+
+
+def test_growth_drivers_start_at_the_last_yoy_and_fade(templates):
+    m = model()
+    assert m.assumptions["volume_g.g0"] == pytest.approx(0.1)  # 2026Q2 vs 2025Q2
+    assert m.value("volume_g", "2026Q3") == pytest.approx(0.1)
+    assert m.value("volume_g", "2026Q4") == pytest.approx(0.09)
+    assert m.value("volume", "2026Q3") == pytest.approx(12 * 1.1)
+    assert m.value("gross_bookings", "2026Q3") == pytest.approx(12 * 1.1 * 100 * 1.05)
+
+
+def test_ratios_hold_last_years_quarter_within_bounds(templates):
+    m = model()
+    assert m.value("take_rate", "2026Q3") == pytest.approx(0.1)
+    m.assumptions["take_rate.shift0"] = 0.5  # far outside: clamped to the 8-quarter max + 50 bps
+    graph.evaluate_cells(m, pack())
+    assert m.value("take_rate", "2026Q3") == pytest.approx(0.105)
+
+
+def test_a_missing_prior_year_quarter_steps_from_two_years_back(templates):
+    p = pack(gb_missing=True)
+    m = model(p)
+    assert m.value("gross_bookings", "2025Q3") is None
+    assert m.value("take_rate", "2026Q3") is not None  # first(take_rate[-4], take_rate[-8])
+
+
+def test_forecast_columns_hold_formulas_only(templates):
+    m = model()
+    result = checks.formula_only(m)
+    assert result.status == "pass" and result.tested > 0
+    m.cells[("volume", "2026Q3")] = graph.Cell(1.0, "input")
+    assert checks.formula_only(m).status == "fail"
+
+
+def test_an_anchor_hits_the_guided_midpoint(templates):
+    class Store:
+        def guidance(self, ticker):
+            return [{"metric": "revenue", "segment": "total", "target_period": "2026Q3",
+                     "low": 130.0, "high": 134.0, "issued_in": "2026Q2"}]
+
+    m = model()
+    result = fc.Forecast(m, pack(), dict(m.assumptions))
+    anchors = fc.anchor(m, pack(), Store(), TEMPLATE["anchors"], SETTINGS, result)
+    assert anchors[0].reached and m.value("revenue", "2026Q3") == pytest.approx(132.0)
+    assert m.assumptions["take_rate.shift0"] == pytest.approx(anchors[0].after)
+
+
+def test_an_anchor_out_of_bounds_is_logged_not_forced(templates):
+    class Store:
+        def guidance(self, ticker):
+            return [{"metric": "revenue", "segment": "total", "target_period": "2026Q3",
+                     "low": 500.0, "high": 500.0, "issued_in": "2026Q2"}]
+
+    m = model()
+    result = fc.Forecast(m, pack(), dict(m.assumptions))
+    anchors = fc.anchor(m, pack(), Store(), TEMPLATE["anchors"], SETTINGS, result)
+    assert not anchors[0].reached and m.value("take_rate", "2026Q3") <= 0.105 + 1e-12
+    assert any("not reached" in e["item"] for e in result.exceptions)
+
+
+@pytest.mark.skipif(shutil.which("soffice") is None, reason="needs LibreOffice")
+def test_forecast_parity_with_libreoffice(templates, tmp_path):
+    m = model(pack(gb_missing=True))
+    checked, differ = workbook.parity(m, workbook.write(m, tmp_path / "f.xlsx"))
+    assert differ == [] and checked > 40
+
+
+def test_proposals_are_bounded_anchors_kept_and_evidence_required(templates):
+    from tenk_agent.research.propose import apply, proposable
+
+    m = model()
+    bounds = proposable(m, {"take_rate.shift0"}) | {"fade": (0.75, 1.0)}
+    assert "take_rate.shift0" not in bounds and "volume_g.g0" in bounds
+
+    class Resolver:
+        def resolve(self, ref):
+            return ref.startswith("kpi:")
+
+    reply = json.dumps({"answer": "x", "proposals": [
+        {"driver": "volume_g.g0", "value": 0.9, "evidence": ["kpi:TEST:volume:2026Q2"]},
+        {"driver": "fade", "value": 0.5, "evidence": ["kpi:TEST:volume:2026Q2"]},
+        {"driver": "price_g.g0", "value": 0.06, "evidence": ["made-up"]},
+        {"driver": "take_rate.shift0", "value": 0.01, "evidence": ["kpi:TEST:gb:2026Q2"]},
+    ]})
+    overrides, applied, exceptions = apply(reply, m, bounds, Resolver())
+    assert overrides["volume_g.g0"] == pytest.approx(bounds["volume_g.g0"][1])  # clipped
+    assert overrides["fade"] == 0.75
+    assert "price_g.g0" not in overrides and "take_rate.shift0" not in overrides
+    assert [p.clipped for p in applied] == [True, True]
+    items = " ".join(e["item"] for e in exceptions)
+    assert "no evidence id resolves" in items and "anchored" in items
+    assert apply("no json here", m, bounds, Resolver())[0] == {}
+
+
+def test_a_ratio_change_holds_until_lapped(templates):
+    m = model()
+    m.assumptions["take_rate.shift0"] = 0.002
+    graph.evaluate_cells(m, pack())
+    assert m.value("take_rate_shift", "2026Q3") == pytest.approx(0.002)
+    assert m.value("take_rate_shift", "2027Q1") == pytest.approx(0.002 * 0.9**2)
+    for q in ("2027Q2", "2027Q3"):  # the fourth forecast quarter, then the fifth
+        m.forecast.append(q)
+        m.quarters.append(q)
+        m.columns.append(q)
+    graph.evaluate_cells(m, pack())
+    assert m.value("take_rate_shift", "2027Q2") == pytest.approx(0.002 * 0.9**3)
+    assert m.value("take_rate_shift", "2027Q3") == 0.0  # lapped
+
+
+def test_revenue_bridge_adds_up():
+    from tenk_agent.agent.tools import _bridge
+
+    class M:
+        lines = [type("L", (), {"name": n}) for n in ("gross_bookings", "take_rate", "volume",
+                                                       "value_per_unit")]
+
+        def __init__(self, vol, unit, rate):
+            self.v = {"volume": vol, "value_per_unit": unit, "gross_bookings": vol * unit,
+                      "take_rate": rate}
+
+        def value(self, line, period):
+            return self.v[line]
+
+    b = _bridge(M(100, 10.0, 0.2), M(110, 9.5, 0.21), "2026Q2")
+    assert b["revenue_variance"] == pytest.approx(110 * 9.5 * 0.21 - 200)
+    assert b["from_gross_value"] + b["from_take_rate"] == pytest.approx(b["revenue_variance"])
+    assert b["of_which_volume"] + b["of_which_value_per_unit"] == pytest.approx(
+        b["from_gross_value"])
+
+
+def test_later_quarters_split_last_years_total_by_seasonal_share(templates):
+    m = model()
+    shares, years = fc.seasonal_shares(m, "volume")
+    assert years == ["2024", "2025"]  # 2026 is incomplete: fewer than three years, all used
+    assert shares[3] == pytest.approx((12 / 42 + 13 / 46) / 2)
+    assert m.assumptions["volume.s4"] == pytest.approx(shares[3])
+    g = m.value("volume_g", "2026Q4")
+    assert m.value("volume", "2026Q4") == pytest.approx(46 * (1 + g) * shares[3])
+    assert m.value("volume", "2026Q3") == pytest.approx(12 * 1.1)  # first quarter: q-4 rule
+
+
+def test_seasonal_shares_use_the_latest_three_complete_years(templates):
+    class Fake:
+        history = [f"{y}Q{i}" for y in range(2021, 2026) for i in (1, 2, 3, 4)]
+
+        def value(self, line, q):
+            return {"2021": 10.0, "2022": 20.0}.get(q[:4], 1.0) * (2 if q.endswith("Q4") else 1)
+
+    shares, years = fc.seasonal_shares(Fake(), "x")
+    assert years == ["2023", "2024", "2025"] and shares[3] == pytest.approx(0.4)
+
+
+def test_a_full_year_guide_anchors_the_fiscal_year_column(templates):
+    class Store:
+        def guidance(self, ticker):
+            return [{"metric": "take_rate_fy", "segment": "total", "target_period": "FY2026",
+                     "low": 10.2, "high": None, "issued_in": "2026Q2"}]
+
+    spec = {"guide": "take_rate_fy", "line": "take_rate", "basis": "margin", "period": "fy",
+            "solve": "take_rate.shift0"}
+    m = model()
+    result = fc.Forecast(m, pack(), dict(m.assumptions))
+    anchors = fc.anchor(m, pack(), Store(), [spec], SETTINGS, result)
+    assert anchors[0].target_period == "FY2026" and anchors[0].reached
+    assert m.value("take_rate", "FY2026") == pytest.approx(0.102, rel=1e-3)
+
+
+def test_a_quarterly_anchor_keeps_its_driver_from_a_full_year_guide(templates):
+    class Store:
+        def guidance(self, ticker):
+            return [{"metric": "revenue", "segment": "total", "target_period": "2026Q3",
+                     "low": 130.0, "high": 134.0, "issued_in": "2026Q2"},
+                    {"metric": "take_rate_fy", "segment": "total", "target_period": "FY2026",
+                     "low": 10.4, "high": None, "issued_in": "2026Q2"}]
+
+    fy = {"guide": "take_rate_fy", "line": "take_rate", "basis": "margin", "period": "fy",
+          "solve": "take_rate.shift0"}
+    m = model()
+    result = fc.Forecast(m, pack(), dict(m.assumptions))
+    anchors = fc.anchor(m, pack(), Store(), TEMPLATE["anchors"] + [fy], SETTINGS, result)
+    assert [a.target_period for a in anchors] == ["2026Q3"]
+    assert m.value("revenue", "2026Q3") == pytest.approx(132.0)
+    assert any("already anchored" in e["item"] for e in result.exceptions)
+
+
+def test_valuation_checks_stop_on_wacc_below_growth_or_bad_weights():
+    from tenk_agent.research.model import checks as layer2
+
+    settings = {"valuation": {"terminal_growth": 0.03, "weights": {"multiple": 0.6, "dcf": 0.4}},
+                "scenarios": {"weights": {"bear": 0.25, "base": 0.5, "bull": 0.25}}}
+    ok = layer2.valuation_checks({"cost_of_capital": {"wacc": 0.09}}, settings)
+    assert all(c.status == "pass" for c in ok)
+    assert layer2.wacc_gt_g({"cost_of_capital": {"wacc": 0.03}}, settings).status == "fail"
+    settings["scenarios"]["weights"]["bull"] = 0.3
+    assert layer2.weights(settings).status == "fail"

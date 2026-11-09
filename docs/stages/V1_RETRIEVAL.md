@@ -1,6 +1,6 @@
 # V1 · Retrieval: question → the chunks that answer it
 
-**Builds on** V0: its chunks, loaded into a database. No LLM. **Code:** [`retrieval/`](../../src/tenk_agent/retrieval/). **Design and results:** [experiments/V1_RETRIEVAL.md](../../experiments/V1_RETRIEVAL.md): with parent-child chunks, Recall@5 87.3% and MRR 0.758 on 46 questions. **Run it:** [Getting started](../GETTING_STARTED.md#4-ask). Overview: [ARCHITECTURE.md](../ARCHITECTURE.md).
+**Builds on** V0: its chunks, loaded into a database. No LLM. **Code:** [`retrieval/`](../../src/tenk_agent/retrieval/). **Design and results:** [experiments/V1_RETRIEVAL.md](../../experiments/V1_RETRIEVAL.md): with parent-child chunks, Recall@5 87.3% and MRR 0.758 on 46 questions. **Run it:** [Getting started](../GETTING_STARTED.md#4-ask). Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
 
 ## Data
 

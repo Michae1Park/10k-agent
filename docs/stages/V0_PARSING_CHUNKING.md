@@ -1,13 +1,13 @@
 # V0 · Parsing and chunking: 10-K HTML → structured document → chunks
 
-**Builds on** nothing: start here. **Code:** [`preprocess/`](../../src/tenk_agent/preprocess/), [`chunking/`](../../src/tenk_agent/chunking/), run over the corpus by [`build.py`](../../src/tenk_agent/build.py). **Design and results:** [experiments/V0_PARSING_CHUNKING.md](../../experiments/V0_PARSING_CHUNKING.md) (it names the rules D1–D8, V1–V7, A1–A5, C1–C10 and T1–T3 used below). **Run it:** [Getting started](../GETTING_STARTED.md#3-build-the-corpus). Overview: [ARCHITECTURE.md](../ARCHITECTURE.md).
+**Builds on** nothing: start here. **Code:** [`preprocess/`](../../src/tenk_agent/preprocess/), [`chunking/`](../../src/tenk_agent/chunking/), run over the corpus by [`build.py`](../../src/tenk_agent/build.py). **Design and results:** [experiments/V0_PARSING_CHUNKING.md](../../experiments/V0_PARSING_CHUNKING.md) (it names the rules D1–D8, V1–V7, A1–A5, C1–C10 and T1–T3 used below). **Run it:** [Getting started](../GETTING_STARTED.md#3-build-the-corpus). Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
 
 ## Data
 
 | Data | Where |
 |---|---|
 | 10-K primary document (HTML), filing metadata (accession, fiscal year, period end, URL) | `data/raw/filings/<TICKER>/FY<year>/*.htm`, `metadata.json`; all of them in `data/raw/manifest.json` |
-| XBRL company facts (gold cross-checks only, D-007) | `data/raw/edgar/<TICKER>/companyfacts.json` |
+| XBRL company facts (gold cross-checks only) | `data/raw/edgar/<TICKER>/companyfacts.json` |
 | **Work files, per filing** | `data/v0-chunking/<TICKER>-FY<year>/` (`build.out`) |
 | **Database, per chunking** | `data/v0-chunking/<method>.db` (V1) |
 

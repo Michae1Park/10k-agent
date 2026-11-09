@@ -161,9 +161,21 @@ def resolve_evidence(store: Store, q: dict) -> list[list[str]]:
         if not evidence:
             resolved.append([])
             continue
-        chunks = store.chunks(source["company"], source["fiscal_year"])
-        resolved.append([c.id for c in chunks if evidence in normalize(c.text)])
+        resolved.append([c.id for c in source_chunks(store, source)
+                         if evidence in normalize(c.text)])
     return resolved
+
+
+def source_chunks(store: Store, source: dict) -> list:
+    """The chunks a source can quote: its 10-K's (V3: fiscal_year), or those of its period and
+    form (V4 sets: period, form)."""
+    if "period" not in source:
+        return store.chunks(source["company"], source["fiscal_year"])
+    from tenk_agent.store import period_parts
+
+    year, period = period_parts(source["period"])
+    return [c for c in store.chunks(source["company"], year)
+            if c.fiscal_period == period and c.form == source["form"]]
 
 
 @dataclass
@@ -183,8 +195,8 @@ def xbrl_checks(q: dict, data_dir: Path) -> list[XbrlCheck]:
     for value in expected_values(q):
         scale = UNIT_SCALE.get(value.get("unit"))
         source = _source_for(q, value)
-        if scale is None or source is None:
-            continue
+        if scale is None or source is None or "fiscal_year" not in source:
+            continue  # V4 sets: values come from labels already checked against XBRL
         facts = _annual_usd_facts(data_dir, source["company"])
         period_end = _period_end(data_dir, source["company"], source["fiscal_year"])
         target = value["value"] * scale
@@ -205,7 +217,7 @@ def _source_for(q: dict, value: dict) -> dict | None:
     """The first source matching the company and fiscal year a value names (if it names them)."""
     company, year = value.get("company"), value.get("fiscal_year")
     for source in q.get("sources", []):
-        if company in (None, source["company"]) and year in (None, source["fiscal_year"]):
+        if company in (None, source["company"]) and year in (None, source.get("fiscal_year")):
             return source
     return None
 

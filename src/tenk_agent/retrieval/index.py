@@ -14,18 +14,13 @@ import logging
 from pathlib import Path
 
 from tenk_agent.corpus import COMPANIES, company_by_ticker
+from tenk_agent.preprocess.forms import TEN_K, form_spec
 from tenk_agent.retrieval.embeddings import Embedder
-from tenk_agent.store import ChildRecord, ChunkRecord, FilingRecord, Store
+from tenk_agent.store import ChildRecord, ChunkRecord, FilingRecord, Store, id_prefix
 
 log = logging.getLogger(__name__)
 
-ITEM_NAMES = {
-    "1": "Business",
-    "1A": "Risk Factors",
-    "7": "Management's Discussion and Analysis",
-    "7A": "Market Risk",
-    "8": "Financial Statements",
-}
+ITEM_NAMES = TEN_K.item_names  # the 10-K's, for callers not yet form-aware
 COMPANY_NAMES = {c.ticker: c.name for c in COMPANIES}
 
 
@@ -34,9 +29,11 @@ COMPANY_NAMES = {c.ticker: c.name for c in COMPANIES}
 
 def chunk_header(chunk: ChunkRecord | ChildRecord, company_name: str) -> str:
     """Context line prepended to chunk text for embedding and reranking (not for display)."""
-    item = ITEM_NAMES.get(chunk.item, "")
+    spec = form_spec(getattr(chunk, "form", "10-K"))  # V3 chunks carry no form: all 10-Ks
+    item = spec.item_names.get(chunk.item, "")
     return (
-        f"{company_name} ({chunk.ticker}) fiscal {chunk.fiscal_year} 10-K, Item {chunk.item} {item}"
+        f"{company_name} ({chunk.ticker}) fiscal {chunk.fiscal_year} {spec.form}, "
+        f"Item {chunk.item} {item}"
     )
 
 
@@ -55,6 +52,16 @@ def child_text(child: dict) -> str:
     return " › ".join(path) + "\n" + child["text"]
 
 
+def meta_prefix(meta: dict) -> str:
+    """The chunk-id prefix of a filing from its metadata.json (store.id_prefix)."""
+    return id_prefix(
+        meta["ticker"],
+        meta["fiscal_year"],
+        meta.get("fiscal_period", "FY"),
+        meta.get("form", "10-K"),
+    )
+
+
 def chunk_ids(chunks: list[dict], prefix: str) -> list[tuple[str, int]]:
     """Each chunk's id and its position within its Item: <prefix>-<item>-<nnn>."""
     seq: dict[str, int] = {}
@@ -68,19 +75,26 @@ def chunk_ids(chunks: list[dict], prefix: str) -> list[tuple[str, int]]:
 # --- Load ----------------------------------------------------------------------------------
 
 
-def load(path: Path, filings: list[tuple[dict, dict, list[dict]]]) -> dict[str, int]:
+def load(path: Path, filings: list[tuple[dict, dict, list[dict]]],
+         append: bool = False) -> dict[str, int]:
     """A new database at `path` (any old one is deleted) from (metadata.json, document, chunks)
     per filing. Ticker and fiscal year come from metadata.json (the corpus folder), not the
-    cover tags, so ids match the gold sets. Parent-child chunks add their children."""
-    path.unlink(missing_ok=True)
+    cover tags, so ids match the gold sets. Parent-child chunks add their children.
+    `append`: keep the database and its other tables (facts, KPIs, market data, saved model
+    versions); add only the filings it doesn't hold yet (by accession number)."""
+    if not append:
+        path.unlink(missing_ok=True)
     store = Store(path)
+    if append:
+        held = {f.accession_no for f in store.filings()}
+        filings = [f for f in filings if f[0]["accession_no"] not in held]
     if any(c.get("children") for _, _, chunks in filings for c in chunks):
         store.enable_children()
-    counts = {"chunks": 0, "children": 0}
+    counts = {"filings": len(filings), "chunks": 0, "children": 0}
     for meta, document, chunks in filings:
         ticker, year = meta["ticker"], meta["fiscal_year"]
         company = company_by_ticker(ticker)
-        prefix = f"{ticker}-FY{year}"
+        prefix = meta_prefix(meta)
         filing = FilingRecord(
             meta["accession_no"],
             ticker,
@@ -88,7 +102,11 @@ def load(path: Path, filings: list[tuple[dict, dict, list[dict]]]) -> dict[str, 
             year,
             meta["period_end_date"],
             meta["filing_date"],
-            meta["source_url"],
+            meta.get("source_url") or meta["documents"][0]["url"],
+            form=meta.get("form", "10-K"),
+            fiscal_period=meta.get("fiscal_period", "FY"),
+            accepted_at=meta.get("accepted_at"),
+            retrieved_at=meta.get("retrieved_at"),
         )
         sections: dict[str, str] = {}
         for s in document["sections"]:
@@ -139,7 +157,7 @@ def add_pages(store: Store, filings: list[tuple[dict, list[dict]]]) -> dict[str,
     for meta, chunks in filings:
         if (meta["ticker"], meta["fiscal_year"]) not in loaded:
             continue
-        prefix = f"{meta['ticker']}-FY{meta['fiscal_year']}"
+        prefix = meta_prefix(meta)
         for (chunk_id, _), c in zip(chunk_ids(chunks, prefix), chunks, strict=True):
             updated = store.set_pages(chunk_id, c["text"], c.get("pages"), c.get("printed_pages"))
             counts["updated" if updated else "mismatched"] += 1
