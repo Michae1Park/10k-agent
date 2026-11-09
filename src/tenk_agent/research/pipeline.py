@@ -255,9 +255,17 @@ def run(db: Path, ticker: str, as_of: str, settings: dict, llm_steps: bool = Tru
     numbered = [{"id": f"X-{i:02d}", **x} for i, x in enumerate(exceptions, 1)]
     s10.blocks = note_sections.review_blocks(numbered)
     facts.add("exceptions in the log", float(len(numbered)), "count", "exception log")
+    for sev in ("error", "warning", "info"):  # section 9 prints each count beside the total
+        n = sum(x["severity"] == sev for x in numbered)
+        if n:
+            facts.add(f"{sev} exceptions in the log", float(n), "count", "exception log")
     s9 = next(s for s in built if s.number == 9)
     s9.blocks = [note_sections.exceptions_line(numbered) if isinstance(b, str)
                  and b.startswith("Exceptions: ") else b for b in s9.blocks]
+    # the final line joins the code-written blocks, so a later lint checks it verbatim
+    saved = json.loads((folder / "note.json").read_text())
+    saved["blocks"].append(note_sections.exceptions_line(numbered))
+    (folder / "note.json").write_text(json.dumps(saved, indent=1))
     issues = consistency.open_issues(s10, numbered)
     if not issues.ok:  # by construction it passes; a failure is logged, never hidden
         numbered += [{"id": f"X-{len(numbered) + i:02d}", **x}
