@@ -13,6 +13,7 @@ Eight online marketplaces (UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP), Q4 2
 | 5. Note | ten sections, number trace, seeded errors, rubric | 100% traced; rubric ≥ 4/5; every seeded error caught | UBER v6: **100% traced, 59/59 seeded, rubric 3.6**; BKNG v7: **100% traced, 60/60 seeded, rubric 3.6** (2026-11-09; the judge marks grounding and analysis 3/5) | **miss** (rubric) |
 | Ask | 79 questions | ≥ 85% correct and verified; 100% of cited ids resolve | **89.9%, 100%** (run 4, after the user's gold rulings; run 3 on the original gold: 84.8%) | pass |
 | Research | 72 questions | ≥ 90% pass (model: ref, assumptions, no unverified claim); 100% of forward numbers from model tools | **88.9%, 100%** (run 2, with two scoring corrections the user adopted after run 1; 87.5% / 94.6% as first frozen) | **miss** |
+| Investigate | 12 multi-part questions, each also given to one Research run as the baseline | higher correct-and-verified rate than the baseline; 100% of cited ids resolve | **25.0% vs 16.7%** auto-pass (every part's expected value or `model:` id verified, no unverified numeric claim; parts 11/21 both); **100% of ids resolve** (115 and 116 cited); 9 vs 17 unverified claims. Required points are judged by hand in `review.md`, not yet done | pass (automatic score) |
 
 ## Backtest
 
