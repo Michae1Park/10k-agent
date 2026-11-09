@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="700" viewBox="0 0 1180 700" role="img" aria-labelledby="svgtitle svgdesc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
   <title id="svgtitle">search_filings in V4</title>
-  <desc id="svgdesc">Zoom of the search_filings tool in V4. Arguments are query, companies, periods, forms and k, bound to the run as-of date. Companies and periods come from the arguments or else the query; no company is an error; no period means the latest filing of each form visible at the as-of date. One sub-question per company and filing. Each sub-question runs a keyword search and a dense search, both filtered by company, form, period and filed before the as-of date inside the store, fused with reciprocal rank fusion, children swapped for parents, reranked by a cross-encoder. A round-robin merge returns k chunks with id, form, period and filing date. No LLM.</desc>
+  <desc id="svgdesc">Zoom of the search_filings tool in V4. Arguments are query, companies, periods, forms and k, bound to the run as-of date. Companies and periods come from the arguments or else the query; no company is an error; no period means every filing visible at the as-of date. One sub-question per company and filing. Each sub-question runs a keyword search and a dense search, both filtered by company, form, period and filed before the as-of date inside the store, fused with reciprocal rank fusion, children swapped for parents, reranked by a cross-encoder. A round-robin merge returns k chunks with id, form, period and filing date. No LLM.</desc>
   <style>
     @media (prefers-color-scheme: dark) {
       .bg    { fill: #0f1419; stroke: #2b3540; }
@@ -34,7 +34,7 @@
   <text class="sub" x="480.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">companies: arguments, else the query</text>
   <text class="sub" x="480.0" y="96" text-anchor="middle" font-size="13" fill="#4a5a68">no company: error asking for one</text>
   <text class="sub" x="480.0" y="114" text-anchor="middle" font-size="13" fill="#4a5a68">periods: "Q2 2026" → period keys;</text>
-  <text class="sub" x="480.0" y="132" text-anchor="middle" font-size="13" fill="#4a5a68">none: latest filing of each form</text>
+  <text class="sub" x="480.0" y="132" text-anchor="middle" font-size="13" fill="#4a5a68">none: every visible filing</text>
   <rect class="work" x="670" y="30" width="230" height="108" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="785.0" y="56" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">Sub-questions</text>
   <text class="sub" x="785.0" y="78" text-anchor="middle" font-size="13" fill="#4a5a68">one per company and</text>

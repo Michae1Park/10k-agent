@@ -488,7 +488,7 @@ query → decompose: one sub-question per company (and filing slot)
 ```
 
 - **Decomposition is rule-based:** companies come from the arguments, else from the tickers, names and aliases in the query. Each sub-question is rewritten to name only its company.
-- No period = the latest filing of each form at D.
+- No period = every filing visible at D (pass periods to narrow it).
 - The model sees parent chunks: a whole subsection or table, not a fragment.
 - **Merge:** each sub-question gets ⌈k / n⌉ places (at least 2). In every round the sub-question whose best chunk scored highest goes first; duplicates are dropped.
 

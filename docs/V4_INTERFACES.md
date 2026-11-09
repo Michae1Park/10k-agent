@@ -147,7 +147,7 @@ set_version_status(version, status) -> None
 ```text
 search_filings(query: str, companies?: [str], periods?: [period], forms?: [form], k?: int = 8)    # k clamped to 1–16
   companies   tickers or names; ["all"] = every company with a filing
-  periods     none = the latest filing of each form at the as-of
+  periods     none = every filing visible at the as-of
   forms       "10-K" | "10-Q" | "ER" | "DEF14A"
 → {query: str,
    searches: [{query: str, company: str, periods?: [period]}],

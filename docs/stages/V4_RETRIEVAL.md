@@ -8,7 +8,7 @@ How `search_filings` finds passages. The search itself is V1's ([V1_RETRIEVAL.md
 
 | Step | What it does | Why |
 | --- | --- | --- |
-| 1 Resolve | Companies and periods from the arguments or the query; none given = latest filing of each form | Searches the right filings |
+| 1 Resolve | Companies and periods from the arguments or the query; no period given = every filing visible at the as-of | Searches the right filings |
 | 2 Split | One sub-question per company and filing, naming only that company | Each company gets its own search |
 | 3 Search | Keyword (BM25) and vector search, top 40 each, only filings before the as-of | Keywords catch figures and names; vectors catch paraphrase |
 | 4 Fuse | Reciprocal rank fusion (k = 60) | Rewards passages both searches found |
