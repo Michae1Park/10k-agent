@@ -54,7 +54,7 @@ Drafts for senior analyst review. Read the limits before reading these.
 
 ## Example report
 
-UBER, earnings update after Q2 2026, as of 2026-08-06: [note (Markdown)](examples/UBER-2026-08-06-note.md), [note (PDF)](examples/UBER-2026-08-06-note.pdf), [model-change workbook](examples/UBER-2026-08-06-workbook.xlsx). Ten sections, 100% of figures traced to the evidence log, every model cell a live formula.
+UBER, earnings update after Q2 2026, as of 2026-08-06: [note (Markdown)](examples/UBER-2026-08-06-note.md), [note (PDF)](examples/UBER-2026-08-06-note.pdf), [model-change workbook](examples/UBER-2026-08-06-workbook.xlsx). Ten sections, 100% of figures traced to the evidence log, every model cell a live formula. Public copy, redacted from the 2026-11-09 run by `experiments/v4/redact_example.py`: every value derived from prices, macro or ERP data reads "local only".
 
 ## Limits
 
@@ -78,4 +78,4 @@ UBER, earnings update after Q2 2026, as of 2026-08-06: [note (Markdown)](example
 
 ## Roll-out: all eight end to end (2026-11-09)
 
-Each company's report ran on the Qwen 27B the day after its Q2 2026 release (`tenk research report <T> --as-of <D>`: UBER 2026-08-06, BKNG 2026-08-05, DASH and EXPE 2026-08-06, ABNB, CART, LYFT and TRIP 2026-08-07), 6–10 minutes each, then reran with `--resume` after the checker fixes below. All eight: ten sections, full workbook parity (350–750 formula cells), no `error` exceptions, saved as drafts. Fixes found on the way, each to the pipeline's checks, none to the notes' text: text written by the sub-agents (debate questions, event summaries) is now traced like prose, and a sentence with an untraced number is replaced by a code-written one (a warning); section 9's exception counts are set once the log is final and checked verbatim; chunk ids are not read as figures. The example files above are the redacted public copy of an earlier UBER run (market values read "local only").
+Each company's report ran on the Qwen 27B the day after its Q2 2026 release (`tenk research report <T> --as-of <D>`: UBER 2026-08-06, BKNG 2026-08-05, DASH and EXPE 2026-08-06, ABNB, CART, LYFT and TRIP 2026-08-07), 6–10 minutes each, then reran with `--resume` after the checker fixes below. All eight: ten sections, full workbook parity (350–750 formula cells), no `error` exceptions, saved as drafts. Fixes found on the way, each to the pipeline's checks, none to the notes' text: text written by the sub-agents (debate questions, event summaries) is now traced like prose, and a sentence with an untraced number is replaced by a code-written one (a warning); section 9's exception counts are set once the log is final and checked verbatim; chunk ids are not read as figures. The example files above are the redacted public copy of this UBER run (`experiments/v4/redact_example.py`; market values read "local only").
