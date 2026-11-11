@@ -19,7 +19,7 @@ All commands run from the repo root. Heavy jobs run pinned to the E-cores: `task
 ## 1. Install
 
 ```bash
-git clone <this repo> && cd 10k-agent
+git clone <this repo> && cd equity-research-agent
 uv sync --extra local --extra chunking     # Python deps + local embedder / reranker + the chunkers
 source .venv/bin/activate
 tenk setup                                 # your SEC User-Agent, Tiingo and FRED keys → credentials.yaml (gitignored)

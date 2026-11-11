@@ -1,4 +1,4 @@
-# 10k-agent
+# equity-research-agent
 
 **Grounded, cited answers over SEC 10-K filings, built one tested version at a time.** Ask a question about the companies' annual reports; it finds the passages, answers from them alone with every number tied to the chunk it came from, checks each number against that chunk, and declines when the filings can't answer.
 
@@ -48,7 +48,7 @@ Each version adds one stage and was tested on its own before the next was built.
 Linux or macOS, Python 3.12 + [uv](https://docs.astral.sh/uv/), a ~40 GB GPU for the default 27B model ([all requirements](docs/GETTING_STARTED.md#requirements)).
 
 ```bash
-git clone <this repo> && cd 10k-agent
+git clone <this repo> && cd equity-research-agent
 uv sync --extra local --extra chunking
 uv run tenk setup                                    # your own SEC, Tiingo, FRED credentials
 uv run tenk fetch                                    # 24 10-Ks from EDGAR (cached)
