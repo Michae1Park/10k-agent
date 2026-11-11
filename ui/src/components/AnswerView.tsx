@@ -1,0 +1,163 @@
+import { useState } from 'react'
+import type { Answer, Claim, SubRun, TraceEvent } from '../api'
+
+const STATUS: Record<string, string> = {
+  verified: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  calculated: 'bg-sky-100 text-sky-800 border-sky-200',
+  cited: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  unverified: 'bg-amber-100 text-amber-900 border-amber-300',
+}
+
+export function StatusBadge({ status }: { status: string }) {
+  return (
+    <span className={`inline-block rounded border px-1.5 py-0.5 text-[11px] font-medium ${
+      STATUS[status] ?? 'bg-stone-100 text-stone-700 border-stone-200'}`}>{status}</span>
+  )
+}
+
+export function SourceChip({ id, onOpen }: { id: string; onOpen: (id: string) => void }) {
+  return (
+    <button onClick={() => onOpen(id)}
+      className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[11px] text-stone-700 hover:bg-stone-200">
+      {id}
+    </button>
+  )
+}
+
+function ClaimRow({ claim, onSource }: { claim: Claim; onSource: (id: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const value = claim.value != null ? `${claim.value}${claim.unit ? ` ${claim.unit}` : ''}` : null
+  return (
+    <li className="border-t border-stone-100 py-2 first:border-0">
+      <div className="flex items-start gap-2">
+        <span className="mt-0.5 w-6 shrink-0 text-xs text-stone-400">[{String(claim.id)}]</span>
+        <StatusBadge status={claim.status} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm">{claim.text}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-stone-500">
+            {value && <span className="font-mono text-stone-700">= {value}</span>}
+            {claim.company && <span>{claim.company}</span>}
+            {(claim.period || claim.fiscal_year) && <span>{claim.period ?? `FY${claim.fiscal_year}`}</span>}
+            {claim.chunk_ids.map((id) => <SourceChip key={id} id={id} onOpen={onSource} />)}
+            <button className="text-stone-400 hover:text-stone-700" onClick={() => setOpen(!open)}>
+              {open ? 'less' : 'details'}
+            </button>
+          </div>
+          {open && (
+            <pre className="mt-1 max-h-60 overflow-auto rounded bg-stone-50 p-2 text-[11px] text-stone-600">
+              {JSON.stringify(claim, null, 2)}
+            </pre>
+          )}
+        </div>
+      </div>
+    </li>
+  )
+}
+
+function Table({ table }: { table: NonNullable<Answer['table']> }) {
+  const columns = (table.columns as string[] | undefined) ?? []
+  const rows = (table.rows as unknown[][] | undefined) ?? []
+  if (!columns.length && !rows.length) return null
+  return (
+    <div className="my-3 overflow-x-auto">
+      {table.title && <div className="mb-1 text-xs font-medium text-stone-500">{String(table.title)}</div>}
+      <table className="text-sm">
+        <thead><tr>{columns.map((c) => <th key={c} className="border border-stone-200 bg-stone-100 px-2 py-1 text-left">{c}</th>)}</tr></thead>
+        <tbody>{rows.map((r, i) => (
+          <tr key={i}>{(Array.isArray(r) ? r : Object.values(r as object)).map((v, j) => (
+            <td key={j} className="border border-stone-200 px-2 py-1">{String(v ?? '')}</td>))}</tr>
+        ))}</tbody>
+      </table>
+    </div>
+  )
+}
+
+export function AnswerBody({ answer, onSource }: { answer: Answer; onSource: (id: string) => void }) {
+  const counts = answer.claims.reduce<Record<string, number>>((m, c) => ({ ...m, [c.status]: (m[c.status] ?? 0) + 1 }), {})
+  return (
+    <div>
+      {answer.abstained && <div className="mb-2 text-xs font-medium text-amber-700">Declined: the filings can't answer this</div>}
+      <p className="whitespace-pre-wrap leading-relaxed">{answer.answer}</p>
+      {answer.table && <Table table={answer.table} />}
+      {answer.scope_notice && <p className="mt-2 text-xs text-stone-500 italic">{answer.scope_notice}</p>}
+      {answer.assumptions && answer.assumptions.length > 0 && (
+        <div className="mt-3">
+          <div className="text-xs font-semibold text-stone-500 uppercase">Assumptions</div>
+          <ul className="list-disc pl-5 text-sm">
+            {answer.assumptions.map((a, i) => <li key={i}>{typeof a === 'string' ? a : JSON.stringify(a)}</li>)}
+          </ul>
+        </div>
+      )}
+      {answer.claims.length > 0 && (
+        <div className="mt-3 rounded-lg border border-stone-200 bg-white px-3 py-1">
+          <div className="flex items-center gap-2 py-1.5 text-xs text-stone-500">
+            <span className="font-semibold uppercase">Claims ({answer.claims.length})</span>
+            {Object.entries(counts).map(([s, n]) => <span key={s}>{n} {s}</span>)}
+          </div>
+          <ul>{answer.claims.map((c) => <ClaimRow key={String(c.id)} claim={c} onSource={onSource} />)}</ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function short(v: unknown, n = 140) {
+  const s = typeof v === 'string' ? v : JSON.stringify(v)
+  return s && s.length > n ? s.slice(0, n) + '…' : s
+}
+
+export function Trace({ events, live }: { events: TraceEvent[]; live?: boolean }) {
+  const [open, setOpen] = useState<number | null>(null)
+  const shown = events.filter((e) => ['model', 'tool', 'sub_start', 'sub_end', 'status'].includes(e.type))
+  const pending = live ? [...events].reverse().find((e) => ['model_start', 'tool_start'].includes(e.type)) : undefined
+  const last = events[events.length - 1]
+  const running = pending && last === pending
+  return (
+    <ol className="space-y-1 font-mono text-[12px]">
+      {shown.map((e, i) => (
+        <li key={i} className={e.scope ? 'ml-4 border-l border-stone-200 pl-2' : ''}>
+          <button className="w-full text-left hover:bg-stone-100" onClick={() => setOpen(open === i ? null : i)}>
+            <span className="mr-2 text-stone-400">{e.t?.toFixed(1)}s</span>
+            {e.type === 'tool' && <><span className="text-violet-700">{e.name}</span> <span className="text-stone-500">{short(e.arguments, 100)}</span> <span className="text-stone-400">{e.seconds}s</span></>}
+            {e.type === 'model' && <><span className="text-teal-700">model</span> <span className="text-stone-500">{e.tool_calls?.length ? `→ ${e.tool_calls.join(', ')}` : short(e.text, 100) || 'answer'}</span> <span className="text-stone-400">{e.seconds}s · {e.input_tokens}/{e.output_tokens} tok</span></>}
+            {e.type === 'sub_start' && <><span className="text-orange-700">sub-question [{e.mode}]</span> <span>{e.question}</span></>}
+            {e.type === 'sub_end' && <><span className="text-orange-700">sub-answer</span> <span className="text-stone-500">{e.error ?? short(e.answer?.answer, 120)}</span></>}
+            {e.type === 'status' && <span className="text-stone-500">{e.text}</span>}
+          </button>
+          {open === i && (
+            <pre className="mt-1 max-h-80 overflow-auto rounded bg-stone-100 p-2 whitespace-pre-wrap text-[11px]">
+              {e.type === 'model' ? e.text : JSON.stringify(e.type === 'tool' ? { arguments: e.arguments, result: e.result } : e, null, 2)}
+            </pre>
+          )}
+        </li>
+      ))}
+      {running && (
+        <li className={`animate-pulse text-stone-500 ${pending.scope ? 'ml-4 pl-2' : ''}`}>
+          {pending.type === 'tool_start' ? `calling ${pending.name}…` : 'model thinking…'}
+        </li>
+      )}
+    </ol>
+  )
+}
+
+export function SubRuns({ subs, onSource }: { subs: SubRun[]; onSource: (id: string) => void }) {
+  return (
+    <div className="space-y-2">
+      {subs.map((s) => (
+        <details key={s.id} className="rounded border border-stone-200 bg-white px-3 py-2">
+          <summary className="cursor-pointer text-sm">
+            <span className="mr-2 font-mono text-xs text-stone-400">{s.id}</span>
+            <span className="mr-2 rounded bg-stone-100 px-1.5 text-xs">{s.mode}</span>
+            {s.follow_up && <span className="mr-2 text-xs text-orange-700">follow-up</span>}
+            {s.question}
+          </summary>
+          <div className="mt-2">
+            {s.why && <p className="mb-2 text-xs text-stone-500 italic">{s.why}</p>}
+            {s.answer ? <AnswerBody answer={s.answer} onSource={onSource} /> : <p className="text-sm text-red-700">{s.stop}</p>}
+            <p className="mt-1 text-xs text-stone-400">{s.calls} tool calls · {s.seconds}s · {s.stop}</p>
+          </div>
+        </details>
+      ))}
+    </div>
+  )
+}
