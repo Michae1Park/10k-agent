@@ -25,6 +25,7 @@ export function SourceDrawer({ id, onClose }: { id: string | null; onClose: () =
             </div>
           )}
           {data?.kind === 'fact' && <div className="text-xs text-stone-500">XBRL fact</div>}
+          {data?.kind === 'data' && <div className="text-xs text-stone-500">{data.ref_kind}</div>}
         </div>
         <button onClick={onClose} className="rounded px-2 py-1 text-stone-500 hover:bg-stone-100">✕</button>
       </header>
@@ -33,6 +34,7 @@ export function SourceDrawer({ id, onClose }: { id: string | null; onClose: () =
         {!data && !error && <p className="text-sm text-stone-400">Loading…</p>}
         {data?.kind === 'chunk' && <pre className="font-sans text-sm leading-relaxed whitespace-pre-wrap">{data.text}</pre>}
         {data?.kind === 'fact' && <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(data.fact, null, 2)}</pre>}
+        {data?.kind === 'data' && <pre className="text-xs whitespace-pre-wrap">{JSON.stringify({ values: data.values, ...data.detail }, null, 2)}</pre>}
         {data?.kind === 'other' && <p className="text-sm text-stone-600">{data.text}</p>}
       </div>
     </aside>

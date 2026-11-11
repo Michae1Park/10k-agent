@@ -163,6 +163,12 @@ def create_app(settings: dict) -> FastAPI:
             fact = store.fact(source_id)
             if fact:
                 return {"kind": "fact", "id": source_id, "fact": fact}
+            from tenk_agent.research.refs import Resolver
+
+            found = Resolver(store).resolve(source_id)  # q:, kpi:, guide:, px:, macro:, cc:
+            if found and found.values:
+                return {"kind": "data", "id": source_id, "ref_kind": found.ref.kind,
+                        "values": found.values, "detail": found.extra}
         return {"kind": "other", "id": source_id,
                 "text": "Not a filing chunk or XBRL fact: a model, valuation or scratch-run "
                         "reference, checked against the model book when the answer was made."}
