@@ -104,11 +104,13 @@ def create_app(settings: dict) -> FastAPI:
         def work():
             try:
                 result = engine.chat(settings, body.mode, body.question, body.as_of, emit)
-                message = {"role": "assistant", "time": time.time(), **result}
+                result.pop("steps", None)  # the trace below holds them
+                message = {"role": "assistant", "time": time.time(), **result,
+                           "trace": emit.log}
                 emit("done", chat_id=record["id"], message=message)
             except Exception as e:  # noqa: BLE001  the error is the reply
                 message = {"role": "assistant", "mode": body.mode, "time": time.time(),
-                           "error": f"{type(e).__name__}: {e}"}
+                           "error": f"{type(e).__name__}: {e}", "trace": emit.log}
                 emit("error", chat_id=record["id"], message=message)
             with chat_lock:
                 saved = load_chat(record["id"])

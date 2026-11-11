@@ -51,10 +51,14 @@ class Emitter:
 
     def __init__(self):
         self.q: queue.Queue = queue.Queue()
+        self.log: list[dict] = []  # kept with the chat message, to replay the trace
         self.started = time.perf_counter()
 
     def __call__(self, kind: str, **data) -> None:
-        self.q.put({"type": kind, "t": round(time.perf_counter() - self.started, 2)} | data)
+        event = {"type": kind, "t": round(time.perf_counter() - self.started, 2)} | data
+        if kind in ("model", "tool", "sub_start", "sub_end"):
+            self.log.append(event)
+        self.q.put(event)
 
     def close(self) -> None:
         self.q.put(None)
