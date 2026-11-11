@@ -14,6 +14,7 @@ tenk companies verify          V4: check companies.yaml against SEC (CIK, FYE, f
 tenk research report T --as-of D   V4 Report mode: note, workbook, logs (research/pipeline.py)
 tenk research approve T:vN --by X  V4: mark a report's model version reviewed
 tenk investigate "Q" --as-of D   V4: Investigate mode
+tenk serve                     the web UI's API (ui/: npm run dev), on localhost
 """
 
 import argparse
@@ -128,6 +129,10 @@ def main(argv: list[str] | None = None) -> int:
     approve.add_argument("version", help="e.g. UBER:v1")
     approve.add_argument("--by", required=True, help="reviewer initials")
 
+    serve = commands.add_parser("serve", help="the web UI's API (uv sync --extra web)")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
+
     args = parser.parse_args(argv)
     settings = config_file.load(args.config)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -148,6 +153,7 @@ def main(argv: list[str] | None = None) -> int:
         "report": _report,
         "companies": _companies,
         "research": _research,
+        "serve": _serve,
     }
     try:
         return handlers[args.command](args, settings)
@@ -222,6 +228,15 @@ def _research(args: argparse.Namespace, settings: dict) -> int:
     for ticker in args.tickers:
         print(json.dumps(run(db, ticker.upper(), args.as_of, knobs(), not args.no_llm,
                              args.resume, search), indent=1))
+    return 0
+
+
+def _serve(args: argparse.Namespace, settings: dict) -> int:
+    import uvicorn
+
+    from tenk_agent.web.app import create_app
+
+    uvicorn.run(create_app(settings), host=args.host, port=args.port)
     return 0
 
 

@@ -31,6 +31,10 @@ chunking = [
     "chonkie[openai]==1.7.0",
     "llama-index-core==0.14.25",
 ]
+web = [
+    "fastapi>=0.162.4",
+    "uvicorn[standard]>=0.54.0",
+]
 
 [dependency-groups]
 dev = [
