@@ -210,7 +210,8 @@ class Jobs:
     def start(self, settings: dict, ticker: str, as_of: str, llm: bool, resume: bool) -> dict:
         job = {"id": uuid.uuid4().hex[:10], "ticker": ticker, "as_of": as_of, "llm": llm,
                "status": "queued", "events": [], "result": None, "error": None,
-               "created": time.time(), "cond": threading.Condition()}
+               "created": time.time(), "cond": threading.Condition(),
+               "cancel": threading.Event()}
         with self.lock:
             self.jobs[job["id"]] = job
         threading.Thread(target=self._run, args=(job, settings, resume), daemon=True).start()
@@ -226,17 +227,36 @@ class Jobs:
         from era_agent.research import pipeline
         from era_agent.research.forecast import knobs
 
-        self._emit(job, "status", text="waiting for the model server")
-        with _gpu:
+        def check():
+            if job["cancel"].is_set():
+                raise Cancelled
+
+        self._emit(job, "status", text="waiting for the running job to finish")
+        try:
+            while not _gpu.acquire(timeout=1):
+                check()
+        except Cancelled:
+            self._emit(job, "cancelled", status="cancelled")
+            return
+        try:
             self._emit(job, "status", status="running", text="started")
-            step = pipeline.Clock.step
+            step, complete = pipeline.Clock.step, pipeline.Meter.complete
 
             def traced(clock, name):
+                check()
                 step(clock, name)
                 if name:
                     self._emit(job, "stage", name=name)
 
-            pipeline.Clock.step = traced
+            def metered(meter, *args, **kwargs):
+                check()
+                started = time.perf_counter()
+                reply = complete(meter, *args, **kwargs)
+                self._emit(job, "llm", step=meter.step,
+                           seconds=round(time.perf_counter() - started, 1))
+                return reply
+
+            pipeline.Clock.step, pipeline.Meter.complete = traced, metered
             try:
                 search = None
                 if job["llm"]:
@@ -254,11 +274,20 @@ class Jobs:
                                       job["llm"], resume, search)
                 job["result"] = result
                 self._emit(job, "done", status="done", result=result)
+            except Cancelled:
+                self._emit(job, "cancelled", status="cancelled")
             except Exception as e:  # noqa: BLE001  shown to the user, not swallowed
                 job["error"] = f"{type(e).__name__}: {e}"
                 self._emit(job, "error", status="failed", text=job["error"])
             finally:
-                pipeline.Clock.step = step
+                pipeline.Clock.step, pipeline.Meter.complete = step, complete
+        finally:
+            _gpu.release()
+
+    def cancel(self, job: dict) -> None:
+        if job["status"] in ("queued", "running"):
+            job["cancel"].set()
+            self._emit(job, "status", text="cancelling (after the current step)")
 
     def public(self, job: dict) -> dict:
         return {k: job[k] for k in ("id", "ticker", "as_of", "llm", "status", "result",
@@ -269,10 +298,11 @@ class Jobs:
         i = 0
         while True:
             with job["cond"]:
-                if i >= len(job["events"]) and job["status"] not in ("done", "failed"):
+                if i >= len(job["events"]) and job["status"] not in ("done", "failed",
+                                                                      "cancelled"):
                     job["cond"].wait(timeout=15)
                 new, i = job["events"][i:], len(job["events"])
-                ended = job["status"] in ("done", "failed")
+                ended = job["status"] in ("done", "failed", "cancelled")
             yield from new or [{"type": "ping"}]
             if ended:
                 return
