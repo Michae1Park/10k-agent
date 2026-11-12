@@ -20,11 +20,15 @@ era serve                     the web UI's API (ui/: npm run dev), on localhost
 import argparse
 import json
 import logging
+import os
 import sys
 from datetime import date
 from pathlib import Path
 
-from era_agent import config as config_file
+if sys.argv[1:2] == ["serve"]:  # the web UI runs on the V4 corpus; set before corpus loads
+    os.environ.setdefault("ERA_COMPANIES", "companies.yaml")
+
+from era_agent import config as config_file  # noqa: E402
 from era_agent import credentials
 from era_agent.corpus import COMPANIES, DATA_DIR, FISCAL_YEARS, WINDOW_START, company_by_ticker
 from era_agent.store import ChunkRecord, Store
