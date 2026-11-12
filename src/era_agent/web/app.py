@@ -11,6 +11,7 @@
   GET  /api/reports/{T}/{as_of}/files/{name}   workbook.xlsx, note.pdf, note.md
   POST /api/reports              {ticker, as_of, llm, resume} → a job; /api/jobs/{id}/events SSE
   POST /api/jobs/{id}/cancel     stop a report run before its next stage or LLM call
+  DELETE /api/jobs/{id}          forget a finished, failed or cancelled run
   POST /api/reports/approve      {version, by}
 """
 
@@ -272,6 +273,16 @@ def create_app(settings: dict) -> FastAPI:
         if not job:
             raise HTTPException(404, "no such job")
         return _sse(jobs.follow(job))
+
+    @app.delete("/api/jobs/{job_id}")
+    def dismiss_job(job_id: str):
+        job = jobs.jobs.get(job_id)
+        if not job:
+            raise HTTPException(404, "no such job")
+        if job["status"] in ("queued", "running"):
+            raise HTTPException(409, "the job is still running; cancel it first")
+        jobs.jobs.pop(job_id, None)
+        return {"ok": True}
 
     @app.post("/api/jobs/{job_id}/cancel")
     def cancel_job(job_id: str):

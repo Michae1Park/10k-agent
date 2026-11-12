@@ -143,7 +143,6 @@ function ReportDetail({ ticker, asOf, onBack }: { ticker: string; asOf: string; 
 export function ReportsView({ companies }: { companies: { ticker: string; name: string }[] }) {
   const [rows, setRows] = useState<ReportRow[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
-  const [hidden, setHidden] = useState<string[]>([])
   const [open, setOpen] = useState<{ ticker: string; asOf: string } | null>(null)
   const [ticker, setTicker] = useState('')
   const [asOf, setAsOf] = useState(today())
@@ -161,7 +160,11 @@ export function ReportsView({ companies }: { companies: { ticker: string; name: 
   }
 
   if (open) return <ReportDetail ticker={open.ticker} asOf={open.asOf} onBack={() => { setOpen(null); load() }} />
-  const active = jobs.filter((j) => j.status !== 'done' && !hidden.includes(j.id))
+  const active = jobs.filter((j) => j.status !== 'done')
+  async function dismiss(id: string) {
+    setJobs((js) => js.filter((j) => j.id !== id))
+    await fetch(`/api/jobs/${id}`, { method: 'DELETE' }).catch(() => {})
+  }
   const chip = (on: boolean) => `rounded-full px-3 py-1 text-sm ${on ? 'bg-neutral-800 text-white shadow' : 'text-neutral-600 hover:text-neutral-900'}`
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-4 pt-6 pb-10">
@@ -198,7 +201,7 @@ export function ReportsView({ companies }: { companies: { ticker: string; name: 
       </section>
 
       {active.length > 0 && <section className="space-y-3">{active.map((j) => (
-        <JobCard key={j.id} job={j} onDone={load} onDismiss={() => setHidden((h) => [...h, j.id])} />))}</section>}
+        <JobCard key={j.id} job={j} onDone={load} onDismiss={() => dismiss(j.id)} />))}</section>}
 
       <section>
         <h3 className="mb-3 px-1 text-sm font-medium text-neutral-600">Saved reports ({rows.length})</h3>
