@@ -13,6 +13,7 @@ import uuid
 from dataclasses import asdict
 from pathlib import Path
 
+from era_agent import telemetry
 from era_agent.corpus import DATA_DIR
 
 RESULT_CHARS = 4000  # a tool result in the trace is cut to this many characters
@@ -136,8 +137,16 @@ def _trace_tools(agent, emit, scope: dict):
     agent.toolbox.call = traced
 
 
-def chat(settings: dict, mode: str, question: str, as_of: str, emit: Emitter) -> dict:
+def chat(settings: dict, mode: str, question: str, as_of: str, emit: Emitter,
+         chat_id: str | None = None) -> dict:
     """One chat message in its mode → {"mode", "answer", "steps" | "investigation"}."""
+    with telemetry.run("chat", question, mode=mode, chat_id=chat_id, as_of=as_of) as run:
+        result = _chat(settings, mode, question, as_of, emit)
+        run.finish(result, result.get("stop") or "ok")
+        return result
+
+
+def _chat(settings: dict, mode: str, question: str, as_of: str, emit: Emitter) -> dict:
     if not _gpu.acquire(blocking=False):
         emit("status", text="waiting for the running job to finish")
         while not _gpu.acquire(timeout=1):
@@ -172,7 +181,8 @@ def chat(settings: dict, mode: str, question: str, as_of: str, emit: Emitter) ->
                     emit("sub_start", scope=scope["id"], question=q,
                          mode=a.toolbox.tool_set)
                     try:
-                        r = original(q)
+                        with telemetry.scope(scope["id"]):
+                            r = original(q)
                     except Exception as e:
                         emit("sub_end", scope=scope["id"], error=f"{type(e).__name__}: {e}")
                         raise
@@ -270,8 +280,11 @@ class Jobs:
                         Path("experiments/v1/config.yaml").read_text())["retrieval"]
                     search = SubQuestionRetriever.from_settings(
                         Store(db_path(), AsOf.today()), retrieval | {"device": "cpu"})
-                result = pipeline.run(db_path(), job["ticker"], job["as_of"], knobs(),
-                                      job["llm"], resume, search)
+                with telemetry.run("report", {"ticker": job["ticker"], "as_of": job["as_of"]},
+                                   llm=job["llm"], resume=resume, job_id=job["id"]) as run:
+                    result = pipeline.run(db_path(), job["ticker"], job["as_of"], knobs(),
+                                          job["llm"], resume, search)
+                    run.finish(result)
                 job["result"] = result
                 self._emit(job, "done", status="done", result=result)
             except Cancelled:
