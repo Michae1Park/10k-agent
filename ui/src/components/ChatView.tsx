@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MODES, getJSON, stream, today } from '../api'
 import type { AssistantMessage, Message, Mode, TraceEvent } from '../api'
-import { AnswerBody, SubRuns, Trace } from './AnswerView'
+import { AnswerBody, LiveStatus, SubRuns, Trace } from './AnswerView'
 
 const MODE_STYLE: Record<Mode, string> = {
   ask: 'bg-emerald-600', research: 'bg-sky-600', investigate: 'bg-violet-600',
@@ -14,6 +14,7 @@ function Assistant({ m, live, onSource }: { m: AssistantMessage; live?: boolean;
   const tools = trace.filter((e) => e.type === 'tool').length
   return (
     <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+      {live && !m.answer && !m.error && <div className="mb-3"><LiveStatus events={trace} /></div>}
       {m.error && <p className="text-sm text-red-700">{m.error}</p>}
       {m.answer && <AnswerBody answer={m.answer} onSource={onSource} />}
       {m.investigation && m.investigation.sub_runs.length > 0 && (
@@ -27,7 +28,6 @@ function Assistant({ m, live, onSource }: { m: AssistantMessage; live?: boolean;
           )}
         </div>
       )}
-      {live && !m.answer && !m.error && trace.length === 0 && <p className="animate-pulse text-sm text-stone-400">Working…</p>}
       <div className="mt-3 border-t border-stone-100 pt-2">
         <button onClick={() => setShowTrace(!showTrace)} className="text-xs text-stone-500 hover:text-stone-800">
           {showTrace ? '▾' : '▸'} Trace · {tools} tool calls{m.seconds != null ? ` · ${m.seconds.toFixed(1)}s` : ''}{m.stop ? ` · ${m.stop}` : ''}

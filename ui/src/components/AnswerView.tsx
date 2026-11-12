@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Answer, Claim, SubRun, TraceEvent } from '../api'
 
 const STATUS: Record<string, string> = {
@@ -106,6 +106,42 @@ function short(v: unknown, n = 140) {
   return s && s.length > n ? s.slice(0, n) + '…' : s
 }
 
+export function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
+  return <span role="status" aria-label="working" className={`inline-block shrink-0 animate-spin rounded-full border-2 border-stone-300 border-t-sky-600 ${className}`} />
+}
+
+/** What the agent is doing now, from the latest trace event. */
+export function activity(events: TraceEvent[]): string {
+  const e = events[events.length - 1]
+  if (!e) return 'Starting…'
+  const sub = e.scope ? ` (${e.scope})` : ''
+  switch (e.type) {
+    case 'model_start': return `Model thinking${sub}…`
+    case 'tool_start': return `Calling ${e.name}${sub}…`
+    case 'tool': return `Got ${e.name} results${sub}, reading…`
+    case 'model': return e.tool_calls?.length ? `Running ${e.tool_calls.join(', ')}${sub}…` : `Writing the answer${sub}…`
+    case 'sub_start': return `Sub-question: ${short(e.question, 80)}`
+    case 'sub_end': return 'Sub-question done, continuing…'
+    case 'status': return `${e.text[0].toUpperCase()}${e.text.slice(1)}…`
+    default: return 'Working…'
+  }
+}
+
+export function LiveStatus({ events }: { events: TraceEvent[] }) {
+  const [start] = useState(() => Date.now())
+  const [now, setNow] = useState(start)
+  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id) }, [])
+  const secs = Math.floor((now - start) / 1000)
+  const tools = events.filter((e) => e.type === 'tool').length
+  return (
+    <div className="flex items-center gap-2 rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900">
+      <Spinner />
+      <span className="min-w-0 flex-1 truncate">{activity(events)}</span>
+      <span className="shrink-0 font-mono text-xs text-sky-700">{tools} tool calls · {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')}</span>
+    </div>
+  )
+}
+
 export function Trace({ events, live }: { events: TraceEvent[]; live?: boolean }) {
   const [open, setOpen] = useState<number | null>(null)
   const shown = events.filter((e) => ['model', 'tool', 'sub_start', 'sub_end', 'status'].includes(e.type))
@@ -131,9 +167,10 @@ export function Trace({ events, live }: { events: TraceEvent[]; live?: boolean }
           )}
         </li>
       ))}
-      {running && (
-        <li className={`animate-pulse text-stone-500 ${pending.scope ? 'ml-4 pl-2' : ''}`}>
-          {pending.type === 'tool_start' ? `calling ${pending.name}…` : 'model thinking…'}
+      {live && (
+        <li className={`flex items-center gap-2 text-stone-500 ${running && pending.scope ? 'ml-4 pl-2' : ''}`}>
+          <Spinner className="h-3 w-3" />
+          {running ? (pending.type === 'tool_start' ? `calling ${pending.name} ${short(pending.arguments, 80)}` : 'model thinking…') : 'working…'}
         </li>
       )}
     </ol>
