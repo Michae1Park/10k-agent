@@ -45,3 +45,13 @@ Set `generation.model` (or pass `--model`). How the model layer is built: [V3 ar
 - **GPU memory.** The 27B leaves ~8 GB for the embedder and reranker that search, the agent and the V1/V2 experiments load. Embedding a whole corpus (`--stage embed`) wants vLLM stopped, or `retrieval.device: cpu`.
 - **Thinking mode.** Qwen models think by default; `generation.thinking: false` keeps an answer to seconds instead of minutes.
 - **One model per port.** The 27B and the judge don't fit together: generate first, then stop the 27B and serve the judge.
+
+## Docker
+
+The API and the built UI in one image, on `:8000`. vLLM stays on the host (start it first).
+
+```bash
+docker compose up --build -d     # http://localhost:8000
+```
+
+Host networking (so `localhost:8001` in `config.yaml` still reaches vLLM), `.env` for credentials, `data/`, `output/` and `config.yaml` mounted from the repo, GPU via the NVIDIA container toolkit.
