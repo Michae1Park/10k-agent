@@ -1,72 +1,144 @@
-# equity-research-agent
+<p align="center">
+  <h1 align="center">Equity Research Agent</h1>
+  <p align="center">
+    <strong>A junior sell-side research agent: cited answers, a forecast model and draft notes from free public data</strong>
+  </p>
+  <p align="center">
+    <a href="https://github.com/Michae1Park/equity-research-agent/actions/workflows/ci.yml"><img src="https://github.com/Michae1Park/equity-research-agent/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.12+-blue.svg" alt="Python 3.12+"></a>
+    <a href="https://github.com/astral-sh/uv"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json" alt="uv"></a>
+  </p>
+</p>
 
-**Grounded, cited answers over SEC 10-K filings, built one tested version at a time.** Ask a question about the companies' annual reports; it finds the passages, answers from them alone with every number tied to the chunk it came from, checks each number against that chunk, and declines when the filings can't answer.
+---
+
+<p align="center">
+  <b>Author:</b> <a href="https://github.com/Michae1Park">Michael Park</a>
+</p>
+
+---
+
+## Overview
+
+An agent that covers eight US travel and mobility companies (**BKNG, EXPE, ABNB, TRIP, UBER, LYFT, DASH, CART**) the way a junior sell-side analyst would. It answers questions from filings, forecasts and values each company with a formula-driven model, and writes a draft earnings note for a senior analyst to review. It runs on a local open model (Qwen3.6-27B on vLLM) and uses only free public data: SEC filings, XBRL, earnings releases, FRED, BTS and NYC TLC.
+
+**Every run takes an as-of date** and sees only data filed strictly before it, so any past quarter can be replayed and backtested. **Every number cites its source:** each claim is checked against the passage, fact or model cell it cites, and the agent declines when the data can't answer.
+
+**Research: an answer computed from the model.** The agent runs the forecast and reads management's guidance, then answers with model and guidance ids it can check.
+
+<p align="center">
+  <img src="docs/img/demo-research.gif" alt="Research mode: the agent forecasts Uber's Q3 2026 revenue from the model, compares it with gross bookings guidance, and every claim is verified" width="820">
+</p>
+
+**Ask: a cited answer from filed data, or a decline.** Each number links to the KPI or passage it came from. When the filings don't have the answer, the agent says so instead of guessing.
+
+<p align="center">
+  <img src="docs/img/demo-ask.gif" alt="Ask mode: a cited answer on Uber's Q2 2026 gross bookings growth with a source opened in the drawer, then a decline because Booking does not disclose hotel occupancy" width="820">
+</p>
+
+**Investigate: a multi-part question, planned.** The planner splits the question into Ask and Research sub-runs and combines their answers into one claim-checked answer.
+
+<p align="center">
+  <img src="docs/img/demo-investigate.gif" alt="Investigate mode: Uber vs Lyft gross bookings growth and Q3 2026 forecasts, split into an Ask and a Research sub-run" width="820">
+</p>
+
+**Report: a draft earnings note.** Ten sections, every figure traced to the evidence log, with a model-change workbook and an exception log.
+
+<p align="center">
+  <img src="docs/img/demo-report.gif" alt="Reports page: the UBER Q2 2026 earnings-update note scrolled from the executive summary through results, debates and the financial summary" width="820">
+</p>
+
+<sub>**About the numbers in the Report demo:** prices, and every value derived from them (rating, price target, return, market cap, EV, multiples, WACC, beta, DCF values), come from licensed third-party data, so the real values are redacted. The ones shown in the Report demo are made up for illustration. Filing-derived figures (revenue, EBITDA, gross bookings) are real. To see the true numbers, run the report locally with your own keys (see Quickstart).</sub>
+
+### What It Does
+
+| Mode | You give it | You get |
+|---|---|---|
+| **Ask** | A question + as-of | A short answer from filed data, every number cited and checked |
+| **Research** | A question + as-of | An answer computed from the model (forecast, scenario, valuation), with its assumptions shown |
+| **Investigate** | A multi-part question + as-of | A plan of Ask and Research sub-runs, combined into one claim-checked answer |
+| **Report** | Ticker + as-of | A 10-section draft note (Markdown and PDF), a model-change workbook (live Excel formulas) and an evidence and exception log |
 
 ```text
-$ era ask "What were Apple's total net sales in fiscal 2025?"
-
-Chunks (8)
-   1. AAPL-FY2025-7-016  AAPL FY2025 item 7 table p.23
-   2. AAPL-FY2025-8-071  AAPL FY2025 item 8 table p.48
-   3. AAPL-FY2025-8-002  AAPL FY2025 item 8 table p.29
-   …
-
-Answer
-
-Apple's total net sales for fiscal 2025 were $416,161 million.
-
-Claims (1)
-  [1] verified   Apple's total net sales for fiscal 2025 were $416,161 million. = 416161 USD millions
-       cites AAPL-FY2025-8-002 · found '416,161' in AAPL-FY2025-8-002
-```
-*A real run, abridged (here with gpt-oss-20b on vLLM; the default model is Qwen3.6-27B): the answer cites the income statement chunk, and the check found the number in it.*
-
-## Pipeline
-
-```mermaid
-flowchart LR
-  E[EDGAR 10-K HTML] --> P[V0 preprocess: rules + LLM structure agent] --> C[V0 chunk: parent-child]
-  C --> DB[(SQLite: chunks, children, FTS5, vectors)]
-  Q[Question] --> R[V1 retrieve: sub-questions → hybrid search → rerank]
-  R --> DB
-  R --> G[V2 generate: one model call → JSON claims] --> V[claims checked against cited chunks] --> A[Cited answer]
+Ask, as of 2026-11-12: "What was Uber's gross bookings growth in Q2 2026 and what drove it?"
 ```
 
-Each version adds one stage and was tested on its own before the next was built.
+The agent:
+1. Reads Uber's gross bookings for Q2 2026 and Q2 2025 from the extracted KPIs (each tied to the release table it came from)
+2. Computes the growth with the calculator tool instead of doing the arithmetic in the model
+3. Searches the earnings release for the drivers (trips, monthly active consumers, segments)
+4. Writes a JSON answer whose claims cite KPI and chunk ids
+5. Checks every claim's number against what it cites, marks each one verified, cited or unverified, and shows unverified claims instead of hiding them
+
+**Results** ([full results and limits](docs/V4_RESULTS.md)):
+
+| Test | Result |
+|---|---|
+| Ask: 79 questions | **89.9%** correct and verified; 100% of cited ids resolve |
+| KPI extraction: 337 hand-checked labels | **98.5%** exact; 100% on revenue, EPS and the main KPI |
+| Next-quarter forecast: 90 walk-forward points | revenue MAPE **3.14%** vs seasonal naive 3.77% (not statistically significant) |
+| Draft notes: all eight companies | 10 sections, **100%** of figures traced, all 474 seeded errors caught |
+
+---
+
+## Architecture
+
+<p align="center">
+  <img src="docs/img/readme-architecture.svg" alt="Architecture. Sources (SEC EDGAR, market and macro, cross-checks) are built offline into text chunks, facts, extracted KPIs and guidance, and market series in one SQLite store read only through an AsOf filter. The web app and CLI enter four modes: Ask, Research, Investigate (which plans Ask and Research sub-runs) and Report. Ask and Research run the agent loop over a toolbox that reaches the store and the code-only model engine; answers pass a claim check. The Report pipeline runs steps S1 to S11 and writes a draft note, workbook and log, saving a model version back to the store." width="100%">
+</p>
+
+| Layer | What it does |
+|---|---|
+| **Acquisition** | Fetches 10-Ks, 10-Qs, earnings releases (8-K Ex. 99.1), proxies, Form 4s, XBRL company facts, prices, FRED/ALFRED macro, the equity risk premium, BTS airline passengers and NYC TLC trips into a local cache |
+| **Store** | One SQLite file holding chunks, FTS5, vectors, XBRL facts, extracted KPIs and guidance, and market series. It is read only through an **AsOf** filter, so nothing filed on or after the as-of date is visible |
+| **Retrieval** | Keyword + dense search, fused with RRF, then reranked, over parent-child chunks of every filing |
+| **Model engine** | A history model with integrity checks (balance, quarters sum, Q4 ties, segments), a driver-based forecast anchored to guidance, and a DCF plus peer-multiple valuation |
+| **Agent** | A tool-calling loop (search, KPIs, facts, calculator, model and valuation tools) that writes a JSON answer with cited claims |
+| **Investigate planner** | Splits a multi-part question into Ask and Research sub-runs, can add a follow-up, and combines the sub-answers into one answer that is claim-checked again |
+| **Report pipeline** | Eleven fixed steps (S1–S11), with the LLM only for events, forecast proposals, debates and the write-up. Exports a note, a workbook whose formulas recalculate to Python's values, and a saved model version |
+| **Web app** | FastAPI with server-sent events and a React UI: chat with a live trace and source drawer, plus report generation and review |
+
+**Rules:** every number comes from a cited source, never from the model's memory; unverified claims are shown, not hidden; ratings and price targets are drafts until a human approves them.
+
+**Built one tested version at a time:**
 
 | Version | Adds | Results |
 |---|---|---|
-| **V0 · Parsing and chunking** | 10-K HTML → blocks (rules) → labels (LLM structure agent, validated and repaired) → one structured document → chunks, three ways | [Rule-based and parent-child level](experiments/V0_PARSING_CHUNKING.md): ~93% exact heading paths, every risk factor on its own |
-| **V1 · Retrieval** | Sub-questions per company and filing → keyword + dense → RRF → rerank → round-robin. No LLM | [Parent-child best](experiments/V1_RETRIEVAL.md): Recall@5 87.3%, MRR 0.758 |
-| **V2 · Generation** | One model call over V1's top 8 → JSON answer with claims citing chunk IDs → each claim checked | [21 / 30 number questions right](experiments/V2_GENERATION.md), 8 / 8 declines, every numeric claim grounded |
-| **V3 · Agent** | The model drives: search, calculate, XBRL facts and EDGAR metadata (LangGraph) → V2's JSON answer and claim check | [87–89% of 78 questions right vs V2's 66.7%](experiments/V3_AGENT.md); the gain is tool use, not the SEC data |
+| V0 · Parsing and chunking | 10-K HTML → structured document → parent-child chunks | [~93% exact heading paths](experiments/V0_PARSING_CHUNKING.md) |
+| V1 · Retrieval | Hybrid search → RRF → rerank | [Recall@5 87.3%](experiments/V1_RETRIEVAL.md) |
+| V2 · Generation | JSON claims citing chunk ids, each claim checked | [21 / 30 numeric questions right, 8 / 8 declines](experiments/V2_GENERATION.md) |
+| V3 · Agent | Tool use (search, calculator, XBRL, EDGAR) | [87–89% vs V2's 66.7%](experiments/V3_AGENT.md) |
+| **V4 · Research agent** | As-of store, KPI extraction, forecast and valuation model, Research / Investigate / Report modes, web app | [V4 results](docs/V4_RESULTS.md) |
 
-**Corpus:** Apple, Microsoft, Amazon, Alphabet, Meta, NVIDIA, Tesla, Netflix × fiscal years 2023–2025 (24 10-Ks); built and tested so far: the FY2025 filings of AAPL, AMZN, MSFT and NVDA. **Rules:** every number comes from a cited passage, never from the model's memory; unverifiable claims are shown as unverified, not hidden; no stock prices, forecasts or investment advice ([guarantees](docs/stages/V3_ARCHITECTURE.md#scope-and-guarantees)).
+Design: [spec](docs/V4_SPEC.md), [technical design](docs/V4_TECHNICAL_DESIGN_DOC.md), [architecture and doc map](docs/ARCHITECTURE.md).
+
+---
 
 ## Quickstart
 
-Linux or macOS, Python 3.12 + [uv](https://docs.astral.sh/uv/), a ~40 GB GPU for the default 27B model ([all requirements](docs/GETTING_STARTED.md#requirements)).
+**Needs:** Linux or macOS, Python 3.12 + [uv](https://docs.astral.sh/uv/), a ~40 GB GPU for the default 27B model, and your own free SEC User-Agent, Tiingo and FRED keys ([all requirements](docs/GETTING_STARTED.md#requirements)).
 
 ```bash
-git clone <this repo> && cd equity-research-agent
+git clone https://github.com/Michae1Park/equity-research-agent.git && cd equity-research-agent
 uv sync --extra local --extra chunking
-uv run era setup                                    # your own SEC, Tiingo, FRED credentials
-uv run era fetch                                    # 24 10-Ks from EDGAR (cached)
-scripts/serve_vllm.sh qwen3.6-27b-fp8                # the default model, other terminal
-taskset -c 16-31 uv run era build --stage chunk     # V0 on every filing (~35–60 min each)
-taskset -c 16-31 uv run era build --stage load --stage embed
-uv run era ask "What were Apple's total net sales in fiscal 2025?"
+source .venv/bin/activate
+era setup                                   # your SEC, Tiingo and FRED credentials (gitignored)
+export ERA_COMPANIES=companies.yaml         # the eight-company corpus
+
+scripts/serve_vllm.sh qwen3.6-27b-fp8       # the model, in its own terminal
+
+# Build the corpus (cached; heavy steps pinned to E-cores)
+era fetch && era fetch --market
+taskset -c 16-31 era build --stage chunk --stage load --stage facts --stage market --stage embed
+taskset -c 16-31 python experiments/v4/extract_pilot.py --releases all   # KPIs and guidance
+era build --stage kpis
 ```
 
-Full steps, the experiments, and troubleshooting: [Getting started](docs/GETTING_STARTED.md).
+**Use it:**
 
-## Documentation
+```bash
+era research report UBER --as-of 2026-08-06    # draft note, workbook and logs → output/reports/
+docker compose up --build                      # web UI + API on http://localhost:8000
+```
 
-| Doc | For |
-|---|---|
-| [Getting started](docs/GETTING_STARTED.md) | Install, build the corpus, ask, run the experiments |
-| [Serving](docs/SERVING.md) | The model layer and vLLM presets |
-| [Architecture](docs/ARCHITECTURE.md) | Versions, principles, the repository layout and the doc map; V3's pipeline in [stages/V3_ARCHITECTURE.md](docs/stages/V3_ARCHITECTURE.md) |
-| [Stage specs](docs/stages/) | V0–V3: data, knobs, outputs, how each works |
-| [Experiments](experiments/README.md) | Each version's design, metrics and results |
-| [Contributing](CONTRIBUTING.md) | Checks, rules, commit style |
+Full steps, the evaluations and troubleshooting: [Getting started](docs/GETTING_STARTED.md). Serving presets: [SERVING.md](docs/SERVING.md). Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
