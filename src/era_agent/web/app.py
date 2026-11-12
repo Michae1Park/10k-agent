@@ -111,7 +111,8 @@ def create_app(settings: dict) -> FastAPI:
 
         def work():
             try:
-                result = engine.chat(settings, body.mode, body.question, body.as_of, emit)
+                result = engine.chat(settings, body.mode, body.question, body.as_of, emit,
+                                     record["id"])
                 result.pop("steps", None)  # the trace below holds them
                 message = {"role": "assistant", "time": time.time(), **result,
                            "trace": emit.log}

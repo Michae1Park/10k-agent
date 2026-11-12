@@ -39,6 +39,7 @@ from era_agent.generation.calculator import CalculatorError, calculate
 from era_agent.models import ToolSpec
 from era_agent.retrieval.search import SubQuestionRetriever
 from era_agent.store import ChunkRecord, Store, period_parts
+from era_agent.telemetry import logged_tool
 
 COMPANY = {"type": "string", "description": "Ticker or name, e.g. AAPL or Apple"}
 YEARS = {"type": "array", "items": {"type": "integer"}, "description": "Fiscal years (10-Ks)"}
@@ -391,6 +392,7 @@ class Toolbox:
         v4 = self.tool_set in ("ask", "research")
         return (ASK_SPECS if v4 else {}).get(name) or SPECS[name]
 
+    @logged_tool
     def call(self, name: str, arguments: dict) -> dict:
         if name not in TOOL_SETS[self.tool_set]:
             return {"error": f"unknown tool {name!r}; tools: {list(TOOL_SETS[self.tool_set])}"}

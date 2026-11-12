@@ -20,6 +20,8 @@ from dataclasses import dataclass, field
 from functools import cache
 from typing import Protocol
 
+from era_agent.telemetry import logged_complete
+
 # USD per million input / output tokens (Anthropic list prices, 2026-09).
 PRICES = {
     "claude-sonnet-5": (2.00, 10.00),
@@ -93,6 +95,7 @@ class AnthropicModel:
         self.name = f"anthropic:{self.model}"
         self._client = anthropic.Anthropic(max_retries=4)
 
+    @logged_complete
     def complete(
         self, messages, tools=None, system=None, max_tokens=8000, tool_choice=None
     ) -> Response:
@@ -201,6 +204,7 @@ class OpenAICompatibleModel:
             else {}
         )
 
+    @logged_complete
     def complete(
         self, messages, tools=None, system=None, max_tokens=8000, tool_choice=None
     ) -> Response:
