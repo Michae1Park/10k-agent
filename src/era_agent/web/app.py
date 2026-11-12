@@ -2,6 +2,8 @@
 
   POST /api/chat                 {chat_id?, mode, question, as_of} → SSE trace, then "done"
   GET  /api/chats[/{id}]         saved chats (output/web/chats/<id>.json); DELETE removes one
+  GET  /api/chats/{id}/live      SSE: the running question's trace from the start (re-attach)
+  POST /api/chats/{id}/cancel    stop the running question at its next model or tool call
   GET  /api/sources/{id}         a cited chunk or XBRL fact
   GET  /api/companies            the V4 coverage
   GET  /api/reports              saved report runs (output/reports/<T>/<as-of>/report.json)
@@ -69,6 +71,7 @@ def create_app(settings: dict) -> FastAPI:
     app = FastAPI(title="era")
     jobs = engine.Jobs()
     chat_lock = threading.Lock()
+    running: dict[str, engine.Emitter] = {}  # chat id → its running question
     CHATS.mkdir(parents=True, exist_ok=True)
 
     def load_chat(chat_id: str) -> dict:
@@ -95,11 +98,14 @@ def create_app(settings: dict) -> FastAPI:
             else:
                 record = {"id": uuid.uuid4().hex[:12], "title": body.question[:80],
                           "created": time.time(), "messages": []}
+            if record["id"] in running:
+                raise HTTPException(409, "this chat already has a question running")
             user = {"role": "user", "mode": body.mode, "as_of": body.as_of,
                     "text": body.question, "time": time.time()}
             record["messages"].append(user)
             save_chat(record)
-        emit = engine.Emitter()
+            emit = engine.Emitter()
+            running[record["id"]] = emit
 
         def work():
             try:
@@ -108,14 +114,20 @@ def create_app(settings: dict) -> FastAPI:
                 message = {"role": "assistant", "time": time.time(), **result,
                            "trace": emit.log}
                 emit("done", chat_id=record["id"], message=message)
+            except engine.Cancelled:
+                message = {"role": "assistant", "mode": body.mode, "time": time.time(),
+                           "stop": "cancelled", "error": "Cancelled.", "trace": emit.log}
+                emit("error", chat_id=record["id"], message=message)
             except Exception as e:  # noqa: BLE001  the error is the reply
                 message = {"role": "assistant", "mode": body.mode, "time": time.time(),
                            "error": f"{type(e).__name__}: {e}", "trace": emit.log}
                 emit("error", chat_id=record["id"], message=message)
             with chat_lock:
-                saved = load_chat(record["id"])
-                saved["messages"].append(message)
-                save_chat(saved)
+                running.pop(record["id"], None)
+                if (CHATS / f"{record['id']}.json").exists():  # not deleted meanwhile
+                    saved = load_chat(record["id"])
+                    saved["messages"].append(message)
+                    save_chat(saved)
             emit.close()
 
         threading.Thread(target=work, daemon=True).start()
@@ -132,16 +144,36 @@ def create_app(settings: dict) -> FastAPI:
         for path in CHATS.glob("*.json"):
             c = json.loads(path.read_text())
             out.append({"id": c["id"], "title": c["title"], "updated": c.get("updated", 0),
-                        "messages": len(c["messages"])})
+                        "messages": len(c["messages"]), "running": c["id"] in running})
         return sorted(out, key=lambda c: -c["updated"])
 
     @app.get("/api/chats/{chat_id}")
     def get_chat(chat_id: str):
-        return load_chat(chat_id)
+        chat = load_chat(chat_id)
+        emit = running.get(chat_id)
+        return chat | {"running": emit.elapsed() if emit else None}
+
+    @app.get("/api/chats/{chat_id}/live")
+    def live_chat(chat_id: str):
+        emit = running.get(chat_id)
+        if not emit:
+            raise HTTPException(404, "nothing running in this chat")
+        return _sse(emit.events())
+
+    @app.post("/api/chats/{chat_id}/cancel")
+    def cancel_chat(chat_id: str):
+        emit = running.get(chat_id)
+        if not emit:
+            raise HTTPException(404, "nothing running in this chat")
+        emit.cancel.set()
+        emit("status", text="cancelling (after the current step)")
+        return {"ok": True}
 
     @app.delete("/api/chats/{chat_id}")
     def delete_chat(chat_id: str):
         load_chat(chat_id)
+        if emit := running.get(chat_id):
+            emit.cancel.set()
         (CHATS / f"{chat_id}.json").unlink()
         return {"ok": True}
 

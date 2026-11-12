@@ -7,7 +7,6 @@ tool calls and runs, and the pipeline's Clock.step, for the length of one run.
 """
 
 import json
-import queue
 import threading
 import time
 import uuid
@@ -46,26 +45,57 @@ def _cut(value) -> object:
     return value if len(text) <= RESULT_CHARS else text[:RESULT_CHARS] + " …(cut)"
 
 
+class Cancelled(BaseException):
+    """The user stopped the run. BaseException: the agents' `except Exception` must not catch it."""
+
+
 class Emitter:
-    """Events from a worker thread, read by the SSE response."""
+    """Events from a worker thread, kept so SSE responses can follow and re-attach."""
 
     def __init__(self):
-        self.q: queue.Queue = queue.Queue()
+        self.events_: list[dict] = []
         self.log: list[dict] = []  # kept with the chat message, to replay the trace
         self.started = time.perf_counter()
+        self.closed = False
+        self.cancel = threading.Event()
+        self._cond = threading.Condition()
+
+    def elapsed(self) -> float:
+        return round(time.perf_counter() - self.started, 2)
 
     def __call__(self, kind: str, **data) -> None:
-        event = {"type": kind, "t": round(time.perf_counter() - self.started, 2)} | data
+        event = {"type": kind, "t": self.elapsed()} | data
         if kind in ("model", "tool", "sub_start", "sub_end"):
             self.log.append(event)
-        self.q.put(event)
+        with self._cond:
+            self.events_.append(event)
+            self._cond.notify_all()
 
     def close(self) -> None:
-        self.q.put(None)
+        with self._cond:
+            self.closed = True
+            self._cond.notify_all()
+
+    def check(self) -> None:
+        if self.cancel.is_set():
+            raise Cancelled
 
     def events(self):
-        while (event := self.q.get()) is not None:
-            yield event
+        """Every event from the start, then new ones until the run ends."""
+        i = 0
+        while True:
+            with self._cond:
+                while i >= len(self.events_) and not self.closed:
+                    self._cond.wait(timeout=15)
+                    if i >= len(self.events_) and not self.closed:
+                        break  # no event for 15 s: send a keep-alive
+                batch, done = self.events_[i:], self.closed
+            i += len(batch)
+            yield from batch
+            if not batch and not done:
+                yield {"type": "ping"}
+            if done and i >= len(self.events_):
+                return
 
 
 def _trace_model(model, emit, scope: dict):
@@ -73,6 +103,7 @@ def _trace_model(model, emit, scope: dict):
     original = model.complete
 
     def complete(*args, **kwargs):
+        emit.check()
         emit("model_start", scope=scope.get("id"), tools=bool(kwargs.get("tools")))
         started = time.perf_counter()
         response = original(*args, **kwargs)
@@ -94,6 +125,7 @@ def _trace_tools(agent, emit, scope: dict):
     call = agent.toolbox.call
 
     def traced(name, arguments):
+        emit.check()
         emit("tool_start", scope=scope.get("id"), name=name, arguments=arguments)
         started = time.perf_counter()
         result = call(name, arguments)
@@ -108,8 +140,10 @@ def chat(settings: dict, mode: str, question: str, as_of: str, emit: Emitter) ->
     """One chat message in its mode → {"mode", "answer", "steps" | "investigation"}."""
     if not _gpu.acquire(blocking=False):
         emit("status", text="waiting for the running job to finish")
-        _gpu.acquire()
+        while not _gpu.acquire(timeout=1):
+            emit.check()
     try:
+        emit.check()
         emit("status", text="loading models" if _factory is None else "starting")
         agent = factory(settings)
         scope: dict = {}

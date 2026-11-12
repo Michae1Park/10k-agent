@@ -51,6 +51,7 @@ export interface AssistantMessage {
   answer?: Answer
   stop?: string
   seconds?: number
+  started?: number  // epoch ms the run started (live only)
   error?: string
   investigation?: { sub_runs: SubRun[]; log: string[]; fallback: boolean }
   trace?: TraceEvent[]
@@ -65,7 +66,7 @@ export interface UserMessage {
 
 export type Message = UserMessage | AssistantMessage
 
-export interface ChatSummary { id: string; title: string; updated: number; messages: number }
+export interface ChatSummary { id: string; title: string; updated: number; messages: number; running?: boolean }
 
 export async function getJSON<T>(url: string): Promise<T> {
   const r = await fetch(url)

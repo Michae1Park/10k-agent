@@ -127,9 +127,9 @@ export function activity(events: TraceEvent[]): string {
   }
 }
 
-export function LiveStatus({ events }: { events: TraceEvent[] }) {
-  const [start] = useState(() => Date.now())
-  const [now, setNow] = useState(start)
+export function LiveStatus({ events, since }: { events: TraceEvent[]; since?: number }) {
+  const [start] = useState(() => since ?? Date.now())
+  const [now, setNow] = useState(() => Date.now())
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id) }, [])
   const secs = Math.floor((now - start) / 1000)
   const tools = events.filter((e) => e.type === 'tool').length

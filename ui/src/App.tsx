@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getJSON } from './api'
 import type { ChatSummary } from './api'
+import { Spinner } from './components/AnswerView'
 import { ChatView } from './components/ChatView'
 import { ReportsView } from './components/ReportsView'
 import { SourceDrawer } from './components/SourceDrawer'
@@ -48,7 +49,8 @@ export default function App() {
             <ul className="-mx-1 flex-1 space-y-0.5 overflow-auto px-1">
               {chats.map((c) => (
                 <li key={c.id} className={`group flex items-center rounded-full ${c.id === chatId ? 'bg-neutral-300/70' : 'hover:bg-neutral-200'}`}>
-                  <button onClick={() => setChatId(c.id)} className="min-w-0 flex-1 truncate px-3 py-1.5 text-left text-sm text-neutral-800">{c.title}</button>
+                  <button onClick={() => setChatId(c.id)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left text-sm text-neutral-800">
+                    <span className="truncate">{c.title}</span>{c.running && <Spinner className="h-3 w-3" />}</button>
                   <button onClick={() => remove(c.id)} className="hidden px-3 text-neutral-400 group-hover:block hover:text-red-500">✕</button>
                 </li>
               ))}

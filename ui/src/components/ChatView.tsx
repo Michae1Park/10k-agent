@@ -16,7 +16,7 @@ function Assistant({ m, live, onSource }: { m: AssistantMessage; live?: boolean;
     <div className="flex gap-4">
       <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-neutral-300 to-neutral-700 text-sm text-white ${live ? 'animate-pulse' : ''}`}>✦</div>
       <div className="min-w-0 flex-1">
-      {live && !m.answer && !m.error && <div className="mb-3"><LiveStatus events={trace} /></div>}
+      {live && !m.answer && !m.error && <div className="mb-3"><LiveStatus events={trace} since={m.started} /></div>}
       {m.error && <p className="text-sm text-red-700">{m.error}</p>}
       {m.answer && <AnswerBody answer={m.answer} onSource={onSource} />}
       {m.investigation && m.investigation.sub_runs.length > 0 && (
@@ -55,33 +55,21 @@ export function ChatView({ chatId, onChat, onSource, companies }: {
   const [live, setLive] = useState<AssistantMessage | null>(null)
   const current = useRef<string | null>(chatId)
   const end = useRef<HTMLDivElement>(null)
+  const abort = useRef<AbortController | null>(null)
 
-  useEffect(() => {
-    if (chatId === current.current && messages.length) return
-    current.current = chatId
-    setLive(null)
-    if (!chatId) { setMessages([]); return }
-    getJSON<{ messages: Message[] }>(`/api/chats/${chatId}`).then((c) => {
-      setMessages(c.messages)
-      const lastUser = [...c.messages].reverse().find((m) => m.role === 'user')
-      if (lastUser && lastUser.role === 'user') { setMode(lastUser.mode); setAsOf(lastUser.as_of) }
-    })
-  }, [chatId])
+  // Leaving the view only stops listening; the run goes on in the server and is re-attached on return.
+  useEffect(() => () => abort.current?.abort(), [])
 
-  useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages.length, live?.trace?.length, live?.answer])
-
-  async function send() {
-    const question = text.trim()
-    if (!question || busy) return
-    setText(''); setBusy(true)
-    setMessages((ms) => [...ms, { role: 'user', mode, as_of: asOf, text: question }])
-    let msg: AssistantMessage = { role: 'assistant', mode, trace: [] }
-    setLive(msg)
+  /** Follow a run's event stream into `live`; resolves with the final message (null if we left). */
+  async function follow(url: string, init: RequestInit, start: AssistantMessage): Promise<AssistantMessage | null> {
+    abort.current?.abort()
+    const ctrl = new AbortController()
+    abort.current = ctrl
+    let msg = start
+    setLive(msg); setBusy(true)
     try {
-      await stream('/api/chat', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: current.current, mode, question, as_of: asOf }),
-      }, (e: TraceEvent) => {
+      await stream(url, init, (e: TraceEvent) => {
+        if (e.type === 'ping') return
         if (e.type === 'chat') {
           if (current.current !== e.chat_id) { current.current = e.chat_id; onChat(e.chat_id) }
           return
@@ -89,12 +77,55 @@ export function ChatView({ chatId, onChat, onSource, companies }: {
         if (e.type === 'done' || e.type === 'error') { msg = e.message; return }
         msg = { ...msg, trace: [...(msg.trace ?? []), e] }
         setLive(msg)
-      })
+      }, ctrl.signal)
     } catch (err) {
+      if (ctrl.signal.aborted) return null
       msg = { ...msg, error: String(err) }
     }
-    setMessages((ms) => [...ms, msg])
+    if (ctrl.signal.aborted) return null
     setLive(null); setBusy(false)
+    if (current.current) onChat(current.current)  // refresh the sidebar's running marks
+    return msg
+  }
+
+  async function load(id: string) {
+    const c = await getJSON<{ messages: Message[]; running: number | null }>(`/api/chats/${id}`)
+    if (current.current !== id) return
+    setMessages(c.messages)
+    const lastUser = [...c.messages].reverse().find((m) => m.role === 'user')
+    if (lastUser && lastUser.role === 'user') { setMode(lastUser.mode); setAsOf(lastUser.as_of) }
+    if (c.running != null) {
+      const msg = await follow(`/api/chats/${id}/live`, {},
+        { role: 'assistant', mode: lastUser?.mode ?? 'ask', trace: [], started: Date.now() - c.running * 1000 })
+      if (msg && current.current === id) load(id)  // the saved reply
+    }
+  }
+
+  useEffect(() => {
+    if (chatId === current.current && messages.length) return
+    abort.current?.abort()
+    current.current = chatId
+    setLive(null); setBusy(false)
+    if (!chatId) { setMessages([]); return }
+    load(chatId).catch(() => {})
+  }, [chatId])
+
+  async function cancel() {
+    if (current.current) await fetch(`/api/chats/${current.current}/cancel`, { method: 'POST' })
+  }
+
+  useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages.length, live?.trace?.length, live?.answer])
+
+  async function send() {
+    const question = text.trim()
+    if (!question || busy) return
+    setText('')
+    setMessages((ms) => [...ms, { role: 'user', mode, as_of: asOf, text: question }])
+    const msg = await follow('/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: current.current, mode, question, as_of: asOf }),
+    }, { role: 'assistant', mode, trace: [], started: Date.now() })
+    if (msg) setMessages((ms) => [...ms, msg])
   }
 
   const hint = MODES.find((m) => m.id === mode)!.hint
@@ -119,8 +150,14 @@ export function ChatView({ chatId, onChat, onSource, companies }: {
                 className="bg-transparent text-sm focus:outline-none" />
             </label>
             <span className="hidden min-w-0 flex-1 truncate text-xs text-neutral-400 md:inline">{hint}</span>
-            <button onClick={send} disabled={busy || !text.trim()} title="Send"
-              className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800 text-lg text-white hover:bg-neutral-900 disabled:bg-neutral-200 disabled:text-neutral-400">➤</button>
+            {busy ? (
+              <button onClick={cancel} title="Stop"
+                className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800 text-white hover:bg-neutral-900">
+                <span className="h-3.5 w-3.5 rounded-[3px] bg-white" /></button>
+            ) : (
+              <button onClick={send} disabled={!text.trim()} title="Send"
+                className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800 text-lg text-white hover:bg-neutral-900 disabled:bg-neutral-200 disabled:text-neutral-400">➤</button>
+            )}
           </div>
           </div>
   )
