@@ -10,4 +10,6 @@ uv run era serve                          # the API on :8000
 cd ui && npm install && npm run dev        # the UI on :5173 (proxies /api)
 ```
 
+Or all at once: `scripts/launch.sh` (logs in `output/logs/`, Ctrl+C stops everything).
+
 `npm run build` writes `ui/dist`, which `era serve` then serves at http://localhost:8000. Runs go one at a time (one GPU); chats are saved in `output/web/chats/`.
