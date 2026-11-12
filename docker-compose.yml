@@ -1,0 +1,23 @@
+# docker compose up --build   → UI + API on http://localhost:8000
+# Start the model server on the host first: scripts/serve_vllm.sh (port 8001).
+services:
+  era:
+    build: .
+    image: era-agent
+    network_mode: host            # reaches vLLM at localhost:8001 as config.yaml expects
+    env_file: .env                # SEC_USER_AGENT, TIINGO_API_KEY, FRED_API_KEY, ANTHROPIC_API_KEY
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+      - ./config.yaml:/app/config.yaml:ro
+      - hf-cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+volumes:
+  hf-cache:
