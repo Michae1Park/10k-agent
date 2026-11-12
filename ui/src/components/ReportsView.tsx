@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { getJSON, postJSON, stream, today } from '../api'
 import type { TraceEvent } from '../api'
 import { Spinner } from './AnswerView'
+import { NoteView } from './Readable'
 
 interface ReportRow {
   ticker: string; as_of: string; version: string; rating: string; price_target: number
@@ -130,7 +129,7 @@ function ReportDetail({ ticker, asOf, onBack }: { ticker: string; asOf: string; 
             {t}{t === 'exceptions' ? ` (${data.exceptions.length})` : ''}</button>
         ))}
       </div>
-      {tab === 'note' && <article className="prose-note rounded-3xl border border-neutral-200 bg-white p-8 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"><ReactMarkdown remarkPlugins={[remarkGfm]}>{data.note}</ReactMarkdown></article>}
+      {tab === 'note' && <NoteView note={data.note} />}
       {tab === 'exceptions' && (
         <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white"><table className="w-full text-sm">
           <thead><tr className="bg-neutral-50 text-left text-xs text-neutral-500"><th className="px-3 py-2">id</th><th className="px-3 py-2">severity</th><th className="px-3 py-2">item</th></tr></thead>

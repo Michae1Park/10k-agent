@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getJSON } from './api'
 import type { ChatSummary } from './api'
 import { Spinner } from './components/AnswerView'
+import { setTickers } from './components/Readable'
 import { ChatView } from './components/ChatView'
 import { ReportsView } from './components/ReportsView'
 import { SourceDrawer } from './components/SourceDrawer'
@@ -19,7 +20,8 @@ export default function App() {
   const loadChats = () => getJSON<ChatSummary[]>('/api/chats').then(setChats).catch(() => {})
   useEffect(() => {
     loadChats()
-    getJSON<{ ticker: string; name: string }[]>('/api/companies').then(setCompanies).catch(() => {})
+    getJSON<{ ticker: string; name: string }[]>('/api/companies')
+      .then((c) => { setTickers(c.map((x) => x.ticker)); setCompanies(c) }).catch(() => {})
   }, [])
 
   async function remove(id: string) {

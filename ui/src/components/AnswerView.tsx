@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Answer, Claim, SubRun, TraceEvent } from '../api'
+import { AnswerText } from './Readable'
 
 const STATUS: Record<string, string> = {
   verified: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -77,7 +78,7 @@ export function AnswerBody({ answer, onSource }: { answer: Answer; onSource: (id
   return (
     <div>
       {answer.abstained && <div className="mb-2 text-xs font-medium text-amber-700">Declined: the filings can't answer this</div>}
-      <p className="whitespace-pre-wrap leading-relaxed">{answer.answer}</p>
+      <AnswerText answer={answer} onSource={onSource} />
       {answer.table && <Table table={answer.table} />}
       {answer.scope_notice && <p className="mt-2 text-xs text-stone-500 italic">{answer.scope_notice}</p>}
       {answer.assumptions && answer.assumptions.length > 0 && (
