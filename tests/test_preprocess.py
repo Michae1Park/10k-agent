@@ -10,9 +10,9 @@ import re
 
 import pytest
 
-from tenk_agent.preprocess.blocks import Block
-from tenk_agent.preprocess.validation import ITEMS, ROLE_FIELDS, is_item_table, role_fits_block
-from tenk_agent.prompts import PROMPTS
+from era_agent.preprocess.blocks import Block
+from era_agent.preprocess.validation import ITEMS, ROLE_FIELDS, is_item_table, role_fits_block
+from era_agent.prompts import PROMPTS
 
 PROMPT = (PROMPTS / "structure.md").read_text(encoding="utf-8").split("<!-- END SYSTEM PROMPT")[0]
 LABEL = json.loads((PROMPTS / "structure.schema.json").read_text())["properties"]["labels"]["items"]
@@ -88,8 +88,8 @@ def test_other_tables_still_cannot_be_item_heading():
 
 
 def test_form_spec_drives_the_item_rules():
-    from tenk_agent.preprocess.forms import FormSpec, form_spec
-    from tenk_agent.preprocess.validation import Context, items_in_order, statement_kinds_in_item_8
+    from era_agent.preprocess.forms import FormSpec, form_spec
+    from era_agent.preprocess.validation import Context, items_in_order, statement_kinds_in_item_8
 
     assert form_spec("10-K").items == tuple(ITEMS)
     with pytest.raises(KeyError):

@@ -18,14 +18,14 @@ import os
 from dataclasses import asdict
 from pathlib import Path
 
-from tenk_agent.agent.loop import build_system
-from tenk_agent.agent.sec import SecData
-from tenk_agent.agent.tools import Toolbox
-from tenk_agent.generation.verify import verify_claim
-from tenk_agent.preprocess.blocks import cover_metadata, read_blocks
-from tenk_agent.preprocess.structure import Outline, assemble, validate
-from tenk_agent.retrieval.index import embedding_text
-from tenk_agent.store import Store, _child, _chunk
+from era_agent.agent.loop import build_system
+from era_agent.agent.sec import SecData
+from era_agent.agent.tools import Toolbox
+from era_agent.generation.verify import verify_claim
+from era_agent.preprocess.blocks import cover_metadata, read_blocks
+from era_agent.preprocess.structure import Outline, assemble, validate
+from era_agent.retrieval.index import embedding_text
+from era_agent.store import Store, _child, _chunk
 
 QUERIES = [
     "revenue growth", "risk factors competition", "share repurchase", "data center",

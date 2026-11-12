@@ -2,10 +2,10 @@
 
 import json
 
-from tenk_agent.agent.loop import Run
-from tenk_agent.agent.plan import NOT_FROM_SUB, Investigator
-from tenk_agent.agent.tools import Toolbox
-from tenk_agent.generation.answers import finalize
+from era_agent.agent.loop import Run
+from era_agent.agent.plan import NOT_FROM_SUB, Investigator
+from era_agent.agent.tools import Toolbox
+from era_agent.generation.answers import finalize
 from test_agent_loop import ANSWER, Scripted
 from test_agent_tools import FACT, make_sec, make_store
 

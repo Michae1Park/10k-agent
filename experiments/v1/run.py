@@ -2,8 +2,8 @@
 """V1 experiment: run the fixed retrieval pipeline on the retrieval gold questions and score
 it. Spec and results: experiments/V1_RETRIEVAL.md.
 
-  sub-questions → keyword + dense → RRF → rerank → round-robin → top k   (tenk_agent.retrieval)
-  Recall@1, @5, @8 and MRR against the gold chunks and their restatements   (tenk_agent.evaluation)
+  sub-questions → keyword + dense → RRF → rerank → round-robin → top k   (era_agent.retrieval)
+  Recall@1, @5, @8 and MRR against the gold chunks and their restatements   (era_agent.evaluation)
 
   taskset -c 16-31 python experiments/v1/run.py
   taskset -c 16-31 python experiments/v1/run.py --question aapl-tariffs-fy2025
@@ -27,14 +27,14 @@ from pathlib import Path
 
 import yaml
 
-from tenk_agent.evaluation.retrieval_metrics import (
+from era_agent.evaluation.retrieval_metrics import (
     first_gold_rank,
     gold_chunks,
     recall_at,
     reciprocal_rank,
 )
-from tenk_agent.retrieval.search import SubQuestionRetriever
-from tenk_agent.store import Store
+from era_agent.retrieval.search import SubQuestionRetriever
+from era_agent.store import Store
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = Path(__file__).resolve().parent / "config.yaml"

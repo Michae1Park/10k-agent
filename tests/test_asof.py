@@ -5,9 +5,9 @@ import sqlite3
 from datetime import date
 from pathlib import Path
 
-from tenk_agent.asof import AsOf
-from tenk_agent.retrieval.index import load
-from tenk_agent.store import Store
+from era_agent.asof import AsOf
+from era_agent.retrieval.index import load
+from era_agent.store import Store
 from test_store import APPLE, filing
 
 FILED = "2025-11-01"  # test_store.filing's filing date
@@ -79,7 +79,7 @@ def test_a_v3_database_is_migrated_and_backfilled(tmp_path):
 
 def test_v4_modules_always_pass_an_asof():
     """V3 may open a Store at today's date; V4 code (facts/, research/) never relies on that."""
-    src = Path(__file__).resolve().parents[1] / "src" / "tenk_agent"
+    src = Path(__file__).resolve().parents[1] / "src" / "era_agent"
     for folder in ("facts", "research"):
         for path in (src / folder).rglob("*.py"):
             for call in re.findall(r"\bStore\(([^)]*)\)", path.read_text()):
@@ -91,7 +91,7 @@ def test_today_default_is_today():
 
 
 def test_id_prefixes_by_form():
-    from tenk_agent.store import id_prefix
+    from era_agent.store import id_prefix
 
     assert id_prefix("UBER", 2025) == "UBER-FY2025"
     assert id_prefix("UBER", 2026, "Q2", "10-Q") == "UBER-2026Q2"

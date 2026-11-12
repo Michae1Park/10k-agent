@@ -1,8 +1,8 @@
 """Rule-based structure for 10-Qs and releases (preprocess/rules.py)."""
 
-from tenk_agent.preprocess.blocks import Block
-from tenk_agent.preprocess.forms import RELEASE, TEN_Q
-from tenk_agent.preprocess.rules import label_blocks, label_release, release_blocks
+from era_agent.preprocess.blocks import Block
+from era_agent.preprocess.forms import RELEASE, TEN_Q
+from era_agent.preprocess.rules import label_blocks, label_release, release_blocks
 
 
 def para(i, text, emph="B", **kw):
@@ -59,7 +59,7 @@ def test_release_exhibits_become_pseudo_items():
 
 
 def test_ten_k_quirks_and_statement_headings():
-    from tenk_agent.preprocess.forms import TEN_K
+    from era_agent.preprocess.forms import TEN_K
 
     blocks = [
         para(1, "Ite m 1A. Risk Factors"),  # TRIP

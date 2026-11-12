@@ -18,10 +18,10 @@ from pathlib import Path
 import yaml
 from run import CONFIG, ROOT, _write, print_scores
 
-from tenk_agent.evaluation import gold
-from tenk_agent.evaluation.judge import Judge
-from tenk_agent.evaluation.scoring import correct, summarize
-from tenk_agent.models import get_model
+from era_agent.evaluation import gold
+from era_agent.evaluation.judge import Judge
+from era_agent.evaluation.scoring import correct, summarize
+from era_agent.models import get_model
 
 
 def main() -> None:

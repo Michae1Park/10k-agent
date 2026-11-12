@@ -227,5 +227,5 @@ credentials.yaml
 # Run outputs (reports, workbooks, scores): local only
 /output/
 
-# Gold set review PDFs: regenerate with `tenk gold render`
+# Gold set review PDFs: regenerate with `era gold render`
 evaluation/gold/*.pdf

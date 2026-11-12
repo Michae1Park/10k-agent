@@ -26,13 +26,13 @@ from pathlib import Path
 
 import yaml
 
-from tenk_agent.evaluation import gold as gold_set
-from tenk_agent.evaluation.retrieval_metrics import gold_chunks
-from tenk_agent.evaluation.scoring import grade, summarize
-from tenk_agent.generation.generate import build_prompt, generate
-from tenk_agent.models import get_model
-from tenk_agent.retrieval.search import SubQuestionRetriever
-from tenk_agent.store import ChunkRecord, Store
+from era_agent.evaluation import gold as gold_set
+from era_agent.evaluation.retrieval_metrics import gold_chunks
+from era_agent.evaluation.scoring import grade, summarize
+from era_agent.generation.generate import build_prompt, generate
+from era_agent.models import get_model
+from era_agent.retrieval.search import SubQuestionRetriever
+from era_agent.store import ChunkRecord, Store
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = Path(__file__).resolve().parent / "config.yaml"

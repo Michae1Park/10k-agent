@@ -8,9 +8,9 @@ How each of the five evaluation layers is run. Rules and pass bars live in the [
 | --- | --- | --- | --- |
 | 1 Extraction | Are extracted KPIs right? | Score against 337 gold labels | `evaluation/extraction.py` |
 | 2 Model integrity | Does every model tie out? | Integrity checks on every model built | `research/model/checks.py` |
-| 3 Forecast | Is the forecast accurate? | Backtest vs baselines, ablations, leakage probe | `python -m tenk_agent.evaluation.backtest` |
+| 3 Forecast | Is the forecast accurate? | Backtest vs baselines, ablations, leakage probe | `python -m era_agent.evaluation.backtest` |
 | 4 Valuation | Is it deterministic and sane? | Rerun on identical inputs; WACC sweep | `test_valuation.py`, backtest |
-| 5 Note | Is every number traced? | Trace, sections, judge rubric, seeded errors | `python -m tenk_agent.evaluation.note_eval` |
+| 5 Note | Is every number traced? | Trace, sections, judge rubric, seeded errors | `python -m era_agent.evaluation.note_eval` |
 | Ask, Research | Are answers right? | Agent on gold questions, then an LLM judge | `experiments/v4/ask_run.py`, `research_run.py` |
 
 The judge (gpt-oss-20b) runs after the main model frees the GPU.

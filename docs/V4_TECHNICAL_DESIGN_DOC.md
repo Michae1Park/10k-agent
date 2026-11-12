@@ -88,7 +88,7 @@ One row per boundary. Each is stated in its section; the full schema is in [V4_I
   <img src="img/v4-architecture.svg" alt="V4 data and control flow. Sources are fetched into a raw cache and built offline along four lanes (text, structured facts, KPI and guidance extraction, market data) into one SQLite file read only through the AsOf filter. Ask and Research are agent runs whose answers pass a claim check that resolves every cited id. Report is a fixed pipeline of eleven steps, S1 to S11, with the LLM only in S2, S4, S9 and S10; it writes a note, a workbook and a saved model version that Ask and Research can cite. Evaluation grades extraction, model integrity, forecast, valuation and the note." width="100%">
 </p>
 
-**Build, offline:** `tenk fetch` fills the raw cache. `tenk build` then runs four lanes into the store: text, facts, KPIs (LLM extraction) and market data. New filings are appended without a rebuild.
+**Build, offline:** `era fetch` fills the raw cache. `era build` then runs four lanes into the store: text, facts, KPIs (LLM extraction) and market data. New filings are appended without a rebuild.
 
 **Run, at one as-of:**
 
@@ -153,14 +153,14 @@ Code: companies, EDGAR filings, market data, cross-checks and Form 4 (`acquisiti
 | Interface | Contract |
 |---|---|
 | **Raw cache** (1) | One folder per filing (`raw/filings/<T>/<period>-<form>/`); `manifest.json` lists each filing's form, period, filing date, acceptance time and retrieval time |
-| **`companies.yaml`** | Per company: CIK (written by `tenk companies verify`), sector (peers = same sector), template, main KPI |
+| **`companies.yaml`** | Per company: CIK (written by `era companies verify`), sector (peers = same sector), template, main KPI |
 | **Store** (2) | Tables `filings`, `chunks`, `facts`, `kpis`, `guidance`, `market`, `insider_tx`, `model_versions`. **Every row carries the date it became public** |
 | **Store reads** (2) | `Store(path, asof)`: every read method filters by that as-of |
 | **Ids** | Chunks `UBER-2026Q2-ER-EX99-005`; facts `xbrl:<T>:<taxonomy>:<concept>:<accession>:<start>/<end>`; derived quarters `q:<T>:<metric>:<period>` |
 
 ### 3.2 Rules
 
-**Build lanes** (`tenk fetch`, then `tenk build`):
+**Build lanes** (`era fetch`, then `era build`):
 
 | Source | Fetch | Build → table |
 |---|---|---|
@@ -214,7 +214,7 @@ Read KPIs and guidance from earnings releases into checked, quoted rows.
 
 Extraction is a second pass that runs after chunking: it reads the release chunks the data layer (§3) already built, not the raw filing. Only releases are read: they are the one source that carries every company's operating KPIs (bookings, volume, segments) and next-quarter guidance, while figures 10-Ks and 10-Qs tag come from XBRL (spec §1.5).
 
-Code: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an ablation), registry (`facts/kpis.yaml`), loader (`tenk build --stage kpis`).
+Code: LLM extractor (`facts/extract.py`), rules extractor (`facts/rules.py`, an ablation), registry (`facts/kpis.yaml`), loader (`era build --stage kpis`).
 
 | Interface | Contract |
 |---|---|
@@ -272,7 +272,7 @@ A tool is a function the agent calls with JSON arguments; it returns JSON with c
 | Investigate | its sub-runs use `ask` or `research`; the planner and combiner call no tools |
 | Report sub-agents (S2 events, S4 proposer, S9 debates) | tool set `ask` |
 | Report code steps, builders, evaluation | their blocks directly, no tools |
-| A person | `tenk tool NAME key=value …` (`--list` prints the schemas) |
+| A person | `era tool NAME key=value …` (`--list` prints the schemas) |
 
 | Group | Tools | `ask` | `research` |
 |---|---|:-:|:-:|
@@ -873,13 +873,13 @@ How it works: [V4_OUTPUTS.md](stages/V4_OUTPUTS.md). Folder and tabs: [V4_INTERF
 
 Write the note and workbook a reviewer reads, check the workbook against the model, and record the review.
 
-Code: workbook and parity (`research/export/workbook.py`), other tabs and PDF (`report.py`), renderer (headless Chrome), review (`tenk research approve`).
+Code: workbook and parity (`research/export/workbook.py`), other tabs and PDF (`report.py`), renderer (headless Chrome), review (`era research approve`).
 
 | Interface | Contract |
 |---|---|
 | **Report folder** (12) | `output/reports/<TICKER>/<as_of>/`: note (`.md`, `.pdf`), workbook, artifacts; saved as a version with its parent |
 | **Workbook** | Tabs: Model, Assumptions, Summary, Scenarios, Valuation, DCF, Revisions, Model (prior), Checks, Log (contents: spec §2.3). Inputs blue, formulas black, links green |
-| **Review** | `tenk research approve TICKER:vN --by INITIALS` marks a version reviewed |
+| **Review** | `era research approve TICKER:vN --by INITIALS` marks a version reviewed |
 
 ### 11.2 Rules
 
@@ -996,8 +996,8 @@ Per-block cases: §3.3, §4.3, §5.4, §6.3, §7.3, §8.3, §9.3, §10.3, §11.3
 
 | File | Holds | Pinned |
 |---|---|---|
-| `config.yaml` (`TENK_CONFIG`) | Retrieval, generation and agent knobs | Per experiment |
-| `companies.yaml` (`TENK_COMPANIES`) | Coverage, data folder, window; per company CIK, sector, template, main KPI | Per experiment |
+| `config.yaml` (`ERA_CONFIG`) | Retrieval, generation and agent knobs | Per experiment |
+| `companies.yaml` (`ERA_COMPANIES`) | Coverage, data folder, window; per company CIK, sector, template, main KPI | Per experiment |
 | `research.yaml` | Forecast, scenarios, proposer, LLM budgets, valuation | Per experiment |
 | `facts/kpis.yaml`, `facts/metrics.yaml` | KPI registry; XBRL concepts per metric | With the code |
 | `research/model/templates/*.yaml` | Model templates | With the code |
@@ -1011,23 +1011,23 @@ Per-block cases: §3.3, §4.3, §5.4, §6.3, §7.3, §8.3, §9.3, §10.3, §11.3
 - **Scenarios:** weights 25/50/25; shocks ±1σ.
 - **Valuation:** 60/40 multiple/DCF; scenario multiples ±15%; terminal growth 3% (grid 2.5–3.5%); 10 DCF years; β from monthly returns since 2023; debt-weight threshold 10%; Buy +15%, Sell −10%.
 
-**Credentials.** Each user types in their own with `tenk setup` (`credentials.yaml`, gitignored). Environment variables take precedence. A missing one stops the command with an error naming it. `data/` and `output/` are never committed.
+**Credentials.** Each user types in their own with `era setup` (`credentials.yaml`, gitignored). Environment variables take precedence. A missing one stops the command with an error naming it. `data/` and `output/` are never committed.
 
 ## Appendix B. CLI
 
 | Command | Does |
 |---|---|
-| `tenk companies verify` | Resolve CIKs, year-ends, filing counts |
-| `tenk fetch [--forms …] [--market]` | Fetch filings; `--market`: prices, macro, ERP |
-| `tenk build --stage chunk,load,append,embed,pages,facts,market,kpis` | Build stages |
-| `tenk research report TICKER… --as-of D [--no-llm] [--resume]` | Report mode |
-| `tenk research approve TICKER:vN --by INITIALS` | Mark a version reviewed |
-| `tenk investigate "question" --as-of D` | Investigate mode: plan, sub-runs, combined answer |
-| `tenk setup` | Type in your credentials |
-| `tenk tool NAME key=value …` | Run one tool by hand (`--list`: schemas) |
-| `python -m tenk_agent.research.{model.history,forecast,valuation} TICKER… AS_OF` | One stage alone (`valuation --all`: relative ratings) |
-| `python -m tenk_agent.evaluation.backtest [--label] [--proposer] [--long]` | Backtest and ablations |
-| `python -m tenk_agent.evaluation.note_eval FOLDER…` | Layer 5 |
+| `era companies verify` | Resolve CIKs, year-ends, filing counts |
+| `era fetch [--forms …] [--market]` | Fetch filings; `--market`: prices, macro, ERP |
+| `era build --stage chunk,load,append,embed,pages,facts,market,kpis` | Build stages |
+| `era research report TICKER… --as-of D [--no-llm] [--resume]` | Report mode |
+| `era research approve TICKER:vN --by INITIALS` | Mark a version reviewed |
+| `era investigate "question" --as-of D` | Investigate mode: plan, sub-runs, combined answer |
+| `era setup` | Type in your credentials |
+| `era tool NAME key=value …` | Run one tool by hand (`--list`: schemas) |
+| `python -m era_agent.research.{model.history,forecast,valuation} TICKER… AS_OF` | One stage alone (`valuation --all`: relative ratings) |
+| `python -m era_agent.evaluation.backtest [--label] [--proposer] [--long]` | Backtest and ablations |
+| `python -m era_agent.evaluation.note_eval FOLDER…` | Layer 5 |
 | `experiments/v4/ask_run.py`, `research_run.py` | Ask and Research gold runs |
 | `experiments/v4/llm_baseline.py --from LABEL` | No-tools LLM backtest baseline |
 | `experiments/v4/investigate_run.py` | Investigate gold run and its single-Research baseline |
@@ -1035,7 +1035,7 @@ Per-block cases: §3.3, §4.3, §5.4, §6.3, §7.3, §8.3, §9.3, §10.3, §11.3
 ## Appendix C. Code layout
 
 ```text
-src/tenk_agent/
+src/era_agent/
   asof.py corpus.py store.py models.py cli.py
   acquisition/   edgar.py filings.py companies.py market.py crosscheck.py insiders.py
   preprocess/    forms.py rules.py blocks.py structure.py validation.py

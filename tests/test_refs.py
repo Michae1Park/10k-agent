@@ -2,7 +2,7 @@
 
 import pytest
 
-from tenk_agent.research.refs import Resolver, parse, xbrl_id
+from era_agent.research.refs import Resolver, parse, xbrl_id
 from test_agent_tools import ACCESSION, FACT, tools  # noqa: F401  (fixture)
 
 

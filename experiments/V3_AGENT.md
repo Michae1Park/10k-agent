@@ -31,7 +31,7 @@ One self-contained set, [agent-gold-fy2025.jsonl](../evaluation/gold/agent-gold-
 | `generation-gold-fy2025` | 54 | 38 / 16 | V2's set, copied in (one question gained a `with_sec_data` override, below). V2's own file stays as V2's gold |
 | `agent-gold-fy2025` (new) | 24 | 16 / 8 | What V2 couldn't do: calculation, several steps, SEC data, knowing when not to use a tool |
 
-The 24 new questions (`tenk gold --gold evaluation/gold/agent-gold-fy2025.jsonl render` for the review PDF of all 78):
+The 24 new questions (`era gold --gold evaluation/gold/agent-gold-fy2025.jsonl render` for the review PDF of all 78):
 
 | Kind | Questions | Example | Scored on |
 |---|---|---|---|
@@ -61,7 +61,7 @@ SEC data comes from the cache (`data/raw/edgar/`, fetched 2026-09-30) with the c
 
 ## 3. Agent
 
-Spec: [docs/stages/V3_AGENT.md](../docs/stages/V3_AGENT.md). Code: [agent/](../src/tenk_agent/agent/). Settings: [config.yaml](v3/config.yaml).
+Spec: [docs/stages/V3_AGENT.md](../docs/stages/V3_AGENT.md). Code: [agent/](../src/era_agent/agent/). Settings: [config.yaml](v3/config.yaml).
 
 ```
 question ─► model ──tool calls──► tools ─► model ─► … ─► JSON answer (V2's format) ─► claim check
@@ -70,7 +70,7 @@ question ─► model ──tool calls──► tools ─► model ─► … �
 | Setting | Value |
 |---|---|
 | Loop | LangGraph `model ⇄ tools`, over the project's own `Model` interface |
-| Prompt | [agent.md](../src/tenk_agent/prompts/agent.md): how to work (plan, cover every company and year, calculator for all arithmetic), V2's rules, the corpus table, V2's answer format |
+| Prompt | [agent.md](../src/era_agent/prompts/agent.md): how to work (plan, cover every company and year, calculator for all arithmetic), V2's rules, the corpus table, V2's answer format |
 | First turn | Must be a tool call (`tool_choice: required`) |
 | Budget | 20 tool calls; a repeated call returns an error; then one answer turn with tools off. The same once the conversation reaches 20k input tokens (the server holds 32k) |
 | Answer | A message (not a tool call) holding a JSON object with `answer`; anything else gets one "only the JSON" retry |
@@ -213,4 +213,4 @@ Round 1 (before the grounding fix): `text` 85.2%, `full` 91.5% of number and dec
 | Variance between runs (up to 7 points) | Repeat each variant 3× and report the spread |
 | Amazon's $128.3B capex scored wrong | Add it as an acceptable answer (still open from V2) |
 | A derived number's inputs left out of the answer | Prompt: state the inputs of every calculated number |
-| The SEC cache is a snapshot (2026-09-30) | `full`'s answers about recent filings (FY2026) depend on it; refresh with `tenk fetch --refresh` |
+| The SEC cache is a snapshot (2026-09-30) | `full`'s answers about recent filings (FY2026) depend on it; refresh with `era fetch --refresh` |

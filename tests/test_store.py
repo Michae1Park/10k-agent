@@ -2,12 +2,12 @@
 
 import pytest
 
-from tenk_agent.retrieval.index import load
-from tenk_agent.store import Store
+from era_agent.retrieval.index import load
+from era_agent.store import Store
 
 
 def filing(ticker: str, year: int, period_end: str, chunks: list[dict]) -> tuple:
-    """(metadata.json, document, chunks) for one filing, as tenk_agent.retrieval.index.load
+    """(metadata.json, document, chunks) for one filing, as era_agent.retrieval.index.load
     takes them."""
     meta = {
         "ticker": ticker,
@@ -75,7 +75,7 @@ def test_reloading_rebuilds_the_database(tmp_path):
 def test_kpis_and_guidance_are_dated_by_their_release(tmp_path):
     from datetime import date
 
-    from tenk_agent.asof import AsOf
+    from era_agent.asof import AsOf
 
     kpi = {"metric": "trips", "segment": "total", "value": 3.1, "unit": "count millions",
            "chunk_id": "UBER-2026Q2-ER-EX99-004", "quote": "Trips 3.1", "definition_version": 1}
@@ -94,7 +94,7 @@ def test_kpis_and_guidance_are_dated_by_their_release(tmp_path):
 
 
 def test_search_filters_by_period_and_form(tmp_path):
-    from tenk_agent.store import period_parts
+    from era_agent.store import period_parts
 
     k10 = filing("AAPL", 2025, "2025-09-27", [prose("7", "Services revenue grew.")])
     q10 = filing("AAPL", 2026, "2026-03-28", [prose("I.2", "Services revenue grew again.")])

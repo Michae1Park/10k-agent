@@ -1,13 +1,13 @@
 # V1 · Retrieval: question → the chunks that answer it
 
-**Builds on** V0: its chunks, loaded into a database. No LLM. **Code:** [`retrieval/`](../../src/tenk_agent/retrieval/). **Design and results:** [experiments/V1_RETRIEVAL.md](../../experiments/V1_RETRIEVAL.md): with parent-child chunks, Recall@5 87.3% and MRR 0.758 on 46 questions. **Run it:** [Getting started](../GETTING_STARTED.md#4-ask). Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
+**Builds on** V0: its chunks, loaded into a database. No LLM. **Code:** [`retrieval/`](../../src/era_agent/retrieval/). **Design and results:** [experiments/V1_RETRIEVAL.md](../../experiments/V1_RETRIEVAL.md): with parent-child chunks, Recall@5 87.3% and MRR 0.758 on 46 questions. **Run it:** [Getting started](../GETTING_STARTED.md#4-ask). Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
 
 ## Data
 
 | Data | Where |
 |---|---|
 | **Database** (`db`) | `data/v0-chunking/parent_child.db`; also `rule.db`, `agentic.db` |
-| Chunks (parents), children, filings, sections; FTS5 index | tables in the database, written by `tenk build --stage load` |
+| Chunks (parents), children, filings, sections; FTS5 index | tables in the database, written by `era build --stage load` |
 | Vectors (1,024-d, cosine) | `chunks_vec`, `children_vec`, written by `--stage embed`; the model in `meta` |
 | Embedding model, reranker | Hugging Face cache, downloaded on first use |
 | Gold questions | [evaluation/gold/retrieval-gold-fy2025.jsonl](../../evaluation/gold/retrieval-gold-fy2025.jsonl) ([format](#gold-questions)) |
@@ -40,7 +40,7 @@
 
 | Output | Where |
 |---|---|
-| Sub-questions with their company and fiscal-year filters; top k with rerank scores | terminal (`tenk search`) |
+| Sub-questions with their company and fiscal-year filters; top k with rerank scores | terminal (`era search`) |
 | V1 experiment: per question, Recall@k, reciprocal rank, first gold rank, every search's candidates | `output/retrieval/<label>/results.json` |
 | V1 experiment: totals, by kind, missed and unscorable questions | terminal, `output/retrieval/<label>/scores.json` |
 
@@ -61,7 +61,7 @@ Each chunk and child is embedded and reranked under a header line naming its com
 
 ## Gold questions
 
-One JSON object per line ([`evaluation/gold.py`](../../src/tenk_agent/evaluation/gold.py)); the V2 set adds 8 declines to V1's 46. `tenk gold --gold <file>` lists a set with its evidence resolved; `tenk gold show <id>` prints one with its source text; `tenk gold render` writes the review PDFs; `tenk gold verify <id> --by <initials>` records a reviewer's sign-off.
+One JSON object per line ([`evaluation/gold.py`](../../src/era_agent/evaluation/gold.py)); the V2 set adds 8 declines to V1's 46. `era gold --gold <file>` lists a set with its evidence resolved; `era gold show <id>` prints one with its source text; `era gold render` writes the review PDFs; `era gold verify <id> --by <initials>` records a reviewer's sign-off.
 
 | Field | Meaning |
 |---|---|

@@ -63,12 +63,12 @@
   <path class="edge" d="M 913 160.0 H 944" fill="none" stroke="#5a6b7a" stroke-width="1.6" marker-end="url(#arrow)"/>
   <rect class="work" x="40" y="276" width="350" height="120" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="215.0" y="306" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">6 · Load</text>
-  <text class="sub" x="215.0" y="332" text-anchor="middle" font-size="14" fill="#4a5a68">tenk build --stage load</text>
+  <text class="sub" x="215.0" y="332" text-anchor="middle" font-size="14" fill="#4a5a68">era build --stage load</text>
   <text class="sub" x="215.0" y="352" text-anchor="middle" font-size="14" fill="#4a5a68">chunks, children, filings, sections;</text>
   <text class="sub" x="215.0" y="372" text-anchor="middle" font-size="14" fill="#4a5a68">FTS5 keyword index</text>
   <rect class="work" x="415" y="276" width="350" height="120" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="590.0" y="306" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">7 · Embed</text>
-  <text class="sub" x="590.0" y="332" text-anchor="middle" font-size="14" fill="#4a5a68">tenk build --stage embed</text>
+  <text class="sub" x="590.0" y="332" text-anchor="middle" font-size="14" fill="#4a5a68">era build --stage embed</text>
   <text class="sub" x="590.0" y="352" text-anchor="middle" font-size="14" fill="#4a5a68">Qwen3-Embedding-0.6B, 1,024-d, sqlite-vec</text>
   <text class="sub" x="590.0" y="372" text-anchor="middle" font-size="14" fill="#4a5a68">under a header: company, year, Item</text>
   <rect class="sink" x="790" y="276" width="350" height="120" rx="7" fill="#f0eaf7" stroke="#7c62a0" stroke-width="1.5"/>

@@ -3,7 +3,7 @@
   taskset -c 16-31 uv run python experiments/v4/ask_run.py [--question ID] [--resume]
   taskset -c 16-31 uv run python experiments/v4/ask_run.py --score    # rescore, after judge.py
 
-Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and TENK_COMPANIES=companies.yaml.
+Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and ERA_COMPANIES=companies.yaml.
 Text answers are judged afterwards: serve the judge, run experiments/v2/judge.py --config
 experiments/v4/ask_config.yaml, then --score. Writes output/generation/<label>/results.json and
 scores.json: V3's scores (evaluation/scoring.py) plus the two frozen bars (design doc §12.2):
@@ -26,16 +26,16 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "v2"))
 from run import _verdict, _write, print_scores  # noqa: E402  (experiments/v2/run.py)
 
-from tenk_agent.agent.loop import Agent  # noqa: E402
-from tenk_agent.agent.tools import Toolbox  # noqa: E402
-from tenk_agent.asof import AsOf  # noqa: E402
-from tenk_agent.evaluation import gold  # noqa: E402
-from tenk_agent.evaluation.answer_metrics import matches  # noqa: E402
-from tenk_agent.evaluation.scoring import grade, summarize  # noqa: E402
-from tenk_agent.models import get_model  # noqa: E402
-from tenk_agent.research.refs import Resolver  # noqa: E402
-from tenk_agent.retrieval.search import SubQuestionRetriever  # noqa: E402
-from tenk_agent.store import Store, period_parts  # noqa: E402
+from era_agent.agent.loop import Agent  # noqa: E402
+from era_agent.agent.tools import Toolbox  # noqa: E402
+from era_agent.asof import AsOf  # noqa: E402
+from era_agent.evaluation import gold  # noqa: E402
+from era_agent.evaluation.answer_metrics import matches  # noqa: E402
+from era_agent.evaluation.scoring import grade, summarize  # noqa: E402
+from era_agent.models import get_model  # noqa: E402
+from era_agent.research.refs import Resolver  # noqa: E402
+from era_agent.retrieval.search import SubQuestionRetriever  # noqa: E402
+from era_agent.store import Store, period_parts  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = Path(__file__).resolve().parent / "ask_config.yaml"

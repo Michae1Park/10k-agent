@@ -1,9 +1,9 @@
-# Settings for the tenk CLI (TENK_CONFIG=<file> to use another). One section per stage; each
+# Settings for the era CLI (ERA_CONFIG=<file> to use another). One section per stage; each
 # experiment pins its own copy in experiments/v*/config.yaml. Paths are relative to the repo root.
 # Specs: docs/stages/V0_PARSING_CHUNKING.md, docs/stages/V1_RETRIEVAL.md, docs/stages/V2_GENERATION.md.
 
-data_dir: data                                          # tenk fetch → data/raw/filings/<TICKER>/FY<year>/
-build:                                                  # tenk build
+data_dir: data                                          # era fetch → data/raw/filings/<TICKER>/FY<year>/
+build:                                                  # era build
   out: data/v4/build                                    # per-filing work files, and <method>.db
   methods: [parent_child]                               # rule | parent_child | agentic (V1's best: parent_child)
 db: data/v4/build/parent_child.db                       # what search, ask and chat read
@@ -29,7 +29,7 @@ chunking:                                               # V0 chunkers
   overlap_chars: 600                                    # C7: longest paragraph carried into the next chunk
 
 retrieval:                                              # V1
-  embedder: local:Qwen/Qwen3-Embedding-0.6B             # must match the vectors in db (tenk build --stage embed)
+  embedder: local:Qwen/Qwen3-Embedding-0.6B             # must match the vectors in db (era build --stage embed)
   reranker: local:BAAI/bge-reranker-v2-m3               # cross-encoder over (question, header + chunk)
   candidates: 40                                        # per retriever, per sub-question; and the fused list cut before reranking
   rrf_k: 60                                             # reciprocal rank fusion constant
@@ -45,7 +45,7 @@ generation:                                             # V2
   base_url: http://localhost:8001/v1                    # vLLM, for openai:* models
   thinking: false                                       # Qwen's reasoning mode; null = model default
   max_tokens: 4000
-  prompt: src/tenk_agent/prompts/answer.md              # rules + answer format; {corpus} = the filings table
+  prompt: src/era_agent/prompts/answer.md              # rules + answer format; {corpus} = the filings table
 
 agent:                                                  # V3
   tools: full                                           # full | text (no xbrl_facts, edgar_filings): the ablation

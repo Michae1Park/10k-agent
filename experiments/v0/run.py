@@ -2,8 +2,8 @@
 """V0 experiment: preprocess a 10-K excerpt once, chunk it three ways, score each against the
 ground truth. Spec and results: experiments/V0_PARSING_CHUNKING.md.
 
-  preprocess  HTML → blocks → LLM labels (cached) → document      tenk_agent.preprocess
-  chunk       document → chunks, per method                     tenk_agent.chunking
+  preprocess  HTML → blocks → LLM labels (cached) → document      era_agent.preprocess
+  chunk       document → chunks, per method                     era_agent.chunking
   score       chunks vs the ground truth                        score.py
 
   taskset -c 16-31 python experiments/v0/run.py                  # all stages (LLM steps cached)
@@ -24,8 +24,8 @@ from pathlib import Path
 
 import yaml
 
-from tenk_agent.chunking import METHODS, chunk
-from tenk_agent.preprocess import StaleLabels, preprocess
+from era_agent.chunking import METHODS, chunk
+from era_agent.preprocess import StaleLabels, preprocess
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = Path(__file__).resolve().parent / "config.yaml"

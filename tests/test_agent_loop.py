@@ -2,9 +2,9 @@
 
 import json
 
-from tenk_agent.agent.loop import ANSWER_NOW, Agent
-from tenk_agent.agent.tools import Toolbox
-from tenk_agent.models import Response, ToolCall
+from era_agent.agent.loop import ANSWER_NOW, Agent
+from era_agent.agent.tools import Toolbox
+from era_agent.models import Response, ToolCall
 from test_agent_tools import FACT, make_sec, make_store
 
 ANSWER = {

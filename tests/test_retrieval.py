@@ -1,10 +1,10 @@
 import numpy as np
 
-from tenk_agent.corpus import resolve_company
-from tenk_agent.retrieval.decompose import QueryDecomposer, companies_in, slots, years_in
-from tenk_agent.retrieval.index import embed_corpus, load
-from tenk_agent.retrieval.search import HybridSearch, SubQuestionRetriever, fuse
-from tenk_agent.store import Store
+from era_agent.corpus import resolve_company
+from era_agent.retrieval.decompose import QueryDecomposer, companies_in, slots, years_in
+from era_agent.retrieval.index import embed_corpus, load
+from era_agent.retrieval.search import HybridSearch, SubQuestionRetriever, fuse
+from era_agent.store import Store
 from test_store import filing, prose
 
 

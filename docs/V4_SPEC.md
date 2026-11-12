@@ -509,7 +509,7 @@ Investigate gets its own gold set of 10–15 multi-part questions. The same ques
 
 ## 7. Pre-build checks and decisions (all resolved)
 
-- [x] Each ticker, listing status, and that all eight file 10-K and 10-Q (`tenk companies verify`)
+- [x] Each ticker, listing status, and that all eight file 10-K and 10-Q (`era companies verify`)
 - [x] Fiscal year-ends (all December) and KPI definitions in the latest release (§1.5)
 - [x] Earnings release dates per backtest quarter, and which companies give numeric guidance (TripAdvisor gives none: its guidance baseline is "n/a")
 - [x] One company end to end on EDGAR: company-facts API, filing dates, rate limit and User-Agent

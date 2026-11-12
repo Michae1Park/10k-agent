@@ -8,7 +8,7 @@ The tool examples (§4) are checked against the code by `tests/test_interfaces.p
 
 | # | Interface | Kind | Producer → consumer | Contract |
 |---|---|---|---|---|
-| 1 | [Raw cache](#1-raw-cache) | files | `tenk fetch` → `tenk build` | [design §3](V4_TECHNICAL_DESIGN_DOC.md#3-data-layer) |
+| 1 | [Raw cache](#1-raw-cache) | files | `era fetch` → `era build` | [design §3](V4_TECHNICAL_DESIGN_DOC.md#3-data-layer) |
 | 2 | [Store](#2-store) | SQLite + Python API | builders, Report → every reader | [design §3](V4_TECHNICAL_DESIGN_DOC.md#3-data-layer) |
 | 3 | [Search](#3-search) | call | Toolbox → Retrieval | [design §6](V4_TECHNICAL_DESIGN_DOC.md#6-retrieval) |
 | 4 | [Tool calls](#4-tool-calls) | JSON call | agent ↔ Toolbox | [design §5](V4_TECHNICAL_DESIGN_DOC.md#5-toolbox) |
@@ -46,7 +46,7 @@ These hold for every interface below unless it says otherwise.
 
 ## 1. Raw cache
 
-*Written by `tenk fetch`; read by `tenk build`.*
+*Written by `era fetch`; read by `era build`.*
 
 **Layout** (`data/v4/raw/`):
 
@@ -68,7 +68,7 @@ manifest.json                  ticker → [filing]
            "retrieved_at": "…"}]}
 ```
 
-**`companies.yaml`** (`TENK_COMPANIES` selects it):
+**`companies.yaml`** (`ERA_COMPANIES` selects it):
 
 ```yaml
 data_dir: data/v4
@@ -76,7 +76,7 @@ window: {since: '2023-01-01'}
 companies:
   UBER:
     name: Uber Technologies, Inc.
-    cik: 1543151            # written by `tenk companies verify`, never typed
+    cik: 1543151            # written by `era companies verify`, never typed
     sector: mobility        # peers = same sector
     template: segments      # §7
     main_kpi: gross_bookings
@@ -168,7 +168,7 @@ Knobs: `config.yaml` `retrieval` (design Appendix A).
 
 ## 4. Tool calls
 
-*Called by the agent (and `tenk tool NAME key=value`); each tool fronts one block. What each computes: [design §5.2](V4_TECHNICAL_DESIGN_DOC.md#52-catalog).*
+*Called by the agent (and `era tool NAME key=value`); each tool fronts one block. What each computes: [design §5.2](V4_TECHNICAL_DESIGN_DOC.md#52-catalog).*
 
 Every tool: `company` = a ticker or name; `periods` = period keys, default the latest eight; results follow the Conventions (percent, 4 decimals, caps, error shape). Each block below gives the signature, then a checked example: `call` is the arguments, `result` what the tool returns.
 
@@ -588,9 +588,9 @@ The engine is plain Python over a `Store` bound to the as-of. **No call takes fi
 **CLI**, one stage per command, writing to `output/research/<T>/<as_of>/`:
 
 ```text
-python -m tenk_agent.research.model.history TICKER… AS_OF   → datapack.json, model.json, checks.json, workbook.xlsx
-python -m tenk_agent.research.forecast      TICKER… AS_OF   → the same, with forecast columns, + forecast.json (assumptions, defaults, anchors, scenarios)
-python -m tenk_agent.research.valuation     TICKER… AS_OF [--all]  → valuation.json (--all: relative ratings)
+python -m era_agent.research.model.history TICKER… AS_OF   → datapack.json, model.json, checks.json, workbook.xlsx
+python -m era_agent.research.forecast      TICKER… AS_OF   → the same, with forecast columns, + forecast.json (assumptions, defaults, anchors, scenarios)
+python -m era_agent.research.valuation     TICKER… AS_OF [--all]  → valuation.json (--all: relative ratings)
 ```
 
 Exit code 1 when a layer-2 check fails or the workbook parity differs.
@@ -780,7 +780,7 @@ Saved as a version (`UBER:v1`, `UBER:v2`, …) with its parent. `research_report
 | Checks | check, status, tested, failures, skipped |
 | Log | id, kind (evidence or exception), label or severity, value or item, source |
 
-**Review:** `tenk research approve TICKER:vN --by INITIALS` sets `status` to `"reviewed by <INITIALS> on <date>"`; anything other than `draft` reads as reviewed.
+**Review:** `era research approve TICKER:vN --by INITIALS` sets `status` to `"reviewed by <INITIALS> on <date>"`; anything other than `draft` reads as reviewed.
 
 ## 13. Gold and results
 

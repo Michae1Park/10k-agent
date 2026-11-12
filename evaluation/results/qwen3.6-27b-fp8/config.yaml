@@ -24,7 +24,7 @@ generation:
   base_url: http://localhost:8001/v1
   thinking: false
   max_tokens: 4000
-  prompt: src/tenk_agent/prompts/answer.md
+  prompt: src/era_agent/prompts/answer.md
   serve:
     gpu_memory_utilization: 0.8
     max_model_len: 32768

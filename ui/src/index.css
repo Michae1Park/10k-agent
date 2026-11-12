@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+body { @apply bg-white text-neutral-900 antialiased; font-family: 'Google Sans', 'Inter', system-ui, sans-serif; }
+/* Gemini-style soft glow, in greys */
+.bg-glow {
+  background:
+    radial-gradient(60rem 30rem at 50% -10%, rgb(229 229 229 / 0.9), transparent 70%),
+    radial-gradient(40rem 24rem at 85% 110%, rgb(212 212 212 / 0.55), transparent 70%),
+    linear-gradient(180deg, #fafafa 0%, #ffffff 60%);
+}
+.text-glow { @apply bg-gradient-to-r from-neutral-400 via-neutral-600 to-neutral-900 bg-clip-text text-transparent; }
+.prose-note { @apply text-[15px] leading-relaxed text-neutral-800; }
+.prose-note h3 { @apply mt-6 mb-2 text-sm font-semibold tracking-wide text-neutral-500 uppercase; }
+.prose-note h3:first-child { @apply mt-0; }
+.prose-note p { @apply my-2.5 max-w-[72ch]; }
+.prose-note strong { @apply font-semibold text-neutral-900; }
+.prose-note ul { @apply my-2 list-disc pl-6; }
+.prose-note ol { @apply my-2 list-decimal space-y-1 pl-6; }
+.prose-note li { @apply max-w-[72ch]; }
+.note-table { @apply my-4 overflow-x-auto rounded-2xl ring-1 ring-neutral-200; }
+.note-table table { @apply w-full border-collapse text-sm; }
+.note-table th { @apply bg-neutral-50 px-3 py-2 text-xs font-medium whitespace-nowrap text-neutral-500; }
+.note-table td { @apply border-t border-neutral-100 px-3 py-2 whitespace-nowrap; }
+.note-table tbody tr:hover { @apply bg-neutral-50; }
+.note-table td:first-child { @apply font-medium text-neutral-800; }
+.prose-note code { @apply rounded bg-neutral-100 px-1 text-[0.85em]; }
+.prose-note pre { @apply overflow-x-auto rounded-xl bg-neutral-100 p-3 text-xs; }

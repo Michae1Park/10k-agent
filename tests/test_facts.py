@@ -2,10 +2,10 @@
 
 import pytest
 
-from tenk_agent.asof import AsOf
-from tenk_agent.facts.quarters import checks, derive
-from tenk_agent.facts.xbrl import company_facts, inline_facts
-from tenk_agent.store import Store
+from era_agent.asof import AsOf
+from era_agent.facts.quarters import checks, derive
+from era_agent.facts.xbrl import company_facts, inline_facts
+from era_agent.store import Store
 
 FLOW = {"kind": "flow", "concepts": ["NetCashProvidedByUsedInOperatingActivities"]}
 TWO = {

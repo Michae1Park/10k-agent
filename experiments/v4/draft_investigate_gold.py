@@ -1,6 +1,6 @@
 """Draft the Investigate gold set (evaluation/gold/investigate-gold.jsonl; spec §2.4, §5).
 
-  TENK_COMPANIES=companies.yaml uv run python experiments/v4/draft_investigate_gold.py
+  ERA_COMPANIES=companies.yaml uv run python experiments/v4/draft_investigate_gold.py
 
 Each question needs more than one Ask or Research run. Its gold is a list of parts, each the
 work one sub-run would do:
@@ -16,9 +16,9 @@ import json
 import re
 from pathlib import Path
 
-from tenk_agent.agent.tools import Toolbox
-from tenk_agent.asof import AsOf
-from tenk_agent.store import Store
+from era_agent.agent.tools import Toolbox
+from era_agent.asof import AsOf
+from era_agent.store import Store
 
 ROOT = Path(__file__).resolve().parents[2]
 DB = ROOT / "data" / "v4" / "build" / "parent_child.db"

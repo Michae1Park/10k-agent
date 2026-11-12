@@ -21,7 +21,7 @@ LOCAL = "local only"
 BANNER = ('> **Public copy, redacted.** Prices, macro and ERP data are licensed or third-party '
           'data kept local, so every value that comes from them (rating, price, PT, return, market '
           'cap, EV, 52-week range, multiples, WACC, beta, DCF values, PT impacts) reads "local '
-          'only". Run `tenk setup` with your own keys, then `tenk research report {t} --as-of '
+          'only". Run `era setup` with your own keys, then `era research report {t} --as-of '
           '{d}`, to see the full note.')
 MARKET_SOURCE = re.compile(r"^(?:px|macro:|erp:)|val-(?:base|bear|bull|scratch)|computed: "
                            r"(?:price|market cap)|px:SPY")
@@ -95,7 +95,7 @@ def redact_workbook(src: Path, dst: Path) -> None:
             row[1].value = LOCAL
     s.insert_rows(1)
     s["A1"] = ("Public copy, redacted: prices, macro and ERP data and every value derived from "
-               "them are local only (run tenk setup and tenk research report).")
+               "them are local only (run era setup and era research report).")
     v = wb["Valuation"]
     for row in v.iter_rows(min_row=2):
         label = str(row[0].value or "")
@@ -127,7 +127,7 @@ def main() -> None:
     stem = OUT / f"{ticker}-{as_of}"
     note = redact_note((folder / "note.md").read_text(), ticker, as_of)
     Path(f"{stem}-note.md").write_text(note)
-    from tenk_agent.research.export.report import pdf
+    from era_agent.research.export.report import pdf
 
     pdf(Path(f"{stem}-note.md"), Path(f"{stem}-note.pdf"))
     redact_workbook(folder / "workbook.xlsx", Path(f"{stem}-workbook.xlsx"))

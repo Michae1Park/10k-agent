@@ -3,7 +3,7 @@
   taskset -c 16-31 uv run python experiments/v4/research_run.py [--question ID] [--resume]
   taskset -c 16-31 uv run python experiments/v4/research_run.py --score
 
-Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and TENK_COMPANIES=companies.yaml.
+Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and ERA_COMPANIES=companies.yaml.
 Bars, frozen 2026-10-27 (design doc §12.2):
   pass               ≥ 90%: a claim cites a model: id the question expects and verifies, the
                      answer lists its assumptions, and no numeric claim is unverified
@@ -28,9 +28,9 @@ from pathlib import Path
 
 import yaml
 
-from tenk_agent.agent.factory import agent_factory as make_factory
-from tenk_agent.evaluation import gold
-from tenk_agent.models import parse_json
+from era_agent.agent.factory import agent_factory as make_factory
+from era_agent.evaluation import gold
+from era_agent.models import parse_json
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = Path(__file__).resolve().parent / "ask_config.yaml"  # the same model and budgets

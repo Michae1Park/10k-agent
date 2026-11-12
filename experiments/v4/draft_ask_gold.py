@@ -16,9 +16,9 @@ import json
 import re
 from pathlib import Path
 
-from tenk_agent.asof import AsOf
-from tenk_agent.facts.quarters import derive, metrics
-from tenk_agent.store import Store
+from era_agent.asof import AsOf
+from era_agent.facts.quarters import derive, metrics
+from era_agent.store import Store
 
 ROOT = Path(__file__).resolve().parents[2]
 LABELS = ROOT / "evaluation" / "gold" / "extraction-gold.jsonl"

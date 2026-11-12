@@ -1,9 +1,9 @@
-# 10k-agent
+# equity-research-agent
 
 **Grounded, cited answers over SEC 10-K filings, built one tested version at a time.** Ask a question about the companies' annual reports; it finds the passages, answers from them alone with every number tied to the chunk it came from, checks each number against that chunk, and declines when the filings can't answer.
 
 ```text
-$ tenk ask "What were Apple's total net sales in fiscal 2025?"
+$ era ask "What were Apple's total net sales in fiscal 2025?"
 
 Chunks (8)
    1. AAPL-FY2025-7-016  AAPL FY2025 item 7 table p.23
@@ -48,14 +48,14 @@ Each version adds one stage and was tested on its own before the next was built.
 Linux or macOS, Python 3.12 + [uv](https://docs.astral.sh/uv/), a ~40 GB GPU for the default 27B model ([all requirements](docs/GETTING_STARTED.md#requirements)).
 
 ```bash
-git clone <this repo> && cd 10k-agent
+git clone <this repo> && cd equity-research-agent
 uv sync --extra local --extra chunking
-uv run tenk setup                                    # your own SEC, Tiingo, FRED credentials
-uv run tenk fetch                                    # 24 10-Ks from EDGAR (cached)
+uv run era setup                                    # your own SEC, Tiingo, FRED credentials
+uv run era fetch                                    # 24 10-Ks from EDGAR (cached)
 scripts/serve_vllm.sh qwen3.6-27b-fp8                # the default model, other terminal
-taskset -c 16-31 uv run tenk build --stage chunk     # V0 on every filing (~35–60 min each)
-taskset -c 16-31 uv run tenk build --stage load --stage embed
-uv run tenk ask "What were Apple's total net sales in fiscal 2025?"
+taskset -c 16-31 uv run era build --stage chunk     # V0 on every filing (~35–60 min each)
+taskset -c 16-31 uv run era build --stage load --stage embed
+uv run era ask "What were Apple's total net sales in fiscal 2025?"
 ```
 
 Full steps, the experiments, and troubleshooting: [Getting started](docs/GETTING_STARTED.md).
