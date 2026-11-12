@@ -89,13 +89,14 @@ export function AnswerBody({ answer, onSource }: { answer: Answer; onSource: (id
         </div>
       )}
       {answer.claims.length > 0 && (
-        <div className="mt-3 rounded-lg border border-stone-200 bg-white px-3 py-1">
-          <div className="flex items-center gap-2 py-1.5 text-xs text-stone-500">
+        <details className="group mt-3 rounded-2xl border border-neutral-200 bg-white/70 px-4 py-1">
+          <summary className="flex cursor-pointer list-none items-center gap-2 py-2 text-xs text-neutral-500 select-none">
+            <span className="text-neutral-400 transition-transform group-open:rotate-90">▸</span>
             <span className="font-semibold uppercase">Claims ({answer.claims.length})</span>
             {Object.entries(counts).map(([s, n]) => <span key={s}>{n} {s}</span>)}
-          </div>
-          <ul>{answer.claims.map((c) => <ClaimRow key={String(c.id)} claim={c} onSource={onSource} />)}</ul>
-        </div>
+          </summary>
+          <ul className="pb-1">{answer.claims.map((c) => <ClaimRow key={String(c.id)} claim={c} onSource={onSource} />)}</ul>
+        </details>
       )}
     </div>
   )
