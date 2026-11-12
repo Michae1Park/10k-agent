@@ -16,7 +16,7 @@ generation:                                             # the model, for all thr
   base_url: http://localhost:8001/v1
   thinking: false
   max_tokens: 4000
-  prompt: src/tenk_agent/prompts/answer.md              # variant v2
+  prompt: src/era_agent/prompts/answer.md              # variant v2
   serve:                                                # the vLLM server: scripts/serve_vllm.sh qwen3.6-27b-fp8 (keep in step)
     gpu_memory_utilization: 0.80                        # 0.72 leaves too little KV cache once compiled
     max_model_len: 32768
@@ -24,8 +24,8 @@ generation:                                             # the model, for all thr
     enforce_eager: false                                # CUDA graphs: ~17 tok/s vs ~11.5 eager
     prefix_caching: true
 
-agent:                                                  # variants text and full (tenk_agent.agent)
-  prompt: src/tenk_agent/prompts/agent.md
+agent:                                                  # variants text and full (era_agent.agent)
+  prompt: src/era_agent/prompts/agent.md
   max_calls: 20                                         # tool-call budget
   max_turns: 20
   max_context: 20000                                    # input tokens past which the agent must answer (server: 32k)

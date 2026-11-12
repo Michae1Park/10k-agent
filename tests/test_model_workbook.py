@@ -6,7 +6,7 @@ import shutil
 import pytest
 from openpyxl import load_workbook
 
-from tenk_agent.research.export import workbook
+from era_agent.research.export import workbook
 from test_model_graph import model, templates  # noqa: F401  (fixture)
 
 

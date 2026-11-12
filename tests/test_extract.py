@@ -4,13 +4,13 @@ import json
 
 import pytest
 
-from tenk_agent.asof import AsOf
-from tenk_agent.corpus import Company
-from tenk_agent.evaluation.extraction import score
-from tenk_agent.facts import extract
-from tenk_agent.models import Response
-from tenk_agent.retrieval.index import load
-from tenk_agent.store import Store
+from era_agent.asof import AsOf
+from era_agent.corpus import Company
+from era_agent.evaluation.extraction import score
+from era_agent.facts import extract
+from era_agent.models import Response
+from era_agent.retrieval.index import load
+from era_agent.store import Store
 
 TABLE = "| Gross Bookings | $46,756 | $58,022 | 24% | 22% |\n| Trips | 3,268 | 3,867 | 18% |"
 OUTLOOK = "For Q3 2026, we anticipate: Gross Bookings of $58.25 billion to $60.25 billion."
@@ -19,7 +19,7 @@ OUTLOOK = "For Q3 2026, we anticipate: Gross Bookings of $58.25 billion to $60.2
 @pytest.fixture(autouse=True)
 def uber_in_corpus(monkeypatch):  # the default corpus is V3's; these tests load a V4 release
     monkeypatch.setattr(
-        "tenk_agent.retrieval.index.company_by_ticker",
+        "era_agent.retrieval.index.company_by_ticker",
         lambda t: Company("UBER", 1543151, "Uber Technologies, Inc."),
     )
 
@@ -202,7 +202,7 @@ def test_squash_ignores_zero_width_spaces():
 
 
 def test_target_periods_normalize():
-    from tenk_agent.evaluation.extraction import _quarter
+    from era_agent.evaluation.extraction import _quarter
 
     assert _quarter("Q3 2026") == _quarter("2026Q3") == "2026Q3"
     assert _quarter("FY 2026") == _quarter("full-year 2026") == _quarter("2026") == "FY2026"

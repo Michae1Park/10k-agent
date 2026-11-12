@@ -1,5 +1,5 @@
 # The V0–V3 corpus: 8 companies × fiscal years 2023–2025.
-# Selected by TENK_COMPANIES (default); kept runnable as the V4 regression check (design doc §14.1).
+# Selected by ERA_COMPANIES (default); kept runnable as the V4 regression check (design doc §14.1).
 
 fiscal_years: [2023, 2024, 2025]
 companies:

@@ -1,12 +1,12 @@
 """V4 Ask (tool set "ask"): data ids resolve and verify, and the data tools read as of the store."""
 
-from tenk_agent.agent.loop import build_system
-from tenk_agent.agent.tools import TOOL_SETS, Toolbox
-from tenk_agent.asof import AsOf
-from tenk_agent.facts.xbrl import company_facts
-from tenk_agent.generation.verify import verify_claim
-from tenk_agent.research.refs import Resolver
-from tenk_agent.store import Store, target_key
+from era_agent.agent.loop import build_system
+from era_agent.agent.tools import TOOL_SETS, Toolbox
+from era_agent.asof import AsOf
+from era_agent.facts.xbrl import company_facts
+from era_agent.generation.verify import verify_claim
+from era_agent.research.refs import Resolver
+from era_agent.store import Store, target_key
 from test_agent_tools import make_store
 
 KPI = {"metric": "units", "segment": "total", "value": 61.2, "unit": "count millions",
@@ -90,7 +90,7 @@ def test_ask_prompt_names_the_as_of_and_coverage(tmp_path):
 
 
 def test_decomposer_takes_years_without_a_fiscal_year_list(tmp_path, monkeypatch):
-    from tenk_agent.retrieval import decompose
+    from era_agent.retrieval import decompose
 
     monkeypatch.setattr(decompose, "FISCAL_YEARS", None)  # V4 corpora list none
     store = ask(tmp_path, "2025-11-04").store

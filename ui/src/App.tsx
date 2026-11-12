@@ -34,7 +34,7 @@ export default function App() {
   return (
     <div className="flex h-screen">
       <nav className="flex w-60 shrink-0 flex-col bg-stone-900 p-3 text-stone-100">
-        <div className="mb-4 px-2 text-lg font-semibold tracking-tight">tenk</div>
+        <div className="mb-4 px-2 text-lg font-semibold tracking-tight">era</div>
         <div className="space-y-1">{nav('chat', 'Chat')}{nav('reports', 'Reports')}</div>
         {tab === 'chat' && (
           <>

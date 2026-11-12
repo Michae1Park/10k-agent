@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 from openpyxl import Workbook, load_workbook
 
-from tenk_agent.research import valuation
-from tenk_agent.research.export import report
+from era_agent.research import valuation
+from era_agent.research.export import report
 from test_valuation import Model, V
 
 

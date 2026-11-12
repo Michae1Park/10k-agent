@@ -44,7 +44,7 @@
   <rect class="panel" x="20" y="150" width="1140" height="240" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
   <text class="ptitle" x="470" y="176" font-size="14.5" font-weight="600" fill="#46586a">Build: offline</text>
   <rect class="work" x="40" y="190" width="1100" height="44" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
-  <text class="name" x="590" y="210" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">tenk fetch → raw cache</text>
+  <text class="name" x="590" y="210" text-anchor="middle" font-size="16" font-weight="600" fill="#132030">era fetch → raw cache</text>
   <text class="sub" x="590" y="227" text-anchor="middle" font-size="12.5" fill="#4a5a68">one filing per form and period · every file stamped retrieved_at in raw/manifest.json</text>
 
   <rect class="work" x="40" y="262" width="260" height="106" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>

@@ -15,7 +15,7 @@ V4 reuses V0–V3's pipeline (parsing, chunking, retrieval, agent loop, claim ch
 
 | Area | Principle |
 |---|---|
-| Code | Pipeline code in `src/tenk_agent/`; experiments only run and score it |
+| Code | Pipeline code in `src/era_agent/`; experiments only run and score it |
 | Settings | Every knob in `config.yaml`, per stage; V4 adds `companies.yaml` (coverage) and `research.yaml` (forecast, valuation, proposer); experiments pin their own copy |
 | Prompts | One Markdown file per task in `prompts/`, its output schema beside it |
 | Storage | One SQLite file (tables, FTS5, sqlite-vec), reached only through `Store` |
@@ -26,19 +26,19 @@ V4 reuses V0–V3's pipeline (parsing, chunking, retrieval, agent loop, claim ch
 
 | Path | Contents |
 |---|---|
-| `src/tenk_agent/` | Shared: `config`, `corpus` (the companies and years, from `companies.yaml`), `asof` (V4 as-of date), `store` (SQLite), `models`, `build` (the corpus build), `cli` |
-| `src/tenk_agent/acquisition/` | `tenk fetch`: filings from SEC EDGAR (`edgar`, `filings`), with `raw/manifest.json`; V4: `companies` (verify), `market` (prices, macro, ERP), `crosscheck` (TLC, BTS), `insiders` (Form 4) |
-| `src/tenk_agent/preprocess/` | Step 1 `blocks` (rules), step 2 `structure` (the LLM agent, assembly) and its `validation` rules; V4: `forms` (10-K, 10-Q, release) and `rules` (rule-based Items) |
-| `src/tenk_agent/chunking/` | `rule_based`, `parent_child`, `agentic`, and what they share (`common`) |
-| `src/tenk_agent/retrieval/` | `index` (database, vectors), `decompose`, `search`, `embeddings` (embedder, reranker) |
-| `src/tenk_agent/generation/` | `generate`, `answers`, `verify`, `calculator` |
-| `src/tenk_agent/agent/` | `loop` (LangGraph), `tools` (tool groups and sets: V3, Ask, Research), `sec` (XBRL facts, EDGAR metadata, cached) |
-| `src/tenk_agent/facts/` | V4: XBRL facts and quarters (`xbrl`, `quarters`), KPI and guidance extraction (`extract`, LLM; `rules`, ablation), `kpis.yaml`, `metrics.yaml` |
-| `src/tenk_agent/research/` | V4: `refs` and `book` (citable ids), `datapack`, `model/` (DSL, graph, templates, checks), `propose`, `forecast`, `valuation`, `subagents` (events, debates), `note/`, `export/` (workbook, PDF), `pipeline` (Report mode) |
-| `src/tenk_agent/evaluation/` | Gold sets (`gold`, `render`), retrieval metrics, number matching, the LLM judge, `scoring`, `report`; V4: `extraction`, `backtest`, `note_eval` |
-| `src/tenk_agent/prompts/` | Every LLM prompt, one Markdown file per task, its output schema beside it: `structure.md` + `structure.schema.json`, `answer.md`, `agent.md`, `judge.md`; V4: `ask.md`, `research.md`, `extract.md`, `propose.md`, `events.md`, `debates.md`, `section.md` |
+| `src/era_agent/` | Shared: `config`, `corpus` (the companies and years, from `companies.yaml`), `asof` (V4 as-of date), `store` (SQLite), `models`, `build` (the corpus build), `cli` |
+| `src/era_agent/acquisition/` | `era fetch`: filings from SEC EDGAR (`edgar`, `filings`), with `raw/manifest.json`; V4: `companies` (verify), `market` (prices, macro, ERP), `crosscheck` (TLC, BTS), `insiders` (Form 4) |
+| `src/era_agent/preprocess/` | Step 1 `blocks` (rules), step 2 `structure` (the LLM agent, assembly) and its `validation` rules; V4: `forms` (10-K, 10-Q, release) and `rules` (rule-based Items) |
+| `src/era_agent/chunking/` | `rule_based`, `parent_child`, `agentic`, and what they share (`common`) |
+| `src/era_agent/retrieval/` | `index` (database, vectors), `decompose`, `search`, `embeddings` (embedder, reranker) |
+| `src/era_agent/generation/` | `generate`, `answers`, `verify`, `calculator` |
+| `src/era_agent/agent/` | `loop` (LangGraph), `tools` (tool groups and sets: V3, Ask, Research), `sec` (XBRL facts, EDGAR metadata, cached) |
+| `src/era_agent/facts/` | V4: XBRL facts and quarters (`xbrl`, `quarters`), KPI and guidance extraction (`extract`, LLM; `rules`, ablation), `kpis.yaml`, `metrics.yaml` |
+| `src/era_agent/research/` | V4: `refs` and `book` (citable ids), `datapack`, `model/` (DSL, graph, templates, checks), `propose`, `forecast`, `valuation`, `subagents` (events, debates), `note/`, `export/` (workbook, PDF), `pipeline` (Report mode) |
+| `src/era_agent/evaluation/` | Gold sets (`gold`, `render`), retrieval metrics, number matching, the LLM judge, `scoring`, `report`; V4: `extraction`, `backtest`, `note_eval` |
+| `src/era_agent/prompts/` | Every LLM prompt, one Markdown file per task, its output schema beside it: `structure.md` + `structure.schema.json`, `answer.md`, `agent.md`, `judge.md`; V4: `ask.md`, `research.md`, `extract.md`, `propose.md`, `events.md`, `debates.md`, `section.md` |
 | `experiments/` | One folder per experiment (V0–V4): its runner and config; `V*.md` design and results (V4's are in `docs/`) |
-| `evaluation/` | `gold/`: the reviewed gold question sets (JSONL, plus review PDFs); `results/<run>/`: each run's end-to-end report (`tenk report`). The code that loads, scores and reports is `src/tenk_agent/evaluation/` |
+| `evaluation/` | `gold/`: the reviewed gold question sets (JSONL, plus review PDFs); `results/<run>/`: each run's end-to-end report (`era report`). The code that loads, scores and reports is `src/era_agent/evaluation/` |
 | `docs/` | This documentation |
 | `scripts/` | `serve_vllm.sh` (open models) |
 | `config.yaml` | Every setting for the CLI, per stage |

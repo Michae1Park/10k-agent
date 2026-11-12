@@ -4,11 +4,11 @@ import json
 
 import pytest
 
-from tenk_agent.agent.sec import SecData
-from tenk_agent.agent.tools import Toolbox
-from tenk_agent.generation.verify import verify_claim
-from tenk_agent.retrieval.index import load
-from tenk_agent.store import Store
+from era_agent.agent.sec import SecData
+from era_agent.agent.tools import Toolbox
+from era_agent.generation.verify import verify_claim
+from era_agent.retrieval.index import load
+from era_agent.store import Store
 
 ACCESSION = "0000320193-25-000079"
 
@@ -222,7 +222,7 @@ def test_a_percent_claim_may_come_from_a_ratio(tools):
 
 
 def test_bare_dollar_amounts_match_gold_values_in_millions():
-    from tenk_agent.evaluation.answer_metrics import matches
+    from era_agent.evaluation.answer_metrics import matches
 
     expected = {"value": 97690, "unit": "USD millions"}
     assert matches(expected, "97,690,000,000", None, 0.005)
@@ -301,15 +301,15 @@ def test_a_filing_claim_may_cite_its_accession_number(tools):
 
 
 def test_per_share_units_are_dollars():
-    from tenk_agent.generation.verify import unit_scale
+    from era_agent.generation.verify import unit_scale
 
     assert unit_scale("USD/shares") == unit_scale("USD per share") == 1.0
 
 
 def test_search_filings_runs_v1_retrieval_and_asks_for_companies(tmp_path):
-    from tenk_agent.retrieval.decompose import QueryDecomposer
-    from tenk_agent.retrieval.index import embed_corpus
-    from tenk_agent.retrieval.search import HybridSearch, SubQuestionRetriever
+    from era_agent.retrieval.decompose import QueryDecomposer
+    from era_agent.retrieval.index import embed_corpus
+    from era_agent.retrieval.search import HybridSearch, SubQuestionRetriever
     from test_retrieval import FakeEmbedder, FakeReranker
     from test_retrieval import make_store as two_company_store
 
@@ -329,7 +329,7 @@ def test_search_filings_runs_v1_retrieval_and_asks_for_companies(tmp_path):
 
 
 def test_tool_sets_are_built_from_groups_in_v3_order():
-    from tenk_agent.agent.tools import GROUPS, TOOL_SETS
+    from era_agent.agent.tools import GROUPS, TOOL_SETS
 
     assert TOOL_SETS == {
         "text": ("search_filings", "calculator"),
@@ -350,8 +350,8 @@ def test_toolbox_sees_its_stores_asof(tools):
 
 
 def test_research_report_returns_a_saved_version_made_before_the_asof(tmp_path):
-    from tenk_agent.asof import AsOf
-    from tenk_agent.research.refs import Resolver
+    from era_agent.asof import AsOf
+    from era_agent.research.refs import Resolver
 
     make_store(tmp_path)
     folder = tmp_path / "report"

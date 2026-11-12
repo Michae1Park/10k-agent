@@ -34,15 +34,15 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "v2"))
 from run import _pct, _verdict, _write, print_scores  # noqa: E402  (experiments/v2/run.py)
 
-from tenk_agent.agent.loop import Agent  # noqa: E402
-from tenk_agent.agent.sec import SecData  # noqa: E402
-from tenk_agent.agent.tools import Toolbox  # noqa: E402
-from tenk_agent.evaluation.retrieval_metrics import gold_chunks  # noqa: E402
-from tenk_agent.evaluation.scoring import grade, summarize  # noqa: E402
-from tenk_agent.generation.generate import build_prompt, generate  # noqa: E402
-from tenk_agent.models import get_model  # noqa: E402
-from tenk_agent.retrieval.search import SubQuestionRetriever  # noqa: E402
-from tenk_agent.store import Store  # noqa: E402
+from era_agent.agent.loop import Agent  # noqa: E402
+from era_agent.agent.sec import SecData  # noqa: E402
+from era_agent.agent.tools import Toolbox  # noqa: E402
+from era_agent.evaluation.retrieval_metrics import gold_chunks  # noqa: E402
+from era_agent.evaluation.scoring import grade, summarize  # noqa: E402
+from era_agent.generation.generate import build_prompt, generate  # noqa: E402
+from era_agent.models import get_model  # noqa: E402
+from era_agent.retrieval.search import SubQuestionRetriever  # noqa: E402
+from era_agent.store import Store  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = Path(__file__).resolve().parent / "config.yaml"
@@ -258,7 +258,7 @@ def tool_use(rows: list[dict], variants: list[str]) -> dict:
 
 
 def by_tool_set(variant: str) -> tuple[str, ...]:
-    from tenk_agent.agent.tools import TOOL_SETS
+    from era_agent.agent.tools import TOOL_SETS
 
     return TOOL_SETS[variant]
 

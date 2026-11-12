@@ -2,9 +2,9 @@
 
 import pytest
 
-from tenk_agent.research.note.facts import Facts
-from tenk_agent.research.note.trace import check, figures
-from tenk_agent.research.pipeline import lint
+from era_agent.research.note.facts import Facts
+from era_agent.research.note.trace import check, figures
+from era_agent.research.pipeline import lint
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ def test_fact_text(facts):
 
 
 def test_form4_parse():
-    from tenk_agent.acquisition.insiders import parse
+    from era_agent.acquisition.insiders import parse
 
     xml = b"""<ownershipDocument><reportingOwner><reportingOwnerId><rptOwnerName>Doe Jane
     </rptOwnerName></reportingOwnerId><reportingOwnerRelationship><isOfficer>1</isOfficer>
@@ -102,8 +102,8 @@ def test_prose_traces_to_its_own_slot_only(facts):
 def test_writer_drops_sentences_still_untraced_after_repair(facts):
     from types import SimpleNamespace
 
-    from tenk_agent.research.note.sections import Section, Slot
-    from tenk_agent.research.note.write import fill
+    from era_agent.research.note.sections import Section, Slot
+    from era_agent.research.note.write import fill
 
     class Writer:  # keeps the bad figure on the repair turn too
         def complete(self, messages, system, max_tokens):
@@ -119,8 +119,8 @@ def test_writer_drops_sentences_still_untraced_after_repair(facts):
 
 def _consistency_note(takeaways="PT $120.00, return +20.0%.", s6="Probability-weighted price "
                       "target: $120.00; return +20.0% → Buy.", s2="| Revenue | $1.0B |"):
-    from tenk_agent.research.note.facts import Facts
-    from tenk_agent.research.note.sections import Section, Slot
+    from era_agent.research.note.facts import Facts
+    from era_agent.research.note.sections import Section, Slot
 
     facts = Facts()
     pt = facts.add("12-month price target", 120.0, "USD", "model:X")
@@ -132,7 +132,7 @@ def _consistency_note(takeaways="PT $120.00, return +20.0%.", s6="Probability-we
 
 
 def test_consistency_passes_a_consistent_note():
-    from tenk_agent.research.note import consistency
+    from era_agent.research.note import consistency
 
     sections, facts = _consistency_note()
     results = consistency.check(sections, facts, {"rating": "Buy", "return": 0.2},
@@ -142,8 +142,8 @@ def test_consistency_passes_a_consistent_note():
 
 
 def test_consistency_catches_each_inconsistency():
-    from tenk_agent.research.note import consistency
-    from tenk_agent.research.note.sections import NO_GUIDANCE
+    from era_agent.research.note import consistency
+    from era_agent.research.note.sections import NO_GUIDANCE
 
     sections, facts = _consistency_note(takeaways="PT $130.00.", s6="no price target here",
                                         s2=NO_GUIDANCE)
@@ -160,8 +160,8 @@ def test_consistency_catches_each_inconsistency():
 
 
 def test_section_10_lists_every_open_issue_by_id():
-    from tenk_agent.research.note import consistency
-    from tenk_agent.research.note.sections import Section, review_blocks
+    from era_agent.research.note import consistency
+    from era_agent.research.note.sections import Section, review_blocks
 
     numbered = [{"id": f"X-{i:02d}", "severity": s, "item": "x"}
                 for i, s in enumerate(["info", "warning", "error", "warning"] * 4, 1)]

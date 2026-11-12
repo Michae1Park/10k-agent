@@ -3102,7 +3102,7 @@ wheels = [
 ]
 
 [[package]]
-name = "tenk-agent"
+name = "era-agent"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

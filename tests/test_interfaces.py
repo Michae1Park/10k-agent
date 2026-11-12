@@ -53,7 +53,7 @@ def same_shape(doc, real, path="result") -> list[str]:
 
 
 def test_every_tool_has_an_example():
-    from tenk_agent.agent.tools import TOOL_SETS
+    from era_agent.agent.tools import TOOL_SETS
 
     documented = {tool for tool, _ in examples()} | {"search_filings"}  # search: §3
     assert set(TOOL_SETS["research"]) <= documented
@@ -63,12 +63,12 @@ def test_every_tool_has_an_example():
 def v4_corpus():
     """The V4 company list for this module; conftest.py pins V0–V3 for the rest. corpus.py
     reads its file at import, so its globals are switched too, then restored."""
-    from tenk_agent import corpus
+    from era_agent import corpus
 
     path = ROOT / "companies.yaml"
     companies, years = corpus.load(path)
     with pytest.MonkeyPatch.context() as mp:
-        mp.setenv("TENK_COMPANIES", str(path))
+        mp.setenv("ERA_COMPANIES", str(path))
         mp.setattr(corpus, "COMPANIES", companies)
         mp.setattr(corpus, "FISCAL_YEARS", years)
         yield
@@ -78,10 +78,10 @@ def v4_corpus():
 def toolboxes(v4_corpus):
     if not DB.exists():
         pytest.skip("needs the V4 store")
-    from tenk_agent.agent.tools import toolbox_from_settings
-    from tenk_agent.asof import AsOf
-    from tenk_agent.config import load
-    from tenk_agent.research.book import Book
+    from era_agent.agent.tools import toolbox_from_settings
+    from era_agent.asof import AsOf
+    from era_agent.config import load
+    from era_agent.research.book import Book
 
     settings = load(ROOT / "config.yaml") | {"db": str(DB), "data_dir": str(DB.parents[1])}
     cache = {}

@@ -1,6 +1,6 @@
 # V2 · Generation: chunks → one model call → a cited answer
 
-**Builds on** V1: its top 8 chunks go to one model call. **Code:** [`generation/`](../../src/tenk_agent/generation/), prompt [prompts/answer.md](../../src/tenk_agent/prompts/answer.md). **Design and results:** [experiments/V2_GENERATION.md](../../experiments/V2_GENERATION.md): with V1's retrieval, 21 of 30 number questions right, all 8 declines declined, every numeric claim found in a chunk it cites. **Run it:** [Getting started](../GETTING_STARTED.md#4-ask). Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
+**Builds on** V1: its top 8 chunks go to one model call. **Code:** [`generation/`](../../src/era_agent/generation/), prompt [prompts/answer.md](../../src/era_agent/prompts/answer.md). **Design and results:** [experiments/V2_GENERATION.md](../../experiments/V2_GENERATION.md): with V1's retrieval, 21 of 30 number questions right, all 8 declines declined, every numeric claim found in a chunk it cites. **Run it:** [Getting started](../GETTING_STARTED.md#4-ask). Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
 
 ## Data
 
@@ -8,7 +8,7 @@
 |---|---|
 | Chunks | V1 (`retrieval.k` of them) from `db` |
 | Corpus table (company, fiscal year, period end) | the `filings` table, written into the prompt's `{corpus}` |
-| Rules + answer format | [prompts/answer.md](../../src/tenk_agent/prompts/answer.md) (`generation.prompt`) |
+| Rules + answer format | [prompts/answer.md](../../src/era_agent/prompts/answer.md) (`generation.prompt`) |
 | Gold questions | [evaluation/gold/generation-gold-fy2025.jsonl](../../evaluation/gold/generation-gold-fy2025.jsonl) ([format](V1_RETRIEVAL.md#gold-questions)) |
 
 ## Knobs
@@ -21,14 +21,14 @@
 | `base_url` | The vLLM server, for `openai:*` models | `http://localhost:8001/v1` |
 | `thinking` | Qwen's reasoning mode; `null` = the model's default (on) | false |
 | `max_tokens` | Per call | 4,000 |
-| `prompt` | The system prompt file | `src/tenk_agent/prompts/answer.md` |
+| `prompt` | The system prompt file | `src/era_agent/prompts/answer.md` |
 | `retrieval.k` | Chunks in the prompt | 8 |
 
 ## Outputs
 
 | Output | Where |
 |---|---|
-| The chunks shown (id, company, year, Item, kind, pages); the answer, table, scope notice; DECLINED / FORMAT ERROR | terminal (`tenk ask`, `tenk chat`) |
+| The chunks shown (id, company, year, Item, kind, pages); the answer, table, scope notice; DECLINED / FORMAT ERROR | terminal (`era ask`, `era chat`) |
 | Claims: status, value and unit, cited chunks, why | terminal; `--json` for the whole answer |
 | Seconds, tokens in and out, whether the JSON retry ran | terminal |
 | V2 experiment: per question and context, the chunks, answer, claims, scores and raw replies | `output/generation/<label>/results.json` |
@@ -48,7 +48,7 @@ question ─► V1: top 8 chunks ─► prompt ─► one model call ─► pars
 | 4. Finalize | `generation/answers.py` | The JSON normalized: claims with their value, unit, company, fiscal year, chunk IDs and calculation; table, scope notice, abstained |
 | 5. Check | `generation/verify.py`, `calculator.py` | Each claim labeled, deterministically; the answer itself is not changed |
 
-**The rules the model gets** ([answer.md](../../src/tenk_agent/prompts/answer.md)):
+**The rules the model gets** ([answer.md](../../src/era_agent/prompts/answer.md)):
 
 | Case | Example | Required behavior |
 |---|---|---|
@@ -79,7 +79,7 @@ question ─► V1: top 8 chunks ─► prompt ─► one model call ─► pars
 | `cited` | No number; the cited chunk IDs exist |
 | `unverified` | Anything else, with the reason: value not found, calculation gives another result, unknown chunk ID, or (parent-child database) the value is only in another company's chunks |
 
-About 28 s per answer with 4 in parallel on the L40S (the V2 experiment); `tenk ask` is one call.
+About 28 s per answer with 4 in parallel on the L40S (the V2 experiment); `era ask` is one call.
 
 ## Gotchas
 

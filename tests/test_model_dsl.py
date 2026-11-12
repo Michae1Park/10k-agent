@@ -2,7 +2,7 @@
 
 import pytest
 
-from tenk_agent.research.model.dsl import Cells, DslError, Readers, evaluate, parse, to_excel
+from era_agent.research.model.dsl import Cells, DslError, Readers, evaluate, parse, to_excel
 
 LINES = {("gb", 0): 100.0, ("tr", 0): 0.25, ("trips", 4): 50.0, ("g", 0): 0.1, ("x", 0): None}
 ROWS = {"gb": 10, "tr": 11, "trips": 12, "g": 13, "revenue": 14}

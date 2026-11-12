@@ -6,7 +6,7 @@
 #   scripts/serve_vllm.sh qwen3.5-9b            # a smaller one: --model openai:Qwen/Qwen3.5-9B
 #   scripts/serve_vllm.sh gpt-oss-20b           # the V2 judge, on port 8002 (experiments/v2/judge.py)
 #
-# Everything must fit on one L40S (48 GB). The tenk process also keeps the embedder and
+# Everything must fit on one L40S (48 GB). The era process also keeps the embedder and
 # reranker on the GPU (3–6 GB per process), so vLLM gets 72% of memory by default (the 27B 80%).
 # VLLM_BIN points at the vLLM executable (default: `vllm` on PATH, else the vllm_py311 conda env).
 # On this machine the i9-14900K's P-cores crash under load; CPUS pins the server to E-cores.

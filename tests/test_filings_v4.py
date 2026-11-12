@@ -1,13 +1,13 @@
 """V4 acquisition (acquisition/filings.py): periods, releases, exhibits."""
 
-from tenk_agent.acquisition.filings import (
+from era_agent.acquisition.filings import (
     FilingV4,
     exhibits,
     periods_by_accession,
     quarter_before,
     resolve,
 )
-from tenk_agent.corpus import Company
+from era_agent.corpus import Company
 
 CO = Company("TEST", 1, "Test Corp")
 

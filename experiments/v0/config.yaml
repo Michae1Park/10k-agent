@@ -11,12 +11,12 @@ llm:                                                    # structure agent and ag
   model: Qwen/Qwen3.6-27B-FP8                           # scripts/serve_vllm.sh qwen3.6-27b-fp8
   base_url: http://localhost:8001/v1
 
-labeling:                                               # structure agent (tenk_agent.preprocess), spec §2.2
+labeling:                                               # structure agent (era_agent.preprocess), spec §2.2
   window: 150                                           # blocks labeled per call (windows don't overlap)
   context: 10                                           # labeled blocks from the previous window shown as context
   repair_rounds: 2                                      # validate → repair rounds per window, at most
 
-chunking:                                               # tenk_agent.chunking, spec §3
+chunking:                                               # era_agent.chunking, spec §3
   tokenizer: Qwen/Qwen3-Embedding-0.6B                  # counts all token sizes: the embedder's, so sizes are what it sees
   target: 600                                           # rule-based and agentic chunk size, tokens
   parent: 1280                                          # parent-child: parent size, tokens (5:1 with child)

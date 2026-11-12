@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from tenk_agent import acquisition
-from tenk_agent.acquisition.edgar import (
+from era_agent import acquisition
+from era_agent.acquisition.edgar import (
     EdgarClient,
     EdgarError,
     Filing,
@@ -11,7 +11,7 @@ from tenk_agent.acquisition.edgar import (
     fiscal_years_by_accession,
     resolve_filings,
 )
-from tenk_agent.corpus import Company
+from era_agent.corpus import Company
 
 COMPANY = Company("TEST", 12345, "Test Corp")
 
@@ -113,7 +113,7 @@ def test_fetch_records_filings_and_skips_failed_companies(tmp_path, monkeypatch)
 
 # --- companies verify (V4) --------------------------------------------------------------------
 
-from tenk_agent.acquisition.companies import counts, filing_rows, verify_company  # noqa: E402
+from era_agent.acquisition.companies import counts, filing_rows, verify_company  # noqa: E402
 
 
 def filings_page(*rows):

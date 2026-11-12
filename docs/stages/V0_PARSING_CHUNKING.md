@@ -1,6 +1,6 @@
 # V0 · Parsing and chunking: 10-K HTML → structured document → chunks
 
-**Builds on** nothing: start here. **Code:** [`preprocess/`](../../src/tenk_agent/preprocess/), [`chunking/`](../../src/tenk_agent/chunking/), run over the corpus by [`build.py`](../../src/tenk_agent/build.py). **Design and results:** [experiments/V0_PARSING_CHUNKING.md](../../experiments/V0_PARSING_CHUNKING.md) (it names the rules D1–D8, V1–V7, A1–A5, C1–C10 and T1–T3 used below). **Run it:** [Getting started](../GETTING_STARTED.md#3-build-the-corpus). Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
+**Builds on** nothing: start here. **Code:** [`preprocess/`](../../src/era_agent/preprocess/), [`chunking/`](../../src/era_agent/chunking/), run over the corpus by [`build.py`](../../src/era_agent/build.py). **Design and results:** [experiments/V0_PARSING_CHUNKING.md](../../experiments/V0_PARSING_CHUNKING.md) (it names the rules D1–D8, V1–V7, A1–A5, C1–C10 and T1–T3 used below). **Run it:** [Getting started](../GETTING_STARTED.md#3-build-the-corpus). Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
 
 ## Data
 
@@ -36,7 +36,7 @@ Built so far: the FY2025 filings of AAPL, AMZN, MSFT and NVDA (the V1 and V2 gol
 | `chunking.parent`, `child`, `child_overlap` | Parent-child sizes, tokens | 1,280 / 256 / 20 |
 | `chunking.candidate_size` | Agentic: candidate pieces over this split further (paragraph → sentence → word) | 128 |
 | `chunking.caption_chars`, `table_chars`, `overlap_chars` | Longest caption paragraph (C3); tables split into row groups above this (C4); longest paragraph repeated in the next chunk (C7) | 300 / 7,200 / 600 |
-| `build.methods`, `build.out` | What `tenk build` chunks and loads, and where | `[parent_child]`, `data/v0-chunking` |
+| `build.methods`, `build.out` | What `era build` chunks and loads, and where | `[parent_child]`, `data/v0-chunking` |
 
 ## Outputs
 
@@ -56,7 +56,7 @@ HTML ─► blocks + features (code) ─► labels per window (LLM) ─► valid
 | Step | Code | What happens | AAPL FY2025 |
 |---|---|---|---|
 | 1. Blocks | `preprocess/blocks.py` | Rules true of every 10-K (D1–D8): hidden elements dropped, inline XBRL unwrapped (text blocks kept as hints), `dei:` cover tags read, split cells joined (`$` + `1,234`), paragraphs and tables in reading order with features (emphasis, Item label, XBRL start, page break, link) and pages | 698 blocks |
-| 2. Label | `preprocess/structure.py`, [prompts/structure.md](../../src/tenk_agent/prompts/structure.md) | The LLM labels ~150 blocks a call (temperature 0, thinking off, output forced to [structure.schema.json](../../src/tenk_agent/prompts/structure.schema.json)): `item_heading`, `heading` (level, kind, run-in), `data_table` (units), `layout_table`, `body`, or noise (`cover`, `toc`, `furniture`, …) | 10 calls, 34 min |
+| 2. Label | `preprocess/structure.py`, [prompts/structure.md](../../src/era_agent/prompts/structure.md) | The LLM labels ~150 blocks a call (temperature 0, thinking off, output forced to [structure.schema.json](../../src/era_agent/prompts/structure.schema.json)): `item_heading`, `heading` (level, kind, run-in), `data_table` (units), `layout_table`, `body`, or noise (`cover`, `toc`, `furniture`, …) | 10 calls, 34 min |
 | 3. Validate, repair | `preprocess/validation.py` | Code checks each window (V1–V7: one label per block, Items in Form 10-K order, levels step down, risk kinds only in 1A, …); violations go back to the LLM, 2 rounds at most | 2 blocks left to review |
 | 4. Assemble | `preprocess/structure.py` | Labels applied to the filing's own text (A1–A5): one section per Item, noise dropped, run-in headings split, statements filed under Item 15 moved into Item 8, heading paths, printed page numbers | 23 sections; 110 blocks dropped |
 | 5. Chunk | `chunking/` | One of three methods (below), all within one Item, each data table its own chunk with its caption | parent-child: 216 parents |
@@ -91,8 +91,8 @@ Metadata: `item 8`, heading path `CONSOLIDATED STATEMENTS OF OPERATIONS`, pages 
 ## Gotchas
 
 - **Labels are cached and keyed by their settings.** In the experiment, changing `labeling:` stops preprocessing with a "labeled with … not …" error: `--relabel`, or set another `run.label`. A build never preprocesses a filing that has a `document.json`: delete it (and `labels.json`, to relabel). Chunks are redone whenever `chunking:` changes.
-- **The tokenizer loads from the local Hugging Face cache only** (`local_files_only`): download it once (`huggingface-cli download Qwen/Qwen3-Embedding-0.6B`, or any `tenk search`).
+- **The tokenizer loads from the local Hugging Face cache only** (`local_files_only`): download it once (`huggingface-cli download Qwen/Qwen3-Embedding-0.6B`, or any `era search`).
 - **An excerpt has no cover page.** `preprocess(html, cover, …)` takes the full filing as `cover` for the `dei:` tags; a full filing is its own cover.
 - **Units differ by filer.** Netflix reports in thousands; per-share figures in dollars. `units` is the LLM's reading of the caption; a table without one has none.
 - **The same number is in several chunks.** A 10-K repeats the statements' figures in MD&A and the notes; the gold sets name a primary source and its restatements ([V1](V1_RETRIEVAL.md#gold-questions)).
-- `tenk build --stage load` rebuilds `<method>.db` from scratch: run `embed` again afterwards.
+- `era build --stage load` rebuilds `<method>.db` from scratch: run `embed` again afterwards.

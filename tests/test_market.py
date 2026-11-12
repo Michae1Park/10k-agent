@@ -2,9 +2,9 @@
 
 import json
 
-from tenk_agent.acquisition.market import market_rows
-from tenk_agent.asof import AsOf
-from tenk_agent.store import Store
+from era_agent.acquisition.market import market_rows
+from era_agent.asof import AsOf
+from era_agent.store import Store
 
 
 def raw_dir(tmp_path):
@@ -68,7 +68,7 @@ def test_unrevised_daily_series_are_published_the_next_day_and_gaps_skipped(tmp_
 def test_erp_fetch_records_when_it_was_retrieved(tmp_path, monkeypatch):
     from types import SimpleNamespace
 
-    from tenk_agent.acquisition import market
+    from era_agent.acquisition import market
 
     monkeypatch.setattr(market.httpx, "get",
                         lambda *a, **k: SimpleNamespace(status_code=200, content=b"xlsx"))

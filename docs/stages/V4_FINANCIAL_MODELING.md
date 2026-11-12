@@ -1,6 +1,6 @@
 # Financial modeling
 
-Equations behind the workbook, all deterministic code (`src/tenk_agent/research/`). The LLM extracts KPIs and may propose bounded assumptions, never a number. Knobs: `research.yaml`. USD millions; ratios as fractions. $x_{-4}$ is the same quarter last year.
+Equations behind the workbook, all deterministic code (`src/era_agent/research/`). The LLM extracts KPIs and may propose bounded assumptions, never a number. Knobs: `research.yaml`. USD millions; ratios as fractions. $x_{-4}$ is the same quarter last year.
 
 ## Inputs
 

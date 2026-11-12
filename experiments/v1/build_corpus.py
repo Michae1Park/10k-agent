@@ -15,7 +15,7 @@ one database per method, embedded. Spec: experiments/V1_RETRIEVAL.md §2.
   taskset -c 16-31 python experiments/v1/build_corpus.py --stage chunk --filing AAPL/FY2025
   taskset -c 16-31 python experiments/v1/build_corpus.py --stage pages
 
-The same build as `tenk build` (tenk_agent.build), with V0's settings (experiments/v0/config.yaml:
+The same build as `era build` (era_agent.build), with V0's settings (experiments/v0/config.yaml:
 llm, labeling, chunking) and V1's (config.yaml: retrieval). Filings: data/raw/filings/<TICKER>/
 FY<year>/. Writes <out>/<TICKER>-FY<year>/ (V0's blocks, labels, document, chunks-<method>.json,
 chunk.log) and <out>/<method>.db.
@@ -26,8 +26,8 @@ from pathlib import Path
 
 import yaml
 
-from tenk_agent.build import STAGES, build, filing_dirs
-from tenk_agent.chunking import METHODS
+from era_agent.build import STAGES, build, filing_dirs
+from era_agent.chunking import METHODS
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "data" / "v0-chunking"

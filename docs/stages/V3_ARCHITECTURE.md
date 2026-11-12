@@ -55,7 +55,7 @@ Evaluation does not run this check; it reads the statuses (below). An unknown ch
 
 ## Models
 
-Answers, the agent and the judge go through `Model.complete(messages)` (`src/tenk_agent/models.py`); providers (vLLM or any OpenAI-compatible server, the Anthropic SDK) translate one neutral message format. The V0 structure agent and agentic chunker call vLLM's OpenAI API directly, for schema-constrained decoding. V4 uses the same layer. Serving and choosing a model: [SERVING.md](../SERVING.md).
+Answers, the agent and the judge go through `Model.complete(messages)` (`src/era_agent/models.py`); providers (vLLM or any OpenAI-compatible server, the Anthropic SDK) translate one neutral message format. The V0 structure agent and agentic chunker call vLLM's OpenAI API directly, for schema-constrained decoding. V4 uses the same layer. Serving and choosing a model: [SERVING.md](../SERVING.md).
 
 ## Evaluation
 

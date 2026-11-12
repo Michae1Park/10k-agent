@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """V0 ground truth draft: Items, heading tree, risk factors, tables, page furniture of any 10-K.
-Spec: experiments/V0_PARSING_CHUNKING.md §4. Shares no code with src/tenk_agent/preprocess, so
+Spec: experiments/V0_PARSING_CHUNKING.md §4. Shares no code with src/era_agent/preprocess, so
 the ground truth doesn't inherit the pipeline's rules.
 
   python -I experiments/v0/testdata/ground_truth.py experiments/v0/testdata/aapl-fy25-excerpt.html \

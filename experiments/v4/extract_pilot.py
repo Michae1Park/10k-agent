@@ -2,7 +2,7 @@
 
   taskset -c 16-31 uv run python experiments/v4/extract_pilot.py [--model anthropic:<id>]
 
---releases all extracts every release in the store (V4.2: what `tenk build --stage kpis` loads);
+--releases all extracts every release in the store (V4.2: what `era build --stage kpis` loads);
 --reuse <label> takes releases already extracted by that run instead of calling the model again.
 """
 
@@ -12,11 +12,11 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from tenk_agent.asof import AsOf
-from tenk_agent.evaluation.extraction import load_gold, score
-from tenk_agent.facts.extract import extract, to_json
-from tenk_agent.models import get_model
-from tenk_agent.store import Store
+from era_agent.asof import AsOf
+from era_agent.evaluation.extraction import load_gold, score
+from era_agent.facts.extract import extract, to_json
+from era_agent.models import get_model
+from era_agent.store import Store
 
 DB = Path("data/v4/build/parent_child.db")
 GOLD = Path("evaluation/gold/extraction-gold.jsonl")
@@ -54,7 +54,7 @@ def main() -> None:
         store = Store(DB, AsOf.after(filings[release]))  # sees the release, nothing later
         t = time.time()
         if args.method == "rules":
-            from tenk_agent.facts.rules import extract_rules
+            from era_agent.facts.rules import extract_rules
 
             out = to_json(extract_rules(store, ticker, period))
         else:

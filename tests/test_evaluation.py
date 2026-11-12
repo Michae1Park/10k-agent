@@ -2,9 +2,9 @@
 
 from datetime import date
 
-from tenk_agent.evaluation import gold
-from tenk_agent.evaluation.report import build_report
-from tenk_agent.evaluation.retrieval_metrics import GoldChunks, recall_at, reciprocal_rank
+from era_agent.evaluation import gold
+from era_agent.evaluation.report import build_report
+from era_agent.evaluation.retrieval_metrics import GoldChunks, recall_at, reciprocal_rank
 from test_store import make_store
 
 

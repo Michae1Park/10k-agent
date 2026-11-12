@@ -41,7 +41,7 @@
   <text class="sub" x="970.0" y="103" text-anchor="middle" font-size="14" fill="#4a5a68">text · table · claims · abstained</text>
   <text class="sub" x="970.0" y="123" text-anchor="middle" font-size="14" fill="#4a5a68">each claim already has a status from the run</text>
   <rect class="panel" x="20" y="150" width="1140" height="940" rx="10" fill="#f7f9fb" stroke="#c7d3de" stroke-width="1.5"/>
-  <text class="ptitle" x="590.0" y="178" text-anchor="middle" font-size="14.5" font-weight="600" fill="#46586a">src/tenk_agent/evaluation: grading one answer</text>
+  <text class="ptitle" x="590.0" y="178" text-anchor="middle" font-size="14.5" font-weight="600" fill="#46586a">src/era_agent/evaluation: grading one answer</text>
   <rect class="work" x="40" y="200" width="340" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
   <text class="name" x="210.0" y="227" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">gold_chunks</text>
   <text class="sub" x="210.0" y="253" text-anchor="middle" font-size="14" fill="#4a5a68">retrieval_metrics.py · gold.py</text>
@@ -116,7 +116,7 @@
   <text class="sub" x="210.0" y="1013" text-anchor="middle" font-size="14" fill="#4a5a68">written by experiments/v2/run.py</text>
   <text class="sub" x="210.0" y="1033" text-anchor="middle" font-size="14" fill="#4a5a68">and updated by judge.py</text>
   <rect class="work" x="410" y="940" width="360" height="104" rx="7" fill="#e7f3ea" stroke="#4f8f61" stroke-width="1.5"/>
-  <text class="name" x="590.0" y="967" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">report.py (tenk report)</text>
+  <text class="name" x="590.0" y="967" text-anchor="middle" font-size="17" font-weight="600" fill="#132030">report.py (era report)</text>
   <text class="sub" x="590.0" y="993" text-anchor="middle" font-size="14" fill="#4a5a68">recomputes Recall@k and MRR from the</text>
   <text class="sub" x="590.0" y="1013" text-anchor="middle" font-size="14" fill="#4a5a68">stored chunk IDs using gold_chunks,</text>
   <text class="sub" x="590.0" y="1033" text-anchor="middle" font-size="14" fill="#4a5a68">then builds the per-question tables</text>

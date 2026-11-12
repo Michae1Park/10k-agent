@@ -55,7 +55,7 @@ Code does only what holds for every 10-K. An LLM labels everything that depends 
 ### 2.2 LLM: the structure agent
 
 - **Model:** `Qwen/Qwen3.6-27B-FP8` on vLLM, at temperature 0 with thinking off. Guided decoding forces the output schema.
-- **Files:** the prompt is [structure.md](../src/tenk_agent/prompts/structure.md) and the output schema is [structure.schema.json](../src/tenk_agent/prompts/structure.schema.json).
+- **Files:** the prompt is [structure.md](../src/era_agent/prompts/structure.md) and the output schema is [structure.schema.json](../src/era_agent/prompts/structure.schema.json).
 - **Input:** about 150 blocks per call, one line each (`id | features | text`). Each call also gets the open Item, the open heading path and the previous window's last labels.
 - **Output:** one label per block, e.g. `{"id": "b0412", "role": "heading", "level": 2, "kind": "risk_factor"}`. The LLM labels; code builds the document from the filing's own text.
 
@@ -117,7 +117,7 @@ Code assembles one JSON document per filing:
 | Parent-child | LlamaIndex `HierarchicalNodeParser` | no | Parents ≤ 1,280, children ≤ 256 |
 | Agentic | Chonkie `SlumberChunker` + `Qwen3.6-27B-FP8` | yes | ≤ 600 tokens |
 
-**Shared by all three** ([chunking/common.py](../src/tenk_agent/chunking/common.py)):
+**Shared by all three** ([chunking/common.py](../src/era_agent/chunking/common.py)):
 - No chunk crosses an Item.
 - Each data table is one chunk with its caption, as `| cell | cell |` lines.
 - Settings are in [config.yaml](v0/config.yaml) under `chunking:`.

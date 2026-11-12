@@ -1,7 +1,7 @@
 """V0 chunking: the chunkers' sentence cuts (C5), table captions (C3) and table row children."""
 
-from tenk_agent.chunking import agentic
-from tenk_agent.chunking import common as chunkers
+from era_agent.chunking import agentic
+from era_agent.chunking import common as chunkers
 
 chunkers.CAPTION_CHARS = 300
 

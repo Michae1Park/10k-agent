@@ -6,7 +6,7 @@ run:
   db: data/v0-chunking/parent_child.db                  # build_corpus.py; also rule.db, agentic.db
   gold: evaluation/gold/retrieval-gold-fy2025.jsonl # 46 questions: FY2025, AAPL/AMZN/NVDA/MSFT
 
-retrieval:                                              # tenk_agent.retrieval, spec §3
+retrieval:                                              # era_agent.retrieval, spec §3
   embedder: local:Qwen/Qwen3-Embedding-0.6B             # must match the vectors in db (build_corpus.py --stage embed)
   reranker: local:BAAI/bge-reranker-v2-m3               # cross-encoder over (question, header + chunk)
   candidates: 40                                        # per retriever, per slot; and the fused list cut before reranking

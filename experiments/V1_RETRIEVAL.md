@@ -23,7 +23,7 @@
 
 ## 1. Test data
 
-**File:** [retrieval-gold-fy2025.jsonl](../evaluation/gold/retrieval-gold-fy2025.jsonl). To read it, run `tenk gold --gold <file> render`: a PDF with one card per question (evidence highlighted) and a summary, written next to the file and not committed.
+**File:** [retrieval-gold-fy2025.jsonl](../evaluation/gold/retrieval-gold-fy2025.jsonl). To read it, run `era gold --gold <file> render`: a PDF with one card per question (evidence highlighted) and a summary, written next to the file and not committed.
 
 46 questions on the FY2025 10-Ks of AAPL, AMZN, MSFT and NVDA, with 80 gold sources. All are reviewed by a person.
 
@@ -77,7 +77,7 @@ Each filing was parsed into a structured document (Items, headings, tables) and 
 question ─► QueryDecomposer ─► sub-questions ─► HybridSearch each: keyword + dense ─► RRF ─► rerank ─► merge ─► top 8
 ```
 
-`SubQuestionRetriever` runs the whole pipeline ([retrieval/](../src/tenk_agent/retrieval/)). Settings: [config.yaml](v1/config.yaml).
+`SubQuestionRetriever` runs the whole pipeline ([retrieval/](../src/era_agent/retrieval/)). Settings: [config.yaml](v1/config.yaml).
 
 **1. Decompose** (`QueryDecomposer`, rule-based, no LLM)
 

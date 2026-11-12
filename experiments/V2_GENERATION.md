@@ -28,7 +28,7 @@ Text questions: 9 of 16 with either context, judged against short facts since 20
 
 ## 1. Test data
 
-**File:** [generation-gold-fy2025.jsonl](../evaluation/gold/generation-gold-fy2025.jsonl). To read it, run `tenk gold --gold <file> render`: a PDF with one card per question (evidence highlighted) and a summary, written next to the file and not committed.
+**File:** [generation-gold-fy2025.jsonl](../evaluation/gold/generation-gold-fy2025.jsonl). To read it, run `era gold --gold <file> render`: a PDF with one card per question (evidence highlighted) and a summary, written next to the file and not committed.
 
 54 questions on the FY2025 10-Ks of AAPL, AMZN, MSFT and NVDA, in V1's parent-child corpus (`data/v0-chunking/parent_child.db`): [V1's 46](V1_RETRIEVAL.md#1-test-data), unchanged, plus 8 to decline.
 
@@ -77,21 +77,21 @@ V1 retrieval ─► 8 chunks + question ─► prompt ─► one model call ─�
 | Setting | Value |
 |---|---|
 | Model | `Qwen/Qwen3.6-27B-FP8` on vLLM, thinking off, temperature 0 |
-| Prompt | [answer.md](../src/tenk_agent/prompts/answer.md): rules, the corpus table (company, fiscal year, period end), the answer format |
+| Prompt | [answer.md](../src/era_agent/prompts/answer.md): rules, the corpus table (company, fiscal year, period end), the answer format |
 | User message | Each chunk as `<chunk id="…">` with company, fiscal year, period end, Item, kind and units; then the question |
 | Answer format | `answer` with `[n]` markers; `claims[]`, one per number (`value`, `unit`, `company`, `fiscal_year`, `chunk_ids`, `calculation`); `table`; `scope_notice`; `abstained` |
 
 The claim check is deterministic and runs after the answer is written. It labels each claim (`verified`, `calculated`, `cited`, `unverified`) but doesn't change the answer.
 
-There are no tools: the model does any arithmetic itself and writes the result into the claim's `calculation`. The check reruns it with the calculator ([calculator.py](../src/tenk_agent/generation/calculator.py)) and marks a wrong result `unverified`, so math errors are caught but not corrected.
+There are no tools: the model does any arithmetic itself and writes the result into the claim's `calculation`. The check reruns it with the calculator ([calculator.py](../src/era_agent/generation/calculator.py)) and marks a wrong result `unverified`, so math errors are caught but not corrected.
 
-Code: [generation/](../src/tenk_agent/generation/). Settings: [config.yaml](v2/config.yaml).
+Code: [generation/](../src/era_agent/generation/). Settings: [config.yaml](v2/config.yaml).
 
 ---
 
 ## 4. Metrics
 
-Code: [scoring.py](../src/tenk_agent/evaluation/scoring.py); judge: [judge.py](v2/judge.py) ([prompt](../src/tenk_agent/prompts/judge.md)).
+Code: [scoring.py](../src/era_agent/evaluation/scoring.py); judge: [judge.py](v2/judge.py) ([prompt](../src/era_agent/prompts/judge.md)).
 
 | Metric | Counts as a hit |
 |---|---|

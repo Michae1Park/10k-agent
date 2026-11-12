@@ -7,10 +7,10 @@ import shutil
 import pytest
 import yaml
 
-from tenk_agent.research import forecast as fc
-from tenk_agent.research.datapack import Point
-from tenk_agent.research.export import workbook
-from tenk_agent.research.model import checks, graph
+from era_agent.research import forecast as fc
+from era_agent.research.datapack import Point
+from era_agent.research.export import workbook
+from era_agent.research.model import checks, graph
 
 HISTORY = ["2024Q1", "2024Q2", "2024Q3", "2024Q4",
            "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2"]
@@ -129,7 +129,7 @@ def test_forecast_parity_with_libreoffice(templates, tmp_path):
 
 
 def test_proposals_are_bounded_anchors_kept_and_evidence_required(templates):
-    from tenk_agent.research.propose import apply, proposable
+    from era_agent.research.propose import apply, proposable
 
     m = model()
     bounds = proposable(m, {"take_rate.shift0"}) | {"fade": (0.75, 1.0)}
@@ -171,7 +171,7 @@ def test_a_ratio_change_holds_until_lapped(templates):
 
 
 def test_revenue_bridge_adds_up():
-    from tenk_agent.agent.tools import _bridge
+    from era_agent.agent.tools import _bridge
 
     class M:
         lines = [type("L", (), {"name": n}) for n in ("gross_bookings", "take_rate", "volume",
@@ -247,7 +247,7 @@ def test_a_quarterly_anchor_keeps_its_driver_from_a_full_year_guide(templates):
 
 
 def test_valuation_checks_stop_on_wacc_below_growth_or_bad_weights():
-    from tenk_agent.research.model import checks as layer2
+    from era_agent.research.model import checks as layer2
 
     settings = {"valuation": {"terminal_growth": 0.03, "weights": {"multiple": 0.6, "dcf": 0.4}},
                 "scenarios": {"weights": {"bear": 0.25, "base": 0.5, "bull": 0.25}}}

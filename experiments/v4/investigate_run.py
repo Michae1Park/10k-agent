@@ -7,7 +7,7 @@
 --baseline answers each question with one plain Research run (tool set "research"), the
 baseline Investigate must beat (spec §5, design doc §12.2). --investigate runs Investigate
 (agent/plan.py): its sub-runs are the same agents, sharing one model book per question.
-Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and TENK_COMPANIES=companies.yaml.
+Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and ERA_COMPANIES=companies.yaml.
 
 Automatic score, per question:
   ask part       every expected value stated by a verified or calculated claim (a guidance
@@ -35,8 +35,8 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import research_run  # noqa: E402  (its agent factory: same model, budgets and tool set)
 
-from tenk_agent.agent.plan import Investigator, answer_text  # noqa: E402
-from tenk_agent.evaluation.answer_metrics import matches  # noqa: E402
+from era_agent.agent.plan import Investigator, answer_text  # noqa: E402
+from era_agent.evaluation.answer_metrics import matches  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 GOLD = ROOT / "evaluation" / "gold" / "investigate-gold.jsonl"

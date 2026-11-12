@@ -15,7 +15,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from tenk_agent.models import get_model, parse_json
+from era_agent.models import get_model, parse_json
 
 ROOT = Path(__file__).resolve().parents[2]
 NAMES = {"ABNB": "Airbnb", "BKNG": "Booking Holdings", "CART": "Instacart (Maplebear)",

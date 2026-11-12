@@ -3,9 +3,9 @@
 import pytest
 import yaml
 
-from tenk_agent.research import datapack
-from tenk_agent.research.datapack import Point
-from tenk_agent.research.model import checks, graph
+from era_agent.research import datapack
+from era_agent.research.datapack import Point
+from era_agent.research.model import checks, graph
 
 QUARTERS = ["2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1"]
 TEMPLATE = {

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from tenk_agent.corpus import Company, companies_path, load
+from era_agent.corpus import Company, companies_path, load
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -30,7 +30,7 @@ def test_v4_file_has_the_eight_and_no_fixed_years():
 
 
 def test_companies_path_prefers_env(monkeypatch):
-    monkeypatch.setenv("TENK_COMPANIES", "companies.yaml")
+    monkeypatch.setenv("ERA_COMPANIES", "companies.yaml")
     assert companies_path().name == "companies.yaml"
-    monkeypatch.delenv("TENK_COMPANIES")
+    monkeypatch.delenv("ERA_COMPANIES")
     assert companies_path().name == "companies-v3.yaml"

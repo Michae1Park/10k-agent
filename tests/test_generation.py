@@ -1,8 +1,8 @@
 import pytest
 
-from tenk_agent.generation.calculator import CalculatorError, calculate
-from tenk_agent.generation.verify import find_value, numbers_in
-from tenk_agent.store import ChunkRecord
+from era_agent.generation.calculator import CalculatorError, calculate
+from era_agent.generation.verify import find_value, numbers_in
+from era_agent.store import ChunkRecord
 
 
 def chunk(text: str, units: str | None = None) -> ChunkRecord:

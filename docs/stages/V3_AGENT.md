@@ -1,18 +1,18 @@
 # V3 · Agent: the model picks the tools, then answers with cited claims
 
-**Builds on** V1 (its search is now a tool) and V2 (the same answer format and claim check). **Code:** [`agent/`](../../src/tenk_agent/agent/), prompt [prompts/agent.md](../../src/tenk_agent/prompts/agent.md). **Design and results:** [experiments/V3_AGENT.md](../../experiments/V3_AGENT.md): 88.5% (10-K tools) and 87.2% (+ SEC data) of 78 questions right, against V2's 66.7% on the same model; 99.3% and 100% of numeric claims grounded.. Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
+**Builds on** V1 (its search is now a tool) and V2 (the same answer format and claim check). **Code:** [`agent/`](../../src/era_agent/agent/), prompt [prompts/agent.md](../../src/era_agent/prompts/agent.md). **Design and results:** [experiments/V3_AGENT.md](../../experiments/V3_AGENT.md): 88.5% (10-K tools) and 87.2% (+ SEC data) of 78 questions right, against V2's 66.7% on the same model; 99.3% and 100% of numeric claims grounded.. Overview: [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md).
 
 ## Commands
 
 ```bash
-tenk tool --list                                                         # the schemas the model gets
-tenk tool search_filings query="research and development" companies=AAPL,NVDA fiscal_years=2025 k=4
-tenk tool calculator op=cagr inputs='{"start": 574785, "end": 716924, "years": 2}'
-tenk tool xbrl_facts company=Tesla concept=us-gaap:Revenues fiscal_year=2024
-tenk tool edgar_filings company=MSFT --live                              # --live: fetch what isn't cached (SEC_USER_AGENT)
+era tool --list                                                         # the schemas the model gets
+era tool search_filings query="research and development" companies=AAPL,NVDA fiscal_years=2025 k=4
+era tool calculator op=cagr inputs='{"start": 574785, "end": 716924, "years": 2}'
+era tool xbrl_facts company=Tesla concept=us-gaap:Revenues fiscal_year=2024
+era tool edgar_filings company=MSFT --live                              # --live: fetch what isn't cached (SEC_USER_AGENT)
 
-tenk agent "Which of the four companies had the highest operating margin in its latest fiscal year?"
-tenk agent "..." --tools text --max-calls 8 --json
+era agent "Which of the four companies had the highest operating margin in its latest fiscal year?"
+era agent "..." --tools text --max-calls 8 --json
 ```
 
 ## Data
@@ -20,9 +20,9 @@ tenk agent "..." --tools text --max-calls 8 --json
 | Data | Where |
 |---|---|
 | Chunks, sections, filings | `db` (V1's parent-child database) |
-| XBRL company facts, EDGAR submissions | `data/raw/edgar/<TICKER>/` (`tenk fetch` writes the corpus companies'; `--live` adds others) |
-| How to work, rules, answer format | [prompts/agent.md](../../src/tenk_agent/prompts/agent.md) |
-| Tool schemas | [agent/tools.py](../../src/tenk_agent/agent/tools.py) (`SPECS`) |
+| XBRL company facts, EDGAR submissions | `data/raw/edgar/<TICKER>/` (`era fetch` writes the corpus companies'; `--live` adds others) |
+| How to work, rules, answer format | [prompts/agent.md](../../src/era_agent/prompts/agent.md) |
+| Tool schemas | [agent/tools.py](../../src/era_agent/agent/tools.py) (`SPECS`) |
 | Gold questions | [agent-gold-fy2025.jsonl](../../evaluation/gold/agent-gold-fy2025.jsonl): all 78, V2's 54 copied in plus 24 new (`gold_set` says which) |
 
 ## Knobs
@@ -41,7 +41,7 @@ tenk agent "..." --tools text --max-calls 8 --json
 | Tool | Does | Returns |
 |---|---|---|
 | `search_filings` | V1's retrieval (sub-questions per company and filing → hybrid search → round-robin merge). `companies` and `fiscal_years`, when given, replace those named in the query; `["all"]` searches every company; no company at all is an error. `k` in all: default 8, at most 16 | The sub-questions searched; chunks with `chunk_id`, company, year, Item, kind, units, pages, text |
-| `calculator` | [calculator.py](../../src/tenk_agent/generation/calculator.py): `pct_change`, `cagr`, `ratio`, `percent_of`, `difference`, `sum`, or an expression over named inputs | Result, formula, inputs |
+| `calculator` | [calculator.py](../../src/era_agent/generation/calculator.py): `pct_change`, `cagr`, `ratio`, `percent_of`, `difference`, `sum`, or an expression over named inputs | Result, formula, inputs |
 | `xbrl_facts` | One concept of one 10-K from SEC company facts, any registrant; an unknown concept returns the closest names | Values for the filing's year and the prior years it shows, each with an `xbrl_id` to cite |
 | `edgar_filings` | EDGAR filing metadata, any registrant | Form, accession, filing date, period end, link (no financial data) |
 

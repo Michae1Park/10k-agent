@@ -2,8 +2,8 @@
 
 import pytest
 
-from tenk_agent import cli, credentials
-from tenk_agent.research import outside
+from era_agent import cli, credentials
+from era_agent.research import outside
 
 
 @pytest.fixture
@@ -11,12 +11,12 @@ def no_creds(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)  # no .env, no credentials.yaml
     for env, _, _ in credentials.CREDENTIALS.values():
         monkeypatch.delenv(env, raising=False)
-    monkeypatch.setenv("TENK_CREDENTIALS", str(tmp_path / "credentials.yaml"))
+    monkeypatch.setenv("ERA_CREDENTIALS", str(tmp_path / "credentials.yaml"))
     return tmp_path
 
 
 def test_missing_credential_names_it_and_setup(no_creds):
-    with pytest.raises(credentials.MissingCredential, match="(?s)Tiingo.*tenk setup"):
+    with pytest.raises(credentials.MissingCredential, match="(?s)Tiingo.*era setup"):
         credentials.get("tiingo_api_key")
 
 

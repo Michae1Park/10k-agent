@@ -10,8 +10,8 @@ How filings, facts and market data are fetched and stored. Rules live in the [de
 
 Two commands:
 
-1. `tenk fetch` downloads everything into a raw cache.
-2. `tenk build` loads it into one SQLite file along four lanes:
+1. `era fetch` downloads everything into a raw cache.
+2. `era build` loads it into one SQLite file along four lanes:
 
 | Lane | Does |
 | --- | --- |
