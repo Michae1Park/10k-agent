@@ -61,11 +61,10 @@ export default function App() {
         )}
       </nav>
       <main className="bg-glow relative min-w-0 flex-1">
-        <div className="absolute top-0 left-0 z-10 px-5 py-4 text-xl text-neutral-700">Equity Research Agent</div>
         {tab === 'chat'
           ? <ChatView key={newKey} chatId={chatId} companies={companies} onSource={setSource}
               onChat={(id) => { setChatId(id); loadChats() }} />
-          : <div className="h-full overflow-auto pt-12"><ReportsView companies={companies} /></div>}
+          : <div className="h-full overflow-auto"><ReportsView companies={companies} /></div>}
       </main>
       <SourceDrawer id={source} onClose={() => setSource(null)} />
     </div>

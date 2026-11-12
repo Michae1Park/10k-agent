@@ -177,7 +177,7 @@ export function ChatView({ chatId, onChat, onSource, companies }: {
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-3xl space-y-8 px-4 pt-16 pb-6">
+        <div className="mx-auto max-w-3xl space-y-8 px-4 pt-8 pb-6">
           {messages.map((m, i) => m.role === 'user' ? (
             <div key={i} className="flex justify-end">
               <div className="max-w-[80%] rounded-3xl rounded-tr-md bg-neutral-100 px-5 py-3 text-neutral-900">
