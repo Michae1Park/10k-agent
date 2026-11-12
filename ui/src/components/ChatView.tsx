@@ -4,7 +4,7 @@ import type { AssistantMessage, Message, Mode, TraceEvent } from '../api'
 import { AnswerBody, LiveStatus, SubRuns, Trace } from './AnswerView'
 
 const MODE_STYLE: Record<Mode, string> = {
-  ask: 'bg-emerald-600', research: 'bg-sky-600', investigate: 'bg-violet-600',
+  ask: 'bg-neutral-800', research: 'bg-neutral-800', investigate: 'bg-neutral-800',
 }
 
 function Assistant({ m, live, onSource }: { m: AssistantMessage; live?: boolean; onSource: (id: string) => void }) {
@@ -13,7 +13,9 @@ function Assistant({ m, live, onSource }: { m: AssistantMessage; live?: boolean;
   const trace = m.trace ?? []
   const tools = trace.filter((e) => e.type === 'tool').length
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+    <div className="flex gap-4">
+      <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-neutral-300 to-neutral-700 text-sm text-white ${live ? 'animate-pulse' : ''}`}>✦</div>
+      <div className="min-w-0 flex-1">
       {live && !m.answer && !m.error && <div className="mb-3"><LiveStatus events={trace} /></div>}
       {m.error && <p className="text-sm text-red-700">{m.error}</p>}
       {m.answer && <AnswerBody answer={m.answer} onSource={onSource} />}
@@ -28,11 +30,12 @@ function Assistant({ m, live, onSource }: { m: AssistantMessage; live?: boolean;
           )}
         </div>
       )}
-      <div className="mt-3 border-t border-stone-100 pt-2">
+      <div className="mt-3">
         <button onClick={() => setShowTrace(!showTrace)} className="text-xs text-stone-500 hover:text-stone-800">
           {showTrace ? '▾' : '▸'} Trace · {tools} tool calls{m.seconds != null ? ` · ${m.seconds.toFixed(1)}s` : ''}{m.stop ? ` · ${m.stop}` : ''}
         </button>
-        {showTrace && <div className="mt-2 max-h-[28rem] overflow-auto"><Trace events={trace} live={live} /></div>}
+        {showTrace && <div className="mt-2 max-h-[28rem] overflow-auto rounded-2xl bg-neutral-50 p-3"><Trace events={trace} live={live} /></div>}
+      </div>
       </div>
     </div>
   )
@@ -95,20 +98,53 @@ export function ChatView({ chatId, onChat, onSource, companies }: {
   }
 
   const hint = MODES.find((m) => m.id === mode)!.hint
+  const composer = (
+          <div className="rounded-[28px] border border-neutral-200 bg-white px-4 pt-3 pb-2 shadow-[0_2px_12px_rgba(0,0,0,0.06)] focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.10)]">
+          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+            placeholder={busy ? 'Running…' : `Ask Equity Research Agent (${MODES.find((m) => m.id === mode)!.label})`}
+            className="w-full resize-none bg-transparent px-1 text-[15px] placeholder:text-neutral-400 focus:outline-none" />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-full bg-neutral-100 p-0.5">
+              {MODES.map((m) => (
+                <button key={m.id} onClick={() => setMode(m.id)} title={m.hint}
+                  className={`rounded-full px-3 py-1 text-sm ${mode === m.id ? `${MODE_STYLE[m.id]} text-white shadow` : 'text-stone-600 hover:text-stone-900'}`}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <label className="flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-600">
+              as of
+              <input type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)}
+                className="bg-transparent text-sm focus:outline-none" />
+            </label>
+            <span className="hidden min-w-0 flex-1 truncate text-xs text-neutral-400 md:inline">{hint}</span>
+            <button onClick={send} disabled={busy || !text.trim()} title="Send"
+              className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800 text-lg text-white hover:bg-neutral-900 disabled:bg-neutral-200 disabled:text-neutral-400">➤</button>
+          </div>
+          </div>
+  )
+  const disclaimer = <p className="mt-2 text-center text-xs text-neutral-400">Answers are drafted by an agent from filings and can be wrong; check the cited sources.</p>
+
+  if (messages.length === 0 && !live) return (
+    <div className="flex h-full flex-col items-center justify-center overflow-auto px-4 pb-[8vh]">
+      <div className="w-full max-w-3xl">
+        <h2 className="text-glow text-5xl font-medium tracking-tight">Hello.</h2>
+        <p className="mt-2 text-4xl font-medium tracking-tight text-neutral-300">What should we research today?</p>
+        <div className="mt-10">{composer}</div>
+        <p className="mt-4 text-center text-sm text-neutral-500">{companies.map((c) => c.ticker).join(' · ')}</p>
+      </div>
+    </div>
+  )
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-3xl space-y-4 px-4 py-6">
-          {messages.length === 0 && !live && (
-            <div className="py-16 text-center text-stone-500">
-              <h2 className="mb-2 text-2xl font-semibold text-stone-800">Ask about the coverage</h2>
-              <p className="text-sm">{companies.map((c) => c.ticker).join(' · ')}</p>
-            </div>
-          )}
+        <div className="mx-auto max-w-3xl space-y-8 px-4 pt-16 pb-6">
           {messages.map((m, i) => m.role === 'user' ? (
             <div key={i} className="flex justify-end">
-              <div className="max-w-[85%] rounded-xl bg-stone-800 px-4 py-2 text-stone-50">
-                <div className="mb-0.5 text-[11px] text-stone-400">{m.mode} · as of {m.as_of}</div>
+              <div className="max-w-[80%] rounded-3xl rounded-tr-md bg-neutral-100 px-5 py-3 text-neutral-900">
+                <div className="mb-0.5 text-[11px] text-neutral-500">{m.mode} · as of {m.as_of}</div>
                 <p className="whitespace-pre-wrap">{m.text}</p>
               </div>
             </div>
@@ -117,32 +153,10 @@ export function ChatView({ chatId, onChat, onSource, companies }: {
           <div ref={end} />
         </div>
       </div>
-      <div className="border-t border-stone-200 bg-white">
-        <div className="mx-auto max-w-3xl px-4 py-3">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <div className="flex rounded-lg bg-stone-100 p-0.5">
-              {MODES.map((m) => (
-                <button key={m.id} onClick={() => setMode(m.id)} title={m.hint}
-                  className={`rounded-md px-3 py-1 text-sm ${mode === m.id ? `${MODE_STYLE[m.id]} text-white shadow` : 'text-stone-600 hover:text-stone-900'}`}>
-                  {m.label}
-                </button>
-              ))}
-            </div>
-            <label className="flex items-center gap-1 text-sm text-stone-600">
-              as of
-              <input type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)}
-                className="rounded border border-stone-300 px-2 py-0.5 text-sm" />
-            </label>
-            <span className="hidden text-xs text-stone-400 sm:inline">{hint}</span>
-          </div>
-          <div className="flex gap-2">
-            <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-              placeholder={busy ? 'Running…' : `${MODES.find((m) => m.id === mode)!.label}: type a question (Enter to send)`}
-              className="flex-1 resize-none rounded-lg border border-stone-300 px-3 py-2 focus:border-stone-500 focus:outline-none" />
-            <button onClick={send} disabled={busy || !text.trim()}
-              className="rounded-lg bg-stone-900 px-4 text-white disabled:opacity-40">Send</button>
-          </div>
+      <div>
+        <div className="mx-auto max-w-3xl px-4 pb-4">
+          {composer}
+          {disclaimer}
         </div>
       </div>
     </div>

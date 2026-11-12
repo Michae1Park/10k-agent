@@ -38,7 +38,7 @@ function JobProgress({ job, onDone }: { job: Job; onDone: () => void }) {
           const i = reached.indexOf(s)
           const current = i >= 0 && i === reached.length - 1 && !done && !failed
           return <li key={s} className={`rounded px-2 py-0.5 text-[11px] ${
-            current ? 'animate-pulse bg-sky-600 text-white' : i >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-400'}`}>{s}</li>
+            current ? 'animate-pulse bg-neutral-700 text-white' : i >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-400'}`}>{s}</li>
         })}
       </ol>
       {failed && <p className="mt-2 text-sm text-red-700">{failed.text}</p>}

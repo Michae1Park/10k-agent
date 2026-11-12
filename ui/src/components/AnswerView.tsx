@@ -107,7 +107,7 @@ function short(v: unknown, n = 140) {
 }
 
 export function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
-  return <span role="status" aria-label="working" className={`inline-block shrink-0 animate-spin rounded-full border-2 border-stone-300 border-t-sky-600 ${className}`} />
+  return <span role="status" aria-label="working" className={`inline-block shrink-0 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-700 ${className}`} />
 }
 
 /** What the agent is doing now, from the latest trace event. */
@@ -134,10 +134,10 @@ export function LiveStatus({ events }: { events: TraceEvent[] }) {
   const secs = Math.floor((now - start) / 1000)
   const tools = events.filter((e) => e.type === 'tool').length
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900">
+    <div className="flex items-center gap-2 rounded-full bg-neutral-100 px-4 py-2 text-sm text-neutral-700">
       <Spinner />
       <span className="min-w-0 flex-1 truncate">{activity(events)}</span>
-      <span className="shrink-0 font-mono text-xs text-sky-700">{tools} tool calls · {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')}</span>
+      <span className="shrink-0 font-mono text-xs text-neutral-500">{tools} tool calls · {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')}</span>
     </div>
   )
 }

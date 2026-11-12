@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
-body { @apply bg-stone-50 text-stone-900 antialiased; }
+body { @apply bg-white text-neutral-900 antialiased; font-family: 'Google Sans', 'Inter', system-ui, sans-serif; }
+/* Gemini-style soft glow, in greys */
+.bg-glow {
+  background:
+    radial-gradient(60rem 30rem at 50% -10%, rgb(229 229 229 / 0.9), transparent 70%),
+    radial-gradient(40rem 24rem at 85% 110%, rgb(212 212 212 / 0.55), transparent 70%),
+    linear-gradient(180deg, #fafafa 0%, #ffffff 60%);
+}
+.text-glow { @apply bg-gradient-to-r from-neutral-400 via-neutral-600 to-neutral-900 bg-clip-text text-transparent; }
 .prose-note h1 { @apply text-xl font-semibold mt-2 mb-3; }
 .prose-note h2 { @apply text-lg font-semibold mt-6 mb-2 border-b border-stone-200 pb-1; }
 .prose-note h3 { @apply font-semibold mt-4 mb-1; }
