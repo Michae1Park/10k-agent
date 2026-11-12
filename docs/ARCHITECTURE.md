@@ -57,4 +57,3 @@ V4 reuses V0–V3's pipeline (parsing, chunking, retrieval, agent loop, claim ch
 | How well it works | [experiments/](../experiments/README.md) (V0–V3), [V4_RESULTS.md](V4_RESULTS.md) |
 | The V4 model equations and parameters | [V4_FINANCIAL_MODELING.md](stages/V4_FINANCIAL_MODELING.md) |
 | The V4 research agent | [spec](V4_SPEC.md), [design](V4_TECHNICAL_DESIGN_DOC.md) and its [per-block companions](stages/) (`V4_*.md`) |
-| To contribute | [CONTRIBUTING.md](../CONTRIBUTING.md) |

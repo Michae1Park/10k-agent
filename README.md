@@ -141,4 +141,4 @@ era research report UBER --as-of 2026-08-06    # draft note, workbook and logs â
 docker compose up --build                      # web UI + API on http://localhost:8000
 ```
 
-Full steps, the evaluations and troubleshooting: [Getting started](docs/GETTING_STARTED.md). Serving presets: [SERVING.md](docs/SERVING.md). Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
+Full steps, the evaluations and troubleshooting: [Getting started](docs/GETTING_STARTED.md). Serving presets: [SERVING.md](docs/SERVING.md).
