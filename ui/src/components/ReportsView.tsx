@@ -15,10 +15,6 @@ interface Job {
 const STAGES = ['S2 events', 'S3-S5 model and forecast', 'S6-S7 peers and valuation', 'S8 revisions',
   'S9 debates', 'S7 sensitivities', 'S10 write', 'S11 export']
 
-function Pill({ children, strong }: { children: React.ReactNode; strong?: boolean }) {
-  return <span className={`rounded-full px-3 py-1 ${strong ? 'bg-neutral-800 text-white' : 'bg-neutral-100 text-neutral-700'}`}>{children}</span>
-}
-
 function clock(secs: number) {
   const s = Math.max(0, Math.floor(secs))
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
@@ -109,12 +105,10 @@ function ReportDetail({ ticker, asOf, onBack }: { ticker: string; asOf: string; 
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-glow text-4xl font-medium tracking-tight">{ticker}</h2>
-          <p className="mt-1 text-sm text-neutral-500">as of {asOf}</p>
-          <div className="mt-3 flex flex-wrap gap-2 text-sm">
-            <Pill>{s.version}</Pill><Pill strong>{s.rating}</Pill><Pill>PT ${s.price_target?.toFixed(2)}</Pill>
-            <Pill>{s.exceptions} exceptions</Pill><Pill>{s.untraced} untraced</Pill>
-            {s.parent && <Pill>parent {s.parent}</Pill>}<Pill>{version?.status ?? 'draft'}</Pill>
-          </div>
+          <p className="mt-1 text-sm text-neutral-500">
+            as of {asOf} · {s.version}{s.parent ? ` (from ${s.parent.split(':')[1] ?? s.parent})` : ''} · <span className="capitalize">{version?.status ?? 'draft'}</span>
+            {s.untraced > 0 && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">{s.untraced} untraced figures</span>}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {data.files.map((f: string) => <a key={f} href={base + f} className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-700 hover:bg-neutral-100">⤓ {f}</a>)}

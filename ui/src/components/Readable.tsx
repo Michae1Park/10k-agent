@@ -245,7 +245,7 @@ const RATING_TONE: Record<string, string> = { Buy: 'text-emerald-700', Sell: 'te
 
 /** A research note: KPI tiles, key takeaways, a section index, and foldable sections. */
 export function NoteView({ note }: { note: string }) {
-  const { titleLine, meta, sections } = useMemo(() => parseNote(note), [note])
+  const { titleLine, sections } = useMemo(() => parseNote(note), [note])
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const summary = sections[0]
   const kpis = summary ? firstTable(summary.body) : null
@@ -256,8 +256,8 @@ export function NoteView({ note }: { note: string }) {
 
   return (
     <div>
-      <p className="text-sm font-medium text-neutral-700">{titleLine}</p>
-      <p className="mt-0.5 text-xs text-neutral-500">{meta.replace(/\s+/g, ' ')}</p>
+      {/* the as-of, status and approval caveat are in the page header; keep company and note type */}
+      <p className="text-sm text-neutral-600">{titleLine.replace(/\s*\([A-Z.]+\)/, '')}</p>
 
       {kpis && (
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
