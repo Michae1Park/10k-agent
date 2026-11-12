@@ -249,7 +249,8 @@ def create_app(settings: dict) -> FastAPI:
                 "revisions": read("revisions.json", []),
                 "note": note.read_text() if note.exists() else "",
                 "files": sorted(f for f in FILES if (folder / f).exists()),
-                "versions": versions(ticker)}
+                "versions": versions(ticker),
+                "generated": (folder / "report.json").stat().st_mtime}  # when this run was saved
 
     @app.get("/api/reports/{ticker}/{as_of}/files/{name}")
     def report_file(ticker: str, as_of: str, name: str):

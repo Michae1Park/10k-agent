@@ -15,6 +15,11 @@ interface Job {
 const STAGES = ['S2 events', 'S3-S5 model and forecast', 'S6-S7 peers and valuation', 'S8 revisions',
   'S9 debates', 'S7 sensitivities', 'S10 write', 'S11 export']
 
+/** Epoch seconds → "Nov 12, 2026, 2:32 PM" in the viewer's locale. */
+function when(epoch: number) {
+  return new Date(epoch * 1000).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
 function clock(secs: number) {
   const s = Math.max(0, Math.floor(secs))
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
@@ -92,6 +97,7 @@ function ReportDetail({ ticker, asOf, onBack }: { ticker: string; asOf: string; 
   if (!data) return <div className="flex items-center gap-2 p-10 text-neutral-500"><Spinner /> Loading…</div>
   const s = data.summary
   const version = data.versions.find((v: any) => v.id === s.version)
+  const parentAsOf = s.parent ? data.versions.find((v: any) => v.id === s.parent)?.as_of ?? 'earlier' : null
   async function approve() {
     try {
       const r = await postJSON<any>('/api/reports/approve', { version: s.version, by })
@@ -106,14 +112,17 @@ function ReportDetail({ ticker, asOf, onBack }: { ticker: string; asOf: string; 
         <div>
           <h2 className="text-glow text-4xl font-medium tracking-tight">{ticker}</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            as of {asOf} · {s.version}{s.parent ? ` (from ${s.parent.split(':')[1] ?? s.parent})` : ''} · <span className="capitalize">{version?.status ?? 'draft'}</span>
+            as of {asOf}
+            {data.generated && <> · generated {when(data.generated)}</>}
+            {parentAsOf && <> · revises the {parentAsOf} report</>}
+            {' · '}<span className="capitalize">{version?.status ?? 'draft'}</span>
             {s.untraced > 0 && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">{s.untraced} untraced figures</span>}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {data.files.map((f: string) => <a key={f} href={base + f} className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-700 hover:bg-neutral-100">⤓ {f}</a>)}
           <input value={by} onChange={(e) => setBy(e.target.value)} placeholder="initials" title="Your initials, recorded as the reviewer" className="w-24 rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm focus:outline-none" />
-          <button disabled={!by} onClick={approve} title="Mark this model version as reviewed" className="rounded-full bg-neutral-800 px-4 py-1 text-sm text-white hover:bg-neutral-900 disabled:bg-neutral-200 disabled:text-neutral-400">Approve {s.version}</button>
+          <button disabled={!by} onClick={approve} title="Mark this report as reviewed" className="rounded-full bg-neutral-800 px-4 py-1 text-sm text-white hover:bg-neutral-900 disabled:bg-neutral-200 disabled:text-neutral-400">Approve report</button>
           {msg && <span className="text-xs text-neutral-500">{msg}</span>}
         </div>
       </div>
@@ -123,7 +132,10 @@ function ReportDetail({ ticker, asOf, onBack }: { ticker: string; asOf: string; 
             {t}{t === 'exceptions' ? ` (${data.exceptions.length})` : ''}</button>
         ))}
       </div>
-      {tab === 'note' && <NoteView note={data.note} />}
+      {tab === 'note' && <NoteView note={data.note.replace(/the prior version \(v(\d+)\)/g, (_: string, n: string) => {
+        const v = data.versions.find((x: any) => x.id === `${ticker}:v${n}`)
+        return v ? `the ${v.as_of} report` : 'the prior report'
+      })} />}
       {tab === 'exceptions' && (
         <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white"><table className="w-full text-sm">
           <thead><tr className="bg-neutral-50 text-left text-xs text-neutral-500"><th className="px-3 py-2">id</th><th className="px-3 py-2">severity</th><th className="px-3 py-2">item</th></tr></thead>
@@ -208,11 +220,11 @@ export function ReportsView({ companies }: { companies: { ticker: string; name: 
         <div className="overflow-hidden rounded-3xl border border-neutral-200 bg-white">
           <table className="w-full text-sm">
             <thead><tr className="bg-neutral-50 text-left text-xs text-neutral-500">
-              {['Ticker', 'As of', 'Version', 'Rating', 'PT', 'Exceptions', 'Untraced', 'Run time'].map((h) => <th key={h} className="px-4 py-2.5 font-medium">{h}</th>)}</tr></thead>
+              {['Ticker', 'As of', 'Generated', 'Rating', 'PT', 'Exceptions', 'Untraced', 'Run time'].map((h) => <th key={h} className="px-4 py-2.5 font-medium">{h}</th>)}</tr></thead>
             <tbody>{rows.map((r) => (
               <tr key={`${r.ticker}/${r.as_of}`} onClick={() => setOpen({ ticker: r.ticker, asOf: r.as_of })} className="cursor-pointer border-t border-neutral-100 hover:bg-neutral-50">
                 <td className="px-4 py-3 font-medium">{r.ticker}</td><td className="px-4 py-3 text-neutral-600">{r.as_of}</td>
-                <td className="px-4 py-3 font-mono text-xs text-neutral-600">{r.version}</td>
+                <td className="px-4 py-3 text-neutral-600">{when(r.modified)}</td>
                 <td className="px-4 py-3"><span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs">{r.rating}</span></td>
                 <td className="px-4 py-3">${r.price_target?.toFixed(2)}</td><td className="px-4 py-3 text-neutral-600">{r.exceptions}</td>
                 <td className="px-4 py-3 text-neutral-600">{r.untraced}</td>
