@@ -10,7 +10,7 @@ services:
       - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface   # reuse downloaded weights
     command: >                    # scripts/serve_vllm.sh qwen3.6-27b-fp8
       --model Qwen/Qwen3.6-27B-FP8 --served-model-name Qwen/Qwen3.6-27B-FP8
-      --port 8001 --gpu-memory-utilization 0.80 --max-model-len 32768
+      --port 8001 --gpu-memory-utilization 0.97 --max-model-len 200000
       --enable-prefix-caching --tool-call-parser qwen3_coder --reasoning-parser qwen3
       --max-num-seqs 4 --limit-mm-per-prompt '{"image":0,"video":0}' --enable-auto-tool-choice
     healthcheck:
