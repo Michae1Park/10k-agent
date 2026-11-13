@@ -125,7 +125,7 @@ source .venv/bin/activate
 era setup                                   # your SEC, Tiingo and FRED credentials (gitignored)
 export ERA_COMPANIES=companies.yaml         # the eight-company corpus
 
-scripts/serve_vllm.sh qwen3.6-27b-fp8       # the model, in its own terminal
+scripts/serve_vllm.sh qwen3.6-27b-fp8       # the model for local runs, in its own terminal
 
 # Build the corpus (cached; heavy steps pinned to E-cores)
 era fetch && era fetch --market
@@ -138,7 +138,7 @@ era build --stage kpis
 
 ```bash
 era research report UBER --as-of 2026-08-06    # draft note, workbook and logs → output/reports/
-docker compose up --build                      # web UI + API on http://localhost:8000
+docker compose up --build                      # vLLM + web UI/API on :8000 (stop local vLLM first)
 ```
 
 Full steps, the evaluations and troubleshooting: [Getting started](docs/GETTING_STARTED.md). Serving presets: [SERVING.md](docs/SERVING.md).

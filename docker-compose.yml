@@ -1,12 +1,39 @@
-# docker compose up --build   → UI + API on http://localhost:8000
-# Start the model server on the host first: scripts/serve_vllm.sh (port 8001).
+# docker compose up --build   → vLLM on :8001, then UI + API on http://localhost:8000
+# Runs the model server too; scripts/serve_vllm.sh is for running era locally (stop it first).
 services:
+  vllm:
+    image: vllm/vllm-openai:v0.33.0
+    network_mode: host            # serves localhost:8001 as config.yaml expects
+    cpuset: "16-31"               # E-cores only: Python segfaults on this i9-14900K's P-cores
+    ipc: host                     # PyTorch shared memory
+    volumes:
+      - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface   # reuse downloaded weights
+    command: >                    # scripts/serve_vllm.sh qwen3.6-27b-fp8
+      --model Qwen/Qwen3.6-27B-FP8 --served-model-name Qwen/Qwen3.6-27B-FP8
+      --port 8001 --gpu-memory-utilization 0.80 --max-model-len 32768
+      --enable-prefix-caching --tool-call-parser qwen3_coder --reasoning-parser qwen3
+      --max-num-seqs 4 --limit-mm-per-prompt '{"image":0,"video":0}' --enable-auto-tool-choice
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/v1/models"]
+      interval: 10s
+      start_period: 600s          # loading weights and compiling CUDA graphs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
   era:
     build: .
     image: era-agent
     network_mode: host            # reaches vLLM at localhost:8001 as config.yaml expects
     cpuset: "16-31"               # E-cores only: Python segfaults on this i9-14900K's P-cores
     env_file: .env                # SEC_USER_AGENT, TIINGO_API_KEY, FRED_API_KEY, ANTHROPIC_API_KEY
+    depends_on:
+      vllm:
+        condition: service_healthy
     volumes:
       - ./data:/app/data
       - ./output:/app/output
