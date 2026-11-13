@@ -144,11 +144,13 @@ class Agent:
         graph.add_edge("tools", "model")
         self.graph = graph.compile()
 
-    def run(self, question: str) -> Run:
+    def run(self, question: str, history: list[dict] | None = None) -> Run:
+        """history: earlier chat turns as messages (agent.history.as_messages), oldest first."""
         start = time.perf_counter()
         state = self.graph.invoke(
             {
-                "messages": [{"role": "user", "content": f"Question: {question}"}],
+                "messages": [*(history or []),
+                             {"role": "user", "content": f"Question: {question}"}],
                 "steps": [],
                 "calls": 0,
                 "turns": 0,

@@ -138,15 +138,22 @@ def _trace_tools(agent, emit, scope: dict):
 
 
 def chat(settings: dict, mode: str, question: str, as_of: str, emit: Emitter,
-         chat_id: str | None = None) -> dict:
-    """One chat message in its mode → {"mode", "answer", "steps" | "investigation"}."""
-    with telemetry.run("chat", question, mode=mode, chat_id=chat_id, as_of=as_of) as run:
-        result = _chat(settings, mode, question, as_of, emit)
+         chat_id: str | None = None, history: list[dict] | None = None,
+         strategy: str = "none") -> dict:
+    """One chat message in its mode → {"mode", "answer", "steps" | "investigation"}.
+    history: the chat's earlier answered turns (agent.history.turns); strategy: how they are
+    used (append | rewrite | none)."""
+    history = history if strategy != "none" else []
+    with telemetry.run("chat", question, mode=mode, chat_id=chat_id, as_of=as_of,
+                       history=strategy, turns=len(history)) as run:
+        result = _chat(settings, mode, question, as_of, emit, history, strategy)
+        result["history"] = {"strategy": strategy, "turns": len(history)}
         run.finish(result, result.get("stop") or "ok")
         return result
 
 
-def _chat(settings: dict, mode: str, question: str, as_of: str, emit: Emitter) -> dict:
+def _chat(settings: dict, mode: str, question: str, as_of: str, emit: Emitter,
+          history: list[dict], strategy: str) -> dict:
     if not _gpu.acquire(blocking=False):
         emit("status", text="waiting for the running job to finish")
         while not _gpu.acquire(timeout=1):
@@ -156,15 +163,26 @@ def _chat(settings: dict, mode: str, question: str, as_of: str, emit: Emitter) -
         emit("status", text="loading models" if _factory is None else "starting")
         agent = factory(settings)
         scope: dict = {}
+        rewritten = None
+        if history and strategy == "rewrite":
+            from era_agent.agent.history import rewrite
+
+            emit("status", text="rewriting the follow-up")
+            model = agent(as_of, mode if mode != "investigate" else "research").model
+            rewritten = question = rewrite(model, history, question)
+            emit("rewrite", question=question)
+            history = []
         if mode in ("ask", "research"):
             run_agent = agent(as_of, mode)
             _trace_tools(run_agent, emit, scope)
             restore = _trace_model(run_agent.model, emit, scope)
             try:
-                run = run_agent.run(question)
+                from era_agent.agent.history import as_messages
+
+                run = run_agent.run(question, as_messages(history))
             finally:
                 restore()
-            return {"mode": mode, "answer": run.answer, "stop": run.stop,
+            return {"mode": mode, "answer": run.answer, "stop": run.stop, "rewritten": rewritten,
                     "seconds": run.seconds, "steps": [asdict(s) for s in run.steps]}
         if mode == "investigate":
             from era_agent.agent.plan import Investigator
@@ -193,11 +211,14 @@ def _chat(settings: dict, mode: str, question: str, as_of: str, emit: Emitter) -
                 a.run = run_sub
             restore = _trace_model(research.model, emit, scope)
             try:
-                inv = Investigator(research.model, agents).run(question)
+                from era_agent.agent.history import as_context
+
+                inv = Investigator(research.model, agents).run(
+                    as_context(history, question) if history else question)
             finally:
                 restore()
             data = json.loads(json.dumps(inv.to_dict(), default=str))
-            return {"mode": mode, "answer": inv.answer, "stop": inv.stop,
+            return {"mode": mode, "answer": inv.answer, "stop": inv.stop, "rewritten": rewritten,
                     "seconds": inv.seconds, "investigation": data}
         raise ValueError(f"unknown mode {mode!r}")
     finally:
