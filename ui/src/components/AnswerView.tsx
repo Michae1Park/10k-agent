@@ -124,6 +124,7 @@ export function activity(events: TraceEvent[]): string {
     case 'model': return e.tool_calls?.length ? `Running ${e.tool_calls.join(', ')}${sub}…` : `Writing the answer${sub}…`
     case 'sub_start': return `Sub-question: ${short(e.question, 80)}`
     case 'sub_end': return 'Sub-question done, continuing…'
+    case 'rewrite': return `Rewrote the follow-up${sub}…`
     case 'status': return `${e.text[0].toUpperCase()}${e.text.slice(1)}…`
     default: return 'Working…'
   }
@@ -146,7 +147,7 @@ export function LiveStatus({ events, since }: { events: TraceEvent[]; since?: nu
 
 export function Trace({ events, live }: { events: TraceEvent[]; live?: boolean }) {
   const [open, setOpen] = useState<number | null>(null)
-  const shown = events.filter((e) => ['model', 'tool', 'sub_start', 'sub_end', 'status'].includes(e.type))
+  const shown = events.filter((e) => ['model', 'tool', 'sub_start', 'sub_end', 'status', 'rewrite'].includes(e.type))
   const pending = live ? [...events].reverse().find((e) => ['model_start', 'tool_start'].includes(e.type)) : undefined
   const last = events[events.length - 1]
   const running = pending && last === pending
@@ -161,6 +162,7 @@ export function Trace({ events, live }: { events: TraceEvent[]; live?: boolean }
             {e.type === 'sub_start' && <><span className="text-orange-700">sub-question [{e.mode}]</span> <span>{e.question}</span></>}
             {e.type === 'sub_end' && <><span className="text-orange-700">sub-answer</span> <span className="text-stone-500">{e.error ?? short(e.answer?.answer, 120)}</span></>}
             {e.type === 'status' && <span className="text-stone-500">{e.text}</span>}
+            {e.type === 'rewrite' && <><span className="text-sky-700">rewrite</span> <span>{e.question}</span></>}
           </button>
           {open === i && (
             <pre className="mt-1 max-h-80 overflow-auto rounded bg-stone-100 p-2 whitespace-pre-wrap text-[11px]">

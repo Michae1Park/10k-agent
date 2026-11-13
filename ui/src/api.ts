@@ -54,8 +54,13 @@ export interface AssistantMessage {
   started?: number  // epoch ms the run started (live only)
   error?: string
   investigation?: { sub_runs: SubRun[]; log: string[]; fallback: boolean }
+  rewritten?: string | null  // the follow-up as a standalone question (history: rewrite)
+  history?: { strategy: History; turns: number }
   trace?: TraceEvent[]
 }
+
+/** How a follow-up uses the chat's earlier turns; '' = the server's default (config chat.history). */
+export type History = '' | 'append' | 'rewrite' | 'none'
 
 export interface UserMessage {
   role: 'user'
