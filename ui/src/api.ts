@@ -59,8 +59,8 @@ export interface AssistantMessage {
   trace?: TraceEvent[]
 }
 
-/** How a follow-up uses the chat's earlier turns; '' = the server's default (config chat.history). */
-export type History = '' | 'append' | 'rewrite' | 'none'
+/** How a follow-up used the chat's earlier turns (config chat.history). */
+export type History = 'append' | 'rewrite' | 'none'
 
 export interface UserMessage {
   role: 'user'

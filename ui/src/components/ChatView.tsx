@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { MODES, getJSON, stream, today } from '../api'
-import type { AssistantMessage, History, Message, Mode, TraceEvent } from '../api'
+import type { AssistantMessage, Message, Mode, TraceEvent } from '../api'
 import { AnswerBody, LiveStatus, SubRuns, Trace } from './AnswerView'
 
 const MODE_STYLE: Record<Mode, string> = {
@@ -51,7 +51,6 @@ export function ChatView({ chatId, onChat, onSource, companies }: {
   const [messages, setMessages] = useState<Message[]>([])
   const [mode, setMode] = useState<Mode>('ask')
   const [asOf, setAsOf] = useState(today())
-  const [history, setHistory] = useState<History>('')
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [live, setLive] = useState<AssistantMessage | null>(null)
@@ -125,7 +124,7 @@ export function ChatView({ chatId, onChat, onSource, companies }: {
     setMessages((ms) => [...ms, { role: 'user', mode, as_of: asOf, text: question }])
     const msg = await follow('/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: current.current, mode, question, as_of: asOf, history: history || null }),
+      body: JSON.stringify({ chat_id: current.current, mode, question, as_of: asOf }),
     }, { role: 'assistant', mode, trace: [], started: Date.now() })
     if (msg) setMessages((ms) => [...ms, msg])
   }
@@ -150,17 +149,6 @@ export function ChatView({ chatId, onChat, onSource, companies }: {
               as of
               <input type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)}
                 className="bg-transparent text-sm focus:outline-none" />
-            </label>
-            <label className="flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-600"
-              title="How a follow-up uses the earlier turns: append them to the agent's context, rewrite it into a standalone question, or ignore them">
-              follow-ups
-              <select value={history} onChange={(e) => setHistory(e.target.value as History)}
-                className="bg-transparent text-sm focus:outline-none">
-                <option value="">default</option>
-                <option value="append">append</option>
-                <option value="rewrite">rewrite</option>
-                <option value="none">none</option>
-              </select>
             </label>
             <span className="hidden min-w-0 flex-1 truncate text-xs text-neutral-400 md:inline">{hint}</span>
             {busy ? (
