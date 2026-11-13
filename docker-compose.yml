@@ -5,6 +5,7 @@ services:
     build: .
     image: era-agent
     network_mode: host            # reaches vLLM at localhost:8001 as config.yaml expects
+    cpuset: "16-31"               # E-cores only: Python segfaults on this i9-14900K's P-cores
     env_file: .env                # SEC_USER_AGENT, TIINGO_API_KEY, FRED_API_KEY, ANTHROPIC_API_KEY
     volumes:
       - ./data:/app/data
