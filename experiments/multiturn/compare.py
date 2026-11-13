@@ -10,7 +10,8 @@ Each conversation runs once per strategy, in its own chat, turn by turn. Per tur
 the answer, the rewritten question (rewrite), seconds, tool calls, and the model's input tokens
 (peak and total). Then a separate judge model (gpt-oss-20b, D-029) judges each follow-up pair
 blind, in both orders (A/B then B/A, to cancel position bias): which answer better answers the
-follow-up *as the user meant it in context*. Writes output/multiturn/<mode>/results.json and report.md.
+follow-up *as the user meant it in context*.
+Writes output/multiturn/<mode>/results.json and report.md.
 """
 
 import argparse
