@@ -20,29 +20,27 @@
 
 ## Overview
 
-An agent that covers eight US travel and mobility companies (**BKNG, EXPE, ABNB, TRIP, UBER, LYFT, DASH, CART**) the way a junior sell-side analyst would. It answers questions from filings, forecasts and values each company with a formula-driven model, and writes a draft earnings note for a senior analyst to review. It runs on a local open model (Qwen3.6-27B on vLLM) and uses only free public data: SEC filings, XBRL, earnings releases, FRED, BTS and NYC TLC.
+An autonomous equity research agent covering eight US travel and mobility companies (**BKNG, EXPE, ABNB, TRIP, UBER, LYFT, DASH, CART**). Operating under strict as-of date constraints to eliminate look-ahead bias, it grounds every output in deterministic financial models and verified SEC data to produce audit-ready earnings notes.
 
-**Every run takes an as-of date** and sees only data filed strictly before it, so any past quarter can be replayed and backtested. **Every number cites its source:** each claim is checked against the passage, fact or model cell it cites, and the agent declines when the data can't answer.
-
-**Research: an answer computed from the model.** The agent runs the forecast and reads management's guidance, then answers with model and guidance ids it can check.
+<p align="center"><b>Research Mode</b></p>
 
 <p align="center">
   <img src="docs/img/demo-research.gif" alt="Research mode: the agent forecasts Uber's Q3 2026 revenue from the model, compares it with gross bookings guidance, and every claim is verified" width="820">
 </p>
 
-**Ask: a cited answer from filed data, or a decline.** Each number links to the KPI or passage it came from. When the filings don't have the answer, the agent says so instead of guessing.
+<p align="center"><b>Ask Mode</b></p>
 
 <p align="center">
   <img src="docs/img/demo-ask.gif" alt="Ask mode: a cited answer on Uber's Q2 2026 gross bookings growth with a source opened in the drawer, then a decline because Booking does not disclose hotel occupancy" width="820">
 </p>
 
-**Investigate: a multi-part question, planned.** The planner splits the question into Ask and Research sub-runs and combines their answers into one claim-checked answer.
+<p align="center"><b>Investigate Mode</b></p>
 
 <p align="center">
   <img src="docs/img/demo-investigate.gif" alt="Investigate mode: Uber vs Lyft gross bookings growth and Q3 2026 forecasts, split into an Ask and a Research sub-run" width="820">
 </p>
 
-**Report: a draft earnings note.** Ten sections, every figure traced to the evidence log, with a model-change workbook and an exception log.
+<p align="center"><b>Report</b></p>
 
 <p align="center">
   <img src="docs/img/demo-report.gif" alt="Reports page: the UBER Q2 2026 earnings-update note scrolled from the executive summary through results, debates and the financial summary" width="820">
