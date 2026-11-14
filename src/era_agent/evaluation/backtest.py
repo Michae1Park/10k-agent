@@ -1,6 +1,6 @@
 """Walk-forward backtest (V4 design doc §12.2), layer 3: forecast next quarter, score it later.
 
-  taskset -c 16-31 uv run python -m era_agent.evaluation.backtest --label defaults [TICKERS]
+  uv run python -m era_agent.evaluation.backtest --label defaults [TICKERS]
 
 For each company and each earnings release from Q4 2024 on whose next quarter has reported:
 D = the day after the release's EDGAR acceptance (US Eastern), the model forecasts the next

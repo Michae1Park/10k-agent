@@ -6,10 +6,10 @@ ground truth. Spec and results: experiments/V0_PARSING_CHUNKING.md.
   chunk       document → chunks, per method                     era_agent.chunking
   score       chunks vs the ground truth                        score.py
 
-  taskset -c 16-31 python experiments/v0/run.py                  # all stages (LLM steps cached)
-  taskset -c 16-31 python experiments/v0/run.py --stage preprocess
-  taskset -c 16-31 python experiments/v0/run.py --stage chunk --stage score
-  taskset -c 16-31 python experiments/v0/run.py --config my-config.yaml
+  python experiments/v0/run.py                  # all stages (LLM steps cached)
+  python experiments/v0/run.py --stage preprocess
+  python experiments/v0/run.py --stage chunk --stage score
+  python experiments/v0/run.py --config my-config.yaml
 
 Settings (inputs, LLM, labeling window, chunk sizes) are in config.yaml. Needs the vLLM server
 (scripts/serve_vllm.sh qwen3.6-27b-fp8) for preprocessing and the agentic chunker. Writes

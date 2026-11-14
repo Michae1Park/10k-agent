@@ -1,6 +1,6 @@
 """Cross-check data (V4 design doc §3.2, V4.7): outside series that test the companies' KPIs.
 
-  taskset -c 16-31 uv run python -m era_agent.acquisition.crosscheck [--since 2023-01]
+  uv run python -m era_agent.acquisition.crosscheck [--since 2023-01]
 
   NYC TLC   high-volume for-hire trips per month and license (HV0003 Uber, HV0005 Lyft), from
             fhvhv_tripdata_YYYY-MM.parquet (~0.5 GB each): downloaded one month at a time,

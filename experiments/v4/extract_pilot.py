@@ -1,6 +1,6 @@
 """V4.1: extract every release in the gold set and score it against the labels.
 
-  taskset -c 16-31 uv run python experiments/v4/extract_pilot.py [--model anthropic:<id>]
+  uv run python experiments/v4/extract_pilot.py [--model anthropic:<id>]
 
 --releases all extracts every release in the store (V4.2: what `era build --stage kpis` loads);
 --reuse <label> takes releases already extracted by that run instead of calling the model again.

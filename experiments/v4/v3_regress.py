@@ -8,7 +8,7 @@ v3_baseline.txt after every change to shared code.
   claim check         every claim of the saved V3 runs re-verified
   tools, system       the agent's tool schemas and system prompt per V3 tool set
 
-  taskset -c 16-31 uv run python -W ignore experiments/v4/v3_regress.py \
+  uv run python -W ignore experiments/v4/v3_regress.py \
     | diff experiments/v4/v3_baseline.txt -
 """
 

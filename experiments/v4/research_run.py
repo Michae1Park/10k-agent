@@ -1,7 +1,7 @@
 """V4.5: the Research agent (tool set "research") on the Research gold set.
 
-  taskset -c 16-31 uv run python experiments/v4/research_run.py [--question ID] [--resume]
-  taskset -c 16-31 uv run python experiments/v4/research_run.py --score
+  uv run python experiments/v4/research_run.py [--question ID] [--resume]
+  uv run python experiments/v4/research_run.py --score
 
 Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and ERA_COMPANIES=companies.yaml.
 Bars, frozen 2026-10-27 (design doc §12.2):

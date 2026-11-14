@@ -9,7 +9,7 @@
 # Everything must fit on one L40S (48 GB). The era process also keeps the embedder and
 # reranker on the GPU (3–6 GB per process), so vLLM gets 72% of memory by default (the 27B 80%).
 # VLLM_BIN points at the vLLM executable (default: `vllm` on PATH, else the vllm_py311 conda env).
-# On this machine the i9-14900K's P-cores crash under load; CPUS pins the server to E-cores.
+# ERA_CPUSET (env or .env) optionally pins the server to those CPU cores, e.g. 16-31.
 set -euo pipefail
 
 preset=${1:?usage: serve_vllm.sh <preset> [extra vllm args]}
@@ -18,7 +18,7 @@ VLLM_BIN=${VLLM_BIN:-$(command -v vllm || echo ~/miniconda3/envs/vllm_py311/bin/
 PORT=${PORT:-8001}
 GPU_UTIL=${GPU_UTIL:-0.72}
 MAX_LEN=${MAX_LEN:-65536}  # agent trajectories reach 20–40k tokens
-CPUS=${CPUS:-16-31}
+ERA_CPUSET=${ERA_CPUSET:-$(sed -n 's/^ERA_CPUSET=//p' "$(dirname "$0")/../.env" 2>/dev/null || true)}
 
 case "$preset" in
   qwen3.5-9b)
@@ -70,7 +70,8 @@ esac
 # Tool calling only for presets with a parser: vLLM refuses auto tool choice without one (the judge).
 [[ " ${args[*]} " == *" --tool-call-parser "* ]] && args+=(--enable-auto-tool-choice)
 
-exec taskset -c "$CPUS" "$VLLM_BIN" serve "$model" \
+pin=(); [[ -n "$ERA_CPUSET" ]] && pin=(taskset -c "$ERA_CPUSET")
+exec "${pin[@]}" "$VLLM_BIN" serve "$model" \
   --served-model-name "${name:-$model}" \
   --port "$PORT" \
   --gpu-memory-utilization "$GPU_UTIL" \

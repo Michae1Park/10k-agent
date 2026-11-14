@@ -7,9 +7,9 @@ Spec and results: experiments/V3_AGENT.md.
   full  agent: + xbrl_facts, edgar_filings                 (SEC data from the cache, offline)
   ─► correct, declined, grounded, gold cited (evaluation/scoring.py) + tool use (tools.json)
 
-  taskset -c 16-31 python experiments/v3/run.py
-  taskset -c 16-31 python experiments/v3/run.py --variant full --question tsla-revenue-fy2024-xbrl
-  taskset -c 16-31 python experiments/v3/run.py --resume          # skip (question, variant) done
+  python experiments/v3/run.py
+  python experiments/v3/run.py --variant full --question tsla-revenue-fy2024-xbrl
+  python experiments/v3/run.py --resume          # skip (question, variant) done
 
 Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8). Text answers are judged
 afterwards: serve the judge, then experiments/v2/judge.py --config experiments/v3/config.yaml.

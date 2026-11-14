@@ -20,7 +20,7 @@ Set `generation.model` (or pass `--model`). How the model layer is built: [V3 ar
 
 ## vLLM presets
 
-`scripts/serve_vllm.sh <preset>`, pinned to the E-cores, port 8001 (the judge: 8002). vLLM lives in its own conda env; the script finds `~/miniconda3/envs/vllm_py311/bin/vllm` when `vllm` isn't on `PATH` (tested with vLLM 0.20.0).
+`scripts/serve_vllm.sh <preset>`, port 8001 (the judge: 8002). vLLM lives in its own conda env; the script finds `~/miniconda3/envs/vllm_py311/bin/vllm` when `vllm` isn't on `PATH` (tested with vLLM 0.20.0).
 
 | Preset | Model | Weights | Context | Notes |
 |---|---|---|---|---|
@@ -35,7 +35,8 @@ Set `generation.model` (or pass `--model`). How the model layer is built: [V3 ar
 | `GPU_UTIL` | 0.72 (27B: 0.80) | GPU memory share; leaves room for the embedder and reranker |
 | `MAX_LEN` / `MAX_LEN_27B` / `MAX_LEN_31B` / `MAX_LEN_JUDGE` | 65536 / 32768 / 32768 / 32768 | Context length |
 | `MAX_SEQS_27B` | 4 | Sequences at once on the 27B; the vLLM default (256) fills the card at startup |
-| `PORT`, `CPUS`, `VLLM_BIN` | 8001, 16-31, `vllm` (else the conda env above) | |
+| `PORT`, `VLLM_BIN` | 8001, `vllm` (else the conda env above) | |
+| `ERA_CPUSET` | unset | CPU cores to pin the server and containers to (`taskset`, compose `cpuset`), e.g. `16-31` |
 | `JUDGE_PORT`, `JUDGE_GPU_UTIL` | 8002, 0.45 | the `gpt-oss-20b` preset |
 
 **What fits on one L40S (48 GB, ~44 usable):** serving ≤ 14B in BF16 comfortably, ~30B in FP8 / 4-bit tightly, 70B not at all.

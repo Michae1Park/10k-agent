@@ -1,6 +1,6 @@
 """V4.2: draft the Ask gold set (evaluation/gold/ask-gold.jsonl) over the eight companies.
 
-  taskset -c 16-31 uv run python experiments/v4/draft_ask_gold.py
+  uv run python experiments/v4/draft_ask_gold.py
 
 Number questions take their values from the extraction gold (evaluation/gold/extraction-gold.jsonl,
 cross-checked against XBRL and printed totals) or from the XBRL quarters, never typed by hand; a

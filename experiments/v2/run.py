@@ -5,11 +5,11 @@ score the answers. Spec and results: experiments/V2_GENERATION.md.
   V1 pipeline (unchanged) ─► context: retrieved · oracle · none ─► one model call ─► claims
   correct, declined, grounded, gold cited   (evaluation/scoring.py; text answers after judge.py)
 
-  taskset -c 16-31 python experiments/v2/run.py
-  taskset -c 16-31 python experiments/v2/run.py --question aapl-tariffs-fy2025
-  taskset -c 16-31 python experiments/v2/run.py --context retrieved
-  taskset -c 16-31 python experiments/v2/run.py --model openai:Qwen/Qwen3.5-9B --label 9b
-  taskset -c 16-31 python experiments/v2/run.py --dry-run --question nvda-rd-fy2025
+  python experiments/v2/run.py
+  python experiments/v2/run.py --question aapl-tariffs-fy2025
+  python experiments/v2/run.py --context retrieved
+  python experiments/v2/run.py --model openai:Qwen/Qwen3.5-9B --label 9b
+  python experiments/v2/run.py --dry-run --question nvda-rd-fy2025
 
 Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and the GPU for V1's embedder
 and reranker. Text answers are scored afterwards by the LLM judge: stop the model, serve the

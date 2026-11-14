@@ -1,6 +1,6 @@
 """S3 model, history only (V4 design doc §6, V4.3): data pack → model → layer-2 checks.
 
-  taskset -c 16-31 uv run python -m era_agent.research.model.history UBER 2026-09-01
+  uv run python -m era_agent.research.model.history UBER 2026-09-01
 
 Writes <out>/<TICKER>/<as_of>/datapack.json, model.json, checks.json and workbook.xlsx (the
 Model tab), then has LibreOffice recalculate the workbook: every formula cell must equal

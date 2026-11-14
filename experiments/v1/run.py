@@ -5,10 +5,10 @@ it. Spec and results: experiments/V1_RETRIEVAL.md.
   sub-questions → keyword + dense → RRF → rerank → round-robin → top k   (era_agent.retrieval)
   Recall@1, @5, @8 and MRR against the gold chunks and their restatements   (era_agent.evaluation)
 
-  taskset -c 16-31 python experiments/v1/run.py
-  taskset -c 16-31 python experiments/v1/run.py --question aapl-tariffs-fy2025
-  taskset -c 16-31 python experiments/v1/run.py --config my-config.yaml
-  taskset -c 16-31 python experiments/v1/run.py --db data/v0-chunking/rule.db --label v0-rule
+  python experiments/v1/run.py
+  python experiments/v1/run.py --question aapl-tariffs-fy2025
+  python experiments/v1/run.py --config my-config.yaml
+  python experiments/v1/run.py --db data/v0-chunking/rule.db --label v0-rule
 
 Settings are in config.yaml. Needs a database with vectors from the configured embedder
 (build_corpus.py builds one per V0 chunking). A question whose evidence quote no

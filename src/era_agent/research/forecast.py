@@ -18,7 +18,7 @@ rate's y/y values, a ratio's y/y changes), from the anchored base; weights from 
 Outside inputs (spec §3.2): research/outside.py moves mapped starting growth rates toward a
 nowcast from TLC, BTS or FRED series before the proposer and the anchors (`forecast.outside`).
 
-  taskset -c 16-31 uv run python -m era_agent.research.forecast UBER BKNG 2026-09-01
+  uv run python -m era_agent.research.forecast UBER BKNG 2026-09-01
 """
 
 import argparse

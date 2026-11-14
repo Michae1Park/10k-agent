@@ -1,6 +1,6 @@
 """V4.7: the spec's third backtest baseline, a plain LLM with no tools (spec §6).
 
-  taskset -c 16-31 uv run python experiments/v4/llm_baseline.py --from all-defaults
+  uv run python experiments/v4/llm_baseline.py --from all-defaults
 
 For each forecast in a backtest run's forecasts.csv, the model is told the date and asked for
 the next quarter's value with no data and no tools. Its MAPE is compared with the model's and

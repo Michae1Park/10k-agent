@@ -1,7 +1,7 @@
 """Report mode (V4 design doc §9): a resumable step graph, S1–S11, per company and as-of.
 
-  taskset -c 16-31 uv run python -m era_agent.research.pipeline UBER 2026-08-06 [--resume]
-  taskset -c 16-31 uv run python -m era_agent.research.pipeline UBER 2026-08-06 --no-llm
+  uv run python -m era_agent.research.pipeline UBER 2026-08-06 [--resume]
+  uv run python -m era_agent.research.pipeline UBER 2026-08-06 --no-llm
 
   S1  datapack   code       history with sources                      (research/datapack.py)
   S2  events     sub-agent  what changed this quarter                 → events.json

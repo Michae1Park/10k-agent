@@ -146,8 +146,6 @@ python experiments/v4/extract_pilot.py --releases all   # KPIs and guidance
 era build --stage kpis
 ```
 
-> **Tip:** on a hybrid Intel CPU where Python crashes on the P-cores, prefix the `era build` and `extract_pilot.py` commands with `taskset -c 16-31` (Linux only; adjust the range to your E-cores). Every step is cached, so reruns are fast.
-
 ### 4. Run it
 
 **CLI** (needs the model server from step 2):

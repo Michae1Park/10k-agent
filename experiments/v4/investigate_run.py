@@ -1,8 +1,8 @@
 """Investigate gold set (evaluation/gold/investigate-gold.jsonl): runs and scoring.
 
-  taskset -c 16-31 uv run python experiments/v4/investigate_run.py --baseline [--question ID]
-  taskset -c 16-31 uv run python experiments/v4/investigate_run.py --investigate [--question ID]
-  taskset -c 16-31 uv run python experiments/v4/investigate_run.py --investigate --score
+  uv run python experiments/v4/investigate_run.py --baseline [--question ID]
+  uv run python experiments/v4/investigate_run.py --investigate [--question ID]
+  uv run python experiments/v4/investigate_run.py --investigate --score
 
 --baseline answers each question with one plain Research run (tool set "research"), the
 baseline Investigate must beat (spec §5, design doc §12.2). --investigate runs Investigate

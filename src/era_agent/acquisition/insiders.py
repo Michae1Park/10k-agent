@@ -1,6 +1,6 @@
 """Form 4 insider transactions (V4 design doc §3.2, V4.7): dilution context only.
 
-  taskset -c 16-31 uv run python -m era_agent.acquisition.insiders [TICKERS] [--since 2023-01-01]
+  uv run python -m era_agent.acquisition.insiders [TICKERS] [--since 2023-01-01]
 
 Each company's Form 4 filings from its cached EDGAR submissions: the raw ownership XML (the
 primary document without its xsl stylesheet folder) is cached under raw/insiders/<T>/ (with

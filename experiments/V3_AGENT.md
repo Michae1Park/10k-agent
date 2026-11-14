@@ -98,7 +98,7 @@ Text answers were judged by `gpt-oss-20b` (the fixed judge) with [v2/judge.py](v
 
 ## 5. Results
 
-Output: `output/generation/v3-qwen3.6-27b-fp8/` (results.json with every step, scores.json, tools.json). Run: `taskset -c 16-31 python experiments/v3/run.py`, then the judge.
+Output: `output/generation/v3-qwen3.6-27b-fp8/` (results.json with every step, scores.json, tools.json). Run: `python experiments/v3/run.py`, then the judge.
 
 ### By kind
 

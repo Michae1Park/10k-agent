@@ -10,10 +10,10 @@ one database per method, embedded. Spec: experiments/V1_RETRIEVAL.md §2.
   pages  each chunk's pages, written into an already built <method>.db in place (no reload,
          no re-embedding); load writes them too
 
-  taskset -c 16-31 python experiments/v1/build_corpus.py --stage chunk --jobs 8
-  taskset -c 16-31 python experiments/v1/build_corpus.py --stage load --stage embed
-  taskset -c 16-31 python experiments/v1/build_corpus.py --stage chunk --filing AAPL/FY2025
-  taskset -c 16-31 python experiments/v1/build_corpus.py --stage pages
+  python experiments/v1/build_corpus.py --stage chunk --jobs 8
+  python experiments/v1/build_corpus.py --stage load --stage embed
+  python experiments/v1/build_corpus.py --stage chunk --filing AAPL/FY2025
+  python experiments/v1/build_corpus.py --stage pages
 
 The same build as `era build` (era_agent.build), with V0's settings (experiments/v0/config.yaml:
 llm, labeling, chunking) and V1's (config.yaml: retrieval). Filings: data/raw/filings/<TICKER>/

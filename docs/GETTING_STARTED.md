@@ -14,7 +14,7 @@ Install, build the V4 corpus, write a research report, ask questions, run the ev
 | Keys | Your own SEC User-Agent, Tiingo and FRED API keys (free) | |
 | Disk | 10 GB, plus the V4 data (`data/v4/`; NYC TLC is ~540 MB a month, aggregated at fetch) | |
 
-All commands run from the repo root. Heavy jobs run pinned to the E-cores: `taskset -c 16-31`.
+All commands run from the repo root.
 
 ## 1. Install
 
@@ -46,10 +46,10 @@ Presets, the judge, other models and GPU memory: [SERVING.md](SERVING.md). Fetch
 era companies verify                                        # CIKs, December year-ends, filing counts vs SEC
 era fetch                                                   # 10-K, 10-Q, earnings releases, DEF 14A from 2023 (cached)
 era fetch --market                                          # prices, macro (ALFRED), ERP, cross-checks
-taskset -c 16-31 era build --stage chunk --stage load       # rule-based Items and chunks (no LLM) → data/v4/build/parent_child.db
-taskset -c 16-31 era build --stage facts --stage market     # XBRL and inline XBRL facts; market series
-taskset -c 16-31 era build --stage embed                    # vectors; stop vLLM first or set retrieval.device: cpu
-taskset -c 16-31 python experiments/v4/extract_pilot.py --releases all   # KPI and guidance extraction (model served)
+era build --stage chunk --stage load       # rule-based Items and chunks (no LLM) → data/v4/build/parent_child.db
+era build --stage facts --stage market     # XBRL and inline XBRL facts; market series
+era build --stage embed                    # vectors; stop vLLM first or set retrieval.device: cpu
+python experiments/v4/extract_pilot.py --releases all   # KPI and guidance extraction (model served)
 era build --stage kpis                                      # load the validated rows
 ```
 
@@ -64,8 +64,8 @@ What each table holds: [design doc §3](V4_TECHNICAL_DESIGN_DOC.md#3-data-layer)
 ## 4. Write a report
 
 ```bash
-taskset -c 16-31 era research report UBER --as-of 2026-08-06              # S1–S11, under 30 min
-taskset -c 16-31 era research report UBER --as-of 2026-08-06 --resume     # after a crash: reuse the saved LLM steps
+era research report UBER --as-of 2026-08-06              # S1–S11, under 30 min
+era research report UBER --as-of 2026-08-06 --resume     # after a crash: reuse the saved LLM steps
 era research report UBER LYFT DASH CART --as-of 2026-08-06 --no-llm       # code-only drafts, no model server
 era research approve UBER:v2 --by MP                                      # mark a version reviewed
 ```
@@ -85,8 +85,8 @@ python -m era_agent.research.valuation UBER 2026-08-06        # valuation; --all
 Ask and Research run through their gold runners, each question at its own as-of (model served):
 
 ```bash
-taskset -c 16-31 python experiments/v4/ask_run.py --question <id>          # Ask: cited answers from filed data
-taskset -c 16-31 python experiments/v4/research_run.py --question <id>     # Research: model tools, assumptions shown
+python experiments/v4/ask_run.py --question <id>          # Ask: cited answers from filed data
+python experiments/v4/research_run.py --question <id>     # Research: model tools, assumptions shown
 era tool --list                                                           # the tool schemas (design doc §5)
 ```
 
@@ -97,11 +97,11 @@ Questions: `evaluation/gold/ask-gold.jsonl`, `research-gold.jsonl`. Results: `ou
 The five layers and their frozen bars: [design doc §12](V4_TECHNICAL_DESIGN_DOC.md#12-evaluation). Results: [V4_RESULTS.md](V4_RESULTS.md).
 
 ```bash
-taskset -c 16-31 python -m era_agent.evaluation.backtest --label defaults        # layer 3: walk-forward backtest, baselines
-taskset -c 16-31 python -m era_agent.evaluation.backtest --proposer llm          # ablation: the LLM proposer
+python -m era_agent.evaluation.backtest --label defaults        # layer 3: walk-forward backtest, baselines
+python -m era_agent.evaluation.backtest --proposer llm          # ablation: the LLM proposer
 python -m era_agent.evaluation.note_eval output/reports/UBER/2026-08-06 --seeds 5  # layer 5: trace, sections, seeded errors
-taskset -c 16-31 python experiments/v4/ask_run.py                                  # all Ask gold, then --score
-taskset -c 16-31 python experiments/v4/research_run.py                             # all Research gold, then --score
+python experiments/v4/ask_run.py                                  # all Ask gold, then --score
+python experiments/v4/research_run.py                             # all Research gold, then --score
 ```
 
 The judge (`gpt-oss-20b`) doesn't fit beside the 27B: generate first, stop the 27B, serve the judge, then judge and `--score` ([SERVING.md](SERVING.md#gotchas)). Ablation configs: `experiments/v4/knobs/`.
@@ -112,8 +112,8 @@ V3 answers questions about 24 10-Ks and stays runnable as a regression check. Ho
 
 ```bash
 era fetch                                                               # the 24 10-Ks from EDGAR (cached)
-taskset -c 16-31 era build --stage chunk --jobs 8                       # V0 with the LLM: ~35–60 min a filing, 8 at once
-taskset -c 16-31 era build --stage load --stage embed                   # V1's database and vectors; stop vLLM first
+era build --stage chunk --jobs 8                       # V0 with the LLM: ~35–60 min a filing, 8 at once
+era build --stage load --stage embed                   # V1's database and vectors; stop vLLM first
 era search "How much did NVIDIA spend on R&D in fiscal 2025?"          # V1: sub-questions, then the top chunks
 era ask "What were Apple's total net sales in fiscal 2025?"            # V2: answer, claims with their status
 era agent "Which of the four companies had the highest operating margin?"   # V3: the agent with tools
@@ -124,10 +124,10 @@ python experiments/v4/v3_regress.py                                     # byte i
 Experiments, each scoring one version ([experiments/README.md](../experiments/README.md)):
 
 ```bash
-taskset -c 16-31 python experiments/v0/run.py        # V0: chunk an excerpt three ways, score vs the ground truth
-taskset -c 16-31 python experiments/v1/run.py        # V1: Recall@k and MRR on 46 gold questions
-taskset -c 16-31 python experiments/v2/run.py        # V2: 54 questions × three contexts
-taskset -c 16-31 python experiments/v2/judge.py      # V2: judge the text answers, with the judge served instead
+python experiments/v0/run.py        # V0: chunk an excerpt three ways, score vs the ground truth
+python experiments/v1/run.py        # V1: Recall@k and MRR on 46 gold questions
+python experiments/v2/run.py        # V2: 54 questions × three contexts
+python experiments/v2/judge.py      # V2: judge the text answers, with the judge served instead
 era report qwen3.6-27b-fp8                          # a finished V2 run → evaluation/results/<run>/report.md
 ```
 
@@ -165,7 +165,6 @@ Things to try: change `chunking.target` and rerun V0's scoring; set `slot_search
 
 | Symptom | Fix |
 |---|---|
-| Python segfaults at random | Run with `taskset -c 16-31` |
 | GPU out of memory | [SERVING.md](SERVING.md#gotchas) |
 | vLLM out of memory or a missing `nvcc` | Use the `qwen3.6-27b-fp8` preset: bf16 KV cache, no vision, 32k context ([SERVING.md](SERVING.md)) |
 | "Report mode needs the V4 corpus" | `export ERA_COMPANIES=companies.yaml` |

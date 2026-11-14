@@ -4,7 +4,7 @@ Each label names the table row (block id + row label) or the sentence that shows
 takes the value and its verbatim quote from there, so a reviewer checks one quote per label.
 Labels are drafts until a human verifies them (`verified_by`, as the V0–V3 gold sets).
 
-  taskset -c 16-31 uv run python experiments/v4/draft_extraction_gold.py
+  uv run python experiments/v4/draft_extraction_gold.py
 """
 
 import json

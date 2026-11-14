@@ -2,8 +2,8 @@
 """V2 judge: score the text answers of a finished run against their required points, and
 rewrite its scores. Spec: experiments/V2_GENERATION.md §4.
 
-  taskset -c 16-31 python experiments/v2/judge.py         # run.label from config.yaml
-  taskset -c 16-31 python experiments/v2/judge.py --label qwen3.5-9b --rejudge
+  python experiments/v2/judge.py         # run.label from config.yaml
+  python experiments/v2/judge.py --label qwen3.5-9b --rejudge
 
 The model under test isn't called again, so only the judge needs serving: stop the 27B, then
 scripts/serve_vllm.sh gpt-oss-20b (port 8002). Numbers are never judged; they're scored by

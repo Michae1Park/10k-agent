@@ -1,6 +1,6 @@
 """S7 valuation (V4 design doc §6.2): market value, multiples, DCF, price target and rating.
 
-  taskset -c 16-31 uv run python -m era_agent.research.valuation UBER BKNG 2026-09-01 [--all]
+  uv run python -m era_agent.research.valuation UBER BKNG 2026-09-01 [--all]
 
   market cap, EV  last close before the as-of × the latest diluted weighted-average shares;
                   EV = market cap + debt − cash − short-term investments (leases, equity stakes

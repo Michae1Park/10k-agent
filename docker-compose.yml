@@ -4,7 +4,7 @@ services:
   vllm:
     image: vllm/vllm-openai:v0.33.0
     network_mode: host            # serves localhost:8001 as config.yaml expects
-    cpuset: "16-31"               # E-cores only: Python segfaults on this i9-14900K's P-cores
+    cpuset: "${ERA_CPUSET:-}"     # optional: pin to these cores (set ERA_CPUSET in .env)
     ipc: host                     # PyTorch shared memory
     volumes:
       - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface   # reuse downloaded weights
@@ -29,7 +29,7 @@ services:
     build: .
     image: era-agent
     network_mode: host            # reaches vLLM at localhost:8001 as config.yaml expects
-    cpuset: "16-31"               # E-cores only: Python segfaults on this i9-14900K's P-cores
+    cpuset: "${ERA_CPUSET:-}"     # optional: pin to these cores (set ERA_CPUSET in .env)
     env_file: .env                # SEC_USER_AGENT, TIINGO_API_KEY, FRED_API_KEY, ANTHROPIC_API_KEY
     depends_on:
       vllm:

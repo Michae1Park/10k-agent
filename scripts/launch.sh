@@ -9,6 +9,9 @@
 # Logs: output/logs/{vllm,api}.log. Ctrl+C stops everything.
 set -euo pipefail
 
+# ERA_CPUSET (env or .env) optionally pins processes to those CPU cores, e.g. 16-31.
+ERA_CPUSET=${ERA_CPUSET:-$(sed -n 's/^ERA_CPUSET=//p' "$(dirname "$0")/../.env" 2>/dev/null || true)}
+
 preset=${1:-qwen3.6-27b-fp8}
 HOST=${HOST:-0.0.0.0}
 cd "$(dirname "$0")/.."
@@ -43,7 +46,8 @@ else
   wait_for http://localhost:8001/v1/models "model server ($preset)" "$!" output/logs/vllm.log
 fi
 
-setsid taskset -c 16-31 uv run --no-sync era serve --host "$HOST" >output/logs/api.log 2>&1 &
+pin=(); [[ -n "$ERA_CPUSET" ]] && pin=(taskset -c "$ERA_CPUSET")
+setsid "${pin[@]}" uv run --no-sync era serve --host "$HOST" >output/logs/api.log 2>&1 &
 pids+=($!)
 wait_for http://localhost:8000/api/companies "API" "$!" output/logs/api.log
 

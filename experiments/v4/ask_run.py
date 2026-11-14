@@ -1,7 +1,7 @@
 """V4.2: the Ask agent (tool set "ask") on the Ask gold set, each question at its own as-of.
 
-  taskset -c 16-31 uv run python experiments/v4/ask_run.py [--question ID] [--resume]
-  taskset -c 16-31 uv run python experiments/v4/ask_run.py --score    # rescore, after judge.py
+  uv run python experiments/v4/ask_run.py [--question ID] [--resume]
+  uv run python experiments/v4/ask_run.py --score    # rescore, after judge.py
 
 Needs the model served (scripts/serve_vllm.sh qwen3.6-27b-fp8) and ERA_COMPANIES=companies.yaml.
 Text answers are judged afterwards: serve the judge, run experiments/v2/judge.py --config

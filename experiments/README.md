@@ -12,7 +12,7 @@ v2/  run.py · judge.py (runs the LLM judge) · config.yaml
 
 Full design, criteria and results: [here](V0_PARSING_CHUNKING.md).
 
-Pipeline: [preprocess/](../src/era_agent/preprocess/), [chunking/](../src/era_agent/chunking/); experiment: [v0/](v0/). Run: `taskset -c 16-31 .venv/bin/python experiments/v0/run.py` (needs the vLLM server).
+Pipeline: [preprocess/](../src/era_agent/preprocess/), [chunking/](../src/era_agent/chunking/); experiment: [v0/](v0/). Run: `.venv/bin/python experiments/v0/run.py` (needs the vLLM server).
 
 ### Preprocessing: HTML → one structured document
 
@@ -43,7 +43,7 @@ Two steps, run in order:
 
 Full design, metrics and results: [here](V1_RETRIEVAL.md).
 
-Pipeline: [retrieval/](../src/era_agent/retrieval/); experiment: [v1/](v1/). Run: `taskset -c 16-31 .venv/bin/python experiments/v1/run.py` (GPU for the embedder and reranker; no vLLM).
+Pipeline: [retrieval/](../src/era_agent/retrieval/); experiment: [v1/](v1/). Run: `.venv/bin/python experiments/v1/run.py` (GPU for the embedder and reranker; no vLLM).
 
 - **Pipeline:** query decomposition (one sub-question per company) → keyword (BM25) + dense (`Qwen3-Embedding-0.6B`) → RRF → rerank (`bge-reranker-v2-m3`) → round-robin → top 8
 - **Corpora:** V0's rule-based, parent-child and agentic chunks of the four FY2025 filings ([build_corpus.py](v1/build_corpus.py) → `data/v0-chunking/<method>.db`)
@@ -55,7 +55,7 @@ Pipeline: [retrieval/](../src/era_agent/retrieval/); experiment: [v1/](v1/). Run
 
 Full design, metrics and results: [here](V2_GENERATION.md).
 
-Pipeline: [generation/](../src/era_agent/generation/), prompt [answer.md](../src/era_agent/prompts/answer.md); experiment: [v2/](v2/). Run: `taskset -c 16-31 .venv/bin/python experiments/v2/run.py` (needs the vLLM server), then `judge.py` with the judge served.
+Pipeline: [generation/](../src/era_agent/generation/), prompt [answer.md](../src/era_agent/prompts/answer.md); experiment: [v2/](v2/). Run: `.venv/bin/python experiments/v2/run.py` (needs the vLLM server), then `judge.py` with the judge served.
 
 - **Pipeline:** V1's retrieval, unchanged (parent-child, top 8) → one model call (`Qwen3.6-27B`) → JSON answer with claims citing chunk IDs → each claim checked against the chunks it cites
 - **Contexts:** the same questions three ways, to separate generation from retrieval:
@@ -70,7 +70,7 @@ Pipeline: [generation/](../src/era_agent/generation/), prompt [answer.md](../src
 
 Full design, metrics and results: [here](V3_AGENT.md).
 
-Agent: [agent/](../src/era_agent/agent/), prompt [agent.md](../src/era_agent/prompts/agent.md); experiment: [v3/](v3/). Run: `taskset -c 16-31 .venv/bin/python experiments/v3/run.py` (needs the vLLM server), then `v2/judge.py --config experiments/v3/config.yaml` with the judge served.
+Agent: [agent/](../src/era_agent/agent/), prompt [agent.md](../src/era_agent/prompts/agent.md); experiment: [v3/](v3/). Run: `.venv/bin/python experiments/v3/run.py` (needs the vLLM server), then `v2/judge.py --config experiments/v3/config.yaml` with the judge served.
 
 - **Agent:** LangGraph loop over `Qwen3.6-27B`; tools `search_filings` (V1's search), `calculator`, and with SEC data `xbrl_facts`, `edgar_filings` (cached, offline). Answer and claim check as in V2, claims may cite XBRL facts
 - **Variants:** V2 rerun as the baseline; the agent with 10-K tools (`text`); with SEC tools too (`full`), to separate what tool use adds from what the data adds

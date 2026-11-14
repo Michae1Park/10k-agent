@@ -1,6 +1,6 @@
 """Layer 5, note quality (V4 design doc §12.2): ten sections, number trace, seeded errors, rubric.
 
-  taskset -c 16-31 uv run python -m era_agent.evaluation.note_eval output/reports/UBER/2026-08-06 …
+  uv run python -m era_agent.evaluation.note_eval output/reports/UBER/2026-08-06 …
   … --judge openai:openai/gpt-oss-20b --judge-url http://localhost:8002/v1
 
   sections   all ten present, in order
