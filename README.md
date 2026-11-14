@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">Equity Research Agent</h1>
   <p align="center">
-    <strong>A junior sell-side research agent: cited answers, a forecast model and draft notes from free public data</strong>
+    <strong>An AI financial analyst that researches equities, builds forecasts, and writes earnings notes</strong>
   </p>
   <p align="center">
     <a href="https://github.com/Michae1Park/equity-research-agent/actions/workflows/ci.yml"><img src="https://github.com/Michae1Park/equity-research-agent/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -13,7 +13,7 @@
 ---
 
 <p align="center">
-  <b>Author:</b> <a href="https://github.com/Michae1Park">Michael Park</a>
+  <b>Author:</b> <a href="https://michae1park.github.io">Michael Park</a>
 </p>
 
 ---
