@@ -50,32 +50,31 @@ An autonomous equity research agent covering eight US travel and mobility compan
 
 ### What It Does
 
-| Mode | You give it | You get |
+| Mode | Input | Execution & output |
 |---|---|---|
-| **Ask** | A question + as-of | A short answer from filed data, every number cited and checked |
-| **Research** | A question + as-of | An answer computed from the model (forecast, scenario, valuation), with its assumptions shown |
-| **Investigate** | A multi-part question + as-of | A plan of Ask and Research sub-runs, combined into one claim-checked answer |
-| **Report** | Ticker + as-of | A 10-section draft note (Markdown and PDF), a model-change workbook (live Excel formulas) and an evidence and exception log |
+| **Ask** | Factual question + as-of | Retrieves filed KPIs and passages; returns a concise, citation-verified answer (or declines if unsupported) |
+| **Research** | Quantitative question + as-of | Runs the driver-based forecast and valuation engine; returns computed figures, model assumptions and cell ids |
+| **Investigate** | Multi-part question + as-of | Splits the question into Ask and Research sub-runs; synthesizes them into a single claim-checked answer |
+| **Report** | Ticker + as-of | Runs an 11-step pipeline; returns a 10-section earnings note (Markdown and PDF), a live-formula Excel workbook and an evidence and exception log |
 
-```text
-Ask, as of 2026-11-12: "What was Uber's gross bookings growth in Q2 2026 and what drove it?"
-```
+### Execution Trace (Ask Mode)
 
-The agent:
-1. Reads Uber's gross bookings for Q2 2026 and Q2 2025 from the extracted KPIs (each tied to the release table it came from)
-2. Computes the growth with the calculator tool instead of doing the arithmetic in the model
-3. Searches the earnings release for the drivers (trips, monthly active consumers, segments)
-4. Writes a JSON answer whose claims cite KPI and chunk ids
-5. Checks every claim's number against what it cites, marks each one verified, cited or unverified, and shows unverified claims instead of hiding them
+**Query:** `"What was Uber's gross bookings growth in Q2 2026 and what drove it?"` (`as_of = 2026-11-12`)
+
+1. **KPI lookup:** Retrieves Q2 2026 and Q2 2025 gross bookings from structured KPI tables tied to Uber's earnings release, ignoring anything filed on or after `2026-11-12`.
+2. **Deterministic math:** Computes year-over-year growth with the calculator tool instead of letting the model do the arithmetic.
+3. **Qualitative retrieval:** Runs hybrid search (keyword + dense, fused with RRF, then reranked) over the Q2 2026 release for the drivers (trips, monthly active consumers, segments).
+4. **Structured synthesis:** Writes a JSON answer in which every numeric claim cites a `kpi_id` or `chunk_id`.
+5. **Claim verification:** Checks each claimed figure against its cited source and tags it `verified`, `cited` or `unverified`, showing unverified claims in the UI instead of hiding them.
 
 **Results** ([full results and limits](docs/V4_RESULTS.md)):
 
-| Test | Result |
-|---|---|
-| Ask: 79 questions | **89.9%** correct and verified; 100% of cited ids resolve |
-| KPI extraction: 337 hand-checked labels | **98.5%** exact; 100% on revenue, EPS and the main KPI |
-| Next-quarter forecast: 90 walk-forward points | revenue MAPE **3.14%** vs seasonal naive 3.77% (not statistically significant) |
-| Draft notes: all eight companies | 10 sections, **100%** of figures traced, all 474 seeded errors caught |
+| Test | Evaluation set | Result |
+|---|---|---|
+| **Ask accuracy** | 79 questions | 89.9% correct and verified; 100% of cited ids resolve |
+| **KPI extraction** | 337 hand-checked labels | 98.5% exact; 100% on revenue, EPS and the main KPI |
+| **Next-quarter forecast** | 90 walk-forward points | Revenue MAPE 3.14% vs 3.77% for seasonal naive (not statistically significant) |
+| **Draft notes** | All eight companies | 10 sections; 100% of figures traced; all 474 seeded errors caught |
 
 ---
 
