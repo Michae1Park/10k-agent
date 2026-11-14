@@ -52,10 +52,10 @@ An autonomous equity research agent covering eight US travel and mobility compan
 
 | Mode | Input | Execution & output |
 |---|---|---|
-| **Ask** | Factual question + as-of | Retrieves filed KPIs and passages; returns a concise, citation-verified answer (or declines if unsupported) |
-| **Research** | Quantitative question + as-of | Runs the driver-based forecast and valuation engine; returns computed figures, model assumptions and cell ids |
-| **Investigate** | Multi-part question + as-of | Splits the question into Ask and Research sub-runs; synthesizes them into a single claim-checked answer |
-| **Report** | Ticker + as-of | Runs an 11-step pipeline; returns a 10-section earnings note (Markdown and PDF), a live-formula Excel workbook and an evidence and exception log |
+| **Ask** | Factual question<br>+ as-of | • Retrieves filed KPIs and passages<br>• Returns a concise, citation-verified answer (or declines if unsupported) |
+| **Research** | Quantitative question<br>+ as-of | • Runs the driver-based forecast and valuation engine<br>• Returns computed figures, model assumptions and cell ids |
+| **Investigate** | Multi-part question<br>+ as-of | • Splits the question into Ask and Research sub-runs<br>• Synthesizes them into a single claim-checked answer |
+| **Report** | Ticker<br>+ as-of | • Runs an 11-step pipeline<br>• Returns a 10-section earnings note (Markdown and PDF), a live-formula Excel workbook and an evidence and exception log |
 
 <details>
 <summary><b>Execution trace (Ask mode example)</b></summary>
