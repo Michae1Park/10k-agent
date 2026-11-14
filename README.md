@@ -62,11 +62,11 @@ An autonomous equity research agent covering eight US travel and mobility compan
 
 **Query:** `"What was Uber's gross bookings growth in Q2 2026 and what drove it?"` (`as_of = 2026-11-12`)
 
-1. **KPI lookup:** Retrieves Q2 2026 and Q2 2025 gross bookings from structured KPI tables tied to Uber's earnings release, ignoring anything filed on or after `2026-11-12`.
-2. **Deterministic math:** Computes year-over-year growth with the calculator tool instead of letting the model do the arithmetic.
-3. **Qualitative retrieval:** Runs hybrid search (keyword + dense, fused with RRF, then reranked) over the Q2 2026 release for the drivers (trips, monthly active consumers, segments).
-4. **Structured synthesis:** Writes a JSON answer in which every numeric claim cites a `kpi_id` or `chunk_id`.
-5. **Claim verification:** Checks each claimed figure against its cited source and tags it `verified`, `cited` or `unverified`, showing unverified claims in the UI instead of hiding them.
+1. **KPI lookup**<br>Retrieves Q2 2026 and Q2 2025 gross bookings from structured KPI tables tied to Uber's earnings release, ignoring anything filed on or after `2026-11-12`.
+2. **Deterministic math**<br>Computes year-over-year growth with the calculator tool instead of letting the model do the arithmetic.
+3. **Qualitative retrieval**<br>Runs hybrid search (keyword + dense, fused with RRF, then reranked) over the Q2 2026 release for the drivers (trips, monthly active consumers, segments).
+4. **Structured synthesis**<br>Writes a JSON answer in which every numeric claim cites a `kpi_id` or `chunk_id`.
+5. **Claim verification**<br>Checks each claimed figure against its cited source and tags it `verified`, `cited` or `unverified`, showing unverified claims in the UI instead of hiding them.
 
 </details>
 
@@ -94,10 +94,10 @@ An autonomous equity research agent covering eight US travel and mobility compan
 
 ### Architectural Invariants
 
-1. **Point-in-time isolation:** every read of the SQLite store goes through the AsOf filter, so nothing filed on or after the as-of date is visible to text search, XBRL facts or market series.
-2. **Deterministic computation:** the model never computes ratios, growth rates or valuation multiples itself. All financial math runs in Python, with integrity checks on the history (balance, quarters sum, Q4 ties, segments).
-3. **Claim auditing:** every number must cite a chunk, KPI or model cell. A claim that fails the check is shown as unverified, never silently dropped.
-4. **Human sign-off:** ratings and price targets stay drafts until a human approves them.
+1. **Point-in-time isolation**<br>Every read of the SQLite store goes through the AsOf filter, so nothing filed on or after the as-of date is visible to text search, XBRL facts or market series.
+2. **Deterministic computation**<br>The model never computes ratios, growth rates or valuation multiples itself. All financial math runs in Python, with integrity checks on the history (balance, quarters sum, Q4 ties, segments).
+3. **Claim auditing**<br>Every number must cite a chunk, KPI or model cell. A claim that fails the check is shown as unverified, never silently dropped.
+4. **Human sign-off**<br>Ratings and price targets stay drafts until a human approves them.
 
 <details>
 <summary><b>System layers: what each part does</b></summary>
