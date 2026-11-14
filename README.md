@@ -84,27 +84,33 @@ An autonomous equity research agent covering eight US travel and mobility compan
   <img src="docs/img/readme-architecture.svg" alt="Architecture. Sources (SEC EDGAR, market and macro, cross-checks) are built offline into text chunks, facts, extracted KPIs and guidance, and market series in one SQLite store read only through an AsOf filter. The web app and CLI enter four modes: Ask, Research, Investigate (which plans Ask and Research sub-runs) and Report. Ask and Research run the agent loop over a toolbox that reaches the store and the code-only model engine; answers pass a claim check. The Report pipeline runs steps S1 to S11 and writes a draft note, workbook and log, saving a model version back to the store." width="100%">
 </p>
 
-| Layer | What it does |
-|---|---|
-| **Acquisition** | Fetches 10-Ks, 10-Qs, earnings releases (8-K Ex. 99.1), proxies, Form 4s, XBRL company facts, prices, FRED/ALFRED macro, the equity risk premium, BTS airline passengers and NYC TLC trips into a local cache |
-| **Store** | One SQLite file holding chunks, FTS5, vectors, XBRL facts, extracted KPIs and guidance, and market series. It is read only through an **AsOf** filter, so nothing filed on or after the as-of date is visible |
-| **Retrieval** | Keyword + dense search, fused with RRF, then reranked, over parent-child chunks of every filing |
-| **Model engine** | A history model with integrity checks (balance, quarters sum, Q4 ties, segments), a driver-based forecast anchored to guidance, and a DCF plus peer-multiple valuation |
-| **Agent** | A tool-calling loop (search, KPIs, facts, calculator, model and valuation tools) that writes a JSON answer with cited claims |
-| **Investigate planner** | Splits a multi-part question into Ask and Research sub-runs, can add a follow-up, and combines the sub-answers into one answer that is claim-checked again |
-| **Report pipeline** | Eleven fixed steps (S1–S11), with the LLM only for events, forecast proposals, debates and the write-up. Exports a note, a workbook whose formulas recalculate to Python's values, and a saved model version |
-| **Web app** | FastAPI with server-sent events and a React UI: chat with a live trace and source drawer, plus report generation and review |
+### Architectural Invariants
 
-**Rules:** every number comes from a cited source, never from the model's memory; unverified claims are shown, not hidden; ratings and price targets are drafts until a human approves them.
+1. **Point-in-time isolation:** every read of the SQLite store goes through the AsOf filter, so nothing filed on or after the as-of date is visible to text search, XBRL facts or market series.
+2. **Deterministic computation:** the model never computes ratios, growth rates or valuation multiples itself. All financial math runs in Python, with integrity checks on the history (balance, quarters sum, Q4 ties, segments).
+3. **Claim auditing:** every number must cite a chunk, KPI or model cell. A claim that fails the check is shown as unverified, never silently dropped.
+4. **Human sign-off:** ratings and price targets stay drafts until a human approves them.
 
-**Built one tested version at a time:**
+### System Layers
 
-| Version | Adds | Results |
+| Subsystem | Layer | What it does |
 |---|---|---|
-| V0 · Parsing and chunking | 10-K HTML → structured document → parent-child chunks | [~93% exact heading paths](experiments/V0_PARSING_CHUNKING.md) |
-| V1 · Retrieval | Hybrid search → RRF → rerank | [Recall@5 87.3%](experiments/V1_RETRIEVAL.md) |
-| V2 · Generation | JSON claims citing chunk ids, each claim checked | [21 / 30 numeric questions right, 8 / 8 declines](experiments/V2_GENERATION.md) |
-| V3 · Agent | Tool use (search, calculator, XBRL, EDGAR) | [87–89% vs V2's 66.7%](experiments/V3_AGENT.md) |
+| **Data plane** (offline build) | **Acquisition** | Fetches 10-Ks, 10-Qs, earnings releases (8-K Ex. 99.1), proxies, Form 4s, XBRL company facts, prices, FRED/ALFRED macro, the equity risk premium, BTS airline passengers and NYC TLC trips into a local cache |
+| | **Store** | One SQLite file holding chunks, FTS5, vectors, XBRL facts, extracted KPIs and guidance, and market series, read only through the **AsOf** filter |
+| **Reasoning and compute** (runtime) | **Retrieval** | Keyword + dense search, fused with RRF, then reranked, over parent-child chunks of every filing |
+| | **Model engine** | A history model, a driver-based forecast anchored to guidance, and a DCF plus peer-multiple valuation |
+| | **Agent and planner** | A tool-calling loop (search, KPIs, facts, calculator, model and valuation tools) that writes a JSON answer with cited claims. The Investigate planner splits a multi-part question into Ask and Research sub-runs, can add a follow-up, and claim-checks the combined answer again |
+| **Delivery** | **Report pipeline** | Eleven fixed steps (S1–S11), with the LLM only for events, forecast proposals, debates and the write-up. Exports a note, a workbook whose formulas recalculate to Python's values, and a saved model version |
+| | **Web app** | FastAPI with server-sent events and a React UI: chat with a live trace and source drawer, plus report generation and review |
+
+### Iterative Build Progression
+
+| Version | Core addition | Result |
+|---|---|---|
+| V0 · Parsing and chunking | 10-K HTML → structured document → parent-child chunks | [**~93%** exact heading paths](experiments/V0_PARSING_CHUNKING.md) |
+| V1 · Retrieval | Hybrid search → RRF → rerank | [Recall@5 **87.3%**](experiments/V1_RETRIEVAL.md) |
+| V2 · Generation | JSON claims citing chunk ids, each claim checked | [**21 / 30** numeric questions right, **8 / 8** declines](experiments/V2_GENERATION.md) |
+| V3 · Agent | Tool use (search, calculator, XBRL, EDGAR) | [**87–89%**, up from V2's 66.7%](experiments/V3_AGENT.md) |
 | **V4 · Research agent** | As-of store, KPI extraction, forecast and valuation model, Research / Investigate / Report modes, web app | [V4 results](docs/V4_RESULTS.md) |
 
 Design: [spec](docs/V4_SPEC.md), [technical design](docs/V4_TECHNICAL_DESIGN_DOC.md), [architecture and doc map](docs/ARCHITECTURE.md).
