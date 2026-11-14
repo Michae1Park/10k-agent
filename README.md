@@ -119,7 +119,9 @@ Design: [spec](docs/V4_SPEC.md), [technical design](docs/V4_TECHNICAL_DESIGN_DOC
 
 ## Quickstart
 
-**Needs:** Linux or macOS, Python 3.12 + [uv](https://docs.astral.sh/uv/), a ~40 GB GPU for the default 27B model, and your own free SEC User-Agent, Tiingo and FRED keys ([all requirements](docs/GETTING_STARTED.md#requirements)).
+**Prerequisites:** Linux or macOS, Python 3.12 + [uv](https://docs.astral.sh/uv/), a ~40 GB GPU for the default 27B model, and your own free SEC User-Agent, Tiingo and FRED keys ([all requirements](docs/GETTING_STARTED.md#requirements)).
+
+### 1. Install and configure
 
 ```bash
 git clone https://github.com/Michae1Park/equity-research-agent.git && cd equity-research-agent
@@ -127,21 +129,38 @@ uv sync --extra local --extra chunking
 source .venv/bin/activate
 era setup                                   # your SEC, Tiingo and FRED credentials (gitignored)
 export ERA_COMPANIES=companies.yaml         # the eight-company corpus
+```
 
-scripts/serve_vllm.sh qwen3.6-27b-fp8       # the model for local runs, in its own terminal
+### 2. Start the model server (terminal 1)
 
-# Build the corpus (cached; heavy steps pinned to E-cores)
-era fetch && era fetch --market
-taskset -c 16-31 era build --stage chunk --stage load --stage facts --stage market --stage embed
-taskset -c 16-31 python experiments/v4/extract_pilot.py --releases all   # KPIs and guidance
+```bash
+scripts/serve_vllm.sh qwen3.6-27b-fp8       # other GPU sizes: docs/SERVING.md
+```
+
+### 3. Build the corpus (terminal 2)
+
+```bash
+era fetch && era fetch --market             # filings, XBRL facts, market and macro series
+era build --stage chunk --stage load --stage facts --stage market --stage embed
+python experiments/v4/extract_pilot.py --releases all   # KPIs and guidance
 era build --stage kpis
 ```
 
-**Use it:**
+> **Tip:** on a hybrid Intel CPU where Python crashes on the P-cores, prefix the `era build` and `extract_pilot.py` commands with `taskset -c 16-31` (Linux only; adjust the range to your E-cores). Every step is cached, so reruns are fast.
+
+### 4. Run it
+
+**CLI** (needs the model server from step 2):
 
 ```bash
 era research report UBER --as-of 2026-08-06    # draft note, workbook and logs → output/reports/
-docker compose up --build                      # vLLM + web UI/API on :8000 (stop local vLLM first)
+era investigate "Compare Uber and Lyft Q2 2026 gross bookings growth and Q3 forecasts" --as-of 2026-08-06
+```
+
+**Web UI and API** at `http://localhost:8000`: chat in Ask, Research and Investigate modes with a live trace and source drawer, and generate and review reports. With containers, compose starts vLLM and the web app (stop any local vLLM from step 2 first). It reads the corpus from `./data`, so build it in step 3 first:
+
+```bash
+docker compose up --build
 ```
 
 Full steps, the evaluations and troubleshooting: [Getting started](docs/GETTING_STARTED.md). Serving presets: [SERVING.md](docs/SERVING.md).
