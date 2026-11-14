@@ -7,7 +7,7 @@ The repository at a glance: its two versions, shared principles, layout and wher
 | Version | What | Corpus | Read |
 |---|---|---|---|
 | **V0–V3** | Cited answers about 10-Ks, built in stages (parsing and chunking, retrieval, generation, agent); kept as a regression check | 8 large caps × FY2023–2025 (`companies-v3.yaml`) | [V3 architecture](stages/V3_ARCHITECTURE.md), [stages/V0–V3](stages/) |
-| **V4** | A junior sell-side research agent: Ask, Research and Report modes, every run at an as-of date | BKNG, EXPE, ABNB, TRIP, UBER, LYFT, DASH, CART from 2023 (`companies.yaml`) | [spec](V4_SPEC.md), [design doc](V4_TECHNICAL_DESIGN_DOC.md), [stages/V4_*](stages/), [results](V4_RESULTS.md) |
+| **V4** | A junior sell-side research agent: Ask, Research, Investigate and Report modes, every run at an as-of date, with a web UI | BKNG, EXPE, ABNB, TRIP, UBER, LYFT, DASH, CART from 2023 (`companies.yaml`) | [spec](V4_SPEC.md), [design doc](V4_TECHNICAL_DESIGN_DOC.md), [stages/V4_*](stages/), [results](V4_RESULTS.md) |
 
 V4 reuses V0–V3's pipeline (parsing, chunking, retrieval, agent loop, claim check); scope: [V4 spec](V4_SPEC.md).
 
@@ -26,21 +26,24 @@ V4 reuses V0–V3's pipeline (parsing, chunking, retrieval, agent loop, claim ch
 
 | Path | Contents |
 |---|---|
-| `src/era_agent/` | Shared: `config`, `corpus` (the companies and years, from `companies.yaml`), `asof` (V4 as-of date), `store` (SQLite), `models`, `build` (the corpus build), `cli` |
+| `src/era_agent/` | Shared: `config`, `credentials` (`era setup`), `corpus` (the companies and years, from `companies.yaml`), `asof` (V4 as-of date), `store` (SQLite), `models`, `telemetry`, `build` (the corpus build), `cli` |
 | `src/era_agent/acquisition/` | `era fetch`: filings from SEC EDGAR (`edgar`, `filings`), with `raw/manifest.json`; V4: `companies` (verify), `market` (prices, macro, ERP), `crosscheck` (TLC, BTS), `insiders` (Form 4) |
 | `src/era_agent/preprocess/` | Step 1 `blocks` (rules), step 2 `structure` (the LLM agent, assembly) and its `validation` rules; V4: `forms` (10-K, 10-Q, release) and `rules` (rule-based Items) |
 | `src/era_agent/chunking/` | `rule_based`, `parent_child`, `agentic`, and what they share (`common`) |
 | `src/era_agent/retrieval/` | `index` (database, vectors), `decompose`, `search`, `embeddings` (embedder, reranker) |
 | `src/era_agent/generation/` | `generate`, `answers`, `verify`, `calculator` |
-| `src/era_agent/agent/` | `loop` (LangGraph), `tools` (tool groups and sets: V3, Ask, Research), `sec` (XBRL facts, EDGAR metadata, cached) |
+| `src/era_agent/agent/` | `loop` (LangGraph), `factory`, `tools` (tool groups and sets: V3, Ask, Research), `plan` (V4 Investigate: plan, sub-runs, combine), `sec` (XBRL facts, EDGAR metadata, cached) |
 | `src/era_agent/facts/` | V4: XBRL facts and quarters (`xbrl`, `quarters`), KPI and guidance extraction (`extract`, LLM; `rules`, ablation), `kpis.yaml`, `metrics.yaml` |
-| `src/era_agent/research/` | V4: `refs` and `book` (citable ids), `datapack`, `model/` (DSL, graph, templates, checks), `propose`, `forecast`, `valuation`, `subagents` (events, debates), `note/`, `export/` (workbook, PDF), `pipeline` (Report mode) |
+| `src/era_agent/research/` | V4: `refs` and `book` (citable ids), `datapack`, `model/` (DSL, graph, templates, checks), `propose`, `forecast`, `outside` (TLC, BTS, FRED inputs), `valuation`, `subagents` (events, debates), `note/`, `export/` (workbook, PDF), `pipeline` (Report mode) |
 | `src/era_agent/evaluation/` | Gold sets (`gold`, `render`), retrieval metrics, number matching, the LLM judge, `scoring`, `report`; V4: `extraction`, `backtest`, `note_eval` |
-| `src/era_agent/prompts/` | Every LLM prompt, one Markdown file per task, its output schema beside it: `structure.md` + `structure.schema.json`, `answer.md`, `agent.md`, `judge.md`; V4: `ask.md`, `research.md`, `extract.md`, `propose.md`, `events.md`, `debates.md`, `section.md` |
+| `src/era_agent/prompts/` | Every LLM prompt, one Markdown file per task, its output schema beside it: `structure.md` + `structure.schema.json`, `answer.md`, `agent.md`, `judge.md`; V4: `ask.md`, `research.md`, `extract.md`, `propose.md`, `events.md`, `debates.md`, `section.md`, `plan.md` and `combine.md` (Investigate) |
+| `src/era_agent/web/` | V4: the FastAPI app (`app`, server-sent events) and the run `engine` behind it (`era serve`) |
+| `ui/` | The React UI (Vite): chat with live trace and source drawer, reports |
 | `experiments/` | One folder per experiment (V0–V4): its runner and config; `V*.md` design and results (V4's are in `docs/`) |
 | `evaluation/` | `gold/`: the reviewed gold question sets (JSONL, plus review PDFs); `results/<run>/`: each run's end-to-end report (`era report`). The code that loads, scores and reports is `src/era_agent/evaluation/` |
 | `docs/` | This documentation |
-| `scripts/` | `serve_vllm.sh` (open models) |
+| `scripts/` | `serve_vllm.sh` (open models), `launch.sh` (vLLM, API and UI together) |
+| `Dockerfile`, `docker-compose.yml` | vLLM plus the API and built UI in containers |
 | `config.yaml` | Every setting for the CLI, per stage |
 | `companies.yaml`, `companies-v3.yaml`, `research.yaml` | V4 coverage, V3 coverage, V4 forecast and valuation knobs |
 | `data/`, `output/` | Filings, work files, databases; experiment outputs (generated, git-ignored) |

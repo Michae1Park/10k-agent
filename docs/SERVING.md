@@ -49,10 +49,10 @@ Set `generation.model` (or pass `--model`). How the model layer is built: [V3 ar
 
 ## Docker
 
-The API and the built UI in one image, on `:8000`. vLLM stays on the host (start it first).
+Two services: `vllm` (the `qwen3.6-27b-fp8` preset's settings, image `vllm/vllm-openai:v0.33.0`) and `era` (the API and the built UI), on `:8000`. Stop any `serve_vllm.sh` server first; `era` starts once vLLM is healthy (first start: up to ~10 min).
 
 ```bash
 docker compose up --build -d     # http://localhost:8000
 ```
 
-Host networking (so `localhost:8001` in `config.yaml` still reaches vLLM), `.env` for credentials, `data/`, `output/` and `config.yaml` mounted from the repo, GPU via the NVIDIA container toolkit.
+Host networking (so `localhost:8001` in `config.yaml` reaches vLLM), `.env` for credentials and `ERA_CPUSET`, `data/`, `output/` and `config.yaml` mounted from the repo, Hugging Face weights reused from `HF_HOME`, GPU via the NVIDIA container toolkit. Without Docker, `scripts/launch.sh` runs the same stack locally ([GETTING_STARTED.md](GETTING_STARTED.md#6-web-ui)).

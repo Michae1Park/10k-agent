@@ -1,6 +1,6 @@
 # Getting started
 
-Install, build the V4 corpus, write a research report, ask questions, run the evaluations. V0–V3 (the 10-K regression corpus) is at the end. How it is built: [ARCHITECTURE.md](ARCHITECTURE.md) and the [V4 design doc](V4_TECHNICAL_DESIGN_DOC.md).
+Install, build the V4 corpus, write a research report, ask questions, use the web UI, run the evaluations. V0–V3 (the 10-K regression corpus) is at the end. How it is built: [ARCHITECTURE.md](ARCHITECTURE.md) and the [V4 design doc](V4_TECHNICAL_DESIGN_DOC.md).
 
 ## Requirements
 
@@ -80,19 +80,33 @@ python -m era_agent.research.forecast UBER 2026-08-06         # forecast
 python -m era_agent.research.valuation UBER 2026-08-06        # valuation; --all adds relative ratings
 ```
 
-## 5. Ask and Research
+## 5. Ask, Research and Investigate
 
-Ask and Research run through their gold runners, each question at its own as-of (model served):
+From the CLI (model served):
 
 ```bash
+era investigate "Compare Uber and Lyft Q2 2026 gross bookings growth and Q3 forecasts" --as-of 2026-08-06   # --json for the full run
 python experiments/v4/ask_run.py --question <id>          # Ask: cited answers from filed data
 python experiments/v4/research_run.py --question <id>     # Research: model tools, assumptions shown
+python experiments/v4/investigate_run.py --investigate --question <id>   # Investigate: Ask and Research sub-runs, combined
 era tool --list                                                           # the tool schemas (design doc §5)
 ```
 
-Questions: `evaluation/gold/ask-gold.jsonl`, `research-gold.jsonl`. Results: `output/generation/<label>/`.
+Questions: `evaluation/gold/ask-gold.jsonl`, `research-gold.jsonl`, `investigate-gold.jsonl`. Results: `output/generation/<label>/`.
 
-## 6. Evaluate
+## 6. Web UI
+
+All four modes plus report generation and review, with a live trace and source drawer. Needs the corpus from step 3; stop any running vLLM first.
+
+```bash
+scripts/launch.sh                 # vLLM, API (:8000) and UI dev server (http://localhost:5173); another preset as $1
+docker compose up --build         # vLLM and API + built UI in containers, http://localhost:8000
+era serve --host 0.0.0.0          # the API alone (uv sync --extra web), against a model you already serve
+```
+
+`launch.sh` logs to `output/logs/`; `HOST=127.0.0.1` keeps it to this machine. Docker details: [SERVING.md](SERVING.md#docker).
+
+## 7. Evaluate
 
 The five layers and their frozen bars: [design doc §12](V4_TECHNICAL_DESIGN_DOC.md#12-evaluation). Results: [V4_RESULTS.md](V4_RESULTS.md).
 
@@ -102,11 +116,12 @@ python -m era_agent.evaluation.backtest --proposer llm          # ablation: the 
 python -m era_agent.evaluation.note_eval output/reports/UBER/2026-08-06 --seeds 5  # layer 5: trace, sections, seeded errors
 python experiments/v4/ask_run.py                                  # all Ask gold, then --score
 python experiments/v4/research_run.py                             # all Research gold, then --score
+python experiments/v4/investigate_run.py --baseline && python experiments/v4/investigate_run.py --investigate --score   # Investigate vs one Research run
 ```
 
 The judge (`gpt-oss-20b`) doesn't fit beside the 27B: generate first, stop the 27B, serve the judge, then judge and `--score` ([SERVING.md](SERVING.md#gotchas)). Ablation configs: `experiments/v4/knobs/`.
 
-## 7. V0–V3: the 10-K regression corpus
+## 8. V0–V3: the 10-K regression corpus
 
 V3 answers questions about 24 10-Ks and stays runnable as a regression check. How it works: [V3 architecture](stages/V3_ARCHITECTURE.md). Unset `ERA_COMPANIES` (or set `companies-v3.yaml`) first.
 
