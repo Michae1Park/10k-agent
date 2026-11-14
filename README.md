@@ -155,10 +155,16 @@ era research report UBER --as-of 2026-08-06    # draft note, workbook and logs â
 era investigate "Compare Uber and Lyft Q2 2026 gross bookings growth and Q3 forecasts" --as-of 2026-08-06
 ```
 
-**Web UI and API** at `http://localhost:8000`: chat in Ask, Research and Investigate modes with a live trace and source drawer, and generate and review reports. With containers, compose starts vLLM and the web app (stop any local vLLM from step 2 first). It reads the corpus from `./data`, so build it in step 3 first:
+**Web UI** (Ask, Research, Investigate, and Reports â€” requires the corpus from step 3; stop any running vLLM first):
 
 ```bash
-docker compose up --build
+scripts/launch.sh            # local: vLLM, API and UI together, UI at http://localhost:5173 (replaces step 2)
+docker compose up --build    # containers: vLLM, API and UI together, UI at http://localhost:8000
 ```
 
-Full steps, the evaluations and troubleshooting: [Getting started](docs/GETTING_STARTED.md). Serving presets: [SERVING.md](docs/SERVING.md).
+Once open:
+
+- **Chat:** Pick a mode, set the as-of date, and ask (e.g., Ask mode with as-of `2026-11-12`: *"What was Uber's gross bookings growth in Q2 2026 and what drove it?"*). Every answer renders a live execution trace and an interactive source drawer.
+- **Reports:** Generate a draft earnings note for any covered ticker and review the output.
+
+Full steps, evaluation suites, and troubleshooting: [Getting started](docs/GETTING_STARTED.md). Serving presets: [SERVING.md](docs/SERVING.md).
