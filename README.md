@@ -46,7 +46,7 @@ An autonomous equity research agent covering eight US travel and mobility compan
   <img src="docs/img/demo-report.gif" alt="Reports page: the UBER Q2 2026 earnings-update note scrolled from the executive summary through results, debates and the financial summary" width="820">
 </p>
 
-<sub>**About the numbers in the Report demo:** prices, and every value derived from them (rating, price target, return, market cap, EV, multiples, WACC, beta, DCF values), come from licensed third-party data, so the real values are redacted. The ones shown in the Report demo are made up for illustration. Filing-derived figures (revenue, EBITDA, gross bookings) are real. To see the true numbers, run the report locally with your own keys (see Quickstart).</sub>
+<p align="center"><sub><i>Report demo: price-derived figures (rating, price target, market cap, multiples, WACC, DCF values) are made up, because the real ones come from licensed data. Filing-derived figures (revenue, EBITDA, gross bookings) are real. Run the report locally with your own keys for the true numbers.</i></sub></p>
 
 ### What It Does
 
@@ -57,7 +57,8 @@ An autonomous equity research agent covering eight US travel and mobility compan
 | **Investigate** | Multi-part question + as-of | Splits the question into Ask and Research sub-runs; synthesizes them into a single claim-checked answer |
 | **Report** | Ticker + as-of | Runs an 11-step pipeline; returns a 10-section earnings note (Markdown and PDF), a live-formula Excel workbook and an evidence and exception log |
 
-### Execution Trace (Ask Mode)
+<details>
+<summary><b>Execution trace (Ask mode example)</b></summary>
 
 **Query:** `"What was Uber's gross bookings growth in Q2 2026 and what drove it?"` (`as_of = 2026-11-12`)
 
@@ -67,7 +68,12 @@ An autonomous equity research agent covering eight US travel and mobility compan
 4. **Structured synthesis:** Writes a JSON answer in which every numeric claim cites a `kpi_id` or `chunk_id`.
 5. **Claim verification:** Checks each claimed figure against its cited source and tags it `verified`, `cited` or `unverified`, showing unverified claims in the UI instead of hiding them.
 
-**Results** ([full results and limits](docs/V4_RESULTS.md)):
+</details>
+
+<details>
+<summary><b>Results</b> (Ask, KPI extraction, forecast, draft notes)</summary>
+
+[Full results and limits](docs/V4_RESULTS.md)
 
 | Test | Evaluation set | Result |
 |---|---|---|
@@ -75,6 +81,8 @@ An autonomous equity research agent covering eight US travel and mobility compan
 | **KPI extraction** | 337 hand-checked labels | 98.5% exact; 100% on revenue, EPS and the main KPI |
 | **Next-quarter forecast** | 90 walk-forward points | Revenue MAPE 3.14% vs 3.77% for seasonal naive (not statistically significant) |
 | **Draft notes** | All eight companies | 10 sections; 100% of figures traced; all 474 seeded errors caught |
+
+</details>
 
 ---
 
@@ -91,7 +99,8 @@ An autonomous equity research agent covering eight US travel and mobility compan
 3. **Claim auditing:** every number must cite a chunk, KPI or model cell. A claim that fails the check is shown as unverified, never silently dropped.
 4. **Human sign-off:** ratings and price targets stay drafts until a human approves them.
 
-### System Layers
+<details>
+<summary><b>System layers: what each part does</b></summary>
 
 | Subsystem | Layer | What it does |
 |---|---|---|
@@ -103,7 +112,10 @@ An autonomous equity research agent covering eight US travel and mobility compan
 | **Delivery** | **Report pipeline** | Eleven fixed steps (S1–S11), with the LLM only for events, forecast proposals, debates and the write-up. Exports a note, a workbook whose formulas recalculate to Python's values, and a saved model version |
 | | **Web app** | FastAPI with server-sent events and a React UI: chat with a live trace and source drawer, plus report generation and review |
 
-### Iterative Build Progression
+</details>
+
+<details>
+<summary><b>Iterative build progression: V0 to V4</b></summary>
 
 | Version | Core addition | Result |
 |---|---|---|
@@ -112,6 +124,8 @@ An autonomous equity research agent covering eight US travel and mobility compan
 | V2 · Generation | JSON claims citing chunk ids, each claim checked | [**21 / 30** numeric questions right, **8 / 8** declines](experiments/V2_GENERATION.md) |
 | V3 · Agent | Tool use (search, calculator, XBRL, EDGAR) | [**87–89%**, up from V2's 66.7%](experiments/V3_AGENT.md) |
 | **V4 · Research agent** | As-of store, KPI extraction, forecast and valuation model, Research / Investigate / Report modes, web app | [V4 results](docs/V4_RESULTS.md) |
+
+</details>
 
 Design: [spec](docs/V4_SPEC.md), [technical design](docs/V4_TECHNICAL_DESIGN_DOC.md), [architecture and doc map](docs/ARCHITECTURE.md).
 
@@ -162,9 +176,12 @@ scripts/launch.sh            # local: vLLM, API and UI together, UI at http://lo
 docker compose up --build    # containers: vLLM, API and UI together, UI at http://localhost:8000
 ```
 
-Once open:
+<details>
+<summary><b>Once open: what you can do</b></summary>
 
 - **Chat:** Pick a mode, set the as-of date, and ask (e.g., Ask mode with as-of `2026-11-12`: *"What was Uber's gross bookings growth in Q2 2026 and what drove it?"*). Every answer renders a live execution trace and an interactive source drawer.
 - **Reports:** Generate a draft earnings note for any covered ticker and review the output.
+
+</details>
 
 Full steps, evaluation suites, and troubleshooting: [Getting started](docs/GETTING_STARTED.md). Serving presets: [SERVING.md](docs/SERVING.md).
